@@ -1,16 +1,12 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
 .DS_Store
+Thumbs.db
 .atom/
 .build/
 .buildlog/
 .history
 .svn/
 .swiftpm/
-migrate_working_dir/
+.vscode/
 
 # IntelliJ related
 *.iml
@@ -18,12 +14,16 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+migrate_working_dir/
+.agent/
 
-# Flutter/Dart/Pub related
+
+########## 2. FLUTTER & DART ##########
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -32,14 +32,26 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
-
-# Symbolication related
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Khai báo riêng cho công cụ build của Android Studio
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+########## 3. BACKEND (NODE.JS / NESTJS / EXPRESS) ##########
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+/backend/dist/
+/backend/node_modules/
+
+# Files cấu hình môi trường (Quan trọng: Không bao giờ commit file chứa secret)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
