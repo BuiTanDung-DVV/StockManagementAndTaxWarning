@@ -1,0 +1,11 @@
+import { Request, Response } from 'express';
+export declare const getStock: (req: Request, res: Response) => Promise<void>;
+export declare const getLowStock: (req: Request, res: Response) => Promise<void>;
+export declare const getMovements: (req: Request, res: Response) => Promise<void>;
+export declare const getWarehouses: (req: Request, res: Response) => Promise<void>;
+export declare const createWarehouse: (req: Request, res: Response) => Promise<void>;
+export declare const getXntReport: (req: Request, res: Response) => Promise<void>;
+export declare const getExpiringProducts: (req: Request, res: Response) => Promise<void>;
+export declare const getPurchaseOrders: (req: Request, res: Response) => Promise<void>;
+export declare const createPurchaseOrder: (req: Request, res: Response) => Promise<void>;
+export declare const createStockTake: (req: Request, res: Response) => Promise<void>;
