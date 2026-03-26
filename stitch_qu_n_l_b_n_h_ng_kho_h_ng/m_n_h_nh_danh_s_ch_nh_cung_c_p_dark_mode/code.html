@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Màn hình Danh sách Nhà cung cấp</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00d19d",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#0f231e",
+                        "card-dark": "#162b26",
+                        "border-dark": "#243a35",
+                        "danger": "#ff4d4f",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex min-h-screen w-full flex-col max-w-[430px] mx-auto overflow-x-hidden shadow-2xl bg-background-light dark:bg-background-dark">
+<!-- Status Bar Placeholder (iOS Style) -->
+<div class="h-10 w-full flex justify-between items-center px-6 pt-2">
+<span class="text-sm font-semibold">9:41</span>
+<div class="flex gap-1.5 items-center">
+<span class="material-symbols-outlined text-[18px]">signal_cellular_alt</span>
+<span class="material-symbols-outlined text-[18px]">wifi</span>
+<span class="material-symbols-outlined text-[18px]">battery_full</span>
+</div>
+</div>
+<!-- Header -->
+<div class="flex items-center p-4 justify-between sticky top-0 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md z-10">
+<div class="flex items-center gap-3">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-border-dark transition-colors">
+<span class="material-symbols-outlined">arrow_back_ios_new</span>
+</button>
+<h2 class="text-xl font-bold tracking-tight">Nhà cung cấp</h2>
+</div>
+<button class="flex items-center gap-1 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+<span class="text-sm font-bold">Thêm NCC</span>
+</button>
+</div>
+<!-- Search Bar -->
+<div class="px-4 py-2">
+<label class="relative flex items-center h-12 w-full">
+<span class="material-symbols-outlined absolute left-4 text-slate-400">search</span>
+<input class="form-input w-full rounded-xl border-none bg-slate-100 dark:bg-card-dark focus:ring-2 focus:ring-primary/50 h-full pl-12 pr-4 text-base placeholder:text-slate-500 transition-all" placeholder="Tìm theo tên, SĐT nhà cung cấp..."/>
+</label>
+</div>
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 gap-3 p-4">
+<div class="flex flex-col gap-2 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-card-dark p-4 shadow-sm">
+<div class="flex items-center justify-center size-8 rounded-lg bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-[20px]">groups</span>
+</div>
+<div class="flex flex-col">
+<span class="text-2xl font-bold">12</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Tổng NCC</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-card-dark p-4 shadow-sm">
+<div class="flex items-center justify-center size-8 rounded-lg bg-danger/20 text-danger">
+<span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+</div>
+<div class="flex flex-col">
+<span class="text-lg font-bold text-danger">15.200.000đ</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Công nợ phải trả</span>
+</div>
+</div>
+</div>
+<!-- List Header -->
+<div class="px-4 pt-2 pb-2 flex justify-between items-center">
+<h3 class="text-lg font-bold tracking-tight">Danh sách</h3>
+<span class="material-symbols-outlined text-slate-400">filter_list</span>
+</div>
+<!-- Supplier List -->
+<div class="flex flex-col gap-3 px-4 pb-24">
+<!-- Supplier Card 1 -->
+<div class="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-card-dark p-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex gap-3">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-white font-bold text-lg">
+                            AB
+                        </div>
+<div class="flex flex-col">
+<h4 class="font-bold text-base leading-tight">Công ty TNHH ABC</h4>
+<p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">call</span> 0901 234 567
+                            </p>
+<p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">mail</span> contact@abc.vn
+                            </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-border-dark/50">
+<span class="text-xs font-medium text-slate-400 uppercase tracking-widest">Tình trạng</span>
+<span class="inline-flex items-center rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-bold text-danger">
+                        Công nợ: 3.500.000đ
+                    </span>
+</div>
+</div>
+<!-- Supplier Card 2 -->
+<div class="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-card-dark p-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex gap-3">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-white font-bold text-lg">
+                            MP
+                        </div>
+<div class="flex flex-col">
+<h4 class="font-bold text-base leading-tight">Đại lý Minh Phát</h4>
+<p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">call</span> 0912 888 999
+                            </p>
+<p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">mail</span> minhphat@gmail.com
+                            </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-border-dark/50">
+<span class="text-xs font-medium text-slate-400 uppercase tracking-widest">Tình trạng</span>
+<span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                        Đã thanh toán
+                    </span>
+</div>
+</div>
+<!-- Supplier Card 3 -->
+<div class="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-card-dark p-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex gap-3">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-white font-bold text-lg">
+                            HS
+                        </div>
+<div class="flex flex-col">
+<h4 class="font-bold text-base leading-tight">NCC Hải Sản Tươi</h4>
+<p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">call</span> 0987 654 321
+                            </p>
+<p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">mail</span> order@haisantươi.com
+                            </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-border-dark/50">
+<span class="text-xs font-medium text-slate-400 uppercase tracking-widest">Tình trạng</span>
+<span class="inline-flex items-center rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-bold text-danger">
+                        Công nợ: 11.700.000đ
+                    </span>
+</div>
+</div>
+<!-- Supplier Card 4 -->
+<div class="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-card-dark p-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex gap-3">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-white font-bold text-lg">
+                            XB
+                        </div>
+<div class="flex flex-col">
+<h4 class="font-bold text-base leading-tight">Xưởng Bánh Ngọt Sài Gòn</h4>
+<p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[14px]">call</span> 028 3456 789
+                            </p>
+<p class="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">mail</span> banhngotsg@info.vn
+                            </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-border-dark/50">
+<span class="text-xs font-medium text-slate-400 uppercase tracking-widest">Tình trạng</span>
+<span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                        Đã thanh toán
+                    </span>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 w-full max-w-[430px] border-t border-slate-200 dark:border-border-dark bg-white/90 dark:bg-background-dark/90 backdrop-blur-lg px-4 pb-6 pt-2 z-20">
+<div class="flex items-center justify-around">
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<p class="text-[10px] font-semibold leading-normal uppercase tracking-tighter">Trang chủ</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<p class="text-[10px] font-semibold leading-normal uppercase tracking-tighter">Đơn hàng</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<p class="text-[10px] font-semibold leading-normal uppercase tracking-tighter">Sản phẩm</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">group</span>
+<p class="text-[10px] font-bold leading-normal uppercase tracking-tighter">Đối tác</p>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-[10px] font-semibold leading-normal uppercase tracking-tighter">Cài đặt</p>
+</a>
+</div>
+</div>
+</div>
+</body></html>

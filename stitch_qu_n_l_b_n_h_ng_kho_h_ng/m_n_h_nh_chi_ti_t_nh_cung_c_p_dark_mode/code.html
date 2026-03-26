@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00d19d",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#0f231e",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden max-w-md mx-auto border-x border-slate-200 dark:border-slate-800">
+<!-- Header -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+<div class="text-slate-900 dark:text-slate-100 flex size-10 shrink-0 items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Chi tiết NCC</h2>
+<div class="flex w-10 items-center justify-end">
+<p class="text-primary text-base font-bold leading-normal cursor-pointer">Sửa</p>
+</div>
+</div>
+<!-- Profile Section -->
+<div class="flex p-6">
+<div class="flex w-full flex-col gap-4 items-center">
+<div class="flex gap-4 flex-col items-center">
+<div class="flex items-center justify-center bg-primary/20 text-primary rounded-full min-h-24 w-24 border-2 border-primary/30">
+<span class="text-3xl font-bold">ABC</span>
+</div>
+<div class="flex flex-col items-center justify-center">
+<p class="text-slate-900 dark:text-slate-100 text-[22px] font-bold leading-tight tracking-[-0.015em] text-center">Công ty TNHH ABC</p>
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal leading-normal text-center">Nhà cung cấp chính</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Contact Info Cards -->
+<div class="px-4 space-y-2 mb-6">
+<div class="flex items-center gap-4 bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-10">
+<span class="material-symbols-outlined">call</span>
+</div>
+<div class="flex flex-col justify-center flex-1">
+<p class="text-slate-900 dark:text-slate-100 text-base font-medium leading-normal">0901 234 567</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Số điện thoại</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<div class="flex items-center gap-4 bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-10">
+<span class="material-symbols-outlined">mail</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-900 dark:text-slate-100 text-base font-medium leading-normal">contact@abc.com.vn</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Email</p>
+</div>
+</div>
+<div class="flex items-center gap-4 bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-10">
+<span class="material-symbols-outlined">location_on</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-slate-900 dark:text-slate-100 text-base font-medium leading-normal">123 Đường số 1, Quận 1, TP.HCM</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Địa chỉ</p>
+</div>
+</div>
+</div>
+<!-- Debt Management Card -->
+<div class="px-4 mb-6">
+<div class="bg-slate-900 dark:bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-slate-100 font-bold text-lg">Quản lý công nợ</h3>
+<span class="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded">Cập nhật 2 phút trước</span>
+</div>
+<div class="grid grid-cols-1 gap-4 mb-6">
+<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+<span class="text-slate-400 text-sm">Tổng nợ</span>
+<span class="text-rose-500 font-bold text-xl">8.500.000đ</span>
+</div>
+<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+<span class="text-slate-400 text-sm">Đã trả</span>
+<span class="text-primary font-bold text-lg">5.000.000đ</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-slate-400 text-sm">Còn lại</span>
+<span class="text-amber-500 font-bold text-lg">3.500.000đ</span>
+</div>
+</div>
+<button class="w-full bg-primary text-background-dark font-bold py-3 rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">payments</span>
+                    Thanh toán ngay
+                </button>
+</div>
+</div>
+<!-- Recent Purchase Orders -->
+<div class="px-4 mb-24">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-slate-900 dark:text-slate-100 font-bold">Đơn nhập gần đây</h3>
+<span class="text-primary text-sm font-medium">Xem tất cả</span>
+</div>
+<div class="space-y-3">
+<!-- Order Item 1 -->
+<div class="flex items-center justify-between p-4 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg">
+<span class="material-symbols-outlined text-slate-500">receipt_long</span>
+</div>
+<div>
+<p class="text-slate-900 dark:text-slate-100 font-bold">PO-001</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">08/03/2026</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-slate-900 dark:text-slate-100 font-bold">2.500.000đ</p>
+<span class="text-[10px] uppercase tracking-wider font-bold text-primary">Hoàn tất</span>
+</div>
+</div>
+<!-- Order Item 2 -->
+<div class="flex items-center justify-between p-4 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg">
+<span class="material-symbols-outlined text-slate-500">receipt_long</span>
+</div>
+<div>
+<p class="text-slate-900 dark:text-slate-100 font-bold">PO-002</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">05/03/2026</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-slate-900 dark:text-slate-100 font-bold">3.200.000đ</p>
+<span class="text-[10px] uppercase tracking-wider font-bold text-amber-500">Đang giao</span>
+</div>
+</div>
+<!-- Order Item 3 -->
+<div class="flex items-center justify-between p-4 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg">
+<span class="material-symbols-outlined text-slate-500">receipt_long</span>
+</div>
+<div>
+<p class="text-slate-900 dark:text-slate-100 font-bold">PO-003</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs">01/03/2026</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-slate-900 dark:text-slate-100 font-bold">2.800.000đ</p>
+<span class="text-[10px] uppercase tracking-wider font-bold text-primary">Hoàn tất</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Primary Action -->
+<div class="fixed bottom-0 left-0 right-0 p-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 max-w-md mx-auto">
+<button class="w-full bg-primary text-background-dark font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">add_box</span>
+                Tạo đơn nhập hàng
+            </button>
+</div>
+</div>
+</body></html>

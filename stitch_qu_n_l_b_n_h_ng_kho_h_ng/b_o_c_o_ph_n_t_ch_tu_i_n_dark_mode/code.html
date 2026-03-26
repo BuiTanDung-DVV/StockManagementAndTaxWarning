@@ -1,0 +1,236 @@
+<html class="dark"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2563EB",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101522",
+                        "card-dark": "#16213E",
+                        "accent-green": "#10B981",
+                        "accent-yellow": "#F59E0B",
+                        "accent-orange": "#F97316",
+                        "accent-red": "#EF4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header Navigation -->
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
+<button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">filter_list</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">Phân tích Tuổi nợ</h1>
+<button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">ios_share</span>
+</button>
+</header>
+<main class="flex-1 overflow-y-auto pb-24">
+<!-- Summary Section -->
+<section class="p-6 text-center">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Tổng nợ phải thu</p>
+<h2 class="text-3xl font-bold text-slate-900 dark:text-white">₫245,800,000</h2>
+<div class="mt-2 flex items-center justify-center gap-1 text-accent-green text-sm font-medium">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+5.2% so với tháng trước</span>
+</div>
+</section>
+<!-- Debt Aging Breakdown -->
+<section class="px-4 mb-6">
+<div class="bg-white dark:bg-card-dark rounded-xl p-5 shadow-sm">
+<h3 class="text-base font-semibold mb-4">Cơ cấu tuổi nợ</h3>
+<div class="space-y-5">
+<!-- Row 1: Green -->
+<div class="space-y-1">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>Chưa đến hạn (45%)</span>
+<span>110.6M • 24 KH</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-accent-green h-full rounded-full" style="width: 45%"></div>
+</div>
+</div>
+<!-- Row 2: Blue -->
+<div class="space-y-1">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>1-30 ngày (25%)</span>
+<span>61.4M • 12 KH</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 25%"></div>
+</div>
+</div>
+<!-- Row 3: Yellow -->
+<div class="space-y-1">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>31-60 ngày (15%)</span>
+<span>36.8M • 8 KH</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-accent-yellow h-full rounded-full" style="width: 15%"></div>
+</div>
+</div>
+<!-- Row 4: Orange -->
+<div class="space-y-1">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>61-90 ngày (10%)</span>
+<span>24.5M • 5 KH</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-accent-orange h-full rounded-full" style="width: 10%"></div>
+</div>
+</div>
+<!-- Row 5: Red -->
+<div class="space-y-1">
+<div class="flex justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+<span>&gt;90 ngày (5%)</span>
+<span>12.5M • 3 KH</span>
+</div>
+<div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-accent-red h-full rounded-full" style="width: 5%"></div>
+</div>
+</div>
+</div>
+<!-- Donut Chart Placeholder -->
+<div class="mt-8 flex justify-center relative">
+<div class="w-40 h-40 rounded-full border-[12px] border-slate-100 dark:border-slate-800 relative flex items-center justify-center">
+<!-- Simulated Donut Segments with SVG -->
+<svg class="absolute inset-0 w-full h-full -rotate-90" viewbox="0 0 36 36">
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#10B981" stroke-dasharray="45 55" stroke-dashoffset="0" stroke-width="2.5"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#2563EB" stroke-dasharray="25 75" stroke-dashoffset="-45" stroke-width="2.5"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#F59E0B" stroke-dasharray="15 85" stroke-dashoffset="-70" stroke-width="2.5"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#F97316" stroke-dasharray="10 90" stroke-dashoffset="-85" stroke-width="2.5"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.915" stroke="#EF4444" stroke-dasharray="5 95" stroke-dashoffset="-95" stroke-width="2.5"></circle>
+</svg>
+<div class="text-center">
+<span class="block text-xs text-slate-500 dark:text-slate-400">Quá hạn</span>
+<span class="text-lg font-bold">55%</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- List Section -->
+<section class="px-4">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-base font-semibold">Nợ quá hạn lâu nhất</h3>
+<button class="text-primary text-sm font-medium">Xem tất cả</button>
+</div>
+<div class="space-y-3">
+<!-- Customer Card 1 -->
+<div class="bg-white dark:bg-card-dark rounded-xl p-4 shadow-sm border border-transparent dark:border-slate-800">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Công ty TNHH Minh Anh</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Mã KH: KH0024</p>
+</div>
+<span class="px-2 py-1 bg-accent-red/10 text-accent-red text-[10px] font-bold rounded uppercase">105 ngày</span>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-xs text-slate-500 dark:text-slate-400">Số tiền nợ</p>
+<p class="text-lg font-bold text-slate-900 dark:text-white">₫45,200,000</p>
+</div>
+<button class="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">chat</span>
+                            Nhắc nợ
+                        </button>
+</div>
+</div>
+<!-- Customer Card 2 -->
+<div class="bg-white dark:bg-card-dark rounded-xl p-4 shadow-sm border border-transparent dark:border-slate-800">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Cửa hàng Điện máy Hùng Phát</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Mã KH: KH0158</p>
+</div>
+<span class="px-2 py-1 bg-accent-orange/10 text-accent-orange text-[10px] font-bold rounded uppercase">82 ngày</span>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-xs text-slate-500 dark:text-slate-400">Số tiền nợ</p>
+<p class="text-lg font-bold text-slate-900 dark:text-white">₫28,600,000</p>
+</div>
+<button class="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">chat</span>
+                            Nhắc nợ
+                        </button>
+</div>
+</div>
+<!-- Customer Card 3 -->
+<div class="bg-white dark:bg-card-dark rounded-xl p-4 shadow-sm border border-transparent dark:border-slate-800">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Đại lý Nông sản Việt</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Mã KH: KH0092</p>
+</div>
+<span class="px-2 py-1 bg-accent-yellow/10 text-accent-yellow text-[10px] font-bold rounded uppercase">45 ngày</span>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-xs text-slate-500 dark:text-slate-400">Số tiền nợ</p>
+<p class="text-lg font-bold text-slate-900 dark:text-white">₫12,450,000</p>
+</div>
+<button class="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">chat</span>
+                            Nhắc nợ
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 pb-safe-area">
+<div class="flex justify-around items-center h-20 px-2 max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Trang chủ</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-[10px] font-medium">Sổ quỹ</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined font-variation-fill">pie_chart</span>
+<span class="text-[10px] font-medium">Tài chính</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-[10px] font-medium">Báo cáo</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Cài đặt</span>
+</a>
+</div>
+</nav>
+<style>
+        .pb-safe-area {
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .font-variation-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</body></html>
