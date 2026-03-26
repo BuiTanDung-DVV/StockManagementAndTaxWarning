@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00d19d",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#0f231e",
+                        "surface": "#162b25",
+                        "accent-amber": "#ffbf00",
+                        "accent-red": "#ff4d4d",
+                        "accent-purple": "#a855f7",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>Nhật ký hoạt động</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex h-screen w-full max-w-[430px] mx-auto flex-col bg-background-light dark:bg-background-dark overflow-hidden border-x border-slate-200 dark:border-slate-800">
+<!-- Header -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 pt-6 justify-between sticky top-0 z-10">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back_ios_new</span>
+</button>
+<h1 class="text-slate-900 dark:text-slate-100 text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10">Nhật ký hoạt động</h1>
+</header>
+<!-- Filters Section -->
+<div class="flex gap-3 p-4 overflow-x-auto no-scrollbar">
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-slate-200 dark:bg-surface px-4 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-primary/20">
+<span class="text-sm font-medium">Tất cả người dùng</span>
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</button>
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-slate-200 dark:bg-surface px-4 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-primary/20">
+<span class="text-sm font-medium">Thời gian</span>
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+</button>
+</div>
+<!-- Timeline Content -->
+<main class="flex-1 overflow-y-auto px-4 py-2">
+<div class="relative">
+<!-- Vertical Line -->
+<div class="absolute left-[19px] top-4 bottom-4 w-[2px] bg-slate-200 dark:bg-primary/10"></div>
+<!-- Timeline Entry: Create -->
+<div class="relative grid grid-cols-[40px_1fr] gap-x-4 mb-6 group">
+<div class="flex flex-col items-center">
+<div class="z-10 flex size-10 items-center justify-center rounded-full bg-primary/20 border-2 border-primary text-primary">
+<span class="material-symbols-outlined text-[20px] font-bold">add_circle</span>
+</div>
+</div>
+<div class="flex flex-col bg-slate-100 dark:bg-surface p-4 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm transition-transform active:scale-[0.98]">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold">Tạo đơn hàng #DH045</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-slate-500 dark:text-primary/70 text-sm font-medium">Admin</span>
+<span class="size-1 rounded-full bg-slate-400 dark:bg-primary/40"></span>
+<span class="text-slate-500 dark:text-primary/70 text-sm">10:30 Hôm nay</span>
+</div>
+</div>
+</div>
+<!-- Timeline Entry: Edit -->
+<div class="relative grid grid-cols-[40px_1fr] gap-x-4 mb-6 group">
+<div class="flex flex-col items-center">
+<div class="z-10 flex size-10 items-center justify-center rounded-full bg-accent-amber/20 border-2 border-accent-amber text-accent-amber">
+<span class="material-symbols-outlined text-[20px] font-bold">edit</span>
+</div>
+</div>
+<div class="flex flex-col bg-slate-100 dark:bg-surface p-4 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm transition-transform active:scale-[0.98]">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold">Cập nhật giá Trà sữa</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-slate-500 dark:text-primary/70 text-sm font-medium">Admin</span>
+<span class="size-1 rounded-full bg-slate-400 dark:bg-primary/40"></span>
+<span class="text-slate-500 dark:text-primary/70 text-sm">10:15 Hôm nay</span>
+</div>
+</div>
+</div>
+<!-- Timeline Entry: Delete -->
+<div class="relative grid grid-cols-[40px_1fr] gap-x-4 mb-6 group">
+<div class="flex flex-col items-center">
+<div class="z-10 flex size-10 items-center justify-center rounded-full bg-accent-red/20 border-2 border-accent-red text-accent-red">
+<span class="material-symbols-outlined text-[20px] font-bold">delete</span>
+</div>
+</div>
+<div class="flex flex-col bg-slate-100 dark:bg-surface p-4 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm transition-transform active:scale-[0.98]">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold">Xóa sản phẩm Nước ngọt</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-slate-500 dark:text-primary/70 text-sm font-medium">NV Minh</span>
+<span class="size-1 rounded-full bg-slate-400 dark:bg-primary/40"></span>
+<span class="text-slate-500 dark:text-primary/70 text-sm">09:45 Hôm nay</span>
+</div>
+</div>
+</div>
+<!-- Timeline Entry: Login -->
+<div class="relative grid grid-cols-[40px_1fr] gap-x-4 mb-6 group">
+<div class="flex flex-col items-center">
+<div class="z-10 flex size-10 items-center justify-center rounded-full bg-accent-purple/20 border-2 border-accent-purple text-accent-purple">
+<span class="material-symbols-outlined text-[20px] font-bold">login</span>
+</div>
+</div>
+<div class="flex flex-col bg-slate-100 dark:bg-surface p-4 rounded-xl border border-slate-200 dark:border-primary/10 shadow-sm transition-transform active:scale-[0.98]">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold">Đăng nhập hệ thống</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-slate-500 dark:text-primary/70 text-sm font-medium">Admin</span>
+<span class="size-1 rounded-full bg-slate-400 dark:bg-primary/40"></span>
+<span class="text-slate-500 dark:text-primary/70 text-sm">08:00 Hôm nay</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Pagination Footer -->
+<div class="bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-primary/10 px-4 py-4">
+<div class="flex items-center justify-between mb-2">
+<button class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-200 dark:bg-surface h-12 text-slate-900 dark:text-slate-100 font-bold border border-slate-300 dark:border-primary/20 disabled:opacity-50">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+<span>Trước</span>
+</button>
+<div class="flex-[0.5] text-center">
+<span class="text-sm font-semibold text-slate-500 dark:text-primary/70">Trang 1/5</span>
+</div>
+<button class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary h-12 text-background-dark font-bold hover:bg-primary/90">
+<span>Tiếp</span>
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="flex gap-2 border-t border-slate-200 dark:border-primary/10 bg-slate-50 dark:bg-surface px-4 pb-8 pt-3">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-primary/50" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Tổng quan</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-primary/50" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Đơn hàng</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-primary/50" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Sản phẩm</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-[1]">history</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Nhật ký</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-primary/50" href="#">
+<span class="material-symbols-outlined">more_horiz</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Khác</p>
+</a>
+</nav>
+</div>
+<style>
+        /* Custom scrollbar hiding */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Premium dark transitions */
+        .dark .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .dark .fill-\[1\] {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</body></html>

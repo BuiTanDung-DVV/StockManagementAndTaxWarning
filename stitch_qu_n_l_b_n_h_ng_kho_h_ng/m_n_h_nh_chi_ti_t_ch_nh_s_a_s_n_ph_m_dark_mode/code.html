@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00d19d",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#0f231e",
+                        "card-dark": "#1a2e29",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col max-w-[480px] mx-auto overflow-x-hidden">
+<!-- Header -->
+<header class="sticky top-0 z-50 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 justify-between border-b border-primary/10">
+<div class="text-slate-900 dark:text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight flex-1 text-center">Chi tiết Sản phẩm</h2>
+<div class="flex w-10 items-center justify-end">
+<button class="text-primary text-base font-bold leading-normal tracking-wide hover:opacity-80">Lưu</button>
+</div>
+</header>
+<main class="flex-1 pb-24">
+<!-- Product Image Hero -->
+<div class="px-4 py-4">
+<div class="relative bg-cover bg-center flex flex-col justify-end overflow-hidden rounded-xl min-h-64 shadow-lg shadow-primary/5" data-alt="High quality close up of a colorful drink with ice" style='background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 50%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuCP8u175PfnQ4-pRUjT9Aduu99_gjy0xUFCA55b4cWvubYk28ybi2VZzJHslqt5AD8dp7FdQEO5njvJdxh23noPFwnU0Aiy1HVX0ACOZ7yBfx3b2ts12HvfbhzggFaR1cSYYsNfanYSvTqrxPSq3Cp6tqOCUWhMKO2eFaor9oYgQWFWTCgOyOfq4hKbbQtZ8nJqCFHtGj1U8a7h8ZIg-SjmU8dO1P2ghlOp05mqd_mEcYym2lAy7a3yiAaR8A0wmXknh3Ez4N8aN_M");'>
+<div class="absolute inset-0 bg-primary/5"></div>
+<div class="relative flex p-4 items-center justify-between">
+<button class="flex items-center gap-2 bg-black/40 backdrop-blur-md text-white px-4 py-2 rounded-full border border-white/20">
+<span class="material-symbols-outlined text-[20px]">photo_camera</span>
+<span class="text-sm font-medium">Đổi ảnh</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Info Section -->
+<section class="px-4 py-2 space-y-4">
+<div class="flex flex-col gap-4 bg-card-dark/40 p-4 rounded-xl border border-primary/10">
+<div>
+<p class="text-slate-400 text-sm font-medium pb-1.5 px-1">Tên sản phẩm</p>
+<input class="w-full rounded-xl text-slate-100 border-none bg-card-dark focus:ring-2 focus:ring-primary/50 h-12 p-4 text-base font-medium shadow-inner" type="text" value="Trà Đào Cam Sả Special"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-slate-400 text-sm font-medium pb-1.5 px-1">Mã SKU</p>
+<div class="relative">
+<input class="w-full rounded-xl text-slate-100 border-none bg-card-dark focus:ring-2 focus:ring-primary/50 h-12 p-4 text-sm font-mono shadow-inner" type="text" value="TDC-00124"/>
+<span class="material-symbols-outlined absolute right-3 top-3 text-primary text-[20px]">refresh</span>
+</div>
+</div>
+<div>
+<p class="text-slate-400 text-sm font-medium pb-1.5 px-1">Đơn vị</p>
+<select class="w-full rounded-xl text-slate-100 border-none bg-card-dark focus:ring-2 focus:ring-primary/50 h-12 px-4 text-sm shadow-inner appearance-none">
+<option>Ly</option>
+<option>Phần</option>
+<option>Cái</option>
+<option>Lon</option>
+</select>
+</div>
+</div>
+<div>
+<p class="text-slate-400 text-sm font-medium pb-1.5 px-1">Danh mục</p>
+<select class="w-full rounded-xl text-slate-100 border-none bg-card-dark focus:ring-2 focus:ring-primary/50 h-12 px-4 text-sm shadow-inner">
+<option>Đồ uống</option>
+<option>Thức ăn</option>
+<option>Khác</option>
+</select>
+</div>
+</div>
+</section>
+<!-- Pricing Section -->
+<section class="px-4 py-4">
+<h3 class="text-slate-100 text-base font-bold mb-3 px-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">payments</span>
+                    Giá bán &amp; Chi phí
+                </h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-card-dark/40 p-4 rounded-xl border border-primary/10">
+<p class="text-slate-400 text-xs font-medium pb-2 uppercase tracking-wider">Giá vốn</p>
+<div class="flex items-baseline gap-1">
+<input class="w-full bg-transparent border-none p-0 text-xl font-bold text-slate-100 focus:ring-0" type="text" value="15,000"/>
+<span class="text-slate-400 text-sm">đ</span>
+</div>
+</div>
+<div class="bg-primary/10 p-4 rounded-xl border border-primary/30">
+<p class="text-primary text-xs font-bold pb-2 uppercase tracking-wider">Giá bán</p>
+<div class="flex items-baseline gap-1">
+<input class="w-full bg-transparent border-none p-0 text-2xl font-black text-primary focus:ring-0" type="text" value="45,000"/>
+<span class="text-primary text-sm font-bold">đ</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Multi-Section Content -->
+<section class="px-4 py-2 space-y-6">
+<!-- Description -->
+<div>
+<p class="text-slate-400 text-sm font-medium pb-1.5 px-1">Mô tả sản phẩm</p>
+<textarea class="w-full rounded-xl text-slate-100 border-none bg-card-dark/40 focus:ring-2 focus:ring-primary/50 p-4 text-sm shadow-inner" placeholder="Nhập mô tả chi tiết sản phẩm..." rows="3"></textarea>
+</div>
+<!-- Product Costs -->
+<div class="space-y-3">
+<div class="flex justify-between items-center px-1">
+<h3 class="text-slate-100 text-base font-bold">Chi phí sản phẩm</h3>
+<button class="text-primary text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">add_circle</span> Thêm chi phí
+                        </button>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center p-3 bg-card-dark/40 rounded-xl border border-primary/5">
+<span class="text-slate-300 text-sm">Nguyên liệu (Mứt, Trà)</span>
+<span class="text-slate-100 font-medium">10,000đ</span>
+</div>
+<div class="flex justify-between items-center p-3 bg-card-dark/40 rounded-xl border border-primary/5">
+<span class="text-slate-300 text-sm">Đóng gói (Ly, Túi)</span>
+<span class="text-slate-100 font-medium">3,000đ</span>
+</div>
+<div class="flex justify-between items-center p-3 bg-card-dark/40 rounded-xl border border-primary/5">
+<span class="text-slate-300 text-sm">Vận chuyển</span>
+<span class="text-slate-100 font-medium">2,000đ</span>
+</div>
+</div>
+</div>
+<!-- Batches -->
+<div class="space-y-3">
+<div class="flex justify-between items-center px-1">
+<h3 class="text-slate-100 text-base font-bold">Lô hàng (Inventory)</h3>
+<button class="text-primary text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">add_circle</span> Thêm lô
+                        </button>
+</div>
+<div class="bg-card-dark/40 rounded-xl overflow-hidden border border-primary/5">
+<table class="w-full text-left text-sm">
+<thead class="bg-primary/5 text-slate-400 uppercase text-[10px] tracking-widest font-bold">
+<tr>
+<th class="px-4 py-2">Mã Lô</th>
+<th class="px-4 py-2 text-center">SL</th>
+<th class="px-4 py-2 text-right">Hạn Dùng</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-primary/5">
+<tr>
+<td class="px-4 py-3 font-mono text-xs text-slate-100">BATCH-24A</td>
+<td class="px-4 py-3 text-center text-slate-100">150</td>
+<td class="px-4 py-3 text-right text-slate-300">12/12/2024</td>
+</tr>
+<tr>
+<td class="px-4 py-3 font-mono text-xs text-slate-100">BATCH-24B</td>
+<td class="px-4 py-3 text-center text-slate-100">85</td>
+<td class="px-4 py-3 text-right text-slate-300">20/01/2025</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Unit Conversion -->
+<div class="space-y-3">
+<div class="flex justify-between items-center px-1">
+<h3 class="text-slate-100 text-base font-bold">Quy đổi đơn vị</h3>
+</div>
+<div class="flex items-center gap-3 p-4 bg-primary/5 rounded-xl border border-dashed border-primary/30 justify-center">
+<span class="text-slate-100 font-bold">1 Thùng</span>
+<span class="material-symbols-outlined text-primary text-sm">equal</span>
+<span class="text-slate-100 font-bold">24 Lon</span>
+<button class="ml-4 text-primary"><span class="material-symbols-outlined">edit_note</span></button>
+</div>
+</div>
+</section>
+<!-- Danger Zone -->
+<section class="px-4 pt-10 pb-12">
+<button class="w-full py-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 font-bold text-base flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all">
+<span class="material-symbols-outlined">delete</span>
+                    Xóa sản phẩm
+                </button>
+</section>
+</main>
+<!-- Bottom Tab Bar (Contextual) -->
+<div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-background-dark/90 backdrop-blur-xl border-t border-primary/10 p-4 pb-8 flex gap-4">
+<button class="flex-1 py-4 rounded-xl bg-card-dark text-slate-300 font-bold border border-primary/10">Hủy</button>
+<button class="flex-[2] py-4 rounded-xl bg-primary text-background-dark font-black shadow-[0_0_20px_rgba(0,208,156,0.3)]">LƯU THÔNG TIN</button>
+</div>
+</div>
+</body></html>

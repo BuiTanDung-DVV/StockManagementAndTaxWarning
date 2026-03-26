@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2563EB",
+                        "background-light": "#F8FAFC",
+                        "background-dark": "#0f172a",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<title>Màn hình Đăng nhập BánHàng Pro</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display antialiased bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-center p-4">
+<!-- Main Container for Mobile View -->
+<div class="relative flex h-full min-h-[812px] w-full max-w-[375px] flex-col bg-background-light dark:bg-background-dark overflow-hidden rounded-[40px] shadow-2xl border-[8px] border-slate-900 dark:border-slate-800">
+<!-- Header / Logo Section -->
+<div class="flex flex-col items-center pt-16 pb-8">
+<div class="flex items-center justify-center bg-primary/10 dark:bg-primary/20 p-4 rounded-2xl mb-4">
+<span class="material-symbols-outlined text-primary text-5xl">shopping_bag</span>
+</div>
+<h1 class="text-slate-900 dark:text-slate-100 text-3xl font-bold tracking-tight">BánHàng Pro</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Quản lý bán hàng thông minh</p>
+</div>
+<!-- Login Card -->
+<div class="flex-1 bg-white dark:bg-slate-900 rounded-t-[32px] px-6 pt-10 pb-8 shadow-inner">
+<h2 class="text-slate-900 dark:text-slate-100 text-2xl font-bold mb-8">Đăng nhập</h2>
+<form class="flex flex-col gap-5">
+<!-- Username Field -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-slate-300 text-sm font-medium ml-1">Tên đăng nhập</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-slate-400">person</span>
+<input class="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Nhập tên đăng nhập" type="text"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="flex flex-col gap-2">
+<label class="text-slate-700 dark:text-slate-300 text-sm font-medium ml-1">Mật khẩu</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-slate-400">lock</span>
+<input class="w-full pl-12 pr-12 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Nhập mật khẩu" type="password"/>
+<span class="material-symbols-outlined absolute right-4 text-slate-400 cursor-pointer hover:text-primary transition-colors">visibility</span>
+</div>
+</div>
+<!-- Forgot Password -->
+<div class="flex justify-end">
+<a class="text-primary text-sm font-semibold hover:underline" href="#">Quên mật khẩu?</a>
+</div>
+<!-- Login Button -->
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98] mt-2" type="submit">
+                    Đăng nhập
+                </button>
+<!-- Divider -->
+<div class="flex items-center gap-4 my-4">
+<div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-700"></div>
+<span class="text-slate-400 text-xs font-medium uppercase tracking-wider">Hoặc</span>
+<div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-700"></div>
+</div>
+<!-- Social Login -->
+<button class="w-full flex items-center justify-center gap-3 border border-slate-200 dark:border-slate-700 bg-transparent py-3.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" type="button">
+<img alt="Google Logo" class="w-5 h-5" data-alt="Google colorful letter G logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsI697S_tMSvEmQTMTYXo2wJd3-jhxBNhlWneFcbh1CBSRbHZuDrNjo6zRTZTSSWW498huM0ACFY4jpHoNKKyE7_9Ke8cmn-jTeCWb5lUSI4Tddn21v-i2115nuaoLTPy_P6epAmM5k6GKnPkHcPoI5Jw47NSjf3re1J1NI5UrVTk9rz-nICrEXyWs0HKeCMD9XFvCUS3Q6LAPcE5Gm_v-b-PpU-Gji9caGLBPceIc6V2VAMQghH8U-G0gx0OnX3oobvEoFKMQQVc"/>
+<span class="text-slate-700 dark:text-slate-200 font-semibold text-sm">Đăng nhập bằng Google</span>
+</button>
+</form>
+<!-- Bottom Link -->
+<div class="mt-auto pt-10 text-center">
+<p class="text-slate-500 dark:text-slate-400 text-sm">
+                    Chưa có tài khoản? 
+                    <a class="text-primary font-bold ml-1 hover:underline" href="#">Đăng ký</a>
+</p>
+</div>
+</div>
+<!-- iOS Indicator bar -->
+<div class="h-1.5 w-32 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-2 mt-4"></div>
+</div>
+</body></html>

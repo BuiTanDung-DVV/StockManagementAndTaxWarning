@@ -1,0 +1,22 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const financeCtrl = require("../controllers/finance.controller");
+const router = (0, express_1.Router)();
+router.get('/cash-transactions', financeCtrl.getCashTransactions);
+router.post('/cash-transactions', financeCtrl.createCashTransaction);
+router.get('/cash-transactions/summary', financeCtrl.getCashFlowSummary);
+router.get('/cash-transactions/profit-loss', financeCtrl.getProfitLoss);
+router.get('/daily-closings', financeCtrl.getDailyClosings);
+router.post('/daily-closings', financeCtrl.createDailyClosing);
+router.get('/cash-accounts', financeCtrl.getCashAccounts);
+router.get('/cashflow-forecasts', financeCtrl.getForecasts);
+router.post('/cashflow-forecasts', financeCtrl.createForecast);
+router.put('/cashflow-forecasts/:id', financeCtrl.updateForecast);
+router.delete('/cashflow-forecasts/:id', financeCtrl.deleteForecast);
+router.get('/budget-plans', financeCtrl.getBudgetPlans);
+router.post('/budget-plans', financeCtrl.createBudgetPlan);
+router.put('/budget-plans/:id', financeCtrl.updateBudgetPlan);
+router.delete('/budget-plans/:id', financeCtrl.deleteBudgetPlan);
+exports.default = router;
+//# sourceMappingURL=finance.routes.js.map

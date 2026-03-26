@@ -1,0 +1,53 @@
+Dựa trên danh sách các bảng báo cáo và sổ sách dành riêng cho Hộ kinh doanh (HKD) mà bạn vừa nêu, tôi xin đi sâu vào chi tiết **các trường dữ liệu bắt buộc phải có** và **những lưu ý thực tế** cho từng file để bạn dễ dàng thiết lập trên Excel hoặc phần mềm:
+
+### 1. Nhóm File/Sổ sách Quản lý Thuế và Chứng từ
+
+**1.1. File quản lý hóa đơn đầu vào - đầu ra**
+*   **Các trường dữ liệu cốt lõi:** 
+    *   *Thông tin đối tác:* Tên, địa chỉ, mã số thuế/số định danh cá nhân của người bán và người mua.
+    *   *Thông tin giao dịch:* Số hóa đơn, ký hiệu hóa đơn, ngày tháng lập.
+    *   *Chi tiết hàng hóa:* Tên hàng hóa/dịch vụ, số lượng, đơn vị tính, đơn giá, thành tiền chưa thuế, thuế suất GTGT, tiền thuế và tổng tiền thanh toán.
+*   **Lưu ý quan trọng:** Bạn phải luôn đối chiếu sự cân bằng giữa đầu vào và đầu ra. Nếu đầu vào cao hơn đầu ra rất nhiều, cơ quan thuế sẽ nghi ngờ bạn đang giấu doanh thu (tồn kho ảo); ngược lại, nếu xuất hóa đơn đầu ra mà không có đầu vào, bạn sẽ bị phạt vì xuất khống hàng hóa,. Thời hạn lưu trữ hóa đơn an toàn là 10 năm.
+
+**1.2. Bảng kê thu mua hàng hóa không có hóa đơn (Mẫu 01/TNDN)**
+*   **Các trường dữ liệu cốt lõi:**
+    *   Ngày, tháng, năm thu mua.
+    *   Thông tin người bán (người nông dân/người trực tiếp sản xuất): Tên, số CCCD, địa chỉ, chữ ký.
+    *   Chi tiết hàng hóa: Tên nông/lâm/thủy sản, số lượng, đơn giá thực tế, tổng tiền thanh toán.
+*   **Lưu ý quan trọng:** Giá thu mua ghi trên bảng kê **tuyệt đối không được cao hơn giá thị trường** tại thời điểm mua. Để cơ quan thuế chấp nhận đây là chi phí hợp lệ, bảng kê này bắt buộc phải đi kèm với chứng từ thanh toán (tốt nhất là ủy nhiệm chi qua ngân hàng, hoặc phiếu chi tiền mặt có đầy đủ chữ ký của người nhận và người duyệt chi),.
+
+**1.3. File theo dõi sổ quỹ tiền mặt và sao kê ngân hàng**
+*   **Các trường dữ liệu cốt lõi:** Ngày tháng giao dịch, mã số phiếu thu/chi, nội dung diễn giải, số tiền thu vào, số tiền chi ra, số dư tồn quỹ cuối ngày.
+*   **Lưu ý quan trọng:** 
+    *   **Về pháp lý:** Theo Thông tư 25/2025/TT-NHNN, từ ngày **01/03/2026**, tên tài khoản thanh toán dùng cho kinh doanh bắt buộc phải khớp đúng với tên đăng ký của hộ kinh doanh/tổ chức trên giấy phép.
+    *   **Về quản trị:** Lỗi chí mạng của HKD là "tiền công lẫn tiền tư". Bạn phải mở một tài khoản ngân hàng riêng chỉ dùng cho kinh doanh. Những chi phí cá nhân (như mua sắm gia đình, xem phim) tuyệt đối không được hạch toán vào file này để tránh rủi ro khi quyết toán thuế.
+
+---
+
+### 2. Nhóm File Báo cáo Quản trị Nội bộ
+
+**2.1. Bảng theo dõi và dự báo dòng tiền**
+*   **Các trường dữ liệu cốt lõi:**
+    *   *Dòng tiền vào (Inflows):* Tiền thu bán hàng trong ngày, tiền khách trả nợ.
+    *   *Dòng tiền ra (Outflows):* Tiền nhập hàng, trả lương, thuê mặt bằng, điện nước, đóng thuế.
+    *   *Dòng tiền thuần:* Lấy tổng tiền vào trừ đi tổng tiền ra.
+*   **Lưu ý quan trọng:** Bạn nên lập dự báo cho 4-12 tuần tiếp theo để biết trước điểm rơi "khô máu" (thiếu tiền mặt). Các chuyên gia tài chính khuyến nghị HKD nên trích lập một **quỹ dự phòng rủi ro tương đương 3-6 tháng chi phí vận hành** để đề phòng các cú sốc thị trường,.
+
+**2.2. File quản lý Công nợ (Phải thu / Phải trả)**
+*   **Các trường dữ liệu cốt lõi:**
+    *   Tên khách hàng/Nhà cung cấp.
+    *   Số tiền nợ phát sinh, số tiền đã thanh toán, số dư nợ còn lại.
+    *   Ngày đến hạn thanh toán, số ngày quá hạn (Phân tích tuổi nợ),.
+*   **Lưu ý quan trọng:** Đối với khoản phải thu, hãy thiết lập chính sách thanh toán rõ ràng, có thể áp dụng chiết khấu (giảm giá 1-2%) nếu khách thanh toán sớm để thu hồi tiền nhanh. Đối với khoản phải trả, hãy cố gắng đàm phán kéo dài thời gian thanh toán với nhà cung cấp để giữ lại vốn lưu động xoay vòng.
+
+**2.3. Bảng theo dõi Xuất - Nhập - Tồn kho**
+*   **Các trường dữ liệu cốt lõi:** Mã hàng hóa, tên hàng hóa, số lượng tồn đầu kỳ, số lượng nhập trong kỳ, số lượng xuất bán, số lượng tồn cuối kỳ, mức tồn kho tối thiểu.
+*   **Lưu ý quan trọng:** Hàng tồn kho quá nhiều chính là nguyên nhân gây "chôn vốn" và đội chi phí bảo quản. Cần thực hiện kiểm kho định kỳ để sớm phát hiện hàng chậm luân chuyển, hàng lỗi, hàng cận date nhằm lên các chiến dịch xả kho (khuyến mãi, giảm giá) kịp thời thu hồi vốn.
+
+**2.4. Báo cáo Kết quả Kinh doanh (Lãi/Lỗ)**
+*   **Các trường dữ liệu cốt lõi:**
+    *   Tổng doanh thu bán hàng.
+    *   Giá vốn hàng bán (chi phí gốc để nhập số hàng đã bán).
+    *   Chi phí vận hành: Lương nhân viên, thuê mặt bằng, marketing, điện nước, khấu hao tài sản,.
+    *   Lợi nhuận ròng (Doanh thu - Giá vốn - Chi phí vận hành).
+*   **Lưu ý quan trọng:** Cần phân biệt rạch ròi giữa "Lợi nhuận" và "Dòng tiền". Một HKD có thể ghi nhận lãi lớn trên sổ sách báo cáo kết quả kinh doanh, nhưng nếu khách hàng nợ toàn bộ số tiền đó (chưa thu được tiền mặt), HKD vẫn có thể phá sản do không có dòng tiền để trả lương và nhập hàng,.

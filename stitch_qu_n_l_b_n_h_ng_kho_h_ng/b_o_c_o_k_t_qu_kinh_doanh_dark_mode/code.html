@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Báo cáo Kết quả Kinh doanh</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2563EB",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#1A1A2E",
+                        "card-dark": "#16213E",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Header -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 justify-between border-b border-slate-200 dark:border-slate-800">
+<button class="text-slate-900 dark:text-slate-100 flex size-10 items-center justify-center">
+<span class="material-symbols-outlined">arrow_back_ios</span>
+</button>
+<h1 class="text-lg font-bold leading-tight flex-1 text-center">Báo cáo KQKD</h1>
+<button class="flex size-10 items-center justify-end">
+<span class="material-symbols-outlined text-primary">calendar_today</span>
+</button>
+</div>
+<!-- Date Range Picker Content -->
+<div class="px-4 py-3 bg-slate-50 dark:bg-card-dark/40 flex items-center justify-between gap-2">
+<div class="flex-1 flex flex-col">
+<span class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Từ ngày</span>
+<span class="text-sm font-medium">01/10/2023</span>
+</div>
+<span class="material-symbols-outlined text-slate-400">trending_flat</span>
+<div class="flex-1 flex flex-col text-right">
+<span class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Đến ngày</span>
+<span class="text-sm font-medium">31/10/2023</span>
+</div>
+</div>
+<!-- Main Scrollable Content -->
+<div class="flex-1 overflow-y-auto pb-24">
+<!-- Summary Cards Horizontal Scroll -->
+<div class="flex overflow-x-auto gap-4 p-4 no-scrollbar">
+<!-- Card 1 -->
+<div class="flex flex-col gap-2 p-4 rounded-xl bg-primary/10 border border-primary/20 min-w-[200px]">
+<span class="text-xs font-medium text-primary">Tổng doanh thu</span>
+<span class="text-xl font-bold">₫125,000,000</span>
+<div class="flex items-center gap-1 text-[10px] text-green-500">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>+12.5%</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex flex-col gap-2 p-4 rounded-xl bg-slate-100 dark:bg-card-dark border border-slate-200 dark:border-slate-800 min-w-[200px]">
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400">Giá vốn hàng bán</span>
+<span class="text-xl font-bold">₫72,000,000</span>
+</div>
+<!-- Card 3 -->
+<div class="flex flex-col gap-2 p-4 rounded-xl bg-slate-100 dark:bg-card-dark border border-slate-200 dark:border-slate-800 min-w-[200px]">
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400">Lãi gộp (42.4%)</span>
+<span class="text-xl font-bold">₫53,000,000</span>
+</div>
+</div>
+<!-- Net Profit Banner -->
+<div class="px-4 mb-6">
+<div class="bg-gradient-to-br from-primary to-blue-700 p-5 rounded-2xl shadow-lg shadow-primary/20">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-white/80 text-sm font-medium">Lợi nhuận ròng (30.4%)</p>
+<h2 class="text-3xl font-bold text-white mt-1">₫38,000,000</h2>
+</div>
+<div class="bg-white/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-white">account_balance_wallet</span>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-white/10 flex justify-between items-center text-xs text-white/70">
+<span>Chi phí vận hành: ₫15,000,000</span>
+<span class="flex items-center gap-1">Hiệu quả cao <span class="material-symbols-outlined text-[14px]">verified</span></span>
+</div>
+</div>
+</div>
+<!-- Charts Section -->
+<div class="px-4 mb-6">
+<h3 class="text-base font-bold mb-4">So sánh Doanh thu - Chi phí - Lợi nhuận</h3>
+<div class="bg-slate-100 dark:bg-card-dark rounded-xl p-4 aspect-[16/9] flex items-end justify-around gap-2">
+<!-- Triple Bar Mockup -->
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="flex items-end gap-1 h-32 w-full justify-center">
+<div class="w-4 bg-primary rounded-t-sm h-full" title="Doanh thu"></div>
+<div class="w-4 bg-slate-400 dark:bg-slate-600 rounded-t-sm h-[60%]" title="Chi phí"></div>
+<div class="w-4 bg-green-500 rounded-t-sm h-[40%]" title="Lợi nhuận"></div>
+</div>
+<span class="text-[10px] text-slate-500">Tuần 1</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="flex items-end gap-1 h-32 w-full justify-center">
+<div class="w-4 bg-primary rounded-t-sm h-[85%]" title="Doanh thu"></div>
+<div class="w-4 bg-slate-400 dark:bg-slate-600 rounded-t-sm h-[55%]" title="Chi phí"></div>
+<div class="w-4 bg-green-500 rounded-t-sm h-[30%]" title="Lợi nhuận"></div>
+</div>
+<span class="text-[10px] text-slate-500">Tuần 2</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="flex items-end gap-1 h-32 w-full justify-center">
+<div class="w-4 bg-primary rounded-t-sm h-[95%]" title="Doanh thu"></div>
+<div class="w-4 bg-slate-400 dark:bg-slate-600 rounded-t-sm h-[50%]" title="Chi phí"></div>
+<div class="w-4 bg-green-500 rounded-t-sm h-[45%]" title="Lợi nhuận"></div>
+</div>
+<span class="text-[10px] text-slate-500">Tuần 3</span>
+</div>
+</div>
+</div>
+<!-- Detailed Breakdown -->
+<div class="px-4 pb-4">
+<h3 class="text-base font-bold mb-3">Chi tiết doanh mục</h3>
+<div class="space-y-3">
+<!-- Row 1 -->
+<div class="flex items-center justify-between p-4 bg-slate-100 dark:bg-card-dark rounded-xl border border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<p class="text-sm font-semibold">Thu nhập bán hàng</p>
+<p class="text-xs text-slate-500">Chuyển khoản / Tiền mặt</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-primary">₫125,000,000</p>
+<p class="text-[10px] text-slate-500">100% Doanh thu</p>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="flex items-center justify-between p-4 bg-slate-100 dark:bg-card-dark rounded-xl border border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500">
+<span class="material-symbols-outlined">inventory_2</span>
+</div>
+<div>
+<p class="text-sm font-semibold">Chi phí nhập hàng</p>
+<p class="text-xs text-slate-500">Giá vốn trực tiếp</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-slate-900 dark:text-slate-100">₫72,000,000</p>
+<p class="text-[10px] text-slate-500">57.6% Chi phí</p>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="flex items-center justify-between p-4 bg-slate-100 dark:bg-card-dark rounded-xl border border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500">
+<span class="material-symbols-outlined">settings_suggest</span>
+</div>
+<div>
+<p class="text-sm font-semibold">Chi phí vận hành</p>
+<p class="text-xs text-slate-500">Mặt bằng, nhân sự, điện nước</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-slate-900 dark:text-slate-100">₫15,000,000</p>
+<p class="text-[10px] text-slate-500">12% Chi phí</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<div class="absolute bottom-0 left-0 right-0 border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-4 pb-6 pt-2">
+<div class="flex gap-2">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Tổng quan</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Giao dịch</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">account_balance_wallet</span>
+<p class="text-[10px] font-bold leading-normal tracking-wide">Tài chính</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Báo cáo</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-[10px] font-medium leading-normal tracking-wide">Cài đặt</p>
+</a>
+</div>
+</div>
+</div>
+</body></html>
