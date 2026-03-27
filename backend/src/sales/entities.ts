@@ -33,6 +33,9 @@ export class SalesOrder {
     @Column({ name: 'total_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
     totalAmount: number;
 
+    @Column({ name: 'total_cogs', type: 'decimal', precision: 18, scale: 2, default: 0 })
+    totalCogs: number;
+
     @Column({ name: 'paid_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
     paidAmount: number;
 
@@ -91,6 +94,9 @@ export class SalesOrderItem {
 
     @Column({ type: 'decimal', precision: 18, scale: 2 })
     subtotal: number;
+
+    @Column({ name: 'cost_price', type: 'decimal', precision: 18, scale: 2, default: 0 })
+    costPrice: number;
 
     @Column({ name: 'tax_rate', type: 'decimal', precision: 5, scale: 2, default: 0 })
     taxRate: number;

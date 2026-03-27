@@ -55,6 +55,9 @@ export class ShopProfile {
 
     @Column({ name: 'business_license_number', length: 50, nullable: true })
     businessLicenseNumber: string;
+
+    @Column({ name: 'costing_method', length: 10, default: 'AVG' })
+    costingMethod: string; // FIFO | AVG
 }
 
 @Entity('activity_logs')

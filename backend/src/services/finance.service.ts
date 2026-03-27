@@ -52,16 +52,23 @@ export class FinanceService {
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
 
-        const result = await this.cashTxRepo.createQueryBuilder('t')
-            .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.category = 'SALES' THEN t.amount ELSE 0 END), 0)", 'revenue')
-            .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.category = 'PURCHASE' THEN t.amount ELSE 0 END), 0)", 'cogs')
-            .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.category != 'PURCHASE' THEN t.amount ELSE 0 END), 0)", 'expenses')
+        // Doanh thu + Giá vốn thực tế từ sales_orders (COGS per-item)
+        const salesResult = await AppDataSource.createQueryBuilder()
+            .select("COALESCE(SUM(o.total_amount), 0)", 'revenue')
+            .addSelect("COALESCE(SUM(o.total_cogs), 0)", 'cogs')
+            .from('sales_orders', 'o')
+            .where("o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { fromDate, toDate })
+            .getRawOne();
+
+        // Chi phí vận hành (loại trừ PURCHASE vì đã tính trong COGS)
+        const expenseResult = await this.cashTxRepo.createQueryBuilder('t')
+            .select("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.category != 'PURCHASE' THEN t.amount ELSE 0 END), 0)", 'expenses')
             .where('t.transaction_date >= :fromDate AND t.transaction_date <= :toDate', { fromDate, toDate })
             .getRawOne();
 
-        const revenue = Number(result?.revenue || 0);
-        const cogs = Number(result?.cogs || 0);
-        const expenses = Number(result?.expenses || 0);
+        const revenue = Number(salesResult?.revenue || 0);
+        const cogs = Number(salesResult?.cogs || 0);
+        const expenses = Number(expenseResult?.expenses || 0);
         const grossProfit = revenue - cogs;
         return { revenue, cogs, grossProfit, expenses, netProfit: grossProfit - expenses, from: fromDate, to: toDate };
     }
