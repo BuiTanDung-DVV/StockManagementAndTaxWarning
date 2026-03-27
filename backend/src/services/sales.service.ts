@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/db.config';
 import { SalesOrder, SalesOrderItem, SalesReturn, SalesOrderPayment } from '../sales/entities';
 import { Customer } from '../customer/entities';
 import { Product } from '../product/entities';
+import { COGSService } from './cogs.service';
 
 export class SalesService {
     private orderRepo = AppDataSource.getRepository(SalesOrder);
@@ -10,6 +11,7 @@ export class SalesService {
     private paymentRepo = AppDataSource.getRepository(SalesOrderPayment);
     private customerRepo = AppDataSource.getRepository(Customer);
     private productRepo = AppDataSource.getRepository(Product);
+    private cogsService = new COGSService();
 
     async findAll(page = 1, limit = 20) {
         const [items, total] = await this.orderRepo.findAndCount({ skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
@@ -23,19 +25,20 @@ export class SalesService {
 
         const result = await this.orderRepo.createQueryBuilder('o')
             .select('COALESCE(SUM(o.total_amount), 0)', 'totalRevenue')
+            .addSelect('COALESCE(SUM(o.total_cogs), 0)', 'totalCogs')
             .addSelect('COUNT(o.id)', 'orderCount')
             .where("o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { fromDate, toDate })
             .getRawOne();
 
         return {
             totalRevenue: Number(result?.totalRevenue || 0),
+            totalCogs: Number(result?.totalCogs || 0),
+            grossProfit: Number(result?.totalRevenue || 0) - Number(result?.totalCogs || 0),
             orderCount: Number(result?.orderCount || 0),
         };
     }
 
     async findById(id: number) {
-        // SalesOrder declares `items` + `payments` relations.
-        // Returns (SalesReturn) exist but SalesOrder has no `returns` property, so load them separately.
         const order = await this.orderRepo.findOne({ where: { id }, relations: ['items', 'payments'] });
         if (!order) throw new Error('Order not found');
 
@@ -49,7 +52,6 @@ export class SalesService {
     }
 
     async create(dto: any) {
-        // order_date is NOT NULL in SQL schema, so always set it.
         const orderDate = dto.orderDate ? new Date(dto.orderDate) : new Date();
 
         const customer = dto.customerId
@@ -57,7 +59,9 @@ export class SalesService {
             : null;
 
         let subtotal = 0;
+        let totalCogs = 0;
         const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
+        const allLotDeductions: { lotId: number; qty: number }[] = [];
 
         const items: SalesOrderItem[] = [];
         for (const i of rawItems) {
@@ -70,11 +74,25 @@ export class SalesService {
                 ? await this.productRepo.findOne({ where: { id: Number(i.productId) } })
                 : null;
 
-            // product is required by relation, but allow null if DB doesn't enforce it strictly.
+            // Tính giá vốn cho item này
+            let costPrice = 0;
+            if (product && quantity > 0) {
+                try {
+                    const cogsResult = await this.cogsService.calculateCOGS(product.id, quantity);
+                    costPrice = cogsResult.unitCost;
+                    totalCogs += cogsResult.totalCost;
+                    allLotDeductions.push(...cogsResult.lotDeductions);
+                } catch {
+                    costPrice = Number(product.costPrice || 0);
+                    totalCogs += costPrice * quantity;
+                }
+            }
+
             const item = (this.orderItemRepo as any).create({
                 quantity,
                 unitPrice,
                 subtotal: lineSubtotal,
+                costPrice,
                 taxRate: Number(i.taxRate || 0),
                 taxAmount: Number(i.taxAmount || 0),
                 ...(product ? { product } : {}),
@@ -94,6 +112,7 @@ export class SalesService {
             discountAmount,
             taxAmount,
             totalAmount,
+            totalCogs,
             paidAmount: Number(dto.paidAmount || 0),
             paymentMethod: dto.paymentMethod || 'CASH',
             notes: dto.notes,
@@ -102,7 +121,14 @@ export class SalesService {
             items,
         } as any);
 
-        return this.orderRepo.save(order);
+        const savedOrder = await this.orderRepo.save(order);
+
+        // Commit: trừ tồn kho các lô
+        if (allLotDeductions.length > 0) {
+            await this.cogsService.commitLotDeductions(allLotDeductions);
+        }
+
+        return savedOrder;
     }
 
     async cancel(id: number) {

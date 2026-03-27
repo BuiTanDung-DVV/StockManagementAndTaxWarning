@@ -9,6 +9,8 @@ import '../../settings/providers/tax_config_provider.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../../settings/presentation/staff_management_screen.dart';
+import '../../settings/presentation/notification_list_screen.dart';
+import '../../auth/providers/auth_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 final _today = DateTime.now();
@@ -39,10 +41,10 @@ class DashboardScreen extends ConsumerWidget {
               // Header
               Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Xin chào 👋', style: TextStyle(fontSize: 14, color: c.textSecondary)),
+                  Text('Xin chào ${ref.watch(authProvider).user?['fullName'] ?? ''} 👋', style: TextStyle(fontSize: 14, color: c.textSecondary)),
                   Text('Tổng quan', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 ])),
-                IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),
               ]),
               const SizedBox(height: 20),
 

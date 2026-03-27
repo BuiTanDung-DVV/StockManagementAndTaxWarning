@@ -86,6 +86,7 @@ CREATE TABLE product_batches (
     manufacturing_date  DATE,
     expiry_date         DATE,
     quantity            INT DEFAULT 0,
+    remaining_qty       INT DEFAULT 0,
     cost_price          DECIMAL(18,2),
     supplier_name       NVARCHAR(200),
     notes               NVARCHAR(500),
@@ -231,6 +232,7 @@ CREATE TABLE sales_orders (
     discount_amount DECIMAL(18,2) DEFAULT 0,
     tax_amount      DECIMAL(18,2) DEFAULT 0,
     total_amount    DECIMAL(18,2) DEFAULT 0,
+    total_cogs      DECIMAL(18,2) DEFAULT 0,
     paid_amount     DECIMAL(18,2) DEFAULT 0,
     payment_method  NVARCHAR(10) DEFAULT 'CASH',
     notes           NVARCHAR(500),
@@ -251,6 +253,7 @@ CREATE TABLE sales_order_items (
     quantity        INT NOT NULL,
     unit_price      DECIMAL(18,2) NOT NULL,
     subtotal        DECIMAL(18,2) NOT NULL,
+    cost_price      DECIMAL(18,2) DEFAULT 0,
     tax_rate        DECIMAL(5,2) DEFAULT 0,
     tax_amount      DECIMAL(18,2) DEFAULT 0
 );
@@ -318,6 +321,7 @@ CREATE TABLE inventory_movements (
     quantity        INT NOT NULL,
     reference_type  NVARCHAR(20),
     reference_id    INT,
+    cost_price      DECIMAL(18,2) DEFAULT 0,
     notes           NVARCHAR(500),
     created_by      INT REFERENCES users(id),
     created_at      DATETIME2 DEFAULT GETDATE()
@@ -709,7 +713,8 @@ CREATE TABLE shop_profiles (
     website                  NVARCHAR(500),
     owner_name               NVARCHAR(200),
     owner_identity_number    NVARCHAR(20),
-    business_license_number  NVARCHAR(50)
+    business_license_number  NVARCHAR(50),
+    costing_method           VARCHAR(10) DEFAULT 'AVG'  -- FIFO | AVG
 );
 
 -- 41. SHOP ROLES (custom roles per shop)
@@ -750,6 +755,21 @@ CREATE TABLE notifications (
 INSERT INTO shop_profiles (shop_name, owner_name, tax_code, phone, address) VALUES
     (N'Cửa hàng Demo', N'Nguyễn Văn A', '0123456789', '0901234567', N'123 Đường ABC, Q.1, TP.HCM');
 
-PRINT N'✅ Tạo thành công 43 bảng + indexes + seed data';
-GO
+-- 44. INVENTORY_LOTS (Lô tồn kho chi tiết cho FIFO/Bình quân)
+CREATE TABLE inventory_lots (
+    id              INT IDENTITY(1,1) PRIMARY KEY,
+    product_id      INT NOT NULL REFERENCES products(id),
+    purchase_id     INT REFERENCES purchase_orders(id),
+    batch_id        INT REFERENCES product_batches(id),
+    lot_date        DATETIME2 NOT NULL DEFAULT GETDATE(),
+    initial_qty     INT NOT NULL,
+    remaining_qty   INT NOT NULL,
+    cost_price      DECIMAL(18,2) NOT NULL,
+    notes           NVARCHAR(200),
+    created_at      DATETIME2 DEFAULT GETDATE()
+);
+CREATE INDEX IX_inventory_lots_product ON inventory_lots(product_id);
+CREATE INDEX IX_inventory_lots_remaining ON inventory_lots(product_id, remaining_qty) WHERE remaining_qty > 0;
 
+PRINT N'✅ Tạo thành công 44 bảng + indexes + seed data';
+GO

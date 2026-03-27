@@ -57,6 +57,10 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  void updateUser(Map<String, dynamic> updated) {
+    state = state.copyWith(user: updated);
+  }
+
   Future<void> logout() async {
     await _api.clearToken();
     ref.read(shopProvider.notifier).clear();

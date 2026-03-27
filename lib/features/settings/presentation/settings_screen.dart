@@ -9,6 +9,8 @@ import '../providers/shop_provider.dart';
 import '../providers/notification_provider.dart';
 import 'staff_management_screen.dart';
 import 'notification_list_screen.dart';
+import 'profile_screen.dart';
+import '../providers/costing_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -38,31 +40,52 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
-        // Profile card
-        shopAsync.when(
-          data: (shop) => Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
-            child: Row(children: [
-              CircleAvatar(radius: 30, backgroundColor: AppColors.primary.withValues(alpha: 0.15), child: const Icon(Icons.storefront, size: 30, color: AppColors.primary)),
-              const SizedBox(width: 16),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(shop['shopName'] ?? shop['name'] ?? 'Cửa hàng', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Text('Chủ: ${shop['ownerName'] ?? 'N/A'}', style: TextStyle(fontSize: 12, color: c.textSecondary)),
-                Text('MST: ${shop['taxCode'] ?? 'N/A'}', style: TextStyle(fontSize: 12, color: c.textSecondary)),
-              ])),
-              const Icon(Icons.edit, color: AppColors.primary, size: 20),
-            ]),
-          ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, _) => Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
-            child: Row(children: [
-              CircleAvatar(radius: 30, backgroundColor: c.surface, child: const Icon(Icons.storefront, size: 30, color: AppColors.primary)),
-              const SizedBox(width: 16),
-              const Expanded(child: Text('Không tải được thông tin')),
-            ]),
+        // Profile card - tappable
+        GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+          child: shopAsync.when(
+            data: (shop) => Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                  child: Text(
+                    ((auth.user?['fullName'] as String?)?.isNotEmpty == true ? (auth.user!['fullName'] as String)[0] : '?').toUpperCase(),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(auth.user?['fullName'] ?? 'Người dùng', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(shop['shopName'] ?? shop['name'] ?? 'Cửa hàng', style: TextStyle(fontSize: 12, color: c.textSecondary)),
+                  Text('MST: ${shop['taxCode'] ?? 'N/A'}', style: TextStyle(fontSize: 12, color: c.textSecondary)),
+                ])),
+                Icon(Icons.chevron_right, color: c.textMuted, size: 22),
+              ]),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) => Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
+              child: Row(children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                  child: Text(
+                    ((auth.user?['fullName'] as String?)?.isNotEmpty == true ? (auth.user!['fullName'] as String)[0] : '?').toUpperCase(),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(auth.user?['fullName'] ?? 'Người dùng', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text('Nhấn để xem thông tin cá nhân', style: TextStyle(fontSize: 12, color: c.textSecondary)),
+                ])),
+                Icon(Icons.chevron_right, color: c.textMuted, size: 22),
+              ]),
+            ),
           ),
         ),
         const SizedBox(height: 20),
@@ -100,6 +123,7 @@ class SettingsScreen extends ConsumerWidget {
           _SettingItem(Icons.warehouse, 'Kho hàng', () {}, c),
           _SettingItem(Icons.history, 'Nhật ký hoạt động', () => context.go('/activity-logs'), c),
         ], c),
+        _CostingMethodTile(c: c),
         _SettingGroup('Cửa hàng', [
           _SettingItem(Icons.receipt, 'Mẫu hóa đơn', () {}, c),
           _SettingItem(Icons.payments, 'Phương thức TT', () => context.go('/payment-config'), c),
@@ -225,3 +249,107 @@ class _SettingItem extends StatelessWidget {
     child: Padding(padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Row(children: [Icon(icon, size: 20, color: AppColors.primary), SizedBox(width: 14), Expanded(child: Text(label, style: TextStyle(fontSize: 14))), Icon(Icons.chevron_right, size: 18, color: AppThemeColors.of(context).textMuted)])));
 }
+
+// ── Costing Method Tile ────────────────────────────
+
+class _CostingMethodTile extends ConsumerStatefulWidget {
+  final AppThemeColors c;
+  const _CostingMethodTile({required this.c});
+
+  @override
+  ConsumerState<_CostingMethodTile> createState() => _CostingMethodTileState();
+}
+
+class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(costingProvider.notifier).loadCostingMethod());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final costing = ref.watch(costingProvider);
+    final c = widget.c;
+    final methodLabel = costing.method == 'FIFO' ? 'Nhập trước - Xuất trước (FIFO)' : 'Bình quân gia quyền (AVG)';
+
+    return _SettingGroup('Giá vốn hàng bán', [
+      InkWell(
+        onTap: () => _showCostingMethodPicker(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(children: [
+            const Icon(Icons.calculate_outlined, size: 20, color: AppColors.primary),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Phương pháp tính giá vốn', style: TextStyle(fontSize: 14)),
+              const SizedBox(height: 2),
+              Text(methodLabel, style: TextStyle(fontSize: 12, color: c.textSecondary)),
+            ])),
+            if (costing.isLoading)
+              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            else
+              Icon(Icons.chevron_right, size: 18, color: c.textMuted),
+          ]),
+        ),
+      ),
+    ], c);
+  }
+
+  void _showCostingMethodPicker(BuildContext context) {
+    final costing = ref.read(costingProvider);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        final c = AppThemeColors.of(ctx);
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('Chọn phương pháp tính giá vốn', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text('Áp dụng cho tất cả sản phẩm', style: TextStyle(fontSize: 12, color: c.textSecondary)),
+            const SizedBox(height: 16),
+            _costingOption(ctx, c, 'AVG', 'Bình quân gia quyền (AVG)',
+                'Giá vốn = trung bình giá nhập tất cả các lô còn tồn. Đơn giản, phù hợp SME.',
+                Icons.balance, costing.method == 'AVG'),
+            const SizedBox(height: 8),
+            _costingOption(ctx, c, 'FIFO', 'Nhập trước - Xuất trước (FIFO)',
+                'Hàng nhập trước sẽ xuất trước. Chính xác hơn khi giá nhập biến động nhiều.',
+                Icons.sort, costing.method == 'FIFO'),
+            const SizedBox(height: 12),
+          ]),
+        );
+      },
+    );
+  }
+
+  Widget _costingOption(BuildContext ctx, AppThemeColors c, String method, String title, String desc, IconData icon, bool isActive) {
+    return InkWell(
+      onTap: () async {
+        Navigator.pop(ctx);
+        await ref.read(costingProvider.notifier).updateCostingMethod(method);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary.withValues(alpha: 0.08) : c.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isActive ? AppColors.primary : c.textMuted.withValues(alpha: 0.2), width: isActive ? 1.5 : 1),
+        ),
+        child: Row(children: [
+          Icon(icon, size: 24, color: isActive ? AppColors.primary : c.textMuted),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isActive ? AppColors.primary : null)),
+            const SizedBox(height: 2),
+            Text(desc, style: TextStyle(fontSize: 11, color: c.textSecondary)),
+          ])),
+          if (isActive) const Icon(Icons.check_circle, color: AppColors.primary, size: 22),
+        ]),
+      ),
+    );
+  }
+}
+

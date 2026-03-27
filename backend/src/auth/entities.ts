@@ -15,8 +15,17 @@ export class User {
     @Column({ name: 'full_name' })
     fullName: string;
 
+    @Column({ nullable: true })
+    email: string;
+
+    @Column({ nullable: true })
+    phone: string;
+
     @Column({ default: 'STAFF' }) // ADMIN, MANAGER, STAFF
     role: string;
+
+    @Column({ name: 'avatar_url', nullable: true })
+    avatarUrl: string;
 
     @Column({ name: 'is_active', default: true })
     isActive: boolean;

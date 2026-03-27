@@ -17,7 +17,10 @@ export const AppDataSource = new DataSource({
   },
   // Entities in this repo live in `*/entities.ts` (e.g. `src/auth/entities.ts`).
   // Keep the glob narrow to avoid accidentally loading non-entity modules.
-  entities: [path.join(__dirname, '../**/entities{.ts,.js}')],
+  entities: [
+    path.join(__dirname, '../**/entities{.ts,.js}'),
+    path.join(__dirname, '../**/*.entity{.ts,.js}'),
+  ],
   migrations: [],
   subscribers: [],
 });
