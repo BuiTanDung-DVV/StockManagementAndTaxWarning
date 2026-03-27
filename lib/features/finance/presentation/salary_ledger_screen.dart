@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -18,7 +19,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
     final txAsync = ref.watch(transactionsProvider((page: 1, type: 'EXPENSE', from: null, to: null)));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sổ lương')),
+      appBar: AppBar(title: const Text('Sổ lương'), actions: [featureGuideButton(context, 'salary_ledger')]),
       body: txAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

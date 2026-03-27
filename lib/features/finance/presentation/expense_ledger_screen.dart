@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,7 +15,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
     final expAsync = ref.watch(expensesByCategoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sổ chi phí')),
+      appBar: AppBar(title: const Text('Sổ chi phí'), actions: [featureGuideButton(context, 'expense_ledger')]),
       body: expAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

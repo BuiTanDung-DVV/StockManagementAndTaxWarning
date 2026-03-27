@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,7 @@ class DailyClosingScreen extends ConsumerWidget {
     final closingAsync = ref.watch(dailyClosingProvider(today));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kết ca hôm nay')),
+      appBar: AppBar(title: const Text('Kết ca hôm nay'), actions: [featureGuideButton(context, 'daily_closing')]),
       body: closingAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

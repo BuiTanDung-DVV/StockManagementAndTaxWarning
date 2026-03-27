@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,6 +45,7 @@ class DashboardScreen extends ConsumerWidget {
                   Text('Xin chào ${ref.watch(authProvider).user?['fullName'] ?? ''} 👋', style: TextStyle(fontSize: 14, color: c.textSecondary)),
                   Text('Tổng quan', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 ])),
+                featureGuideButton(context, 'dashboard'),
                 IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),
               ]),
               const SizedBox(height: 20),

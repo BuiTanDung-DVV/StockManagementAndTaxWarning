@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -5,7 +6,7 @@ class StockTakeScreen extends StatelessWidget {
   const StockTakeScreen({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('Kiểm kê Kho'), actions: [IconButton(icon: Icon(Icons.add), onPressed: () {})]),
+    appBar: AppBar(title: Text('Kiểm kê Kho'), actions: [featureGuideButton(context, 'stock_take'), IconButton(icon: Icon(Icons.add), onPressed: () {})]),
     body: ListView.builder(padding: EdgeInsets.all(16), itemCount: 5, itemBuilder: (_, i) => Container(
       margin: EdgeInsets.only(bottom: 10), padding: EdgeInsets.all(14),
       decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),

@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -5,7 +6,7 @@ class PurchaseOrderScreen extends StatelessWidget {
   const PurchaseOrderScreen({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('Nhập hàng / Đơn mua'), actions: [IconButton(icon: Icon(Icons.add), onPressed: () {})]),
+    appBar: AppBar(title: Text('Nhập hàng / Đơn mua'), actions: [featureGuideButton(context, 'purchase_order'), IconButton(icon: Icon(Icons.add), onPressed: () {})]),
     body: ListView.builder(padding: EdgeInsets.all(16), itemCount: 8, itemBuilder: (_, i) => Container(
       margin: EdgeInsets.only(bottom: 10), padding: EdgeInsets.all(14),
       decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),

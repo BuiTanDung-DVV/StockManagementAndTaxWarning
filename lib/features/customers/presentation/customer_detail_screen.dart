@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,7 @@ class CustomerDetailScreen extends ConsumerWidget {
     final customerAsync = ref.watch(customerDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Khách hàng #$id')),
+      appBar: AppBar(title: Text('Khách hàng #$id'), actions: [featureGuideButton(context, 'customer_detail')]),
       body: customerAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
