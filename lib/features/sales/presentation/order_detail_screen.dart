@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,7 @@ class OrderDetailScreen extends ConsumerWidget {
     final orderAsync = ref.watch(salesDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Chi tiết đơn #$id')),
+      appBar: AppBar(title: Text('Chi tiết đơn #$id'), actions: [featureGuideButton(context, 'order_detail')]),
       body: orderAsync.when(
         data: (order) {
           final createdAt = (order['createdAt'] ?? order['created_at'])?.toString();

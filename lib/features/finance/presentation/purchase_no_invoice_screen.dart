@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,7 +15,7 @@ class PurchaseNoInvoiceScreen extends ConsumerWidget {
     final pnAsync = ref.watch(purchasesNoInvoiceProvider(1));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mua hàng không hóa đơn')),
+      appBar: AppBar(title: const Text('Mua hàng không hóa đơn'), actions: [featureGuideButton(context, 'purchase_no_invoice')]),
       body: pnAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

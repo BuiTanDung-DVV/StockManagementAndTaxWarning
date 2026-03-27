@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -6,7 +7,7 @@ class SupplierDetailScreen extends StatelessWidget {
   const SupplierDetailScreen({super.key, required this.id});
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('NCC #$id')),
+    appBar: AppBar(title: Text('NCC #$id'), actions: [featureGuideButton(context, 'supplier_detail')]),
     body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
       Container(width: 70, height: 70, decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.business, size: 36, color: AppColors.info)),
       const SizedBox(height: 12),

@@ -11,6 +11,7 @@ import 'staff_management_screen.dart';
 import 'notification_list_screen.dart';
 import 'profile_screen.dart';
 import '../providers/costing_provider.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -27,6 +28,7 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Cài đặt'),
         actions: [
+          featureGuideButton(context, 'settings'),
           // Notification bell
           Stack(children: [
             IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),

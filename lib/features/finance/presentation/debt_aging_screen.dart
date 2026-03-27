@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,7 @@ class DebtAgingScreen extends ConsumerWidget {
     final overdueAsync = ref.watch(overdueDebtsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Phân tích Tuổi nợ'), actions: [IconButton(icon: const Icon(Icons.file_download), onPressed: () {})]),
+      appBar: AppBar(title: const Text('Phân tích Tuổi nợ'), actions: [featureGuideButton(context, 'debt_aging'), IconButton(icon: const Icon(Icons.file_download), onPressed: () {})]),
       body: agingAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
