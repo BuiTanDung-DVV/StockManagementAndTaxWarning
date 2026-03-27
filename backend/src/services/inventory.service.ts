@@ -1,6 +1,7 @@
 import { AppDataSource } from '../config/db.config';
 import { InventoryStock, InventoryMovement, Warehouse, PurchaseOrder, PurchaseOrderItem, StockTake, StockTakeItem } from '../inventory/entities';
 import { Product, ProductBatch } from '../product/entities';
+import { COGSService } from './cogs.service';
 
 export class InventoryService {
     private stockRepo = AppDataSource.getRepository(InventoryStock);
@@ -11,6 +12,7 @@ export class InventoryService {
     private stockTakeRepo = AppDataSource.getRepository(StockTake);
     private stockTakeItemRepo = AppDataSource.getRepository(StockTakeItem);
     private batchRepo = AppDataSource.getRepository(ProductBatch);
+    private cogsService = new COGSService();
 
     // Stock
     async getStock(page = 1, limit = 20) {
@@ -86,7 +88,22 @@ export class InventoryService {
             return this.poItemRepo.create({ ...i, subtotal: sub });
         });
         const po = this.poRepo.create({ ...dto, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items });
-        return this.poRepo.save(po);
+        const savedPO = await this.poRepo.save(po) as unknown as PurchaseOrder;
+
+        // Tạo inventory lots cho mỗi item (để COGS tính đúng)
+        for (const item of (dto.items || [])) {
+            if (item.productId && item.quantity > 0 && item.unitPrice > 0) {
+                await this.cogsService.addInventoryLot({
+                    productId: Number(item.productId),
+                    quantity: Number(item.quantity),
+                    costPrice: Number(item.unitPrice),
+                    purchaseId: savedPO.id,
+                    notes: `PO ${savedPO.orderCode}`,
+                });
+            }
+        }
+
+        return savedPO;
     }
 
     // Stock Takes

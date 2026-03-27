@@ -28,6 +28,8 @@ import systemRoutes from './routes/system.routes';
 import shopRoleRoutes from './routes/shop-role.routes';
 import shopMemberRoutes from './routes/shop-member.routes';
 import notificationRoutes from './routes/notification.routes';
+import profileRoutes from './routes/profile.routes';
+import cogsRoutes from './routes/cogs.routes';
 
 // Routes
 apiRouter.use('/auth', authRoutes);
@@ -41,6 +43,8 @@ apiRouter.use('/', systemRoutes);
 apiRouter.use('/', shopRoleRoutes);
 apiRouter.use('/', shopMemberRoutes);
 apiRouter.use('/', notificationRoutes);
+apiRouter.use('/profile', profileRoutes);
+apiRouter.use('/cogs', cogsRoutes);
 
 // Mount the API router
 app.use('/api', apiRouter);
