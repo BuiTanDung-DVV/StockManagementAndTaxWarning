@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -5,7 +6,7 @@ class XntReportScreen extends StatelessWidget {
   const XntReportScreen({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('Báo cáo XNT Kho'), actions: [IconButton(icon: const Icon(Icons.filter_list), onPressed: () {})]),
+    appBar: AppBar(title: Text('Báo cáo XNT Kho'), actions: [featureGuideButton(context, 'xnt_report'), IconButton(icon: const Icon(Icons.filter_list), onPressed: () {})]),
     body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Expanded(child: _MiniCard('Tồn đầu', '1.250', AppColors.info)),

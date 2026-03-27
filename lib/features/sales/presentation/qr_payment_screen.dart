@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -172,6 +173,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       appBar: AppBar(
         title: const Text('Thanh toán chuyển khoản'),
         centerTitle: true,
+        actions: [featureGuideButton(context, 'qr_payment')],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

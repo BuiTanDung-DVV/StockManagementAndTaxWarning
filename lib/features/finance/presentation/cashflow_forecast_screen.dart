@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,7 @@ class CashflowForecastScreen extends ConsumerWidget {
     final budgetAsync = ref.watch(budgetPlansProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dự báo dòng tiền')),
+      appBar: AppBar(title: const Text('Dự báo dòng tiền'), actions: [featureGuideButton(context, 'cashflow_forecast')]),
       body: forecastAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -6,7 +7,7 @@ class ProductDetailScreen extends StatelessWidget {
   const ProductDetailScreen({super.key, required this.id});
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('Sản phẩm #$id'), actions: [IconButton(icon: const Icon(Icons.edit), onPressed: () {})]),
+    appBar: AppBar(title: Text('Sản phẩm #$id'), actions: [featureGuideButton(context, 'product_detail'), IconButton(icon: const Icon(Icons.edit), onPressed: () {})]),
     body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Center(child: Container(width: 120, height: 120, decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.inventory_2, size: 50, color: AppColors.primary))),
       const SizedBox(height: 16),

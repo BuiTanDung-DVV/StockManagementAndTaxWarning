@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +20,7 @@ class FinanceScreen extends ConsumerWidget {
     final txAsync = ref.watch(transactionsProvider((page: 1, type: null, from: _from, to: _to)));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Tài chính')),
+      appBar: AppBar(title: Text('Tài chính'), actions: [featureGuideButton(context, 'finance')]),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(cashSummaryProvider);

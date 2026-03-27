@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,7 +15,7 @@ class TaxObligationScreen extends ConsumerWidget {
     final taxAsync = ref.watch(taxObligationsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nghĩa vụ thuế')),
+      appBar: AppBar(title: const Text('Nghĩa vụ thuế'), actions: [featureGuideButton(context, 'tax_obligations')]),
       body: taxAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -13,7 +14,7 @@ class ProductListScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final listAsync = ref.watch(productListProvider((page: 1, search: null)));
     return Scaffold(
-      appBar: AppBar(title: Text('Sản phẩm'), actions: [IconButton(icon: Icon(Icons.add), onPressed: () {})]),
+      appBar: AppBar(title: Text('Sản phẩm'), actions: [featureGuideButton(context, 'product_list'), IconButton(icon: Icon(Icons.add), onPressed: () {})]),
       body: Column(children: [
         Padding(padding: EdgeInsets.all(16), child: TextField(decoration: InputDecoration(hintText: 'Tìm sản phẩm...', prefixIcon: Icon(Icons.search, color: c.textMuted)))),
         Expanded(child: listAsync.when(

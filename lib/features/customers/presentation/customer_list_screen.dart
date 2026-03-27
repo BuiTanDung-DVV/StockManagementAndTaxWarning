@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +15,7 @@ class CustomerListScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final listAsync = ref.watch(customerListProvider((page: 1, search: null)));
     return Scaffold(
-      appBar: AppBar(title: Text('Khách hàng'), actions: [IconButton(icon: Icon(Icons.person_add), onPressed: () {})]),
+      appBar: AppBar(title: Text('Khách hàng'), actions: [featureGuideButton(context, 'customer_list'), IconButton(icon: Icon(Icons.person_add), onPressed: () {})]),
       body: listAsync.when(
         data: (data) {
           final items = (data['items'] as List?) ?? [];

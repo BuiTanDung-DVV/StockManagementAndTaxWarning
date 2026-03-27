@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -17,7 +18,7 @@ class ProfitLossScreen extends ConsumerWidget {
     final plAsync = ref.watch(profitLossProvider((from: from, to: to)));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Báo cáo KQKD'), actions: [IconButton(icon: const Icon(Icons.date_range), onPressed: () {})]),
+      appBar: AppBar(title: const Text('Báo cáo KQKD'), actions: [featureGuideButton(context, 'profit_loss'), IconButton(icon: const Icon(Icons.date_range), onPressed: () {})]),
       body: plAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

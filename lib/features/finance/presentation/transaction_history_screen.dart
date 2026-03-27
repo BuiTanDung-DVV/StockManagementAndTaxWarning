@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -18,7 +19,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
     final txAsync = ref.watch(transactionsProvider((page: 1, type: null, from: _from, to: _to)));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Lịch sử Giao dịch')),
+      appBar: AppBar(title: Text('Lịch sử Giao dịch'), actions: [featureGuideButton(context, 'transaction_history')]),
       body: txAsync.when(
         data: (data) {
           final items = (data['items'] as List?) ?? [];

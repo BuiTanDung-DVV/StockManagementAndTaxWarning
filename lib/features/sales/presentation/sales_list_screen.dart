@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +28,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         child: Column(children: [
           Padding(padding: EdgeInsets.all(16), child: Row(children: [
             const Expanded(child: Text('Đơn hàng', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
+            featureGuideButton(context, 'sales_list'),
             IconButton(icon: Icon(Icons.search, color: c.textSecondary), onPressed: () {}),
           ])),
           SingleChildScrollView(

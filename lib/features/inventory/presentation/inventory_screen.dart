@@ -1,3 +1,4 @@
+import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,7 +16,7 @@ class InventoryScreen extends ConsumerWidget {
     final slowAsync = ref.watch(slowMovingProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Quản lý Kho')),
+      appBar: AppBar(title: Text('Quản lý Kho'), actions: [featureGuideButton(context, 'inventory')]),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(stockProvider);
