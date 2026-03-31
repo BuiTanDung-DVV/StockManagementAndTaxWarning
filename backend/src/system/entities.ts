@@ -116,13 +116,13 @@ export class InvoiceScan {
     @Column({ length: 20, default: 'PENDING' })
     status: string; // PENDING, PROCESSING, COMPLETED, FAILED, CONFIRMED
 
-    @Column({ name: 'ocr_raw_text', type: 'nvarchar', length: 'MAX', nullable: true })
+    @Column({ name: 'ocr_raw_text', type: 'text', nullable: true })
     ocrRawText: string;
 
-    @Column({ name: 'ocr_parsed_data', type: 'nvarchar', length: 'MAX', nullable: true })
+    @Column({ name: 'ocr_parsed_data', type: 'text', nullable: true })
     ocrParsedData: string;
 
-    @Column({ name: 'confirmed_data', type: 'nvarchar', length: 'MAX', nullable: true })
+    @Column({ name: 'confirmed_data', type: 'text', nullable: true })
     confirmedData: string;
 
     @Column({ name: 'confidence_score', nullable: true })
