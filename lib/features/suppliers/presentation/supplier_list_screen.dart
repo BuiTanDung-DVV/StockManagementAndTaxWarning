@@ -1,4 +1,7 @@
+import 'supplier_form_screen.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,17 +15,17 @@ class SupplierListScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final listAsync = ref.watch(supplierListProvider((page: 1, search: null)));
     return Scaffold(
-      appBar: AppBar(title: Text('Nhà cung cấp'), actions: [featureGuideButton(context, 'supplier_list'), IconButton(icon: Icon(Icons.add), onPressed: () {})]),
+      appBar: AppBar(title: Text('Nhà cung cấp'), actions: [featureGuideButton(context, 'supplier_list'), IconButton(icon: Icon(Icons.add), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupplierFormScreen())))]),
       body: listAsync.when(
         data: (data) {
           final items = (data['items'] as List?) ?? [];
-          if (items.isEmpty) return Center(child: Text('Chưa có NCC', style: TextStyle(color: c.textSecondary)));
+          if (items.isEmpty) return AppEmpty(message: 'Chưa có NCC', subtitle: 'Thêm nhà cung cấp đầu tiên');
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(supplierListProvider),
             child: ListView.builder(padding: EdgeInsets.all(16), itemCount: items.length, itemBuilder: (_, i) {
               final s = items[i];
               return GestureDetector(
-                onTap: () => context.go('/suppliers/${s['id']}'),
+                onTap: () => context.push('/suppliers/${s['id']}'),
                 child: Container(margin: EdgeInsets.only(bottom: 10), padding: EdgeInsets.all(14),
                   decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
                   child: Row(children: [
@@ -40,8 +43,8 @@ class SupplierListScreen extends ConsumerWidget {
             }),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e', style: const TextStyle(color: AppColors.danger))),
+        loading: () => const ShimmerList(),
+        error: (e, _) => AppError(message: 'Lỗi: $e', onRetry: () => ref.invalidate(supplierListProvider)),
       ),
     );
   }

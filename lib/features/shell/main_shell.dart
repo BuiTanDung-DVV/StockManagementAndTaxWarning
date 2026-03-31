@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
@@ -23,14 +24,14 @@ class MainShell extends ConsumerWidget {
 
     // Build visible tabs based on permissions
     final allTabs = <_NavDef>[
-      _NavDef(icon: Icons.home_rounded, label: 'Trang chủ', route: '/', prefixes: ['/']),
+      _NavDef(icon: HugeIcons.strokeRoundedHome01, label: 'Trang chủ', route: '/', prefixes: ['/']),
       if (shop.hasPermission('pos') || shop.hasPermission('sales_view'))
-        _NavDef(icon: Icons.shopping_cart_rounded, label: 'Bán hàng', route: '/sales', prefixes: ['/sales', '/pos']),
+        _NavDef(icon: HugeIcons.strokeRoundedShoppingCart01, label: 'Bán hàng', route: '/sales', prefixes: ['/sales', '/pos']),
       if (shop.hasPermission('inventory'))
-        _NavDef(icon: Icons.inventory_2_rounded, label: 'Kho', route: '/inventory', prefixes: ['/inventory', '/purchase', '/stock', '/xnt']),
+        _NavDef(icon: HugeIcons.strokeRoundedPackage, label: 'Kho', route: '/inventory', prefixes: ['/inventory', '/purchase', '/stock', '/xnt']),
       if (shop.hasPermission('finance'))
-        _NavDef(icon: Icons.account_balance_wallet_rounded, label: 'Tài chính', route: '/finance', prefixes: ['/finance', '/daily', '/profit', '/cashflow', '/debt', '/invoices', '/tax-calculator', '/expense-ledger', '/tax-obligations', '/salary-ledger', '/tax-declaration', '/transactions']),
-      _NavDef(icon: Icons.settings_rounded, label: 'Cài đặt', route: '/settings', prefixes: ['/settings', '/activity', '/tax-config', '/tax-support', '/payment-config']),
+        _NavDef(icon: HugeIcons.strokeRoundedCoinsDollar, label: 'Tài chính', route: '/finance', prefixes: ['/finance', '/daily', '/profit', '/cashflow', '/debt', '/invoices', '/tax-calculator', '/expense-ledger', '/tax-obligations', '/salary-ledger', '/tax-declaration', '/transactions']),
+      _NavDef(icon: HugeIcons.strokeRoundedSettings02, label: 'Cài đặt', route: '/settings', prefixes: ['/settings', '/activity', '/tax-config', '/tax-support', '/payment-config']),
     ];
 
     final idx = _currentIndex(context, allTabs);
@@ -68,7 +69,7 @@ class MainShell extends ConsumerWidget {
 
 // ── Nav tab definition ──
 class _NavDef {
-  final IconData icon;
+  final dynamic icon; // HugeIcons path data
   final String label;
   final String route;
   final List<String> prefixes;
@@ -82,7 +83,7 @@ class _NavDef {
 }
 
 class _NavItem extends StatelessWidget {
-  final IconData icon;
+  final dynamic icon;
   final String label;
   final bool isActive;
   final VoidCallback onTap;
@@ -91,6 +92,7 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final color = isActive ? AppColors.primary : c.textMuted;
 
     return GestureDetector(
       onTap: onTap,
@@ -105,9 +107,9 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 22, color: isActive ? AppColors.primary : c.textMuted),
+            HugeIcon(icon: icon, color: color, size: 22),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 10, fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: isActive ? AppColors.primary : c.textMuted)),
+            Text(label, style: TextStyle(fontSize: 10, fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: color)),
           ],
         ),
       ),

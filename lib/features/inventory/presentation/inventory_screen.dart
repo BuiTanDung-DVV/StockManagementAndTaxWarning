@@ -55,9 +55,9 @@ class InventoryScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             Text('Thao tác nhanh', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 12),
-            _ActionTile('Kiểm kê kho', Icons.fact_check, () => context.go('/stock-take')),
-            _ActionTile('Nhập hàng', Icons.move_to_inbox, () => context.go('/purchase-orders')),
-            _ActionTile('Báo cáo XNT', Icons.analytics, () => context.go('/xnt-report')),
+            _ActionTile('Kiểm kê kho', Icons.fact_check, () => context.push('/stock-take')),
+            _ActionTile('Nhập hàng', Icons.move_to_inbox, () => context.push('/purchase-orders')),
+            _ActionTile('Báo cáo XNT', Icons.analytics, () => context.push('/xnt-report')),
             const SizedBox(height: 24),
             // Low stock list
             lowAsync.when(
