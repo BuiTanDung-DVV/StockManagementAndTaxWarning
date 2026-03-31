@@ -128,7 +128,7 @@ class AppColors {
 
   // Gradients
   static const primaryGradient = LinearGradient(
-    colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+    colors: [Color(0xFF1E3A5F), Color(0xFF2D8C8C)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -164,7 +164,7 @@ class AppTheme {
       scaffoldBackgroundColor: colors.bg,
       cardColor: colors.card,
       dividerColor: colors.divider,
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+      textTheme: GoogleFonts.beVietnamProTextTheme(base.textTheme).apply(
         bodyColor: colors.textPrimary,
         displayColor: colors.textPrimary,
       ),

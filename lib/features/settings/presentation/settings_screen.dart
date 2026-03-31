@@ -10,8 +10,10 @@ import '../providers/notification_provider.dart';
 import 'staff_management_screen.dart';
 import 'notification_list_screen.dart';
 import 'profile_screen.dart';
+import 'shop_profile_screen.dart';
 import '../providers/costing_provider.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -31,7 +33,7 @@ class SettingsScreen extends ConsumerWidget {
           featureGuideButton(context, 'settings'),
           // Notification bell
           Stack(children: [
-            IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),
+                IconButton(icon: HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: c.textSecondary, size: 22), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),
             if (notifState.unreadCount > 0)
               Positioned(right: 6, top: 6, child: Container(
                 padding: const EdgeInsets.all(4),
@@ -64,7 +66,7 @@ class SettingsScreen extends ConsumerWidget {
                   Text(shop['shopName'] ?? shop['name'] ?? 'Cửa hàng', style: TextStyle(fontSize: 12, color: c.textSecondary)),
                   Text('MST: ${shop['taxCode'] ?? 'N/A'}', style: TextStyle(fontSize: 12, color: c.textSecondary)),
                 ])),
-                Icon(Icons.chevron_right, color: c.textMuted, size: 22),
+                HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: c.textMuted, size: 22),
               ]),
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -85,7 +87,7 @@ class SettingsScreen extends ConsumerWidget {
                   Text(auth.user?['fullName'] ?? 'Người dùng', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   Text('Nhấn để xem thông tin cá nhân', style: TextStyle(fontSize: 12, color: c.textSecondary)),
                 ])),
-                Icon(Icons.chevron_right, color: c.textMuted, size: 22),
+                HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: c.textMuted, size: 22),
               ]),
             ),
           ),
@@ -95,7 +97,7 @@ class SettingsScreen extends ConsumerWidget {
         // ── Shop switcher (if user has multiple shops) ──
         if (shopState.userShops.length > 1)
           _SettingGroup('Cửa hàng hiện tại', [
-            _SettingItem(Icons.swap_horiz, 'Chuyển shop (${shopState.currentShopName ?? ""})', () {
+            _SettingItem(HugeIcons.strokeRoundedExchange01, 'Chuyển shop (${shopState.currentShopName ?? ""})', () {
               _showShopSwitcher(context, ref, shopState);
             }, c),
           ], c),
@@ -105,7 +107,7 @@ class SettingsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(children: [
-              const Icon(Icons.palette, size: 20, color: AppColors.primary),
+              const HugeIcon(icon: HugeIcons.strokeRoundedPaintBoard, size: 20, color: AppColors.primary),
               const SizedBox(width: 14),
               const Expanded(child: Text('Chế độ hiển thị', style: TextStyle(fontSize: 14))),
               _ThemeSelector(current: themeMode, onChanged: (m) => ref.read(themeProvider.notifier).setTheme(m)),
@@ -116,29 +118,45 @@ class SettingsScreen extends ConsumerWidget {
         // ── Staff management (only for shop owners) ──
         if (shopState.isOwner || auth.isShopOwner)
           _SettingGroup('Nhân viên & Phân quyền', [
-            _SettingItem(Icons.people, 'Quản lý nhân viên', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffManagementScreen())), c),
-            _SettingItem(Icons.admin_panel_settings, 'Quản lý vai trò', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RoleConfigScreen())), c),
+            _SettingItem(HugeIcons.strokeRoundedUserMultiple, 'Quản lý nhân viên', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffManagementScreen())), c),
+            _SettingItem(HugeIcons.strokeRoundedUserStar02, 'Quản lý vai trò', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RoleConfigScreen())), c),
           ], c),
 
         _SettingGroup('Quản lý', [
-          _SettingItem(Icons.category, 'Danh mục SP', () {}, c),
-          _SettingItem(Icons.warehouse, 'Kho hàng', () {}, c),
-          _SettingItem(Icons.history, 'Nhật ký hoạt động', () => context.go('/activity-logs'), c),
+          _SettingItem(HugeIcons.strokeRoundedDashboardSquare01, 'Danh mục SP', () {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quản lý danh mục sẽ sớm khả dụng'), duration: Duration(seconds: 2)));
+          }, c),
+          _SettingItem(HugeIcons.strokeRoundedClock04, 'Nhật ký hoạt động', () => context.push('/activity-logs'), c),
         ], c),
         _CostingMethodTile(c: c),
         _SettingGroup('Cửa hàng', [
-          _SettingItem(Icons.receipt, 'Mẫu hóa đơn', () {}, c),
-          _SettingItem(Icons.payments, 'Phương thức TT', () => context.go('/payment-config'), c),
-          _SettingItem(Icons.local_shipping, 'Đơn vị vận chuyển', () {}, c),
+          _SettingItem(HugeIcons.strokeRoundedStore01, 'Thông tin cửa hàng', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShopProfileScreen())), c),
+          _SettingItem(HugeIcons.strokeRoundedInvoice01, 'Mẫu hóa đơn', () {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tùy chỉnh mẫu hóa đơn sẽ sớm khả dụng'), duration: Duration(seconds: 2)));
+          }, c),
+          _SettingItem(HugeIcons.strokeRoundedCreditCard, 'Phương thức TT', () => context.push('/payment-config'), c),
+          _SettingItem(HugeIcons.strokeRoundedTruck, 'Đơn vị vận chuyển', () {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quản lý vận chuyển sẽ sớm khả dụng'), duration: Duration(seconds: 2)));
+          }, c),
         ], c),
         _SettingGroup('Thuế & Kê khai', [
-          _SettingItem(Icons.calculate, 'Cấu hình thuế', () => context.go('/tax-config'), c),
-          _SettingItem(Icons.support_agent, 'Hỗ trợ thuế', () => context.go('/tax-support'), c),
+          _SettingItem(HugeIcons.strokeRoundedCalculator01, 'Cấu hình thuế', () => context.push('/tax-config'), c),
+          _SettingItem(HugeIcons.strokeRoundedCustomerSupport, 'Hỗ trợ thuế', () => context.push('/tax-support'), c),
         ], c),
         _SettingGroup('Hệ thống', [
-          _SettingItem(Icons.notifications, 'Thông báo', () {}, c),
-          _SettingItem(Icons.backup, 'Sao lưu dữ liệu', () {}, c),
-          _SettingItem(Icons.help, 'Trợ giúp', () {}, c),
+          _SettingItem(HugeIcons.strokeRoundedNotification03, 'Thông báo', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen())), c),
+          _SettingItem(HugeIcons.strokeRoundedCloudSavingDone01, 'Sao lưu dữ liệu', () {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sao lưu & khôi phục sẽ sớm khả dụng'), duration: Duration(seconds: 2)));
+          }, c),
+          _SettingItem(HugeIcons.strokeRoundedHelpCircle, 'Trợ giúp', () {
+            showAboutDialog(
+              context: context,
+              applicationName: 'Sales & Stock Management',
+              applicationVersion: '1.0.0',
+              applicationLegalese: '© 2026 All rights reserved',
+              children: [const SizedBox(height: 12), const Text('Ứng dụng quản lý bán hàng và kho hàng dành cho hộ kinh doanh.', style: TextStyle(fontSize: 13))],
+            );
+          }, c),
         ], c),
         const SizedBox(height: 16),
         SizedBox(width: double.infinity, child: OutlinedButton.icon(
@@ -146,7 +164,7 @@ class SettingsScreen extends ConsumerWidget {
             await ref.read(authProvider.notifier).logout();
             if (context.mounted) context.go('/login');
           },
-          icon: const Icon(Icons.logout, color: AppColors.danger),
+          icon: HugeIcon(icon: HugeIcons.strokeRoundedLogout03, color: AppColors.danger, size: 20),
           label: Text('Đăng xuất', style: TextStyle(color: AppColors.danger)),
           style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.danger), padding: const EdgeInsets.symmetric(vertical: 14)),
         )),
@@ -168,10 +186,10 @@ class SettingsScreen extends ConsumerWidget {
             ...shopState.userShops.map((shop) {
               final isActive = shop['shopId'] == shopState.currentShopId;
               return ListTile(
-                leading: Icon(Icons.storefront, color: isActive ? AppColors.primary : c.textMuted),
+                leading: HugeIcon(icon: HugeIcons.strokeRoundedStore01, color: isActive ? AppColors.primary : c.textMuted, size: 24),
                 title: Text(shop['shopName'] ?? 'Shop #${shop['shopId']}', style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
                 subtitle: Text(shop['memberType'] == 'OWNER' ? 'Chủ shop' : (shop['role']?['name'] ?? 'Nhân viên'), style: TextStyle(fontSize: 12, color: c.textSecondary)),
-                trailing: isActive ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+                trailing: isActive ? HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: AppColors.primary, size: 22) : null,
                 onTap: () {
                   ref.read(shopProvider.notifier).switchShop(shop['shopId'] as int);
                   Navigator.pop(ctx);
@@ -245,11 +263,11 @@ class _SettingGroup extends StatelessWidget {
 }
 
 class _SettingItem extends StatelessWidget {
-  final IconData icon; final String label; final VoidCallback onTap; final AppThemeColors c;
+  final dynamic icon; final String label; final VoidCallback onTap; final AppThemeColors c;
   const _SettingItem(this.icon, this.label, this.onTap, this.c);
   @override Widget build(BuildContext context) => InkWell(onTap: onTap,
     child: Padding(padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      child: Row(children: [Icon(icon, size: 20, color: AppColors.primary), SizedBox(width: 14), Expanded(child: Text(label, style: TextStyle(fontSize: 14))), Icon(Icons.chevron_right, size: 18, color: AppThemeColors.of(context).textMuted)])));
+      child: Row(children: [HugeIcon(icon: icon, size: 20, color: AppColors.primary), SizedBox(width: 14), Expanded(child: Text(label, style: TextStyle(fontSize: 14))), HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppThemeColors.of(context).textMuted)])));
 }
 
 // ── Costing Method Tile ────────────────────────────
@@ -281,7 +299,7 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(children: [
-            const Icon(Icons.calculate_outlined, size: 20, color: AppColors.primary),
+            const HugeIcon(icon: HugeIcons.strokeRoundedCalculator01, size: 20, color: AppColors.primary),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Phương pháp tính giá vốn', style: TextStyle(fontSize: 14)),
@@ -291,7 +309,7 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
             if (costing.isLoading)
               const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
             else
-              Icon(Icons.chevron_right, size: 18, color: c.textMuted),
+              HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: c.textMuted),
           ]),
         ),
       ),
@@ -348,7 +366,7 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
             const SizedBox(height: 2),
             Text(desc, style: TextStyle(fontSize: 11, color: c.textSecondary)),
           ])),
-          if (isActive) const Icon(Icons.check_circle, color: AppColors.primary, size: 22),
+          if (isActive) HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: AppColors.primary, size: 22),
         ]),
       ),
     );

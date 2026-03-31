@@ -1,4 +1,7 @@
+import 'product_form_screen.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,13 +17,13 @@ class ProductListScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final listAsync = ref.watch(productListProvider((page: 1, search: null)));
     return Scaffold(
-      appBar: AppBar(title: Text('Sản phẩm'), actions: [featureGuideButton(context, 'product_list'), IconButton(icon: Icon(Icons.add), onPressed: () {})]),
+      appBar: AppBar(title: Text('Sản phẩm'), actions: [featureGuideButton(context, 'product_list'), IconButton(icon: Icon(Icons.add), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductFormScreen())))]),
       body: Column(children: [
         Padding(padding: EdgeInsets.all(16), child: TextField(decoration: InputDecoration(hintText: 'Tìm sản phẩm...', prefixIcon: Icon(Icons.search, color: c.textMuted)))),
         Expanded(child: listAsync.when(
           data: (data) {
             final items = (data['items'] as List?) ?? [];
-            if (items.isEmpty) return Center(child: Text('Chưa có sản phẩm', style: TextStyle(color: c.textSecondary)));
+            if (items.isEmpty) return AppEmpty(message: 'Chưa có sản phẩm', subtitle: 'Hãy thêm sản phẩm đầu tiên');
             return RefreshIndicator(
               onRefresh: () async => ref.invalidate(productListProvider),
               child: ListView.builder(padding: EdgeInsets.symmetric(horizontal: 16), itemCount: items.length, itemBuilder: (_, i) {
@@ -43,8 +46,8 @@ class ProductListScreen extends ConsumerWidget {
               }),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Lỗi: $e', style: const TextStyle(color: AppColors.danger))),
+          loading: () => const ShimmerList(),
+          error: (e, _) => AppError(message: 'Lỗi: $e', onRetry: () => ref.invalidate(productListProvider)),
         )),
       ]),
     );

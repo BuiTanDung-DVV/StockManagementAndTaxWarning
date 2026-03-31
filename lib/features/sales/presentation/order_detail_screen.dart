@@ -284,8 +284,6 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
           Wrap(spacing: 8, children: [
             _MethodChip('CASH', 'Tiền mặt', Icons.money, selectedMethod, (v) => setState(() => selectedMethod = v)),
             _MethodChip('TRANSFER', 'Chuyển khoản', Icons.account_balance, selectedMethod, (v) => setState(() => selectedMethod = v)),
-            _MethodChip('MOMO', 'Momo', Icons.phone_android, selectedMethod, (v) => setState(() => selectedMethod = v)),
-            _MethodChip('QR', 'QR Pay', Icons.qr_code, selectedMethod, (v) => setState(() => selectedMethod = v)),
           ]),
           const SizedBox(height: 16),
 
@@ -374,9 +372,6 @@ String _paymentMethodLabel(String method) {
   switch (method) {
     case 'CASH': return 'Tiền mặt';
     case 'TRANSFER': return 'Chuyển khoản';
-    case 'MOMO': return 'Momo';
-    case 'ZALOPAY': return 'ZaloPay';
-    case 'QR': return 'QR Pay';
     default: return method;
   }
 }

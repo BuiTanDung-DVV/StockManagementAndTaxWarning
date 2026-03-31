@@ -16,7 +16,11 @@ export class InventoryService {
 
     // Stock
     async getStock(page = 1, limit = 20) {
-        const [items, total] = await this.stockRepo.findAndCount({ skip: (page - 1) * limit, take: limit });
+        const [items, total] = await this.stockRepo.findAndCount({ 
+            skip: (page - 1) * limit, 
+            take: limit,
+            relations: ['product', 'warehouse'] 
+        });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
     async getLowStock(threshold?: number) {
@@ -108,7 +112,13 @@ export class InventoryService {
 
     // Stock Takes
     async createStockTake(dto: any) {
-        const items = (dto.items || []).map((i: any) => this.stockTakeItemRepo.create({ ...i, expectedQuantity: 0, difference: i.actualQuantity }));
+        const items = (dto.items || []).map((i: any) => this.stockTakeItemRepo.create({
+            product: { id: i.productId },
+            systemQty: i.systemQty || 0,
+            actualQty: i.actualQty || 0,
+            difference: (i.actualQty || 0) - (i.systemQty || 0),
+            notes: i.notes
+        }));
         return this.stockTakeRepo.save(this.stockTakeRepo.create({ ...dto, items }));
     }
 }

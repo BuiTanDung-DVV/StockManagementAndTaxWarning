@@ -25,8 +25,16 @@ export class InventoryStock {
     @Column({ name: 'product_id' })
     productId: number;
 
+    @ManyToOne(() => Product)
+    @JoinColumn({ name: 'product_id' })
+    product: Product;
+
     @Column({ name: 'warehouse_id' })
     warehouseId: number;
+
+    @ManyToOne(() => Warehouse)
+    @JoinColumn({ name: 'warehouse_id' })
+    warehouse: Warehouse;
 
     @Column({ default: 0 })
     quantity: number;

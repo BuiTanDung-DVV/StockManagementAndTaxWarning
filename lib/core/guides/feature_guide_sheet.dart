@@ -58,7 +58,7 @@ void showFeatureGuide(BuildContext context, String screenKey) {
               controller: controller,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               itemCount: guide.items.length,
-              separatorBuilder: (_, _a) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (_, i) => _GuideItemCard(item: guide.items[i]),
             ),
           ),

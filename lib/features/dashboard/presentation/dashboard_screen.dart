@@ -1,5 +1,8 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_animations.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -46,7 +49,7 @@ class DashboardScreen extends ConsumerWidget {
                   Text('Tổng quan', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 ])),
                 featureGuideButton(context, 'dashboard'),
-                IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),
+                IconButton(icon: HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: c.textSecondary, size: 22), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),
               ]),
               const SizedBox(height: 20),
 
@@ -58,32 +61,24 @@ class DashboardScreen extends ConsumerWidget {
                   final avgOrder = orders > 0 ? revenue / orders : 0.0;
                   return Column(children: [
                     Row(children: [
-                      Expanded(child: _SummaryCard('Doanh thu', _currFmt.format(revenue), Icons.trending_up, AppColors.primary)),
+                      Expanded(child: _SummaryCard('Doanh thu', _currFmt.format(revenue), HugeIcons.strokeRoundedChartIncrease, AppColors.primary)),
                       const SizedBox(width: 12),
-                      Expanded(child: _SummaryCard('Đơn hàng', '$orders', Icons.receipt, AppColors.success)),
+                      Expanded(child: _SummaryCard('Đơn hàng', '$orders', HugeIcons.strokeRoundedInvoice03, AppColors.success)),
                     ]),
                     SizedBox(height: 12),
                     Row(children: [
-                      Expanded(child: _SummaryCard('TB / Đơn', _currFmt.format(avgOrder), Icons.analytics, AppColors.info)),
+                      Expanded(child: _SummaryCard('TB / Đơn', _currFmt.format(avgOrder), HugeIcons.strokeRoundedAnalytics01, AppColors.info)),
                       SizedBox(width: 12),
                       Expanded(child: lowStockAsync.when(
-                        data: (items) => _SummaryCard('Dưới DMức', '${items.length}', Icons.warning, items.isEmpty ? AppColors.success : AppColors.danger),
-                        loading: () => _SummaryCard('Dưới DMức', '...', Icons.warning, AppColors.warning),
-                        error: (_, _) => _SummaryCard('Dưới DMức', '?', Icons.warning, AppColors.danger),
+                        data: (items) => _SummaryCard('Dưới DMức', '${items.length}', HugeIcons.strokeRoundedAlert02, items.isEmpty ? AppColors.success : AppColors.danger),
+                        loading: () => _SummaryCard('Dưới DMức', '...', HugeIcons.strokeRoundedAlert02, AppColors.warning),
+                        error: (_, _) => _SummaryCard('Dưới DMức', '?', HugeIcons.strokeRoundedAlert02, AppColors.danger),
                       )),
                     ]),
                   ]);
                 },
-                loading: () => const Center(child: Padding(padding: EdgeInsets.all(30), child: CircularProgressIndicator())),
-                error: (e, _) => Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: AppColors.danger.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Row(children: [
-                    const Icon(Icons.cloud_off, color: AppColors.danger),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text('Không thể kết nối server\n$e', style: const TextStyle(fontSize: 12, color: AppColors.danger))),
-                  ]),
-                ),
+                loading: () => const ShimmerDashboard(),
+                error: (e, _) => AppError(message: 'Không thể kết nối server\n$e', onRetry: () { ref.invalidate(salesSummaryProvider); ref.invalidate(lowStockProvider); }),
               ),
 
               const SizedBox(height: 16),
@@ -97,7 +92,7 @@ class DashboardScreen extends ConsumerWidget {
                   final color = RevenueThreshold.getColor(revenue);
                   final nextThreshold = RevenueThreshold.getNextThreshold(revenue);
                   return GestureDetector(
-                    onTap: () => context.go('/tax-calculator'),
+                    onTap: () => context.push('/tax-calculator'),
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -107,12 +102,12 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(children: [
-                          Icon(Icons.flag, size: 16, color: color),
+                          HugeIcon(icon: HugeIcons.strokeRoundedFlag01, size: 16, color: color),
                           const SizedBox(width: 6),
                           Text('Ngưỡng DT: ${RevenueThreshold.getTierLabel(revenue)}',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
                           const Spacer(),
-                          Icon(Icons.chevron_right, size: 16, color: c.textMuted),
+                          HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 16, color: c.textMuted),
                         ]),
                         SizedBox(height: 6),
                         ClipRRect(
@@ -142,17 +137,17 @@ class DashboardScreen extends ConsumerWidget {
                 crossAxisCount: 4, mainAxisSpacing: 12, crossAxisSpacing: 12, shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _QuickAction(Icons.point_of_sale, 'Bán hàng', () => context.go('/pos')),
-                  _QuickAction(Icons.receipt_long, 'Đơn hàng', () => context.go('/sales')),
-                  _QuickAction(Icons.inventory_2, 'Sản phẩm', () => context.go('/products')),
-                  _QuickAction(Icons.people, 'Khách hàng', () => context.go('/customers')),
-                  _QuickAction(Icons.warehouse, 'Kho hàng', () => context.go('/inventory')),
-                  _QuickAction(Icons.business, 'NCC', () => context.go('/suppliers')),
-                  _QuickAction(Icons.account_balance_wallet, 'Tài chính', () => context.go('/finance')),
-                  _QuickAction(Icons.settings, 'Cài đặt', () => context.go('/settings')),
-                  if (ref.watch(shopProvider).isOwner) ...[                  
-                    _QuickAction(Icons.people, 'Nhân viên', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffManagementScreen()))),
-                    _QuickAction(Icons.admin_panel_settings, 'Vai trò', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RoleConfigScreen()))),
+                  _QuickAction(HugeIcons.strokeRoundedStore01, 'Tạo đơn', () => context.push('/pos')),
+                  _QuickAction(HugeIcons.strokeRoundedPackage, 'Sản phẩm', () => context.go('/products')),
+                  _QuickAction(HugeIcons.strokeRoundedUserGroup, 'Khách hàng', () => context.go('/customers')),
+                  _QuickAction(HugeIcons.strokeRoundedTruck, 'NCC', () => context.go('/suppliers')),
+                  _QuickAction(HugeIcons.strokeRoundedTask01, 'Kiểm kê', () => context.push('/stock-take')),
+                  _QuickAction(HugeIcons.strokeRoundedCheckmarkCircle02, 'Chốt sổ', () => context.push('/daily-closing')),
+                  _QuickAction(HugeIcons.strokeRoundedAnalytics01, 'Lãi/Lỗ', () => context.push('/profit-loss')),
+                  _QuickAction(HugeIcons.strokeRoundedInvoice01, 'Hóa đơn', () => context.push('/invoices')),
+                  if (ref.watch(shopProvider).isOwner) ...[
+                    _QuickAction(HugeIcons.strokeRoundedUserMultiple, 'Nhân viên', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffManagementScreen()))),
+                    _QuickAction(HugeIcons.strokeRoundedUserStar02, 'Vai trò', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RoleConfigScreen()))),
                   ],
                 ],
               ),
@@ -250,7 +245,7 @@ class _TaxObligationReminder extends ConsumerWidget {
               }
 
               return GestureDetector(
-                onTap: () => context.go('/tax-obligations'),
+                onTap: () => context.push('/tax-obligations'),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: const EdgeInsets.all(14),
@@ -300,7 +295,7 @@ class _TaxObligationReminder extends ConsumerWidget {
 
 class _SummaryCard extends StatelessWidget {
   final String title, value;
-  final IconData icon;
+  final dynamic icon;
   final Color color;
   const _SummaryCard(this.title, this.value, this.icon, this.color);
 
@@ -309,11 +304,22 @@ class _SummaryCard extends StatelessWidget {
     final c = AppThemeColors.of(context);
     return Container(
       padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(height: 8),
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: HugeIcon(icon: icon, size: 18, color: color),
+        ),
+        const SizedBox(height: 10),
+        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 2),
         Text(title, style: TextStyle(fontSize: 11, color: c.textSecondary)),
       ]),
     );
@@ -321,7 +327,7 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _QuickAction extends StatelessWidget {
-  final IconData icon;
+  final dynamic icon;
   final String label;
   final VoidCallback onTap;
   const _QuickAction(this.icon, this.label, this.onTap);
@@ -332,11 +338,21 @@ class _QuickAction extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(icon, color: AppColors.primary, size: 22),
-          SizedBox(height: 4),
-          Text(label, style: TextStyle(fontSize: 10, color: c.textSecondary), textAlign: TextAlign.center),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: HugeIcon(icon: icon, color: AppColors.primary, size: 20),
+          ),
+          SizedBox(height: 6),
+          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: c.textSecondary), textAlign: TextAlign.center),
         ]),
       ),
     );
