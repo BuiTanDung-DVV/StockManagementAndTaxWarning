@@ -1,25 +1,95 @@
 import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../providers/inventory_provider.dart';
+import 'purchase_order_form_screen.dart';
 
-class PurchaseOrderScreen extends StatelessWidget {
+final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+
+class PurchaseOrderScreen extends ConsumerWidget {
   const PurchaseOrderScreen({super.key});
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('Nhập hàng / Đơn mua'), actions: [featureGuideButton(context, 'purchase_order'), IconButton(icon: Icon(Icons.add), onPressed: () {})]),
-    body: ListView.builder(padding: EdgeInsets.all(16), itemCount: 8, itemBuilder: (_, i) => Container(
-      margin: EdgeInsets.only(bottom: 10), padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
-      child: Row(children: [
-        Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.move_to_inbox, color: AppColors.info, size: 20)),
-        SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('PO-${2000 + i}', style: TextStyle(fontWeight: FontWeight.w600)),
-          Text('NCC: Nhà cung cấp ${(i % 4) + 1}', style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary)),
-          Text('Ngày: 0${i + 1}/03/2026 • HĐ: ${i < 5 ? 'HD-00${i}5' : 'Chưa có'}', style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textMuted)),
-        ])),
-        Text('₫${(i + 1) * 3}M', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13)),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppThemeColors.of(context);
+    final poAsync = ref.watch(purchaseOrdersProvider(1));
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Nhập hàng / Đơn mua'), actions: [
+        featureGuideButton(context, 'purchase_order'),
+        IconButton(
+          icon: const Icon(Icons.add), 
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()));
+          },
+        ),
       ]),
-    )),
-  );
+      body: poAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+          const SizedBox(height: 12),
+          Text('Không tải được dữ liệu\n$e', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+          const SizedBox(height: 12),
+          ElevatedButton(onPressed: () => ref.invalidate(purchaseOrdersProvider), child: const Text('Thử lại')),
+        ])),
+        data: (data) {
+          final items = (data['items'] as List?) ?? [];
+          if (items.isEmpty) {
+            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.move_to_inbox_outlined, size: 64, color: Colors.grey),
+              const SizedBox(height: 12),
+              const Text('Chưa có đơn mua hàng', style: TextStyle(fontSize: 16, color: Colors.grey)),
+            ]));
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: items.length,
+            itemBuilder: (_, i) {
+              final po = items[i] as Map;
+              final code = po['orderCode'] ?? po['code'] ?? 'PO-${po['id'] ?? i}';
+              final supplierName = po['supplier']?['name'] ?? po['supplierName'] ?? '';
+              final totalAmount = (po['totalAmount'] as num?)?.toDouble() ?? 0;
+              final createdAt = po['createdAt']?.toString().split('T').first ?? '';
+              final invoiceNumber = po['invoiceNumber'] ?? '';
+              final status = po['status'] ?? '';
+
+              Color statusColor;
+              String statusLabel;
+              switch (status) {
+                case 'COMPLETED': statusColor = AppColors.success; statusLabel = 'Hoàn thành'; break;
+                case 'CANCELLED': statusColor = AppColors.danger; statusLabel = 'Đã hủy'; break;
+                case 'PENDING': statusColor = AppColors.warning; statusLabel = 'Chờ xử lý'; break;
+                default: statusColor = AppColors.info; statusLabel = status.isNotEmpty ? status : 'N/A';
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.move_to_inbox, color: AppColors.info, size: 20)),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Text('$code', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 8),
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
+                        child: Text(statusLabel, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: statusColor))),
+                    ]),
+                    if (supplierName.isNotEmpty) Text('NCC: $supplierName', style: TextStyle(fontSize: 11, color: c.textSecondary)),
+                    Text('${createdAt.isNotEmpty ? createdAt : ''}${invoiceNumber.isNotEmpty ? ' • HĐ: $invoiceNumber' : ''}', style: TextStyle(fontSize: 11, color: c.textMuted)),
+                  ])),
+                  Text(_currFmt.format(totalAmount), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13)),
+                ]),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
 }

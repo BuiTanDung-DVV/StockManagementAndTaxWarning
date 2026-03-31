@@ -13,7 +13,9 @@ class ActivityLogScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Nhật ký hoạt động'),
-        actions: [IconButton(icon: const Icon(Icons.filter_list), onPressed: () {})],
+        actions: [IconButton(icon: const Icon(Icons.filter_list), onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bộ lọc sẽ khả dụng khi có nhiều loại nhật ký hơn'), duration: Duration(seconds: 2)));
+        })],
       ),
       body: logsAsync.when(
         data: (data) {

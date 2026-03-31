@@ -5,20 +5,53 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/finance_provider.dart';
 
-class ProfitLossScreen extends ConsumerWidget {
+class ProfitLossScreen extends ConsumerStatefulWidget {
   const ProfitLossScreen({super.key});
+  @override
+  ConsumerState<ProfitLossScreen> createState() => _ProfitLossScreenState();
+}
+
+class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
+  late DateTimeRange _range;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _range = DateTimeRange(start: DateTime(now.year, now.month, 1), end: now);
+  }
 
   String _fmt(num v) => NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(v);
 
+  Future<void> _pickDateRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: _range,
+      locale: const Locale('vi'),
+    );
+    if (picked != null) {
+      setState(() => _range = picked);
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final from = DateTime(now.year, now.month, 1).toIso8601String().split('T').first;
-    final to = now.toIso8601String().split('T').first;
+  Widget build(BuildContext context) {
+    final from = _range.start.toIso8601String().split('T').first;
+    final to = _range.end.toIso8601String().split('T').first;
     final plAsync = ref.watch(profitLossProvider((from: from, to: to)));
+    final label = '${DateFormat('dd/MM').format(_range.start)} - ${DateFormat('dd/MM').format(_range.end)}';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Báo cáo KQKD'), actions: [featureGuideButton(context, 'profit_loss'), IconButton(icon: const Icon(Icons.date_range), onPressed: () {})]),
+      appBar: AppBar(title: const Text('Báo cáo KQKD'), actions: [
+        TextButton.icon(
+          onPressed: _pickDateRange,
+          icon: const Icon(Icons.date_range, size: 18),
+          label: Text(label, style: const TextStyle(fontSize: 12)),
+        ),
+        featureGuideButton(context, 'profit_loss'),
+      ]),
       body: plAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

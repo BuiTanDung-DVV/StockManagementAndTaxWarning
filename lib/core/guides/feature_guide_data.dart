@@ -1,10 +1,10 @@
 // Dữ liệu hướng dẫn tính năng — dành cho hộ kinh doanh nhỏ lẻ
 //
 // Mỗi screen có 1 [FeatureGuide] gồm:
-/// - title: Tên tính năng
-/// - items: Danh sách [{intro, example}]
-///   + intro: Giới thiệu chức năng (gộp lý do + cách dùng)
-///   + example: Ví dụ nhỏ minh họa
+// - title: Tên tính năng
+// - items: Danh sách [{intro, example}]
+//   + intro: Giới thiệu chức năng (gộp lý do + cách dùng)
+//   + example: Ví dụ nhỏ minh họa
 
 class FeatureGuideItem {
   final String intro;

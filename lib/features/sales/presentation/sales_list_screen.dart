@@ -1,4 +1,6 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +19,14 @@ class SalesListScreen extends ConsumerStatefulWidget {
 class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   int _page = 1;
   String? _status;
+  bool _searching = false;
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +39,14 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           Padding(padding: EdgeInsets.all(16), child: Row(children: [
             const Expanded(child: Text('Đơn hàng', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
             featureGuideButton(context, 'sales_list'),
-            IconButton(icon: Icon(Icons.search, color: c.textSecondary), onPressed: () {}),
+            IconButton(icon: Icon(_searching ? Icons.close : Icons.search, color: c.textSecondary), onPressed: () => setState(() { _searching = !_searching; if (!_searching) _searchCtrl.clear(); })),
           ])),
+          if (_searching)
+            Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), child: TextField(
+              controller: _searchCtrl, autofocus: true,
+              decoration: InputDecoration(hintText: 'Tìm đơn hàng, khách hàng...', prefixIcon: Icon(Icons.search, color: c.textMuted),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), filled: true, fillColor: c.card),
+            )),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 16),
@@ -58,7 +74,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
               data: (data) {
                 final items = (data['items'] as List?) ?? [];
                 if (items.isEmpty) {
-                  return Center(child: Text('Chưa có đơn hàng nào', style: TextStyle(color: c.textSecondary)));
+                  return AppEmpty(message: 'Chưa có đơn hàng nào', subtitle: 'Tạo đơn hàng đầu tiên từ màn hình POS');
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(salesListProvider),
@@ -74,7 +90,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                       final customerName = order['customer']?['name'] ?? 'Khách lẻ';
 
                       return GestureDetector(
-                        onTap: () => context.go('/sales/${order['id']}'),
+                        onTap: () => context.push('/sales/${order['id']}'),
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: EdgeInsets.all(14),
@@ -107,19 +123,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                   ),
                 );
               },
-              loading: () => Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.cloud_off, size: 48, color: c.textMuted),
-                const SizedBox(height: 12),
-                Text('Lỗi: $e', style: const TextStyle(color: AppColors.danger, fontSize: 12), textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                ElevatedButton(onPressed: () => ref.invalidate(salesListProvider), child: Text('Thử lại')),
-              ])),
+              loading: () => const ShimmerList(),
+              error: (e, _) => AppError(message: 'Lỗi: $e', onRetry: () => ref.invalidate(salesListProvider)),
             ),
           ),
         ]),
       ),
-      floatingActionButton: FloatingActionButton(onPressed: () => context.go('/pos'), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton(onPressed: () => context.push('/pos'), child: const Icon(Icons.add)),
     );
   }
 }

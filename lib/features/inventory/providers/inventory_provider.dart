@@ -5,7 +5,7 @@ class InventoryRepository {
   final ApiClient _api;
   InventoryRepository(this._api);
 
-  Future<List<dynamic>> getCurrentStock({int? warehouseId}) async {
+  Future<dynamic> getCurrentStock({int? warehouseId}) async {
     final params = <String, dynamic>{};
     if (warehouseId != null) params['warehouseId'] = '$warehouseId';
     return await _api.get('/inventory/stock', params: params);
@@ -46,8 +46,11 @@ class InventoryRepository {
 
 final inventoryRepoProvider = Provider<InventoryRepository>((ref) => InventoryRepository(ref.read(apiClientProvider)));
 
-final stockProvider = FutureProvider.family<List<dynamic>, int?>((ref, warehouseId) {
-  return ref.read(inventoryRepoProvider).getCurrentStock(warehouseId: warehouseId);
+final stockProvider = FutureProvider.family<List<dynamic>, int?>((ref, warehouseId) async {
+  final result = await ref.read(inventoryRepoProvider).getCurrentStock(warehouseId: warehouseId);
+  if (result is List) return result;
+  if (result is Map) return (result['items'] as List?) ?? [];
+  return [];
 });
 
 final lowStockProvider = FutureProvider<List<dynamic>>((ref) {

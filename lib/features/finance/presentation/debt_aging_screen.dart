@@ -16,7 +16,9 @@ class DebtAgingScreen extends ConsumerWidget {
     final overdueAsync = ref.watch(overdueDebtsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Phân tích Tuổi nợ'), actions: [featureGuideButton(context, 'debt_aging'), IconButton(icon: const Icon(Icons.file_download), onPressed: () {})]),
+      appBar: AppBar(title: const Text('Phân tích Tuổi nợ'), actions: [featureGuideButton(context, 'debt_aging'), IconButton(icon: const Icon(Icons.file_download), onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Xuất báo cáo PDF/Excel sẽ sớm khả dụng'), duration: Duration(seconds: 2)));
+      })]),
       body: agingAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
