@@ -40,25 +40,33 @@ export class AuthService {
             { expiresIn: String(config.jwtExpiresIn) } as jwt.SignOptions,
         );
 
-        // Fetch user's shop memberships with role info
-        const memberships = await this.memberRepo.find({
-            where: { userId: user.id, isActive: true },
-            relations: ['role'],
-        });
-        const shops = memberships.map(m => {
-            let permissions: Record<string, string> = {};
-            if (m.memberType === 'OWNER') {
-                permissions = { _owner: 'true' };
-            } else if (m.role?.permissions) {
-                try { permissions = JSON.parse(m.role.permissions); } catch {}
-            }
-            return {
-                shopId: m.shopId,
-                memberType: m.memberType,
-                role: m.role ? { id: m.role.id, name: m.role.name } : null,
-                permissions,
-            };
-        });
+       let shops: any[] = [];
+        try {
+            const memberships = await this.memberRepo.find({
+                where: { userId: user.id, isActive: true },
+                relations: ['role'],
+            });
+            shops = memberships.map(m => {
+                let permissions: Record<string, string> = {};
+                if (m.memberType === 'OWNER') {
+                    permissions = { _owner: 'true' };
+                } else if (m.role?.permissions) {
+                    try {
+                        permissions = JSON.parse(m.role.permissions);
+                    } catch {
+                        permissions = {};
+                    }
+                }
+                return {
+                    shopId: m.shopId,
+                    memberType: m.memberType,
+                    role: m.role ? { id: m.role.id, name: m.role.name } : null,
+                    permissions,
+                };
+            });
+        } catch (e: any) {
+            shops = [];
+        }
 
         return {
             access_token: accessToken,
@@ -76,11 +84,6 @@ export class AuthService {
         };
     }
 
-    /**
-     * Simplified forgot-password for local/dev testing.
-     * Accepts { identifier } (username/phone/email) and returns a reset hint.
-     * In production this should send OTP/email; currently we only verify the user exists.
-     */
     async forgotPassword(dto: any) {
         const identifier = (dto?.identifier || '').toString().trim();
         if (!identifier) throw new Error('Missing identifier');
@@ -94,10 +97,6 @@ export class AuthService {
         return { sent: true, userId: user.id };
     }
 
-    /**
-     * Simplified reset-password for local/dev testing.
-     * Accepts { identifier, newPassword }.
-     */
     async resetPassword(dto: any) {
         const identifier = (dto?.identifier || '').toString().trim();
         const newPassword = (dto?.newPassword || '').toString();
