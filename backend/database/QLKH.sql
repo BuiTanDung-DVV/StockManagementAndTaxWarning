@@ -2,10 +2,32 @@
 -- Phần mềm Quản lý Bán hàng & Kho hàng
 -- SQL Server Migration - All 34 Tables
 -- =====================================================
-Create database QLKH;
-Go
-Use QLKH;
-Go
+
+USE master;
+GO
+
+-- Ngắt tất cả kết nối
+DECLARE @SQL NVARCHAR(MAX) = '';
+SELECT @SQL = @SQL + 'KILL ' + CAST(session_id AS VARCHAR(10)) + ';'
+FROM sys.dm_exec_sessions
+WHERE database_id = DB_ID('QLKH');
+EXEC sp_executesql @SQL;
+GO
+
+-- Xóa database nếu tồn tại
+IF EXISTS (SELECT name FROM sys.databases WHERE name = 'QLKH')
+BEGIN
+    DROP DATABASE QLKH;
+END
+GO
+
+-- Tạo database mới
+CREATE DATABASE QLKH COLLATE Vietnamese_CI_AS;
+GO
+
+USE QLKH;
+GO
+
 -- 1. USERS
 CREATE TABLE users (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -627,74 +649,6 @@ CREATE INDEX IX_pwi_items_purchase ON purchase_without_invoice_items(purchase_id
 CREATE INDEX IX_purchase_orders_warehouse ON purchase_orders(warehouse_id);
 CREATE INDEX IX_tax_obligations_period ON tax_obligations(period);
 
--- =====================================================
--- SEED DATA: Default cost types
--- =====================================================
-INSERT INTO cost_types (name, description, sort_order) VALUES
-    (N'Vận chuyển', N'Chi phí vận chuyển hàng hóa', 1),
-    (N'Đóng gói', N'Chi phí bao bì, đóng gói', 2),
-    (N'Tiền công', N'Chi phí nhân công, gia công', 3),
-    (N'Hao hụt', N'Hao hụt trong quá trình vận chuyển/bảo quản', 4),
-    (N'Thuế nhập', N'Thuế nhập khẩu, thuế GTGT đầu vào', 5),
-    (N'Phí kho', N'Chi phí lưu kho, bảo quản', 6),
-    (N'Khác', N'Chi phí khác', 99);
-
--- =====================================================
--- SEED DATA: Sample financial data (admin account)
--- =====================================================
-
--- Cash Account
-INSERT INTO cash_accounts (name, account_type, balance) VALUES
-    (N'Quỹ tiền mặt', 'CASH', 50000000);
-
--- Cash Transactions (10 records — income + expense)
-INSERT INTO cash_transactions (transaction_code, type, category, amount, counterparty, transaction_date, notes) VALUES
-    ('TX-001', 'INCOME',  'SALES',     15000000, N'Khách lẻ',        CAST(GETDATE() AS DATE),           N'Bán hàng tại quầy'),
-    ('TX-002', 'INCOME',  'SALES',      8500000, N'Cửa hàng Minh',   DATEADD(DAY, -1, CAST(GETDATE() AS DATE)), N'Đơn sỉ'),
-    ('TX-003', 'INCOME',  'SALES',     12000000, N'Nguyễn Văn An',   DATEADD(DAY, -2, CAST(GETDATE() AS DATE)), N'Thanh toán đơn hàng DH-301'),
-    ('TX-004', 'EXPENSE', 'PURCHASE',  20000000, N'NCC Phúc Thịnh',  DATEADD(DAY, -1, CAST(GETDATE() AS DATE)), N'Nhập hàng đợt 03/2026'),
-    ('TX-005', 'EXPENSE', 'SALARY',     8000000, N'Trần Thị Bích',   DATEADD(DAY, -3, CAST(GETDATE() AS DATE)), N'Lương tháng 3'),
-    ('TX-006', 'EXPENSE', 'RENT',       5000000, N'Chủ nhà',         DATEADD(DAY, -5, CAST(GETDATE() AS DATE)), N'Tiền thuê mặt bằng T3'),
-    ('TX-007', 'EXPENSE', 'UTILITIES',  1200000, N'EVN',             DATEADD(DAY, -4, CAST(GETDATE() AS DATE)), N'Tiền điện T3'),
-    ('TX-008', 'INCOME',  'SALES',      6500000, N'Khách lẻ',        DATEADD(DAY, -3, CAST(GETDATE() AS DATE)), N'Bán hàng online'),
-    ('TX-009', 'EXPENSE', 'OTHER',       800000, N'Grab Express',    DATEADD(DAY, -2, CAST(GETDATE() AS DATE)), N'Phí vận chuyển'),
-    ('TX-010', 'INCOME',  'SALES',      4500000, N'Lê Hoàng',        CAST(GETDATE() AS DATE),           N'Đơn DH-305');
-
--- Invoices (5 records — in + out)
-INSERT INTO invoices (invoice_number, invoice_type, invoice_date, partner_name, partner_tax_code, subtotal, tax_amount, total_amount) VALUES
-    ('HD-0001', 'OUT', DATEADD(DAY, -1, CAST(GETDATE() AS DATE)), N'Cửa hàng Minh',   '0312345678', 8500000,  850000,   9350000),
-    ('HD-0002', 'OUT', DATEADD(DAY, -2, CAST(GETDATE() AS DATE)), N'Nguyễn Văn An',    NULL,         12000000, 1200000, 13200000),
-    ('HD-0003', 'IN',  DATEADD(DAY, -1, CAST(GETDATE() AS DATE)), N'NCC Phúc Thịnh',   '0398765432', 20000000, 2000000, 22000000),
-    ('HD-0004', 'OUT', CAST(GETDATE() AS DATE),                    N'Lê Hoàng',         NULL,         4500000,  450000,   4950000),
-    ('HD-0005', 'IN',  DATEADD(DAY, -4, CAST(GETDATE() AS DATE)), N'Điện lực HCM',     '0301234567', 1200000,  120000,   1320000);
-
--- Tax Obligations (2 records — previous + current quarter)
-INSERT INTO tax_obligations (period, vat_declared, pit_declared, vat_paid, pit_paid, due_date, status) VALUES
-    ('Q4/2025', 3500000, 1200000, 3500000, 1200000, '2026-01-30', 'done'),
-    ('Q1/2026', 2500000,  900000,       0,       0, '2026-04-30', 'pending');
-
--- Purchases Without Invoice (3 records)
-INSERT INTO purchases_without_invoice (record_code, purchase_date, seller_name, seller_identity_number, total_amount) VALUES
-    ('BK-001', DATEADD(DAY, -2, CAST(GETDATE() AS DATE)), N'Chị Ba chợ Bình Tây', '079200012345', 3500000),
-    ('BK-002', DATEADD(DAY, -5, CAST(GETDATE() AS DATE)), N'Anh Tư vựa trái cây', '079200054321', 1800000),
-    ('BK-003', CAST(GETDATE() AS DATE),                    N'Cô Năm rau sạch',     '079200099999',  950000);
-
--- Budget Plan (current month)
-INSERT INTO budget_plans (name, period, start_date, end_date, planned_income, planned_expense, actual_income, actual_expense) VALUES
-    (N'Ngân sách T3/2026', 'MONTHLY', '2026-03-01', '2026-03-31', 50000000, 35000000, 46500000, 35000000);
-
--- Cashflow Forecasts (5 days ahead)
-INSERT INTO cashflow_forecasts (forecast_date, expected_income, expected_expense, expected_balance) VALUES
-    (DATEADD(DAY, 1, CAST(GETDATE() AS DATE)), 12000000, 9000000,  3000000),
-    (DATEADD(DAY, 2, CAST(GETDATE() AS DATE)), 14000000, 10000000, 4000000),
-    (DATEADD(DAY, 3, CAST(GETDATE() AS DATE)), 16000000, 11000000, 5000000),
-    (DATEADD(DAY, 4, CAST(GETDATE() AS DATE)), 18000000, 12000000, 6000000),
-    (DATEADD(DAY, 5, CAST(GETDATE() AS DATE)), 20000000, 13000000, 7000000);
-
--- Daily Closing (yesterday)
-INSERT INTO daily_closings (closing_date, opening_cash, closing_cash, expected_cash, cash_difference, total_sales, total_income, total_expense, order_count, closed_at) VALUES
-    (DATEADD(DAY, -1, CAST(GETDATE() AS DATE)), 50000000, 53300000, 53500000, -200000, 8500000, 8500000, 5200000, 12, GETDATE());
-
 -- 40. SHOP PROFILES
 CREATE TABLE shop_profiles (
     id                       INT IDENTITY(1,1) PRIMARY KEY,
@@ -751,10 +705,6 @@ CREATE TABLE notifications (
     created_at  DATETIME2 DEFAULT GETDATE()
 );
 
--- Seed Shop Profile
-INSERT INTO shop_profiles (shop_name, owner_name, tax_code, phone, address) VALUES
-    (N'Cửa hàng Demo', N'Nguyễn Văn A', '0123456789', '0901234567', N'123 Đường ABC, Q.1, TP.HCM');
-
 -- 44. INVENTORY_LOTS (Lô tồn kho chi tiết cho FIFO/Bình quân)
 CREATE TABLE inventory_lots (
     id              INT IDENTITY(1,1) PRIMARY KEY,
@@ -773,3 +723,5 @@ CREATE INDEX IX_inventory_lots_remaining ON inventory_lots(product_id, remaining
 
 PRINT N'✅ Tạo thành công 44 bảng + indexes + seed data';
 GO
+
+Select * from shop_profiles;

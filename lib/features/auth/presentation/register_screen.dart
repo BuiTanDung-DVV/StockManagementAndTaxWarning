@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 
@@ -20,6 +21,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscureConfirm = true;
   bool _isLoading = false;
   String? _error;
+  String _accountType = 'SHOP';
 
   @override
   void dispose() {
@@ -67,6 +69,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           'username': phone,
           'passwordHash': pass,
           'fullName': storeName,
+          'accountType': _accountType,
         },
       );
 
@@ -81,9 +84,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       context.pop();
     } catch (e) {
       if (!mounted) return;
+      String errorMessage = 'Đăng ký không thành công. Vui lòng thử lại.';
+      if (e is DioException && e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data['message'] != null) {
+          errorMessage = data['message'].toString();
+          // Translate some common backend errors
+          if (errorMessage == 'Username already exists') {
+            errorMessage = 'Tên đăng nhập / Số điện thoại này đã tồn tại!';
+          }
+        }
+      }
       setState(() {
         _isLoading = false;
-        _error = 'Đăng ký không thành công. Vui lòng thử lại.';
+        _error = errorMessage;
       });
     }
   }
@@ -110,15 +124,44 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       style: TextStyle(
                           fontSize: 24, fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
-                  Text('để trải nghiệm hệ thống Quản lý Bán hàng & Kho hàng', style: TextStyle(
+                  Text(
+                      _accountType == 'SHOP'
+                          ? 'để bắt đầu quản lý bán hàng & kho hàng'
+                          : 'để tham gia hệ thống với tư cách nhân viên',
+                      style: TextStyle(
                           fontSize: 14, color: c.textSecondary)),
-                  SizedBox(height: 32),
+                  SizedBox(height: 24),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment<String>(
+                        value: 'SHOP',
+                        label: Text('Chủ cửa hàng'),
+                        icon: Icon(Icons.store),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'PERSONAL',
+                        label: Text('Nhân viên'),
+                        icon: Icon(Icons.person),
+                      ),
+                    ],
+                    selected: {_accountType},
+                    onSelectionChanged: (Set<String> newSelection) {
+                      setState(() {
+                        _accountType = newSelection.first;
+                      });
+                    },
+                    style: SegmentedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                  SizedBox(height: 16),
                   TextField(
                     controller: _storeNameCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Tên cửa hàng/Doanh nghiệp',
-                      prefixIcon:
-                          Icon(Icons.store, color: c.textMuted),
+                      hintText: _accountType == 'SHOP' ? 'Tên cửa hàng/Hộ kinh doanh' : 'Họ và tên của bạn',
+                      prefixIcon: Icon(
+                          _accountType == 'SHOP' ? Icons.store : Icons.person,
+                          color: c.textMuted),
                     ),
                   ),
                   SizedBox(height: 16),

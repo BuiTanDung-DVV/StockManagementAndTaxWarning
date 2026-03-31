@@ -12,7 +12,7 @@ export class ShopRole {
     @Column({ length: 100 })
     name: string;
 
-    @Column({ type: 'nvarchar', length: 'MAX' })
+    @Column({ type: 'text' })
     permissions: string; // JSON: {"pos":"full","products":"view",...}
 
     @Column({ name: 'is_default', default: false })
@@ -70,7 +70,7 @@ export class Notification {
     @Column({ length: 500, nullable: true })
     message: string;
 
-    @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
+    @Column({ type: 'text', nullable: true })
     data: string; // JSON metadata
 
     @Column({ name: 'is_read', default: false })

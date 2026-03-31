@@ -1,10 +1,28 @@
+import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Enhanced API client with auth token management
 class ApiClient {
-  static const String baseUrl = 'http://10.0.2.2:8080/api'; // Android emulator → localhost
+  static String get baseUrl {
+    const envUrl = String.fromEnvironment('API_URL');
+    if (envUrl.isNotEmpty) {
+      return envUrl;
+    }
+
+    const defaultUrl = 'http://localhost:8080/api';
+
+    if (const bool.fromEnvironment('dart.library.html')) return defaultUrl;
+    // Use an environment variable or compile-time constant for web, else check platform
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:8080/api';
+    } catch (e) {
+      // Platform.isAndroid throws on web
+    }
+    return defaultUrl;
+  }
+  
   late final Dio _dio;
   String? _token;
 

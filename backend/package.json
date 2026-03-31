@@ -18,8 +18,7 @@
         "helmet": "^7.1.0",
         "jsonwebtoken": "^9.0.2",
         "morgan": "^1.10.0",
-        "msnodesqlv8": "^5.1.5",
-        "mssql": "^11.0.1",
+        "pg": "^8.20.0",
         "reflect-metadata": "^0.2.2",
         "typeorm": "^0.3.20",
         "zod": "^3.22.4"
@@ -32,6 +31,7 @@
         "@types/jsonwebtoken": "^9.0.5",
         "@types/morgan": "^1.9.9",
         "@types/node": "^22.0.0",
+        "@types/pg": "^8.20.0",
         "ts-node-dev": "^2.0.0",
         "typescript": "^5.7.0"
     }
