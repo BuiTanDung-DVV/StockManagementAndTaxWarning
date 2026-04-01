@@ -68,7 +68,7 @@ const createReceivable = async (req, res) => {
 exports.createReceivable = createReceivable;
 const overdueDebts = async (req, res) => {
     try {
-        res.json({ success: true, data: [] });
+        res.json({ success: true, data: await customerService.getOverdueDebts() });
     }
     catch (e) {
         res.status(500).json({ success: false, message: e.message });
@@ -77,7 +77,7 @@ const overdueDebts = async (req, res) => {
 exports.overdueDebts = overdueDebts;
 const debtAging = async (req, res) => {
     try {
-        res.json({ success: true, data: [] });
+        res.json({ success: true, data: await customerService.getDebtAging() });
     }
     catch (e) {
         res.status(500).json({ success: false, message: e.message });

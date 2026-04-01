@@ -44,6 +44,10 @@ __decorate([
     __metadata("design:type", String)
 ], ShopProfile.prototype, "bankAccount", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'bank_id', length: 20, nullable: true }),
+    __metadata("design:type", String)
+], ShopProfile.prototype, "bankId", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'bank_name', length: 100, nullable: true }),
     __metadata("design:type", String)
 ], ShopProfile.prototype, "bankName", void 0);
@@ -79,6 +83,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'business_license_number', length: 50, nullable: true }),
     __metadata("design:type", String)
 ], ShopProfile.prototype, "businessLicenseNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'costing_method', length: 10, default: 'AVG' }),
+    __metadata("design:type", String)
+], ShopProfile.prototype, "costingMethod", void 0);
 exports.ShopProfile = ShopProfile = __decorate([
     (0, typeorm_1.Entity)('shop_profiles')
 ], ShopProfile);
@@ -160,15 +168,15 @@ __decorate([
     __metadata("design:type", String)
 ], InvoiceScan.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'ocr_raw_text', type: 'nvarchar', length: 'MAX', nullable: true }),
+    (0, typeorm_1.Column)({ name: 'ocr_raw_text', type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], InvoiceScan.prototype, "ocrRawText", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'ocr_parsed_data', type: 'nvarchar', length: 'MAX', nullable: true }),
+    (0, typeorm_1.Column)({ name: 'ocr_parsed_data', type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], InvoiceScan.prototype, "ocrParsedData", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'confirmed_data', type: 'nvarchar', length: 'MAX', nullable: true }),
+    (0, typeorm_1.Column)({ name: 'confirmed_data', type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], InvoiceScan.prototype, "confirmedData", void 0);
 __decorate([

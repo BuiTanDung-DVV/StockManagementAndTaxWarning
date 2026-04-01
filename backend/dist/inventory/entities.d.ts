@@ -8,7 +8,9 @@ export declare class Warehouse {
 export declare class InventoryStock {
     id: number;
     productId: number;
+    product: Product;
     warehouseId: number;
+    warehouse: Warehouse;
     quantity: number;
     updatedAt: Date;
 }

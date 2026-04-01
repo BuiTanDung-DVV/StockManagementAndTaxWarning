@@ -5,6 +5,7 @@ const db_config_1 = require("../config/db.config");
 const entities_1 = require("../sales/entities");
 const entities_2 = require("../customer/entities");
 const entities_3 = require("../product/entities");
+const cogs_service_1 = require("./cogs.service");
 class SalesService {
     constructor() {
         this.orderRepo = db_config_1.AppDataSource.getRepository(entities_1.SalesOrder);
@@ -13,13 +14,28 @@ class SalesService {
         this.paymentRepo = db_config_1.AppDataSource.getRepository(entities_1.SalesOrderPayment);
         this.customerRepo = db_config_1.AppDataSource.getRepository(entities_2.Customer);
         this.productRepo = db_config_1.AppDataSource.getRepository(entities_3.Product);
+        this.cogsService = new cogs_service_1.COGSService();
     }
     async findAll(page = 1, limit = 20) {
         const [items, total] = await this.orderRepo.findAndCount({ skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
     async summary(from, to) {
-        return { totalRevenue: 0, orderCount: 0 };
+        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const toDate = to ? new Date(to) : new Date();
+        toDate.setHours(23, 59, 59, 999);
+        const result = await this.orderRepo.createQueryBuilder('o')
+            .select('COALESCE(SUM(o.total_amount), 0)', 'totalRevenue')
+            .addSelect('COALESCE(SUM(o.total_cogs), 0)', 'totalCogs')
+            .addSelect('COUNT(o.id)', 'orderCount')
+            .where("o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { fromDate, toDate })
+            .getRawOne();
+        return {
+            totalRevenue: Number(result?.totalRevenue || 0),
+            totalCogs: Number(result?.totalCogs || 0),
+            grossProfit: Number(result?.totalRevenue || 0) - Number(result?.totalCogs || 0),
+            orderCount: Number(result?.orderCount || 0),
+        };
     }
     async findById(id) {
         const order = await this.orderRepo.findOne({ where: { id }, relations: ['items', 'payments'] });
@@ -38,7 +54,9 @@ class SalesService {
             ? await this.customerRepo.findOne({ where: { id: Number(dto.customerId) } })
             : null;
         let subtotal = 0;
+        let totalCogs = 0;
         const rawItems = Array.isArray(dto.items) ? dto.items : [];
+        const allLotDeductions = [];
         const items = [];
         for (const i of rawItems) {
             const quantity = Number(i.quantity || 0);
@@ -48,10 +66,24 @@ class SalesService {
             const product = i.productId
                 ? await this.productRepo.findOne({ where: { id: Number(i.productId) } })
                 : null;
+            let costPrice = 0;
+            if (product && quantity > 0) {
+                try {
+                    const cogsResult = await this.cogsService.calculateCOGS(product.id, quantity);
+                    costPrice = cogsResult.unitCost;
+                    totalCogs += cogsResult.totalCost;
+                    allLotDeductions.push(...cogsResult.lotDeductions);
+                }
+                catch {
+                    costPrice = Number(product.costPrice || 0);
+                    totalCogs += costPrice * quantity;
+                }
+            }
             const item = this.orderItemRepo.create({
                 quantity,
                 unitPrice,
                 subtotal: lineSubtotal,
+                costPrice,
                 taxRate: Number(i.taxRate || 0),
                 taxAmount: Number(i.taxAmount || 0),
                 ...(product ? { product } : {}),
@@ -69,6 +101,7 @@ class SalesService {
             discountAmount,
             taxAmount,
             totalAmount,
+            totalCogs,
             paidAmount: Number(dto.paidAmount || 0),
             paymentMethod: dto.paymentMethod || 'CASH',
             notes: dto.notes,
@@ -76,7 +109,11 @@ class SalesService {
             ...(customer ? { customer } : {}),
             items,
         });
-        return this.orderRepo.save(order);
+        const savedOrder = await this.orderRepo.save(order);
+        if (allLotDeductions.length > 0) {
+            await this.cogsService.commitLotDeductions(allLotDeductions);
+        }
+        return savedOrder;
     }
     async cancel(id) {
         const order = await this.findById(id);

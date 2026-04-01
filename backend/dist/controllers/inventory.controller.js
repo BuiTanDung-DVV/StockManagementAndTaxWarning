@@ -14,7 +14,8 @@ const getStock = async (req, res) => {
 exports.getStock = getStock;
 const getLowStock = async (req, res) => {
     try {
-        res.json({ success: true, data: await inventoryService.getLowStock() });
+        const threshold = req.query.threshold ? +(req.query.threshold) : undefined;
+        res.json({ success: true, data: await inventoryService.getLowStock(threshold) });
     }
     catch (e) {
         res.status(500).json({ success: false, message: e.message });
@@ -50,7 +51,11 @@ const createWarehouse = async (req, res) => {
 exports.createWarehouse = createWarehouse;
 const getXntReport = async (req, res) => {
     try {
-        res.json({ success: true, data: await inventoryService.getXntReport() });
+        const { from, to, warehouseId } = req.query;
+        res.json({
+            success: true,
+            data: await inventoryService.getXntReport(from, to, warehouseId ? +(warehouseId) : undefined)
+        });
     }
     catch (e) {
         res.status(500).json({ success: false, message: e.message });
@@ -59,7 +64,8 @@ const getXntReport = async (req, res) => {
 exports.getXntReport = getXntReport;
 const getExpiringProducts = async (req, res) => {
     try {
-        res.json({ success: true, data: await inventoryService.getExpiringProducts() });
+        const daysAhead = req.query.daysAhead ? +(req.query.daysAhead) : 30;
+        res.json({ success: true, data: await inventoryService.getExpiringProducts(daysAhead) });
     }
     catch (e) {
         res.status(500).json({ success: false, message: e.message });

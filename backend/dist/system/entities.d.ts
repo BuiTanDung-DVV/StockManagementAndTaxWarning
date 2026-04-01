@@ -7,6 +7,7 @@ export declare class ShopProfile {
     address: string;
     taxCode: string;
     bankAccount: string;
+    bankId: string;
     bankName: string;
     accountHolder: string;
     qrPaymentUrl: string;
@@ -16,6 +17,7 @@ export declare class ShopProfile {
     ownerName: string;
     ownerIdentityNumber: string;
     businessLicenseNumber: string;
+    costingMethod: string;
 }
 export declare class ActivityLog {
     id: number;

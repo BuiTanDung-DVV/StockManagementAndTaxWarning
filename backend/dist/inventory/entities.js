@@ -46,9 +46,19 @@ __decorate([
     __metadata("design:type", Number)
 ], InventoryStock.prototype, "productId", void 0);
 __decorate([
+    (0, typeorm_1.ManyToOne)(() => entities_1.Product),
+    (0, typeorm_1.JoinColumn)({ name: 'product_id' }),
+    __metadata("design:type", entities_1.Product)
+], InventoryStock.prototype, "product", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'warehouse_id' }),
     __metadata("design:type", Number)
 ], InventoryStock.prototype, "warehouseId", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => Warehouse),
+    (0, typeorm_1.JoinColumn)({ name: 'warehouse_id' }),
+    __metadata("design:type", Warehouse)
+], InventoryStock.prototype, "warehouse", void 0);
 __decorate([
     (0, typeorm_1.Column)({ default: 0 }),
     __metadata("design:type", Number)

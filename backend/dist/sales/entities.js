@@ -54,6 +54,10 @@ __decorate([
     __metadata("design:type", Number)
 ], SalesOrder.prototype, "totalAmount", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'total_cogs', type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], SalesOrder.prototype, "totalCogs", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'paid_amount', type: 'decimal', precision: 18, scale: 2, default: 0 }),
     __metadata("design:type", Number)
 ], SalesOrder.prototype, "paidAmount", void 0);
@@ -133,6 +137,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'decimal', precision: 18, scale: 2 }),
     __metadata("design:type", Number)
 ], SalesOrderItem.prototype, "subtotal", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'cost_price', type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], SalesOrderItem.prototype, "costPrice", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'tax_rate', type: 'decimal', precision: 5, scale: 2, default: 0 }),
     __metadata("design:type", Number)
