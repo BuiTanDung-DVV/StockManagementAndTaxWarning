@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomerService = void 0;
 const db_config_1 = require("../config/db.config");
 const entities_1 = require("../customer/entities");
+const typeorm_1 = require("typeorm");
 class CustomerService {
     constructor() {
         this.customerRepo = db_config_1.AppDataSource.getRepository(entities_1.Customer);
@@ -48,6 +49,55 @@ class CustomerService {
         if (!receivable)
             throw new Error('Receivable not found');
         return this.paymentRepo.save(this.paymentRepo.create({ ...dto, receivable }));
+    }
+    async getDebtAging() {
+        const receivables = await this.receivableRepo.find({
+            where: { status: (0, typeorm_1.Not)((0, typeorm_1.In)(['PAID'])) },
+            relations: ['customer'],
+        });
+        const now = new Date();
+        const buckets = { current: 0, days30: 0, days60: 0, days90: 0, over90: 0 };
+        let totalDebt = 0;
+        for (const r of receivables) {
+            const remaining = Number(r.amount) - Number(r.paidAmount);
+            if (remaining <= 0)
+                continue;
+            totalDebt += remaining;
+            const daysDiff = Math.floor((now.getTime() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+            if (daysDiff <= 0)
+                buckets.current += remaining;
+            else if (daysDiff <= 30)
+                buckets.days30 += remaining;
+            else if (daysDiff <= 60)
+                buckets.days60 += remaining;
+            else if (daysDiff <= 90)
+                buckets.days90 += remaining;
+            else
+                buckets.over90 += remaining;
+        }
+        return { buckets, totalDebt, receivableCount: receivables.length };
+    }
+    async getOverdueDebts() {
+        const receivables = await this.receivableRepo.find({
+            where: { status: (0, typeorm_1.Not)((0, typeorm_1.In)(['PAID'])) },
+            relations: ['customer'],
+            order: { dueDate: 'ASC' },
+        });
+        const now = new Date();
+        const overdueItems = receivables
+            .filter(r => new Date(r.dueDate) < now && (Number(r.amount) - Number(r.paidAmount)) > 0)
+            .map(r => ({
+            customerId: r.customer?.id,
+            customerName: r.customer?.name || 'N/A',
+            phone: r.customer?.phone || '',
+            amount: Number(r.amount),
+            paidAmount: Number(r.paidAmount),
+            remaining: Number(r.amount) - Number(r.paidAmount),
+            dueDate: r.dueDate,
+            daysOverdue: Math.floor((now.getTime() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24)),
+        }))
+            .sort((a, b) => b.remaining - a.remaining);
+        return overdueItems;
     }
 }
 exports.CustomerService = CustomerService;

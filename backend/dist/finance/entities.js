@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DailyClosing = exports.CashflowForecast = exports.BudgetPlan = exports.CashTransaction = exports.CashAccount = void 0;
+exports.PurchaseWithoutInvoice = exports.TaxObligation = exports.Invoice = exports.DailyClosing = exports.CashflowForecast = exports.BudgetPlan = exports.CashTransaction = exports.CashAccount = void 0;
 const typeorm_1 = require("typeorm");
 let CashAccount = class CashAccount {
 };
@@ -258,4 +258,202 @@ __decorate([
 exports.DailyClosing = DailyClosing = __decorate([
     (0, typeorm_1.Entity)('daily_closings')
 ], DailyClosing);
+let Invoice = class Invoice {
+};
+exports.Invoice = Invoice;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], Invoice.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'invoice_number', length: 50 }),
+    __metadata("design:type", String)
+], Invoice.prototype, "invoiceNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'invoice_symbol', length: 20, nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "invoiceSymbol", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'invoice_type', length: 10 }),
+    __metadata("design:type", String)
+], Invoice.prototype, "invoiceType", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'invoice_date', type: 'date' }),
+    __metadata("design:type", Date)
+], Invoice.prototype, "invoiceDate", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'partner_name', length: 200 }),
+    __metadata("design:type", String)
+], Invoice.prototype, "partnerName", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'partner_tax_code', length: 20, nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "partnerTaxCode", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'partner_address', length: 500, nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "partnerAddress", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'partner_identity_number', length: 20, nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "partnerIdentityNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'reference_type', length: 30, nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "referenceType", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'reference_id', nullable: true }),
+    __metadata("design:type", Number)
+], Invoice.prototype, "referenceId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], Invoice.prototype, "subtotal", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'tax_amount', type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], Invoice.prototype, "taxAmount", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'total_amount', type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], Invoice.prototype, "totalAmount", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'payment_method', length: 20, nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "paymentMethod", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'payment_status', length: 20, default: 'UNPAID' }),
+    __metadata("design:type", String)
+], Invoice.prototype, "paymentStatus", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'image_url', length: 1000, nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "imageUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 500, nullable: true }),
+    __metadata("design:type", String)
+], Invoice.prototype, "notes", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'created_by', nullable: true }),
+    __metadata("design:type", Number)
+], Invoice.prototype, "createdBy", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
+    __metadata("design:type", Date)
+], Invoice.prototype, "createdAt", void 0);
+exports.Invoice = Invoice = __decorate([
+    (0, typeorm_1.Entity)('invoices')
+], Invoice);
+let TaxObligation = class TaxObligation {
+};
+exports.TaxObligation = TaxObligation;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], TaxObligation.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 20 }),
+    __metadata("design:type", String)
+], TaxObligation.prototype, "period", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'vat_declared', type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], TaxObligation.prototype, "vatDeclared", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'pit_declared', type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], TaxObligation.prototype, "pitDeclared", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'vat_paid', type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], TaxObligation.prototype, "vatPaid", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'pit_paid', type: 'decimal', precision: 18, scale: 2, default: 0 }),
+    __metadata("design:type", Number)
+], TaxObligation.prototype, "pitPaid", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'due_date', type: 'date', nullable: true }),
+    __metadata("design:type", Date)
+], TaxObligation.prototype, "dueDate", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 20, default: 'pending' }),
+    __metadata("design:type", String)
+], TaxObligation.prototype, "status", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
+    __metadata("design:type", Date)
+], TaxObligation.prototype, "createdAt", void 0);
+exports.TaxObligation = TaxObligation = __decorate([
+    (0, typeorm_1.Entity)('tax_obligations')
+], TaxObligation);
+let PurchaseWithoutInvoice = class PurchaseWithoutInvoice {
+};
+exports.PurchaseWithoutInvoice = PurchaseWithoutInvoice;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)(),
+    __metadata("design:type", Number)
+], PurchaseWithoutInvoice.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'record_code', length: 20, unique: true }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "recordCode", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'purchase_date', type: 'date' }),
+    __metadata("design:type", Date)
+], PurchaseWithoutInvoice.prototype, "purchaseDate", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'seller_name', length: 200 }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "sellerName", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'seller_identity_number', length: 20 }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "sellerIdentityNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'seller_address', length: 500, nullable: true }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "sellerAddress", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'seller_phone', length: 20, nullable: true }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "sellerPhone", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'seller_signature_url', length: 1000, nullable: true }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "sellerSignatureUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'total_amount', type: 'decimal', precision: 18, scale: 2 }),
+    __metadata("design:type", Number)
+], PurchaseWithoutInvoice.prototype, "totalAmount", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'payment_method', length: 20, default: 'CASH' }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "paymentMethod", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'payment_proof_url', length: 1000, nullable: true }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "paymentProofUrl", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'market_price_reference', type: 'decimal', precision: 18, scale: 2, nullable: true }),
+    __metadata("design:type", Number)
+], PurchaseWithoutInvoice.prototype, "marketPriceReference", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 500, nullable: true }),
+    __metadata("design:type", String)
+], PurchaseWithoutInvoice.prototype, "notes", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'approved_by', nullable: true }),
+    __metadata("design:type", Number)
+], PurchaseWithoutInvoice.prototype, "approvedBy", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'created_by', nullable: true }),
+    __metadata("design:type", Number)
+], PurchaseWithoutInvoice.prototype, "createdBy", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)({ name: 'created_at' }),
+    __metadata("design:type", Date)
+], PurchaseWithoutInvoice.prototype, "createdAt", void 0);
+exports.PurchaseWithoutInvoice = PurchaseWithoutInvoice = __decorate([
+    (0, typeorm_1.Entity)('purchases_without_invoice')
+], PurchaseWithoutInvoice);
 //# sourceMappingURL=entities.js.map

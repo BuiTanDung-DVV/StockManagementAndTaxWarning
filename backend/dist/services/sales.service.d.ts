@@ -6,6 +6,7 @@ export declare class SalesService {
     private paymentRepo;
     private customerRepo;
     private productRepo;
+    private cogsService;
     findAll(page?: number, limit?: number): Promise<{
         items: SalesOrder[];
         total: number;
@@ -15,6 +16,8 @@ export declare class SalesService {
     }>;
     summary(from?: string, to?: string): Promise<{
         totalRevenue: number;
+        totalCogs: number;
+        grossProfit: number;
         orderCount: number;
     }>;
     findById(id: number): Promise<any>;
