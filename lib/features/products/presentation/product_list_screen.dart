@@ -26,7 +26,16 @@ class ProductListScreen extends ConsumerWidget {
             if (items.isEmpty) return AppEmpty(message: 'Chưa có sản phẩm', subtitle: 'Hãy thêm sản phẩm đầu tiên');
             return RefreshIndicator(
               onRefresh: () async => ref.invalidate(productListProvider),
-              child: ListView.builder(padding: EdgeInsets.symmetric(horizontal: 16), itemCount: items.length, itemBuilder: (_, i) {
+              child: GridView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: items.length,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 450,
+                  mainAxisExtent: 85,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 0,
+                ),
+                itemBuilder: (_, i) {
                 final p = items[i];
                 final price = (p['sellingPrice'] ?? p['retailPrice'] ?? 0).toDouble();
                 final stock = p['currentStock'] ?? p['stock'] ?? 0;

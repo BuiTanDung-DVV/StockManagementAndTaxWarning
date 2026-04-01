@@ -25,8 +25,15 @@ class CustomerListScreen extends ConsumerWidget {
           if (items.isEmpty) return AppEmpty(message: 'Chưa có khách hàng', subtitle: 'Hãy thêm khách hàng đầu tiên');
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(customerListProvider),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16), itemCount: items.length,
+            child: GridView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: items.length,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 450,
+                mainAxisExtent: 85,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 0,
+              ),
               itemBuilder: (_, i) {
                 final cust = items[i];
                 final debt = (cust['totalDebt'] ?? 0).toDouble();

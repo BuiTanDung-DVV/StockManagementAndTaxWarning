@@ -38,8 +38,14 @@ class StockTakeScreen extends ConsumerWidget {
               const Text('Chưa có dữ liệu tồn kho', style: TextStyle(fontSize: 16, color: Colors.grey)),
             ]));
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
+          return GridView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 450,
+              mainAxisExtent: 85,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 0,
+            ),
             itemCount: items.length,
             itemBuilder: (_, i) {
               final item = items[i] as Map;

@@ -36,33 +36,118 @@ class MainShell extends ConsumerWidget {
 
     final idx = _currentIndex(context, allTabs);
 
-    return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: child,
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: c.surface,
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, -2)),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = constraints.maxWidth >= 800;
+
+        if (isDesktop) {
+          return Scaffold(
+            backgroundColor: c.bg,
+            body: Row(
               children: [
-                for (int i = 0; i < allTabs.length; i++)
-                  _NavItem(icon: allTabs[i].icon, label: allTabs[i].label, isActive: i == idx, onTap: () => context.go(allTabs[i].route)),
+                Container(
+                  width: 260,
+                  decoration: BoxDecoration(
+                    color: c.surface,
+                    border: Border(right: BorderSide(color: c.divider)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const HugeIcon(icon: HugeIcons.strokeRoundedStore01, color: AppColors.primary, size: 26),
+                            ),
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Text(
+                                'SmartStock',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: allTabs.length,
+                          itemBuilder: (context, i) {
+                            final isActive = i == idx;
+                            final color = isActive ? AppColors.primary : c.textSecondary;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: ListTile(
+                                leading: HugeIcon(icon: allTabs[i].icon, color: color, size: 24),
+                                title: Text(
+                                  allTabs[i].label,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                                    color: color,
+                                  ),
+                                ),
+                                selected: isActive,
+                                selectedTileColor: AppColors.primary.withValues(alpha: 0.1),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                hoverColor: AppColors.primary.withValues(alpha: 0.05),
+                                onTap: () => context.go(allTabs[i].route),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: child),
               ],
             ),
+          );
+        }
+
+        return Scaffold(
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: child,
+            ),
           ),
-        ),
-      ),
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: c.surface,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, -2)),
+              ],
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    for (int i = 0; i < allTabs.length; i++)
+                      _NavItem(icon: allTabs[i].icon, label: allTabs[i].label, isActive: i == idx, onTap: () => context.go(allTabs[i].route)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
