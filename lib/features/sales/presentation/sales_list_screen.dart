@@ -78,9 +78,15 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(salesListProvider),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: items.length,
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 450,
+                      mainAxisExtent: 85,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 0,
+                    ),
                     itemBuilder: (_, i) {
                       final order = items[i];
                       final orderStatus = order['status'] ?? 'PENDING';

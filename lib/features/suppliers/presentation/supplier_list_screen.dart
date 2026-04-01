@@ -22,7 +22,16 @@ class SupplierListScreen extends ConsumerWidget {
           if (items.isEmpty) return AppEmpty(message: 'Chưa có NCC', subtitle: 'Thêm nhà cung cấp đầu tiên');
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(supplierListProvider),
-            child: ListView.builder(padding: EdgeInsets.all(16), itemCount: items.length, itemBuilder: (_, i) {
+            child: GridView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: items.length,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 450,
+                mainAxisExtent: 85,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 0,
+              ),
+              itemBuilder: (_, i) {
               final s = items[i];
               return GestureDetector(
                 onTap: () => context.push('/suppliers/${s['id']}'),

@@ -57,24 +57,37 @@ class InvoiceListScreen extends ConsumerWidget {
             if (items.isNotEmpty) ...[
               const Text('Danh sách hóa đơn', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              ...items.map<Widget>((inv) {
-                final isOut = inv['invoiceType'] == 'OUT';
-                return Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
-                  child: Row(children: [
-                    Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: (isOut ? AppColors.danger : AppColors.success).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                      child: Icon(isOut ? Icons.arrow_upward : Icons.arrow_downward, color: isOut ? AppColors.danger : AppColors.success, size: 18)),
-                    const SizedBox(width: 12),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(inv['invoiceNumber'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text(inv['partnerName'] ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 12)),
-                      Text(inv['invoiceDate']?.toString().split('T').first ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 11)),
-                    ])),
-                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text(_fmt((inv['totalAmount'] as num?) ?? 0), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isOut ? AppColors.danger : AppColors.success)),
-                      Text('VAT: ${_fmt((inv['taxAmount'] as num?) ?? 0)}', style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary)),
-                    ]),
-                  ]));
-              }),
+              GridView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 450,
+                  mainAxisExtent: 85,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 0,
+                ),
+                itemBuilder: (_, i) {
+                  final inv = items[i];
+                  final isOut = inv['invoiceType'] == 'OUT';
+                  return Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
+                    child: Row(children: [
+                      Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: (isOut ? AppColors.danger : AppColors.success).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                        child: Icon(isOut ? Icons.arrow_upward : Icons.arrow_downward, color: isOut ? AppColors.danger : AppColors.success, size: 18)),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(inv['invoiceNumber'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text(inv['partnerName'] ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 12)),
+                        Text(inv['invoiceDate']?.toString().split('T').first ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 11)),
+                      ])),
+                      Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        Text(_fmt((inv['totalAmount'] as num?) ?? 0), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isOut ? AppColors.danger : AppColors.success)),
+                        Text('VAT: ${_fmt((inv['taxAmount'] as num?) ?? 0)}', style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary)),
+                      ]),
+                    ]));
+                },
+              ),
             ],
           ]));
         },

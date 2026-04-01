@@ -133,8 +133,8 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               Text('Thao tác nhanh', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 12),
-              GridView.count(
-                crossAxisCount: 4, mainAxisSpacing: 12, crossAxisSpacing: 12, shrinkWrap: true,
+              GridView.extent(
+                maxCrossAxisExtent: 100, mainAxisSpacing: 12, crossAxisSpacing: 12, shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _QuickAction(HugeIcons.strokeRoundedStore01, 'Tạo đơn', () => context.push('/pos')),
