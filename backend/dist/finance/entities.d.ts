@@ -62,3 +62,54 @@ export declare class DailyClosing {
     closedBy: number;
     closedAt: Date;
 }
+export declare class Invoice {
+    id: number;
+    invoiceNumber: string;
+    invoiceSymbol: string;
+    invoiceType: string;
+    invoiceDate: Date;
+    partnerName: string;
+    partnerTaxCode: string;
+    partnerAddress: string;
+    partnerIdentityNumber: string;
+    referenceType: string;
+    referenceId: number;
+    subtotal: number;
+    taxAmount: number;
+    totalAmount: number;
+    paymentMethod: string;
+    paymentStatus: string;
+    imageUrl: string;
+    notes: string;
+    createdBy: number;
+    createdAt: Date;
+}
+export declare class TaxObligation {
+    id: number;
+    period: string;
+    vatDeclared: number;
+    pitDeclared: number;
+    vatPaid: number;
+    pitPaid: number;
+    dueDate: Date;
+    status: string;
+    createdAt: Date;
+}
+export declare class PurchaseWithoutInvoice {
+    id: number;
+    recordCode: string;
+    purchaseDate: Date;
+    sellerName: string;
+    sellerIdentityNumber: string;
+    sellerAddress: string;
+    sellerPhone: string;
+    sellerSignatureUrl: string;
+    totalAmount: number;
+    paymentMethod: string;
+    paymentProofUrl: string;
+    marketPriceReference: number;
+    notes: string;
+    approvedBy: number;
+    createdBy: number;
+    createdAt: Date;
+}

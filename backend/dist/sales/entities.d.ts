@@ -10,6 +10,7 @@ export declare class SalesOrder {
     discountAmount: number;
     taxAmount: number;
     totalAmount: number;
+    totalCogs: number;
     paidAmount: number;
     paymentMethod: string;
     notes: string;
@@ -30,6 +31,7 @@ export declare class SalesOrderItem {
     quantity: number;
     unitPrice: number;
     subtotal: number;
+    costPrice: number;
     taxRate: number;
     taxAmount: number;
 }

@@ -5,19 +5,18 @@ const typeorm_1 = require("typeorm");
 const env_config_1 = require("./env.config");
 const path = require("path");
 exports.AppDataSource = new typeorm_1.DataSource({
-    type: 'mssql',
-    host: env_config_1.config.dbHost,
-    database: env_config_1.config.dbDatabase,
+    type: 'postgres',
+    ...(env_config_1.config.dbUrl
+        ? { url: env_config_1.config.dbUrl, ssl: { rejectUnauthorized: false } }
+        : {
+            host: env_config_1.config.dbHost,
+            database: env_config_1.config.dbDatabase,
+        }),
     synchronize: env_config_1.config.dbSync,
-    driver: require('mssql/msnodesqlv8'),
-    options: {
-        encrypt: false,
-        trustServerCertificate: true,
-    },
-    extra: {
-        connectionString: `Driver={ODBC Driver 17 for SQL Server};Server=${env_config_1.config.dbHost};Database=${env_config_1.config.dbDatabase};Trusted_Connection=Yes;`,
-    },
-    entities: [path.join(__dirname, '../**/entities{.ts,.js}')],
+    entities: [
+        path.join(__dirname, '../**/entities{.ts,.js}'),
+        path.join(__dirname, '../**/*.entity{.ts,.js}'),
+    ],
     migrations: [],
     subscribers: [],
 });

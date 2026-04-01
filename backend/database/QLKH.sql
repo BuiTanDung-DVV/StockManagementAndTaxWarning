@@ -725,3 +725,4 @@ PRINT N'✅ Tạo thành công 44 bảng + indexes + seed data';
 GO
 
 Select * from shop_profiles;
+Select * from users;

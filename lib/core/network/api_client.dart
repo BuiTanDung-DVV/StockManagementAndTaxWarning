@@ -11,12 +11,12 @@ class ApiClient {
       return envUrl;
     }
 
-    const defaultUrl = 'http://localhost:8080/api';
+    const defaultUrl = 'https://stockmanagementandtaxwarning.onrender.com/api';
 
     if (const bool.fromEnvironment('dart.library.html')) return defaultUrl;
     // Use an environment variable or compile-time constant for web, else check platform
     try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:8080/api';
+      if (Platform.isAndroid) return defaultUrl;
     } catch (e) {
       // Platform.isAndroid throws on web
     }
@@ -29,8 +29,8 @@ class ApiClient {
   ApiClient() {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 60),
       headers: {'Content-Type': 'application/json'},
     ));
 
