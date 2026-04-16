@@ -15,6 +15,7 @@ import '../../settings/providers/shop_provider.dart';
 import '../../settings/presentation/staff_management_screen.dart';
 import '../../settings/presentation/notification_list_screen.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 final _today = DateTime.now();
@@ -42,15 +43,62 @@ class DashboardScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Header
-              Row(children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Xin chào ${ref.watch(authProvider).user?['fullName'] ?? ''} 👋', style: TextStyle(fontSize: 14, color: c.textSecondary)),
-                  Text('Tổng quan', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                ])),
-                featureGuideButton(context, 'dashboard'),
-                IconButton(icon: HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: c.textSecondary, size: 22), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),
-              ]),
+              // Header Banner with Profile
+              Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: AppColors.primary.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 8)),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    children: [
+                      // Background Banner Image
+                      SizedBox(
+                        height: 140,
+                        width: double.infinity,
+                        child: CachedNetworkImage(
+                          imageUrl: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop',
+                          fit: BoxFit.cover,
+                          color: Colors.black.withValues(alpha: 0.4),
+                          colorBlendMode: BlendMode.darken,
+                          placeholder: (context, url) => Container(color: AppColors.primary.withValues(alpha: 0.1)),
+                          errorWidget: (context, url, error) => Container(color: AppColors.primary.withValues(alpha: 0.1)),
+                        ),
+                      ),
+                      // Text Content overlay
+                      Positioned(
+                        left: 20,
+                        bottom: 20,
+                        right: 20,
+                        child: Row(children: [
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('Xin chào, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'} 👋', 
+                                style: const TextStyle(fontSize: 14, color: Colors.white70)),
+                            const SizedBox(height: 4),
+                            const Text('Tổng quan hôm nay', 
+                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ])),
+                          featureGuideButton(context, 'dashboard'),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: IconButton(
+                              icon: const HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: Colors.white, size: 22), 
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen())),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
 
               // Sales summary cards
@@ -306,7 +354,10 @@ class _SummaryCard extends StatelessWidget {
       padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
@@ -340,7 +391,10 @@ class _QuickAction extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: c.card,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
         ),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(
