@@ -23,6 +23,7 @@ migrate_working_dir/
 .agent/
 stitch_qu_n_l_b_n_h_ng_kho_h_ng/
 note/
+skills-lock.json
 ########## 2. FLUTTER & DART ##########
 **/doc/api/
 **/ios/Flutter/.last_build_id
