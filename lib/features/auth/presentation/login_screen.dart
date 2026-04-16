@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -45,10 +46,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: SingleChildScrollView(
               padding: EdgeInsets.all(32),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              // Aesthetic Login Header
               Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                child: const Icon(Icons.storefront, size: 48, color: AppColors.primary),
+                width: double.infinity,
+                height: 160,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(color: AppColors.primary.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 8)),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: 'https://images.unsplash.com/photo-1542744094-24638ea0bc40?q=80&w=1000&auto=format&fit=crop',
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        color: Colors.black.withValues(alpha: 0.5),
+                        colorBlendMode: BlendMode.darken,
+                        placeholder: (context, url) => Container(color: AppColors.primary.withValues(alpha: 0.1)),
+                        errorWidget: (context, url, _) => Container(color: AppColors.primary.withValues(alpha: 0.1)),
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                            child: const Icon(Icons.storefront, size: 36, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               Text('Quản lý Bán hàng', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),

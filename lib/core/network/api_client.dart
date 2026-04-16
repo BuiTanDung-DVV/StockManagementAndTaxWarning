@@ -11,7 +11,7 @@ class ApiClient {
       return envUrl;
     }
 
-    const defaultUrl = 'https://stockmanagementandtaxwarning.onrender.com/api';
+    const defaultUrl = 'https://stock-management-and-tax-warning.vercel.app/api';
 
     if (const bool.fromEnvironment('dart.library.html')) return defaultUrl;
     // Use an environment variable or compile-time constant for web, else check platform
