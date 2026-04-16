@@ -55,12 +55,31 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
-// Start Server
-AppDataSource.initialize()
-  .then(() => {
-    console.log(`🚀 Database connected: ${config.dbHost}\\${config.dbDatabase}`);
-    app.listen(config.port, () => {
-      console.log(`🚀 Server running on http://localhost:${config.port}/api`);
-    });
-  })
-  .catch((error) => console.log('❌ Database connection error: ', error));
+// Vercel Serverless requirements: export the app
+if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
+  // Start Server locally
+  AppDataSource.initialize()
+    .then(() => {
+      console.log(`🚀 Database connected: ${config.dbHost}\\${config.dbDatabase}`);
+      app.listen(config.port, () => {
+        console.log(`🚀 Server running on http://localhost:${config.port}/api`);
+      });
+    })
+    .catch((error) => console.log('❌ Database connection error: ', error));
+}
+
+// Function to handle requests on Vercel
+const vercelHandler = async (req: express.Request, res: express.Response) => {
+  if (!AppDataSource.isInitialized) {
+    try {
+      await AppDataSource.initialize();
+      console.log('🚀 Database connected for Vercel Serverless');
+    } catch (error) {
+      console.log('❌ Database connection error: ', error);
+      return res.status(500).json({ success: false, message: 'Database connection failed' });
+    }
+  }
+  return app(req, res);
+};
+
+export default vercelHandler;
