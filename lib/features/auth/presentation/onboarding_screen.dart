@@ -234,7 +234,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         Container(
                           margin: const EdgeInsets.only(top: 8),
                           decoration: BoxDecoration(
-                            border: Border.all(color: c.border),
+                            border: Border.all(color: c.divider),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           constraints: const BoxConstraints(maxHeight: 200),
@@ -277,7 +277,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       Card(
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          side: BorderSide(color: c.border),
+                          side: BorderSide(color: c.divider),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: ListTile(
