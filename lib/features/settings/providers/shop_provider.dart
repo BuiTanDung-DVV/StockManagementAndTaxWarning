@@ -5,7 +5,9 @@ import '../../../core/network/api_client.dart';
 class ShopState {
   final int? currentShopId;
   final String? currentShopName;
+  final String? shopCode;
   final String? memberType; // 'OWNER' | 'EMPLOYEE'
+  final String? status; // 'ACTIVE' | 'PENDING' | 'REJECTED'
   final Map<String, String> permissions; // { "pos": "full", ... }
   final List<Map<String, dynamic>> userShops;
   final bool isLoading;
@@ -13,13 +15,18 @@ class ShopState {
   const ShopState({
     this.currentShopId,
     this.currentShopName,
+    this.shopCode,
     this.memberType,
+    this.status,
     this.permissions = const {},
     this.userShops = const [],
     this.isLoading = false,
   });
 
   bool get isOwner => memberType == 'OWNER' || userShops.isEmpty;
+  bool get isPending => status == 'PENDING';
+  bool get isRejected => status == 'REJECTED';
+  bool get isActive => status == 'ACTIVE' || status == null; // legacy compatibility
 
   /// Check if user has permission. Owners and users with no shop config always return true.
   bool hasPermission(String key, [String level = 'view']) {
@@ -35,14 +42,18 @@ class ShopState {
   ShopState copyWith({
     int? currentShopId,
     String? currentShopName,
+    String? shopCode,
     String? memberType,
+    String? status,
     Map<String, String>? permissions,
     List<Map<String, dynamic>>? userShops,
     bool? isLoading,
   }) => ShopState(
     currentShopId: currentShopId ?? this.currentShopId,
     currentShopName: currentShopName ?? this.currentShopName,
+    shopCode: shopCode ?? this.shopCode,
     memberType: memberType ?? this.memberType,
+    status: status ?? this.status,
     permissions: permissions ?? this.permissions,
     userShops: userShops ?? this.userShops,
     isLoading: isLoading ?? this.isLoading,
@@ -106,7 +117,9 @@ class ShopNotifier extends Notifier<ShopState> {
     state = ShopState(
       currentShopId: current['shopId'] as int?,
       currentShopName: current['shopName'] as String?,
+      shopCode: current['shopCode'] as String?,
       memberType: current['memberType'] as String?,
+      status: current['status'] as String?,
       permissions: perms,
       userShops: shops,
       isLoading: false,
