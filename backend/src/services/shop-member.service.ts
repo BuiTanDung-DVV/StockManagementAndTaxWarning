@@ -10,10 +10,10 @@ export class ShopMemberService {
     private notifRepo = AppDataSource.getRepository(Notification);
     private roleRepo = AppDataSource.getRepository(ShopRole);
 
-    /** List members of a shop */
+    /** List ACTIVE members of a shop */
     async findAll(shopId: number) {
         const members = await this.memberRepo.find({
-            where: { shopId },
+            where: { shopId, status: 'ACTIVE' },
             order: { memberType: 'ASC', createdAt: 'ASC' },
         });
         // Attach user info
@@ -33,6 +33,30 @@ export class ShopMemberService {
                 memberType: m.memberType,
                 role: m.role ? { id: m.role.id, name: m.role.name } : null,
                 isActive: m.isActive,
+                createdAt: m.createdAt,
+            };
+        });
+    }
+
+    /** List PENDING requests of a shop */
+    async findAllPending(shopId: number) {
+        const members = await this.memberRepo.find({
+            where: { shopId, status: 'PENDING' },
+            order: { createdAt: 'ASC' },
+        });
+        const userIds = members.map(m => m.userId);
+        const users = userIds.length ? await this.userRepo.findByIds(userIds) : [];
+        const userMap = new Map(users.map(u => [u.id, u]));
+
+        return members.map(m => {
+            const u = userMap.get(m.userId);
+            return {
+                id: m.id,
+                userId: m.userId,
+                username: u?.username,
+                fullName: u?.fullName,
+                avatarUrl: u?.avatarUrl,
+                status: m.status,
                 createdAt: m.createdAt,
             };
         });
@@ -98,14 +122,46 @@ export class ShopMemberService {
     async remove(memberId: number) {
         const member = await this.memberRepo.findOneByOrFail({ id: memberId });
         if (member.memberType === 'OWNER') throw new Error('Không thể xóa chủ shop');
-        await this.memberRepo.delete(memberId);
+        member.status = 'INACTIVE';
+        member.isActive = false;
+        await this.memberRepo.save(member);
         return { deleted: true };
+    }
+
+    /** Approve a join request */
+    async approve(memberId: number) {
+        const member = await this.memberRepo.findOneByOrFail({ id: memberId });
+        if (member.status !== 'PENDING') throw new Error('Yêu cầu không còn ở trạng thái chờ duyệt');
+        member.status = 'ACTIVE';
+        member.isActive = true;
+        const saved = await this.memberRepo.save(member);
+
+        const shop = await this.shopRepo.findOne({ where: { id: member.shopId } });
+        const notif = this.notifRepo.create({
+            userId: member.userId,
+            type: 'REQUEST_APPROVED',
+            title: 'Yêu cầu được phê duyệt',
+            message: `Yêu cầu tham gia cửa hàng "${shop?.shopName}" của bạn đã được phê duyệt.`,
+            data: JSON.stringify({ shopId: member.shopId }),
+        });
+        await this.notifRepo.save(notif);
+        return saved;
+    }
+
+    /** Reject a join request */
+    async reject(memberId: number) {
+        const member = await this.memberRepo.findOneByOrFail({ id: memberId });
+        if (member.status !== 'PENDING') throw new Error('Yêu cầu không còn ở trạng thái chờ duyệt');
+        member.status = 'REJECTED';
+        member.isActive = false;
+        const saved = await this.memberRepo.save(member);
+        return saved;
     }
 
     /** Get all shops a user belongs to (for shop switching) */
     async getUserShops(userId: number) {
         const members = await this.memberRepo.find({
-            where: { userId, isActive: true },
+            where: { userId }, // include all so frontend knows about pending
         });
         const shopIds = members.map(m => m.shopId);
         const shops = shopIds.length
@@ -119,13 +175,15 @@ export class ShopMemberService {
             let permissions: Record<string, string> = {};
             if (m.memberType === 'OWNER') {
                 permissions = { _owner: 'true' }; // special flag
-            } else if (m.role?.permissions) {
+            } else if (m.status === 'ACTIVE' && m.role?.permissions) {
                 try { permissions = JSON.parse(m.role.permissions); } catch {}
             }
             return {
                 shopId: m.shopId,
                 shopName: shop?.shopName,
+                shopCode: shop?.shopCode,
                 memberType: m.memberType,
+                status: m.status,
                 role: m.role ? { id: m.role.id, name: m.role.name } : null,
                 permissions,
             };

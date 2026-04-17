@@ -11,6 +11,21 @@ export const listMembers = async (req: Request, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+export const listPending = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await svc.findAllPending(shopId(req)) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+export const approveMember = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await svc.approve(+req.params.id) }); }
+    catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
+};
+
+export const rejectMember = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await svc.reject(+req.params.id) }); }
+    catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
+};
+
 export const inviteMember = async (req: Request, res: Response) => {
     try {
         const { username, roleId } = req.body;

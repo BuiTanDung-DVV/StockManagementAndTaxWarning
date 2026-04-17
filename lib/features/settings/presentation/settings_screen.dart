@@ -65,6 +65,19 @@ class SettingsScreen extends ConsumerWidget {
                   Text(auth.user?['fullName'] ?? 'Người dùng', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   Text(shop['shopName'] ?? shop['name'] ?? 'Cửa hàng', style: TextStyle(fontSize: 12, color: c.textSecondary)),
                   Text('MST: ${shop['taxCode'] ?? 'N/A'}', style: TextStyle(fontSize: 12, color: c.textSecondary)),
+                  if (shopState.isOwner && shopState.shopCode != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                            child: Text('Mã CH: ${shopState.shopCode}', style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
                 ])),
                 HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: c.textMuted, size: 22),
               ]),

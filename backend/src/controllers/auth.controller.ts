@@ -52,4 +52,30 @@ export const resetPassword = async (req: Request, res: Response) => {
         }
     }
 };
+export const completeOnboarding = async (req: Request, res: Response) => {
+    try {
+        // Assuming authMiddleware is used, req.user holds the token payload
+        const userId = (req as any).user?.sub;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+        const result = await authService.completeOnboarding(userId, req.body);
+        res.json({ success: true, data: result, message: 'Onboarding completed successfully' });
+    } catch (error: any) {
+        if (error.message === 'Username already exists') {
+            res.status(409).json({ success: false, message: error.message });
+        } else {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+};
 
+export const searchShops = async (req: Request, res: Response) => {
+    try {
+        const query = req.query.q as string;
+        const shops = await authService.searchShops(query);
+        res.json({ success: true, data: shops, message: 'Shops retrieved successfully' });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

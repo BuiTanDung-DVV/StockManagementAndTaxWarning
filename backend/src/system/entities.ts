@@ -10,6 +10,9 @@ export class ShopProfile {
     @Column({ name: 'shop_name', length: 200 })
     shopName: string;
 
+    @Column({ name: 'shop_code', length: 20, unique: true, nullable: true })
+    shopCode: string;
+
     @Column({ name: 'logo_url', length: 1000, nullable: true })
     logoUrl: string;
 

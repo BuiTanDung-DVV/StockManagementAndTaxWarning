@@ -31,6 +31,7 @@ class MyApp extends ConsumerWidget {
     // Watch auth state to react to login/logout
     ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
+    final router = ref.watch(routerProvider);
     
     return MaterialApp.router(
       title: 'Quản lý Bán hàng & Kho hàng',
