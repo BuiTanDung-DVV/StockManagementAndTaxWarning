@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -161,11 +162,13 @@ class SettingsScreen extends ConsumerWidget {
           _SettingItem(HugeIcons.strokeRoundedCloudSavingDone01, 'Sao lưu dữ liệu', () {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sao lưu & khôi phục sẽ sớm khả dụng'), duration: Duration(seconds: 2)));
           }, c),
-          _SettingItem(HugeIcons.strokeRoundedHelpCircle, 'Trợ giúp', () {
+          _SettingItem(HugeIcons.strokeRoundedHelpCircle, 'Trợ giúp', () async {
+            final pkg = await PackageInfo.fromPlatform();
+            if (!context.mounted) return;
             showAboutDialog(
               context: context,
               applicationName: 'Sales & Stock Management',
-              applicationVersion: '1.0.0',
+              applicationVersion: pkg.version,
               applicationLegalese: '© 2026 All rights reserved',
               children: [const SizedBox(height: 12), const Text('Ứng dụng quản lý bán hàng và kho hàng dành cho hộ kinh doanh.', style: TextStyle(fontSize: 13))],
             );
