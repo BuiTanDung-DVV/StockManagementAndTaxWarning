@@ -13,7 +13,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final _storeNameCtrl = TextEditingController();
+  final _fullNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
@@ -25,7 +25,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
-    _storeNameCtrl.dispose();
+    _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
@@ -38,12 +38,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       _isLoading = true;
     });
 
-    final storeName = _storeNameCtrl.text.trim();
+    final fullName = _fullNameCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
     final pass = _passwordCtrl.text;
     final confirmPass = _confirmPasswordCtrl.text;
 
-    if (storeName.isEmpty || phone.isEmpty || pass.isEmpty) {
+    if (fullName.isEmpty || phone.isEmpty || pass.isEmpty) {
       setState(() {
         _error = 'Vui lòng điền đầy đủ thông tin';
         _isLoading = false;
@@ -68,7 +68,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         data: {
           'username': phone,
           'passwordHash': pass,
-          'fullName': storeName,
+          'fullName': fullName,
           'accountType': _accountType,
         },
       );
@@ -156,21 +156,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   SizedBox(height: 16),
                   TextField(
-                    controller: _storeNameCtrl,
+                    controller: _fullNameCtrl,
                     decoration: InputDecoration(
-                      hintText: _accountType == 'SHOP' ? 'Tên cửa hàng/Hộ kinh doanh' : 'Họ và tên của bạn',
-                      prefixIcon: Icon(
-                          _accountType == 'SHOP' ? Icons.store : Icons.person,
-                          color: c.textMuted),
+                      hintText: 'Họ và tên của bạn',
+                      prefixIcon: Icon(Icons.badge, color: c.textMuted),
                     ),
                   ),
                   SizedBox(height: 16),
                   TextField(
                     controller: _phoneCtrl,
-                    keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
-                      hintText: 'Số điện thoại/Tên đăng nhập',
-                      prefixIcon: Icon(Icons.phone_android,
+                      hintText: 'SĐT hoặc Tên đăng nhập',
+                      prefixIcon: Icon(Icons.account_circle,
                           color: c.textMuted),
                     ),
                   ),
