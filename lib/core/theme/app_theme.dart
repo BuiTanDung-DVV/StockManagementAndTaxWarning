@@ -50,14 +50,14 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 
   // ── Light palette (clean, warm) ──
   static const light = AppThemeColors(
-    bg: Color(0xFFF9FAFB),       // warm off-white
+    bg: Color(0xFFF0F2F5),       // Gray-100/150 - darker background for better card contrast
     surface: Colors.white,
     card: Colors.white,
-    cardAlt: Color(0xFFF3F4F6),
+    cardAlt: Color(0xFFE5E7EB),  // Gray-200
     textPrimary: Color(0xFF111827),   // near-black for crisp text
     textSecondary: Color(0xFF4B5563), // dark gray
     textMuted: Color(0xFF9CA3AF),     // medium gray
-    divider: Color(0xFFE5E7EB),
+    divider: Color(0xFFD1D5DB),       // Gray-300 (darker divider for better borders)
     inputFill: Color(0xFFF3F4F6),
     inputBorder: Color(0xFFD1D5DB),
   );
