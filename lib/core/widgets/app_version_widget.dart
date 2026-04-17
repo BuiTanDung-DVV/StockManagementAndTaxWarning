@@ -21,7 +21,7 @@ class AppVersionWidget extends StatelessWidget {
         final c = AppThemeColors.of(context);
         
         return Text(
-          'Phiên bản $version (Build $buildNumber)',
+          'Phiên bản $version',
           style: style ?? TextStyle(
             color: c.textMuted,
             fontSize: 12,
