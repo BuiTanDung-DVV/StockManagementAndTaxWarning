@@ -102,7 +102,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<List<Map<String, dynamic>>> searchShops(String query) async {
     if (query.trim().isEmpty) return [];
     try {
-      final response = await _api.get('/auth/search-shops', queryParameters: {'q': query});
+      final response = await _api.get('/auth/search-shops', params: {'q': query});
       if (response is List) {
         return response.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
