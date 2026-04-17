@@ -1,6 +1,7 @@
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_version_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -225,6 +226,9 @@ class DashboardScreen extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const SizedBox.shrink(),
               ),
+              const SizedBox(height: 32),
+              const Center(child: AppVersionWidget()),
+              const SizedBox(height: 16),
             ]),
           ),
         ),

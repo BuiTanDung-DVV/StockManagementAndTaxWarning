@@ -43,6 +43,9 @@ export class ShopMember {
     @Column({ name: 'is_active', default: true })
     isActive: boolean;
 
+    @Column({ length: 20, default: 'PENDING' })
+    status: string; // 'PENDING' | 'ACTIVE' | 'REJECTED' | 'INACTIVE'
+
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 

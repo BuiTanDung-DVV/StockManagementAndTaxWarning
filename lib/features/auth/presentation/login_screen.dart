@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-
+import '../../settings/providers/shop_provider.dart';
+import '../../../core/widgets/app_version_widget.dart';
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -29,8 +29,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _passwordCtrl.text,
     );
     if (success && mounted) {
-      // App shell uses "/" as the dashboard route.
-      context.go('/');
+      final state = ref.read(authProvider);
+      if (!state.isOnboarded) {
+        context.go('/onboarding');
+      } else {
+        final shopState = ref.read(shopProvider);
+        if (shopState.isPending) {
+          context.go('/waiting-approval');
+        } else {
+          context.go('/');
+        }
+      }
     }
   }
 
@@ -61,15 +70,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      CachedNetworkImage(
-                        imageUrl: 'https://images.unsplash.com/photo-1542744094-24638ea0bc40?q=80&w=1000&auto=format&fit=crop',
+                      Container(
                         width: double.infinity,
                         height: double.infinity,
-                        fit: BoxFit.cover,
-                        color: Colors.black.withValues(alpha: 0.5),
-                        colorBlendMode: BlendMode.darken,
-                        placeholder: (context, url) => Container(color: AppColors.primary.withValues(alpha: 0.1)),
-                        errorWidget: (context, url, _) => Container(color: AppColors.primary.withValues(alpha: 0.1)),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.6)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
                       ),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -91,8 +101,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               SizedBox(height: 40),
               TextField(
                 controller: _usernameCtrl,
+                keyboardType: TextInputType.text,
                 decoration: InputDecoration(
-                  hintText: 'Tên đăng nhập',
+                  hintText: 'SĐT hoặc Tên đăng nhập',
                   prefixIcon: Icon(Icons.person_outline, color: c.textMuted),
                 ),
               ),
@@ -143,6 +154,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Text('Đăng ký tài khoản', style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
               ]),
+              const SizedBox(height: 32),
+              const AppVersionWidget(),
             ]),
             ),
           ),

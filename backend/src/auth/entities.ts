@@ -30,6 +30,9 @@ export class User {
     @Column({ name: 'is_active', default: true })
     isActive: boolean;
 
+    @Column({ name: 'is_onboarded', default: false })
+    isOnboarded: boolean;
+
     @Column({ name: 'account_type', length: 20, default: 'PERSONAL' })
     accountType: string; // 'SHOP' (hộ kinh doanh) | 'PERSONAL'
 
