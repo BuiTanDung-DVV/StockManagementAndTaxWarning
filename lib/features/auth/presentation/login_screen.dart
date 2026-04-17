@@ -55,48 +55,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: SingleChildScrollView(
               padding: EdgeInsets.all(32),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              // Aesthetic Login Header
+              // App Logo
               Container(
-                width: double.infinity,
-                height: 160,
+                width: 96,
+                height: 96,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
-                    BoxShadow(color: AppColors.primary.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 8)),
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.2), 
+                      blurRadius: 24, 
+                      offset: const Offset(0, 8),
+                    ),
                   ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.6)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                      ),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-                            child: const Icon(Icons.storefront, size: 36, color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ],
+                  child: Image.asset(
+                    'assets/icon/app_icon.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback in case icon is missing
+                      return Container(
+                        color: AppColors.primary,
+                        child: const Icon(Icons.storefront, size: 48, color: Colors.white),
+                      );
+                    },
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              Text('Quản lý Bán hàng', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text('Quản lý Bán hàng', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
               Text('& Kho hàng', style: TextStyle(fontSize: 16, color: c.textSecondary)),
               SizedBox(height: 40),
               TextField(
