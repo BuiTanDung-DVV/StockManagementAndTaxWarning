@@ -80,7 +80,13 @@ class ExpenseLedgerScreen extends ConsumerWidget {
           ]));
         },
       ),
-      floatingActionButton: FloatingActionButton(onPressed: () => _showAddExpenseDialog(context, ref), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddExpenseDialog(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
     );
   }
 
