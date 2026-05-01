@@ -24,7 +24,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()));
         },
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.shopping_cart_checkout),
         label: const Text('Tạo đơn'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

@@ -46,7 +46,7 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
                 style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.add), label: const Text('Thêm bảng kê'), onPressed: _openAddDialog),
+              ElevatedButton.icon(icon: const Icon(Icons.receipt_long), label: const Text('Thêm bảng kê'), onPressed: _openAddDialog),
             ]));
           }
 
@@ -195,7 +195,7 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: _openAddDialog,
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.receipt_long),
             label: const Text('Thêm'),
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
@@ -209,7 +209,7 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
       body: listBody(pendingTabOnly: false, showQuickFilter: true),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddDialog,
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.receipt_long),
         label: const Text('Thêm'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

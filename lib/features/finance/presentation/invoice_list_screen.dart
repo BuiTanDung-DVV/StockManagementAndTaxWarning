@@ -52,7 +52,7 @@ class InvoiceListScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               const Text('Chưa có hóa đơn nào', style: TextStyle(fontSize: 16, color: Colors.grey)),
               const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.add), label: const Text('Thêm hóa đơn'), onPressed: () => _showAddDialog(context, ref)),
+              ElevatedButton.icon(icon: const Icon(Icons.receipt), label: const Text('Thêm hóa đơn'), onPressed: () => _showAddDialog(context, ref)),
             ]))),
             if (items.isNotEmpty) ...[
               const Text('Danh sách hóa đơn', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
@@ -94,7 +94,7 @@ class InvoiceListScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.receipt),
         label: const Text('Thêm'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

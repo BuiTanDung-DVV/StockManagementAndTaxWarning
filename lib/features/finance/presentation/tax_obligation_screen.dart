@@ -29,7 +29,7 @@ class TaxObligationScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               const Text('Chưa có dữ liệu nghĩa vụ thuế', style: TextStyle(fontSize: 16, color: Colors.grey)),
               const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.add), label: const Text('Thêm kỳ thuế'), onPressed: () => _showAddDialog(context, ref)),
+              ElevatedButton.icon(icon: const Icon(Icons.account_balance), label: const Text('Thêm kỳ thuế'), onPressed: () => _showAddDialog(context, ref)),
             ]));
           }
 
@@ -76,7 +76,7 @@ class TaxObligationScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.account_balance),
         label: const Text('Thêm'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

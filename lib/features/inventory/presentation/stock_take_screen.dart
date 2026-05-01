@@ -22,7 +22,7 @@ class StockTakeScreen extends ConsumerWidget {
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const StockTakeFormScreen()));
         },
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.fact_check),
         label: const Text('Kiểm kê'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
