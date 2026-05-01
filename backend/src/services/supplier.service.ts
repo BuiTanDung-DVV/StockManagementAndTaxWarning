@@ -5,38 +5,39 @@ export class SupplierService {
     private supplierRepo = AppDataSource.getRepository(Supplier);
     private payableRepo = AppDataSource.getRepository(Payable);
 
-    async findAll(page = 1, limit = 20, search?: string) {
-        const qb = this.supplierRepo.createQueryBuilder('s');
+    async findAll(shopId: number, page = 1, limit = 20, search?: string) {
+        const qb = this.supplierRepo.createQueryBuilder('s')
+            .where('s.shop_id = :shopId', { shopId });
         if (search) {
-            qb.where('s.name LIKE :s OR s.phone LIKE :s OR s.code LIKE :s', { s: `%${search}%` });
+            qb.andWhere('(s.name LIKE :s OR s.phone LIKE :s OR s.code LIKE :s)', { s: `%${search}%` });
         }
         const [items, total] = await qb.skip((page - 1) * limit).take(limit).orderBy('s.createdAt', 'DESC').getManyAndCount();
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
-    async findById(id: number) {
-        const supplier = await this.supplierRepo.findOne({ where: { id } });
+    async findById(shopId: number, id: number) {
+        const supplier = await this.supplierRepo.findOne({ where: { id, shopId } });
         if (!supplier) throw new Error('Supplier not found');
         return supplier;
     }
 
-    async create(dto: Partial<Supplier>) {
-        return this.supplierRepo.save(this.supplierRepo.create({ ...dto, code: 'SUP' + Date.now().toString().slice(-6) }));
+    async create(shopId: number, dto: Partial<Supplier>) {
+        return this.supplierRepo.save(this.supplierRepo.create({ ...dto, shopId, code: 'SUP' + Date.now().toString().slice(-6) }));
     }
 
-    async update(id: number, dto: Partial<Supplier>) {
-        const supplier = await this.findById(id);
+    async update(shopId: number, id: number, dto: Partial<Supplier>) {
+        const supplier = await this.findById(shopId, id);
         Object.assign(supplier, dto);
         return this.supplierRepo.save(supplier);
     }
 
-    async remove(id: number) {
-        const supplier = await this.findById(id);
+    async remove(shopId: number, id: number) {
+        const supplier = await this.findById(shopId, id);
         supplier.isActive = false;
         return this.supplierRepo.save(supplier);
     }
 
-    async getPayables(supplierId: number) {
-        return this.payableRepo.find({ where: { supplierId } });
+    async getPayables(shopId: number, supplierId: number) {
+        return this.payableRepo.find({ where: { shopId, supplierId } });
     }
 }

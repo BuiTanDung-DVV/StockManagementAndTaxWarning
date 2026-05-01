@@ -10,6 +10,9 @@ export class Warehouse {
     @Column({ unique: true, length: 100 })
     name: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ length: 500, nullable: true })
     address: string;
 
@@ -24,6 +27,9 @@ export class InventoryStock {
 
     @Column({ name: 'product_id' })
     productId: number;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @ManyToOne(() => Product)
     @JoinColumn({ name: 'product_id' })
@@ -50,6 +56,9 @@ export class InventoryMovement {
 
     @Column({ name: 'product_id' })
     productId: number;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'warehouse_id' })
     warehouseId: number;
@@ -83,6 +92,9 @@ export class PurchaseOrder {
 
     @Column({ name: 'order_code', unique: true, length: 20 })
     orderCode: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'supplier_id' })
     supplierId: number;
@@ -160,6 +172,9 @@ export class StockTake {
 
     @Column({ name: 'stock_take_code', unique: true, length: 20 })
     stockTakeCode: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'stock_take_date', type: 'date' })
     stockTakeDate: Date;

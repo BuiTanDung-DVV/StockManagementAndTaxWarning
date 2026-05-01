@@ -158,7 +158,7 @@ export class AuthService {
             return { sent: true };
         }
 
-        return { sent: true, userId: user.id };
+        return { sent: true };
     }
 
     async resetPassword(dto: any) {

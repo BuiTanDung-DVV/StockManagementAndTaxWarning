@@ -41,8 +41,9 @@ export class FinanceService {
     }
 
     // Cash Transactions
-    async getCashTransactions(page = 1, limit = 20, type?: string, from?: string, to?: string) {
-        const qb = this.cashTxRepo.createQueryBuilder('t');
+    async getCashTransactions(shopId: number, page = 1, limit = 20, type?: string, from?: string, to?: string) {
+        const qb = this.cashTxRepo.createQueryBuilder('t')
+            .where('t.shop_id = :shopId', { shopId });
         if (type) qb.andWhere('t.type = :type', { type });
         if (from) qb.andWhere('t.transaction_date >= :from', { from: new Date(from) });
         if (to) qb.andWhere('t.transaction_date <= :to', { to: new Date(to) });
@@ -50,11 +51,11 @@ export class FinanceService {
             .skip((page - 1) * limit).take(limit).getManyAndCount();
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async createCashTransaction(dto: Partial<CashTransaction>) {
+    async createCashTransaction(shopId: number, dto: Partial<CashTransaction>) {
         if (!dto.transactionCode) dto.transactionCode = 'PT' + Date.now().toString().slice(-6);
-        return this.cashTxRepo.save(this.cashTxRepo.create(dto));
+        return this.cashTxRepo.save(this.cashTxRepo.create({ ...dto, shopId }));
     }
-    async getCashFlowSummary(period?: string) {
+    async getCashFlowSummary(shopId: number, period?: string) {
         const now = new Date();
         let fromDate: Date;
         switch (period) {
@@ -67,7 +68,7 @@ export class FinanceService {
         const result = await this.cashTxRepo.createQueryBuilder('t')
             .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where('t.transaction_date >= :fromDate', { fromDate })
+            .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate', { shopId, fromDate })
             .getRawOne();
 
         const income = Number(result?.income || 0);
@@ -75,7 +76,7 @@ export class FinanceService {
         return { income, expense, balance: income - expense, period: period || 'month' };
     }
 
-    async getProfitLoss(from?: string, to?: string) {
+    async getProfitLoss(shopId: number, from?: string, to?: string) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
@@ -85,13 +86,13 @@ export class FinanceService {
             .select("COALESCE(SUM(o.total_amount), 0)", 'revenue')
             .addSelect("COALESCE(SUM(o.total_cogs), 0)", 'cogs')
             .from('sales_orders', 'o')
-            .where("o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { fromDate, toDate })
+            .where("o.shop_id = :shopId AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { shopId, fromDate, toDate })
             .getRawOne();
 
         // Chi phí vận hành (loại trừ PURCHASE vì đã tính trong COGS)
         const expenseResult = await this.cashTxRepo.createQueryBuilder('t')
             .select("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.category != 'PURCHASE' THEN t.amount ELSE 0 END), 0)", 'expenses')
-            .where('t.transaction_date >= :fromDate AND t.transaction_date <= :toDate', { fromDate, toDate })
+            .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate', { shopId, fromDate, toDate })
             .getRawOne();
 
         const revenue = Number(salesResult?.revenue || 0);
@@ -115,7 +116,7 @@ export class FinanceService {
         };
     }
 
-    async getInvoiceReconciliation(from?: string, to?: string) {
+    async getInvoiceReconciliation(shopId: number, from?: string, to?: string) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
@@ -124,7 +125,7 @@ export class FinanceService {
             .select('i.invoice_type', 'invoiceType')
             .addSelect('COUNT(*)', 'count')
             .addSelect('COALESCE(SUM(i.total_amount), 0)', 'totalValue')
-            .where('i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { fromDate, toDate })
+            .where('i.shop_id = :shopId AND i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { shopId, fromDate, toDate })
             .groupBy('i.invoice_type')
             .getRawMany();
 
@@ -163,7 +164,7 @@ export class FinanceService {
     }
 
     // Expenses by category
-    async getExpensesByCategory(from?: string, to?: string) {
+    async getExpensesByCategory(shopId: number, from?: string, to?: string) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
@@ -172,7 +173,7 @@ export class FinanceService {
             .select('t.category', 'category')
             .addSelect('SUM(t.amount)', 'amount')
             .addSelect('COUNT(*)', 'count')
-            .where("t.type = 'EXPENSE' AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate", { fromDate, toDate })
+            .where("t.shop_id = :shopId AND t.type = 'EXPENSE' AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate", { shopId, fromDate, toDate })
             .groupBy('t.category')
             .orderBy('SUM(t.amount)', 'DESC')
             .getRawMany();
@@ -182,7 +183,7 @@ export class FinanceService {
 
         // Recent expense transactions
         const [recentItems] = await this.cashTxRepo.findAndCount({
-            where: { type: 'EXPENSE' },
+            where: { shopId, type: 'EXPENSE' },
             order: { transactionDate: 'DESC' },
             take: 10,
         });
@@ -191,12 +192,12 @@ export class FinanceService {
     }
 
     // Daily Closings
-    async getDailyClosings(page = 1, limit = 20) {
-        const [items, total] = await this.closingRepo.findAndCount({ skip: (page - 1) * limit, take: limit, order: { closingDate: 'DESC' } });
+    async getDailyClosings(shopId: number, page = 1, limit = 20) {
+        const [items, total] = await this.closingRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { closingDate: 'DESC' } });
         return { items, total, page, limit };
     }
-    async getDailyClosingByDate(date: string) {
-        const closing = await this.closingRepo.findOne({ where: { closingDate: new Date(date) as any } });
+    async getDailyClosingByDate(shopId: number, date: string) {
+        const closing = await this.closingRepo.findOne({ where: { shopId, closingDate: new Date(date) as any } });
         if (!closing) {
             // Return today's summary from transactions
             const d = new Date(date);
@@ -204,7 +205,7 @@ export class FinanceService {
                 .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'totalIncome')
                 .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'totalExpense')
                 .addSelect("COUNT(*)", 'orderCount')
-                .where('CAST(t.transaction_date AS DATE) = :d', { d: date })
+                .where('t.shop_id = :shopId AND CAST(t.transaction_date AS DATE) = :d', { shopId, d: date })
                 .getRawOne();
 
             const totalIncome = Number(summary?.totalIncome || 0);
@@ -212,7 +213,7 @@ export class FinanceService {
 
             // Get recent transactions for the day
             const transactions = await this.cashTxRepo.find({
-                where: { transactionDate: d as any },
+                where: { shopId, transactionDate: d as any },
                 order: { createdAt: 'DESC' },
                 take: 20,
             });
@@ -221,52 +222,53 @@ export class FinanceService {
         }
         return { ...closing, closed: true };
     }
-    async createDailyClosing(dto: Partial<DailyClosing>) {
-        return this.closingRepo.save(this.closingRepo.create(dto));
+    async createDailyClosing(shopId: number, dto: Partial<DailyClosing>) {
+        return this.closingRepo.save(this.closingRepo.create({ ...dto, shopId }));
     }
 
     // Cash Accounts
-    async getCashAccounts() {
-        return this.accountRepo.find();
+    async getCashAccounts(shopId: number) {
+        return this.accountRepo.find({ where: { shopId } });
     }
 
     // Cashflow Forecasts
-    async getForecasts() { return this.forecastRepo.find({ order: { forecastDate: 'ASC' } }); }
-    async createForecast(dto: Partial<CashflowForecast>) { return this.forecastRepo.save(this.forecastRepo.create(dto)); }
-    async updateForecast(id: number, dto: Partial<CashflowForecast>) {
-        const record = await this.forecastRepo.findOne({ where: { id } });
+    async getForecasts(shopId: number) { return this.forecastRepo.find({ where: { shopId }, order: { forecastDate: 'ASC' } }); }
+    async createForecast(shopId: number, dto: Partial<CashflowForecast>) { return this.forecastRepo.save(this.forecastRepo.create({ ...dto, shopId })); }
+    async updateForecast(shopId: number, id: number, dto: Partial<CashflowForecast>) {
+        const record = await this.forecastRepo.findOne({ where: { id, shopId } });
         if (!record) throw new Error('Not found');
         Object.assign(record, dto);
         return this.forecastRepo.save(record);
     }
-    async deleteForecast(id: number) {
-        const record = await this.forecastRepo.findOne({ where: { id } });
+    async deleteForecast(shopId: number, id: number) {
+        const record = await this.forecastRepo.findOne({ where: { id, shopId } });
         if (record) await this.forecastRepo.remove(record);
     }
 
     // Budget Plans
-    async getBudgetPlans() { return this.budgetRepo.find({ order: { startDate: 'DESC' } }); }
-    async createBudgetPlan(dto: Partial<BudgetPlan>) { return this.budgetRepo.save(this.budgetRepo.create(dto)); }
-    async updateBudgetPlan(id: number, dto: Partial<BudgetPlan>) {
-        const record = await this.budgetRepo.findOne({ where: { id } });
+    async getBudgetPlans(shopId: number) { return this.budgetRepo.find({ where: { shopId }, order: { startDate: 'DESC' } }); }
+    async createBudgetPlan(shopId: number, dto: Partial<BudgetPlan>) { return this.budgetRepo.save(this.budgetRepo.create({ ...dto, shopId })); }
+    async updateBudgetPlan(shopId: number, id: number, dto: Partial<BudgetPlan>) {
+        const record = await this.budgetRepo.findOne({ where: { id, shopId } });
         if (!record) throw new Error('Not found');
         Object.assign(record, dto);
         return this.budgetRepo.save(record);
     }
-    async deleteBudgetPlan(id: number) {
-        const record = await this.budgetRepo.findOne({ where: { id } });
+    async deleteBudgetPlan(shopId: number, id: number) {
+        const record = await this.budgetRepo.findOne({ where: { id, shopId } });
         if (record) await this.budgetRepo.remove(record);
     }
 
     // Invoices
-    async getInvoices(page = 1, limit = 20, type?: string) {
-        const qb = this.invoiceRepo.createQueryBuilder('i');
+    async getInvoices(shopId: number, page = 1, limit = 20, type?: string) {
+        const qb = this.invoiceRepo.createQueryBuilder('i')
+            .where('i.shop_id = :shopId', { shopId });
         if (type) qb.andWhere('i.invoice_type = :type', { type });
         const [items, total] = await qb.orderBy('i.invoice_date', 'DESC')
             .skip((page - 1) * limit).take(limit).getManyAndCount();
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async getInvoiceSummary(from?: string, to?: string) {
+    async getInvoiceSummary(shopId: number, from?: string, to?: string) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
@@ -274,40 +276,41 @@ export class FinanceService {
         const result = await this.invoiceRepo.createQueryBuilder('i')
             .select("COALESCE(SUM(CASE WHEN i.invoice_type = 'IN' THEN i.tax_amount ELSE 0 END), 0)", 'vatIn')
             .addSelect("COALESCE(SUM(CASE WHEN i.invoice_type = 'OUT' THEN i.tax_amount ELSE 0 END), 0)", 'vatOut')
-            .where('i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { fromDate, toDate })
+            .where('i.shop_id = :shopId AND i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { shopId, fromDate, toDate })
             .getRawOne();
 
         const vatIn = Number(result?.vatIn || 0);
         const vatOut = Number(result?.vatOut || 0);
         return { vatIn, vatOut, vatOwed: vatOut - vatIn };
     }
-    async getInvoiceById(id: number) {
-        const invoice = await this.invoiceRepo.findOne({ where: { id } });
+    async getInvoiceById(shopId: number, id: number) {
+        const invoice = await this.invoiceRepo.findOne({ where: { id, shopId } });
         if (!invoice) throw new Error('Invoice not found');
         return invoice;
     }
-    async createInvoice(dto: Partial<Invoice>) {
+    async createInvoice(shopId: number, dto: Partial<Invoice>) {
         if (!dto.invoiceNumber) dto.invoiceNumber = 'HD' + Date.now().toString().slice(-8);
-        return this.invoiceRepo.save(this.invoiceRepo.create(dto));
+        return this.invoiceRepo.save(this.invoiceRepo.create({ ...dto, shopId }));
     }
 
 
     // Tax Obligations
-    async getTaxObligations() {
-        const items = await this.taxObRepo.find({ order: { period: 'DESC' } });
+    async getTaxObligations(shopId: number) {
+        const items = await this.taxObRepo.find({ where: { shopId }, order: { period: 'DESC' } });
         const totalVat = items.reduce((s, i) => s + Number(i.vatDeclared), 0);
         const totalPit = items.reduce((s, i) => s + Number(i.pitDeclared), 0);
         const totalPaidVat = items.reduce((s, i) => s + Number(i.vatPaid), 0);
         const totalPaidPit = items.reduce((s, i) => s + Number(i.pitPaid), 0);
         return { items, totalVat, totalPit, totalPaidVat, totalPaidPit, totalOwed: (totalVat + totalPit) - (totalPaidVat + totalPaidPit) };
     }
-    async createTaxObligation(dto: Partial<TaxObligation>) {
-        return this.taxObRepo.save(this.taxObRepo.create(dto));
+    async createTaxObligation(shopId: number, dto: Partial<TaxObligation>) {
+        return this.taxObRepo.save(this.taxObRepo.create({ ...dto, shopId }));
     }
 
     // Purchases Without Invoice
-    async getPurchasesWithoutInvoice(page = 1, limit = 20) {
+    async getPurchasesWithoutInvoice(shopId: number, page = 1, limit = 20) {
         const [items, total] = await this.purchaseNoInvRepo.findAndCount({
+            where: { shopId },
             relations: ['items'],
             skip: (page - 1) * limit,
             take: limit,
@@ -317,7 +320,7 @@ export class FinanceService {
         return { items, total, totalAmount, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
-    async createPurchaseWithoutInvoice(dto: Partial<PurchaseWithoutInvoice> & {
+    async createPurchaseWithoutInvoice(shopId: number, dto: Partial<PurchaseWithoutInvoice> & {
         items?: Array<Partial<PurchaseWithoutInvoiceItem>>;
         creatorUserId?: number;
         creatorRole?: string;
@@ -340,7 +343,7 @@ export class FinanceService {
                 const unitPrice = Number(i.unitPrice || 0);
                 const subtotal = Number(i.subtotal || (quantity * unitPrice));
                 if (!productName || quantity <= 0 || unitPrice < 0 || subtotal < 0) return null;
-                return { productName, productId, quantity, unitPrice, subtotal } as PurchaseWithoutInvoiceItem;
+                return { productName, productId, quantity, unitPrice, subtotal, shopId } as PurchaseWithoutInvoiceItem;
             })
             .filter((i): i is PurchaseWithoutInvoiceItem => !!i);
 
@@ -361,6 +364,7 @@ export class FinanceService {
 
         const entity = this.purchaseNoInvRepo.create({
             ...dto,
+            shopId,
             sellerName,
             sellerIdentityNumber,
             totalAmount,
@@ -389,6 +393,7 @@ export class FinanceService {
     }
 
     async updatePurchaseWithoutInvoiceApproval(
+        shopId: number,
         id: number,
         input: {
             decision: 'APPROVED' | 'REJECTED';
@@ -398,7 +403,7 @@ export class FinanceService {
             requestIp?: string;
         },
     ) {
-        const record = await this.purchaseNoInvRepo.findOne({ where: { id } });
+        const record = await this.purchaseNoInvRepo.findOne({ where: { id, shopId } });
         if (!record) throw new Error('Validation: Không tìm thấy bảng kê');
 
         if (input.approverAccountType !== 'SHOP') {

@@ -8,6 +8,9 @@ export class Supplier {
     @Column({ unique: true, length: 20 })
     code: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ length: 200 })
     name: string;
 
@@ -58,6 +61,9 @@ export class Payable {
 
     @Column({ name: 'supplier_id' })
     supplierId: number;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'purchase_order_id', nullable: true })
     purchaseOrderId: number;

@@ -8,54 +8,55 @@ export class CustomerService {
     private evidenceRepo = AppDataSource.getRepository(DebtEvidence);
     private paymentRepo = AppDataSource.getRepository(DebtPaymentHistory);
 
-    async findAll(page = 1, limit = 20, search?: string) {
-        const qb = this.customerRepo.createQueryBuilder('c');
+    async findAll(shopId: number, page = 1, limit = 20, search?: string) {
+        const qb = this.customerRepo.createQueryBuilder('c')
+            .where('c.shopId = :shopId', { shopId });
         if (search) {
-            qb.where('c.name LIKE :s OR c.phone LIKE :s OR c.code LIKE :s', { s: `%${search}%` });
+            qb.andWhere('(c.name LIKE :s OR c.phone LIKE :s OR c.code LIKE :s)', { s: `%${search}%` });
         }
         const [items, total] = await qb.skip((page - 1) * limit).take(limit).orderBy('c.createdAt', 'DESC').getManyAndCount();
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
-    async findById(id: number) {
-        const customer = await this.customerRepo.findOne({ where: { id } });
+    async findById(shopId: number, id: number) {
+        const customer = await this.customerRepo.findOne({ where: { id, shopId } });
         if (!customer) throw new Error('Customer not found');
         return customer;
     }
 
-    async create(dto: Partial<Customer>) {
-        return this.customerRepo.save(this.customerRepo.create({ ...dto, code: 'CUS' + Date.now().toString().slice(-6) }));
+    async create(shopId: number, dto: Partial<Customer>) {
+        return this.customerRepo.save(this.customerRepo.create({ ...dto, shopId, code: 'CUS' + Date.now().toString().slice(-6) }));
     }
 
-    async update(id: number, dto: Partial<Customer>) {
-        const customer = await this.findById(id);
+    async update(shopId: number, id: number, dto: Partial<Customer>) {
+        const customer = await this.findById(shopId, id);
         Object.assign(customer, dto);
         return this.customerRepo.save(customer);
     }
 
-    async remove(id: number) {
-        const customer = await this.findById(id);
+    async remove(shopId: number, id: number) {
+        const customer = await this.findById(shopId, id);
         customer.isActive = false;
         return this.customerRepo.save(customer);
     }
 
-    async getReceivables(customerId: number) {
-        return this.receivableRepo.find({ where: { customer: { id: customerId } }, relations: ['evidences', 'paymentHistory'] });
+    async getReceivables(shopId: number, customerId: number) {
+        return this.receivableRepo.find({ where: { shopId, customer: { id: customerId } }, relations: ['evidences', 'paymentHistory'] });
     }
 
-    async getDebtEvidence(customerId: number) {
-        return this.evidenceRepo.find({ where: { receivable: { customer: { id: customerId } } } });
+    async getDebtEvidence(shopId: number, customerId: number) {
+        return this.evidenceRepo.find({ where: { shopId, receivable: { customer: { id: customerId } } } });
     }
 
-    async addPayment(customerId: number, receivableId: number, dto: Partial<DebtPaymentHistory>) {
-        const receivable = await this.receivableRepo.findOne({ where: { id: receivableId, customer: { id: customerId } } });
+    async addPayment(shopId: number, customerId: number, receivableId: number, dto: Partial<DebtPaymentHistory>) {
+        const receivable = await this.receivableRepo.findOne({ where: { id: receivableId, shopId, customer: { id: customerId } } });
         if (!receivable) throw new Error('Receivable not found');
-        return this.paymentRepo.save(this.paymentRepo.create({ ...dto, receivable }));
+        return this.paymentRepo.save(this.paymentRepo.create({ ...dto, shopId, receivable }));
     }
 
-    async getDebtAging(asOf?: string) {
+    async getDebtAging(shopId: number, asOf?: string) {
         const receivables = await this.receivableRepo.find({
-            where: { status: Not(In(['PAID'])) },
+            where: { shopId, status: Not(In(['PAID'])) },
             relations: ['customer', 'paymentHistory'],
         });
 
@@ -156,9 +157,9 @@ export class CustomerService {
         };
     }
 
-    async getOverdueDebts() {
+    async getOverdueDebts(shopId: number) {
         const receivables = await this.receivableRepo.find({
-            where: { status: Not(In(['PAID'])) },
+            where: { shopId, status: Not(In(['PAID'])) },
             relations: ['customer'],
             order: { dueDate: 'ASC' },
         });

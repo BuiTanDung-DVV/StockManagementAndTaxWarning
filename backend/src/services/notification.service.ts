@@ -20,9 +20,12 @@ export class NotificationService {
         return this.repo.count({ where: { userId, isRead: false } });
     }
 
-    /** Mark one as read */
-    async markRead(id: number) {
-        await this.repo.update(id, { isRead: true });
+    /** Mark one as read — only if owned by the user */
+    async markRead(id: number, userId: number) {
+        const notification = await this.repo.findOne({ where: { id, userId } });
+        if (!notification) throw new Error('Notification not found');
+        notification.isRead = true;
+        await this.repo.save(notification);
         return { updated: true };
     }
 

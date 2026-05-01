@@ -14,12 +14,12 @@ export class SalesService {
     private productRepo = AppDataSource.getRepository(Product);
     private cogsService = new COGSService();
 
-    async findAll(page = 1, limit = 20) {
-        const [items, total] = await this.orderRepo.findAndCount({ skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
+    async findAll(shopId: number, page = 1, limit = 20) {
+        const [items, total] = await this.orderRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
     
-    async summary(from?: string, to?: string) {
+    async summary(shopId: number, from?: string, to?: string) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
@@ -28,7 +28,7 @@ export class SalesService {
             .select('COALESCE(SUM(o.total_amount), 0)', 'totalRevenue')
             .addSelect('COALESCE(SUM(o.total_cogs), 0)', 'totalCogs')
             .addSelect('COUNT(o.id)', 'orderCount')
-            .where("o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { fromDate, toDate })
+            .where("o.shop_id = :shopId AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { shopId, fromDate, toDate })
             .getRawOne();
 
         return {
@@ -39,12 +39,12 @@ export class SalesService {
         };
     }
 
-    async findById(id: number) {
-        const order = await this.orderRepo.findOne({ where: { id }, relations: ['items', 'payments'] });
+    async findById(shopId: number, id: number) {
+        const order = await this.orderRepo.findOne({ where: { id, shopId }, relations: ['items', 'payments'] });
         if (!order) throw new Error('Order not found');
 
         const returns = await this.returnRepo.find({
-            where: { order: { id } as any } as any,
+            where: { order: { id, shopId } as any, shopId } as any,
             relations: ['items'],
             order: { createdAt: 'DESC' } as any,
         });
@@ -52,11 +52,11 @@ export class SalesService {
         return { ...(order as any), returns };
     }
 
-    async create(dto: any) {
+    async create(shopId: number, dto: any) {
         const orderDate = dto.orderDate ? new Date(dto.orderDate) : new Date();
 
         const customer = dto.customerId
-            ? await this.customerRepo.findOne({ where: { id: Number(dto.customerId) } })
+            ? await this.customerRepo.findOne({ where: { id: Number(dto.customerId), shopId } })
             : null;
 
         let subtotal = 0;
@@ -72,7 +72,7 @@ export class SalesService {
             subtotal += lineSubtotal;
 
             const product = i.productId
-                ? await this.productRepo.findOne({ where: { id: Number(i.productId) } })
+                ? await this.productRepo.findOne({ where: { id: Number(i.productId), shopId } })
                 : null;
 
             // Tính giá vốn cho item này
@@ -90,6 +90,7 @@ export class SalesService {
             }
 
             const item = (this.orderItemRepo as any).create({
+                shopId,
                 quantity,
                 unitPrice,
                 subtotal: lineSubtotal,
@@ -109,7 +110,7 @@ export class SalesService {
         if (customer && Number(customer.creditLimit || 0) > 0) {
             const existingDebtRaw = await this.receivableRepo.createQueryBuilder('r')
                 .select('COALESCE(SUM(r.amount - r.paid_amount), 0)', 'remainingDebt')
-                .where('r.customer_id = :customerId', { customerId: customer.id })
+                .where('r.customer_id = :customerId AND r.shop_id = :shopId', { customerId: customer.id, shopId })
                 .andWhere("r.status != 'PAID'")
                 .getRawOne();
 
@@ -125,6 +126,7 @@ export class SalesService {
         }
 
         const order = this.orderRepo.create({
+            shopId,
             orderCode: dto.orderCode || 'SO' + Date.now().toString().slice(-6),
             orderDate,
             status: dto.status || 'PENDING',
@@ -151,24 +153,24 @@ export class SalesService {
         return savedOrder;
     }
 
-    async cancel(id: number) {
-        const order = await this.findById(id);
+    async cancel(shopId: number, id: number) {
+        const order = await this.findById(shopId, id);
         order.status = 'CANCELLED';
         return this.orderRepo.save(order);
     }
 
-    async addPayment(orderId: number, dto: Partial<SalesOrderPayment>) {
-        const order = await this.findById(orderId);
-        const payment = await this.paymentRepo.save(this.paymentRepo.create({ ...dto, order }));
+    async addPayment(shopId: number, orderId: number, dto: Partial<SalesOrderPayment>) {
+        const order = await this.findById(shopId, orderId);
+        const payment = await this.paymentRepo.save(this.paymentRepo.create({ ...dto, shopId, order }));
         order.paidAmount = Number(order.paidAmount || 0) + Number(dto.amount);
         order.status = (order.paidAmount >= order.totalAmount) ? 'DELIVERED' : 'PENDING';
         await this.orderRepo.save(order);
         return payment;
     }
 
-    async createReturn(orderId: number, dto: any) {
+    async createReturn(shopId: number, orderId: number, dto: any) {
         // Use base order entity (not the aggregated object returned by findById).
-        const order = await this.orderRepo.findOne({ where: { id: orderId } });
+        const order = await this.orderRepo.findOne({ where: { id: orderId, shopId } });
         if (!order) throw new Error('Order not found');
 
         // return_date is NOT NULL in schema → always set.
@@ -183,6 +185,7 @@ export class SalesService {
         }
 
         const entity = this.returnRepo.create({
+            shopId,
             returnCode: dto.returnCode || 'RT' + Date.now().toString().slice(-6),
             order,
             returnDate,
@@ -198,10 +201,11 @@ export class SalesService {
             (entity as any).items = [];
             for (const i of rawItems) {
                 const product = i.productId
-                    ? await this.productRepo.findOne({ where: { id: Number(i.productId) } })
+                    ? await this.productRepo.findOne({ where: { id: Number(i.productId), shopId } })
                     : null;
 
                 (entity as any).items.push({
+                    shopId,
                     ...(product ? { product } : {}),
                     quantity: Number(i.quantity || 0),
                     unitPrice: Number(i.unitPrice || 0),

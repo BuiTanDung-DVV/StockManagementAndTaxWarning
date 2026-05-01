@@ -31,8 +31,20 @@ import notificationRoutes from './routes/notification.routes';
 import profileRoutes from './routes/profile.routes';
 import cogsRoutes from './routes/cogs.routes';
 
+import { authenticateJwt, requireShopId } from './middleware/auth.middleware';
+
 // Routes
 apiRouter.use('/auth', authRoutes);
+
+// Protect all other routes
+apiRouter.use(authenticateJwt);
+
+// User-scoped routes (no shopId required)
+apiRouter.use('/', notificationRoutes);
+apiRouter.use('/profile', profileRoutes);
+
+// Shop-scoped routes (shopId REQUIRED)
+apiRouter.use(requireShopId);
 apiRouter.use('/', financeRoutes);
 apiRouter.use('/', inventoryRoutes);
 apiRouter.use('/', salesRoutes);
@@ -42,8 +54,6 @@ apiRouter.use('/', supplierRoutes);
 apiRouter.use('/', systemRoutes);
 apiRouter.use('/', shopRoleRoutes);
 apiRouter.use('/', shopMemberRoutes);
-apiRouter.use('/', notificationRoutes);
-apiRouter.use('/profile', profileRoutes);
 apiRouter.use('/cogs', cogsRoutes);
 
 // Mount the API router
