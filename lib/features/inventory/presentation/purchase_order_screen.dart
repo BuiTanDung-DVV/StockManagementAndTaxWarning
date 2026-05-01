@@ -19,13 +19,16 @@ class PurchaseOrderScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Nhập hàng / Đơn mua'), actions: [
         featureGuideButton(context, 'purchase_order'),
-        IconButton(
-          icon: const Icon(Icons.add), 
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()));
-          },
-        ),
       ]),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()));
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Tạo đơn'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
       body: poAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [

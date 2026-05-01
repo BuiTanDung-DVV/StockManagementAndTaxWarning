@@ -135,7 +135,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           ),
         ]),
       ),
-      floatingActionButton: FloatingActionButton(onPressed: () => context.push('/pos'), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/pos'),
+        icon: const Icon(Icons.point_of_sale),
+        label: const Text('Bán hàng'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
     );
   }
 }

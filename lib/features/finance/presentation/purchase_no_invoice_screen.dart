@@ -193,7 +193,13 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
               listBody(pendingTabOnly: true, showQuickFilter: false),
             ],
           ),
-          floatingActionButton: FloatingActionButton(onPressed: _openAddDialog, child: const Icon(Icons.add)),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _openAddDialog,
+            icon: const Icon(Icons.add),
+            label: const Text('Thêm'),
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
         ),
       );
     }
@@ -201,7 +207,13 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
     return Scaffold(
       appBar: AppBar(title: const Text('Mua hàng không hóa đơn'), actions: [featureGuideButton(context, 'purchase_no_invoice')]),
       body: listBody(pendingTabOnly: false, showQuickFilter: true),
-      floatingActionButton: FloatingActionButton(onPressed: _openAddDialog, child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
     );
   }
 

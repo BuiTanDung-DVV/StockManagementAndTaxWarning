@@ -30,11 +30,14 @@ class ProductListScreen extends ConsumerWidget {
         title: Text('Sản phẩm'),
         actions: [
           featureGuideButton(context, 'product_list'),
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => context.push('/products/form'),
-          )
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/products/form'),
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
       ),
       body: Column(children: [
         Padding(padding: EdgeInsets.all(16), child: TextField(decoration: InputDecoration(hintText: 'Tìm sản phẩm...', prefixIcon: Icon(Icons.search, color: c.textMuted)))),
