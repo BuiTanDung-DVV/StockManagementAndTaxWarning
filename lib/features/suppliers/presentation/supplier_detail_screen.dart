@@ -16,7 +16,14 @@ class SupplierDetailScreen extends ConsumerWidget {
     final detailAsync = ref.watch(supplierDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(title: Text('NCC #$id'), actions: [featureGuideButton(context, 'supplier_detail')]),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('NCC #$id'),
+        actions: [featureGuideButton(context, 'supplier_detail')],
+      ),
       body: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [

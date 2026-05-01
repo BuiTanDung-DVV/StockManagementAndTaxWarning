@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
 
@@ -40,7 +41,8 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final data = await _api.post('/auth/login', data: {'username': username, 'password': password});
       final token = data['access_token'] ?? data['token'] ?? '';
-      await _api.saveToken(token);
+      final refreshToken = data['refresh_token'];
+      await _api.saveToken(token, refreshToken);
 
       final user = data['user'] is Map ? Map<String, dynamic>.from(data['user']) : null;
       final accountType = user?['accountType'] as String? ?? 'PERSONAL';
@@ -54,7 +56,11 @@ class AuthNotifier extends Notifier<AuthState> {
 
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Sai tên đăng nhập hoặc mật khẩu');
+      String msg = 'Không thể đăng nhập. Vui lòng thử lại';
+      if (e is DioException && e.error is ApiException) {
+        msg = (e.error as ApiException).message;
+      }
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
@@ -88,7 +94,13 @@ class AuthNotifier extends Notifier<AuthState> {
       
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString().contains('bắt buộc') || e.toString().contains('Không tìm thấy') ? e.toString() : 'Không thể hoàn tất onboarding. Vui lòng thử lại.');
+      String msg = 'Không thể hoàn tất onboarding. Vui lòng thử lại.';
+      if (e is DioException && e.error is ApiException) {
+        msg = (e.error as ApiException).message;
+      } else if (e.toString().contains('bắt buộc') || e.toString().contains('Không tìm thấy')) {
+        msg = e.toString();
+      }
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }

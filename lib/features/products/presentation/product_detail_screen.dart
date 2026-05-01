@@ -7,6 +7,11 @@ import '../../../core/theme/app_theme.dart';
 import '../providers/product_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+double _asDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0;
+  return 0;
+}
 
 class ProductDetailScreen extends ConsumerWidget {
   final int id;
@@ -17,7 +22,13 @@ class ProductDetailScreen extends ConsumerWidget {
     final detailAsync = ref.watch(productDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Sản phẩm #$id'), actions: [
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('Sản phẩm #$id'),
+        actions: [
         featureGuideButton(context, 'product_detail'),
         IconButton(icon: const Icon(Icons.edit), onPressed: () async {
           final asyncVal = detailAsync;
@@ -42,9 +53,9 @@ class ProductDetailScreen extends ConsumerWidget {
           final category = p['category']?['name'] ?? p['categoryName'] ?? '';
           final unit = p['unit'] ?? '';
           final barcode = p['barcode'] ?? '';
-          final costPrice = (p['costPrice'] as num?)?.toDouble() ?? 0;
-          final sellingPrice = (p['sellingPrice'] as num?)?.toDouble() ?? 0;
-          final wholesalePrice = (p['wholesalePrice'] as num?)?.toDouble() ?? 0;
+          final costPrice = _asDouble(p['costPrice']);
+          final sellingPrice = _asDouble(p['sellingPrice'] ?? p['sellPrice']);
+          final wholesalePrice = _asDouble(p['wholesalePrice']);
           final taxRate = p['taxRate'] ?? p['tax'] ?? '';
           final currentStock = (p['currentStock'] ?? p['quantity'] ?? 0);
           final minStock = (p['minStock'] ?? p['minimumStock'] ?? 0);

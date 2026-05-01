@@ -8,10 +8,6 @@ import '../../auth/providers/auth_provider.dart';
 import '../providers/system_provider.dart';
 import '../providers/shop_provider.dart';
 import '../providers/notification_provider.dart';
-import 'staff_management_screen.dart';
-import 'notification_list_screen.dart';
-import 'profile_screen.dart';
-import 'shop_profile_screen.dart';
 import '../providers/costing_provider.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -34,7 +30,7 @@ class SettingsScreen extends ConsumerWidget {
           featureGuideButton(context, 'settings'),
           // Notification bell
           Stack(children: [
-                IconButton(icon: HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: c.textSecondary, size: 22), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen()))),
+                IconButton(icon: HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: c.textSecondary, size: 22), onPressed: () => context.push('/notifications')),
             if (notifState.unreadCount > 0)
               Positioned(right: 6, top: 6, child: Container(
                 padding: const EdgeInsets.all(4),
@@ -47,7 +43,7 @@ class SettingsScreen extends ConsumerWidget {
       body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
         // Profile card - tappable
         GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+          onTap: () => context.push('/profile'),
           child: shopAsync.when(
             data: (shop) => Container(
               padding: const EdgeInsets.all(16),
@@ -132,8 +128,8 @@ class SettingsScreen extends ConsumerWidget {
         // ── Staff management (only for shop owners) ──
         if (shopState.isOwner || auth.isShopOwner)
           _SettingGroup('Nhân viên & Phân quyền', [
-            _SettingItem(HugeIcons.strokeRoundedUserMultiple, 'Quản lý nhân viên', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffManagementScreen())), c),
-            _SettingItem(HugeIcons.strokeRoundedUserStar02, 'Quản lý vai trò', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RoleConfigScreen())), c),
+            _SettingItem(HugeIcons.strokeRoundedUserMultiple, 'Quản lý nhân viên', () => context.push('/staff'), c),
+            _SettingItem(HugeIcons.strokeRoundedUserStar02, 'Quản lý vai trò', () => context.push('/roles'), c),
           ], c),
 
         _SettingGroup('Quản lý', [
@@ -144,7 +140,7 @@ class SettingsScreen extends ConsumerWidget {
         ], c),
         _CostingMethodTile(c: c),
         _SettingGroup('Cửa hàng', [
-          _SettingItem(HugeIcons.strokeRoundedStore01, 'Thông tin cửa hàng', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShopProfileScreen())), c),
+          _SettingItem(HugeIcons.strokeRoundedStore01, 'Thông tin cửa hàng', () => context.push('/shop-profile'), c),
           _SettingItem(HugeIcons.strokeRoundedInvoice01, 'Mẫu hóa đơn', () {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tùy chỉnh mẫu hóa đơn sẽ sớm khả dụng'), duration: Duration(seconds: 2)));
           }, c),
@@ -158,7 +154,7 @@ class SettingsScreen extends ConsumerWidget {
           _SettingItem(HugeIcons.strokeRoundedCustomerSupport, 'Hỗ trợ thuế', () => context.push('/tax-support'), c),
         ], c),
         _SettingGroup('Hệ thống', [
-          _SettingItem(HugeIcons.strokeRoundedNotification03, 'Thông báo', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationListScreen())), c),
+          _SettingItem(HugeIcons.strokeRoundedNotification03, 'Thông báo', () => context.push('/notifications'), c),
           _SettingItem(HugeIcons.strokeRoundedCloudSavingDone01, 'Sao lưu dữ liệu', () {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sao lưu & khôi phục sẽ sớm khả dụng'), duration: Duration(seconds: 2)));
           }, c),

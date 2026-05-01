@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/shop_provider.dart';
@@ -154,9 +155,17 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
     final c = AppThemeColors.of(context);
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('Quản lý nhân viên'),
         actions: [
-          IconButton(icon: const Icon(Icons.group_add), tooltip: 'Quản lý vai trò', onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RoleConfigScreen()))),
+          IconButton(
+            icon: const Icon(Icons.group_add),
+            tooltip: 'Quản lý vai trò',
+            onPressed: () => context.push('/roles'),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

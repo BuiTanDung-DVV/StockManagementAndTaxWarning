@@ -23,7 +23,13 @@ export const findOne = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await salesService.create(req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        if (String(e.message || '').includes('hạn mức tín dụng')) {
+            res.status(400).json({ success: false, message: e.message });
+            return;
+        }
+        res.status(500).json({ success: false, message: e.message });
+    }
 };
 
 export const cancel = async (req: Request, res: Response) => {

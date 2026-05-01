@@ -106,17 +106,11 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
     final c = AppThemeColors.of(context);
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('Thông tin cửa hàng'),
-        actions: [
-          if (!_loading)
-            TextButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: _saving
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: AppColors.primary, size: 18),
-              label: Text(_saving ? 'Đang lưu...' : 'Lưu', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
-            ),
-        ],
       ),
       body: _loading
           ? const ShimmerList(count: 6)
