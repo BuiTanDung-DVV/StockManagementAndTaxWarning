@@ -31,7 +31,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   const Text('Chưa có dữ liệu dự báo', style: TextStyle(fontSize: 16, color: Colors.grey)),
                   const SizedBox(height: 16),
-                  ElevatedButton.icon(icon: const Icon(Icons.add), label: const Text('Thêm dự báo'), onPressed: () => _showAddForecastDialog(context, ref)),
+                  ElevatedButton.icon(icon: const Icon(Icons.trending_up), label: const Text('Thêm dự báo'), onPressed: () => _showAddForecastDialog(context, ref)),
                 ]));
               }
               return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -92,7 +92,7 @@ class CashflowForecastScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddForecastDialog(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.trending_up),
         label: const Text('Thêm'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

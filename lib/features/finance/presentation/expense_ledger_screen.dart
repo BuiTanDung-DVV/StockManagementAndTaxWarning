@@ -30,7 +30,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               const Text('Chưa có chi phí nào', style: TextStyle(fontSize: 16, color: Colors.grey)),
               const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.add), label: const Text('Thêm chi phí'), onPressed: () => _showAddExpenseDialog(context, ref)),
+              ElevatedButton.icon(icon: const Icon(Icons.money_off), label: const Text('Thêm chi phí'), onPressed: () => _showAddExpenseDialog(context, ref)),
             ]));
           }
 
@@ -82,7 +82,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddExpenseDialog(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.money_off),
         label: const Text('Thêm'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

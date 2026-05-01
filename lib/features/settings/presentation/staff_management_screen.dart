@@ -395,7 +395,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
       appBar: AppBar(title: const Text('Quản lý vai trò')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showRoleEditor(),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.shield_outlined),
         label: const Text('Tạo vai trò'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

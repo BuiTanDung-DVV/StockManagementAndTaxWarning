@@ -26,7 +26,7 @@ class SupplierListScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/suppliers/form'),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.domain_add),
         label: const Text('Thêm'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

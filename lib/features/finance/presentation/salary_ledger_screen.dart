@@ -36,7 +36,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               const Text('Chưa có chi lương nào', style: TextStyle(fontSize: 16, color: Colors.grey)),
               const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.add), label: const Text('Thêm chi lương'), onPressed: () => _showAddDialog(context, ref)),
+              ElevatedButton.icon(icon: const Icon(Icons.payments), label: const Text('Thêm chi lương'), onPressed: () => _showAddDialog(context, ref)),
             ]));
           }
 
@@ -73,7 +73,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.payments),
         label: const Text('Thêm'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
