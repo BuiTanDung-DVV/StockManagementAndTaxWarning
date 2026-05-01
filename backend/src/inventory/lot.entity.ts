@@ -13,6 +13,9 @@ export class InventoryLot {
     @Column({ name: 'product_id' })
     productId: number;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ name: 'purchase_id', nullable: true })
     purchaseId: number;
 
@@ -37,3 +40,4 @@ export class InventoryLot {
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 }
+

@@ -9,6 +9,9 @@ export class Customer {
     @Column({ unique: true, length: 20 })
     code: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ length: 200 })
     name: string;
 
@@ -74,6 +77,9 @@ export class Receivable {
     @JoinColumn({ name: 'customer_id' })
     customer: Customer;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ name: 'order_id', nullable: true })
     orderId: number;
 
@@ -129,6 +135,9 @@ export class DebtEvidence {
     @JoinColumn({ name: 'receivable_id' })
     receivable: Receivable;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ name: 'payable_id', nullable: true })
     payableId: number;
 
@@ -162,6 +171,9 @@ export class DebtPaymentHistory {
     @ManyToOne(() => Receivable, (r) => r.paymentHistory, { nullable: true })
     @JoinColumn({ name: 'receivable_id' })
     receivable: Receivable;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'payable_id', nullable: true })
     payableId: number;

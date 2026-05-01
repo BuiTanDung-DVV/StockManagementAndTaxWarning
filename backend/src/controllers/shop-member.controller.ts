@@ -4,7 +4,7 @@ import { AuthRequest } from '../middleware/auth.middleware';
 
 const svc = new ShopMemberService();
 
-const shopId = (req: Request) => +(req.query.shopId || 1);
+const shopId = (req: Request) => (req as any).shopId;
 
 export const listMembers = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await svc.findAll(shopId(req)) }); }
@@ -17,12 +17,12 @@ export const listPending = async (req: Request, res: Response) => {
 };
 
 export const approveMember = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await svc.approve(+req.params.id) }); }
+    try { res.json({ success: true, data: await svc.approve(shopId(req), +req.params.id) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
 export const rejectMember = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await svc.reject(+req.params.id) }); }
+    try { res.json({ success: true, data: await svc.reject(shopId(req), +req.params.id) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
@@ -35,12 +35,12 @@ export const inviteMember = async (req: Request, res: Response) => {
 };
 
 export const updateMemberRole = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await svc.updateRole(+req.params.id, req.body.roleId) }); }
+    try { res.json({ success: true, data: await svc.updateRole(shopId(req), +req.params.id, req.body.roleId) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
 export const removeMember = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await svc.remove(+req.params.id) }); }
+    try { res.json({ success: true, data: await svc.remove(shopId(req), +req.params.id) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 

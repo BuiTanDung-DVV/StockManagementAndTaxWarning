@@ -22,8 +22,11 @@ export const getUnreadCount = async (req: AuthRequest, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-export const markRead = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await svc.markRead(+req.params.id) }); }
+export const markRead = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.sub;
+        res.json({ success: true, data: await svc.markRead(+req.params.id, userId) });
+    }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 

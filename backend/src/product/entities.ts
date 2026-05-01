@@ -8,6 +8,9 @@ export class Category {
     @Column({ unique: true, length: 100 })
     name: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ length: 500, nullable: true })
     description: string;
 
@@ -25,6 +28,9 @@ export class Product {
 
     @Column({ unique: true, length: 50 })
     sku: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ length: 200 })
     name: string;
@@ -108,6 +114,9 @@ export class CostType {
     @Column({ unique: true, length: 100 })
     name: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ length: 500, nullable: true })
     description: string;
 
@@ -129,6 +138,9 @@ export class ProductCostItem {
     @ManyToOne(() => Product, (p) => p.costItems)
     @JoinColumn({ name: 'product_id' })
     product: Product;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @ManyToOne(() => CostType)
     @JoinColumn({ name: 'cost_type_id' })
@@ -152,6 +164,9 @@ export class ProductBatch {
     @ManyToOne(() => Product)
     @JoinColumn({ name: 'product_id' })
     product: Product;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'batch_number', length: 50 })
     batchNumber: string;
@@ -190,6 +205,9 @@ export class UnitConversion {
     @JoinColumn({ name: 'product_id' })
     product: Product;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ name: 'from_unit', length: 30 })
     fromUnit: string;
 
@@ -211,6 +229,9 @@ export class ProductPriceHistory {
     @ManyToOne(() => Product)
     @JoinColumn({ name: 'product_id' })
     product: Product;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'price_type', length: 30 })
     priceType: string; // COST, SELLING, WHOLESALE, PROMO

@@ -11,6 +11,9 @@ export class SalesOrder {
     @Column({ name: 'order_code', unique: true, length: 20 })
     orderCode: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @ManyToOne(() => Customer, { nullable: true })
     @JoinColumn({ name: 'customer_id' })
     customer: Customer;
@@ -82,6 +85,9 @@ export class SalesOrderItem {
     @JoinColumn({ name: 'order_id' })
     order: SalesOrder;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @ManyToOne(() => Product)
     @JoinColumn({ name: 'product_id' })
     product: Product;
@@ -114,6 +120,9 @@ export class SalesOrderPayment {
     @JoinColumn({ name: 'order_id' })
     order: SalesOrder;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ type: 'decimal', precision: 18, scale: 2 })
     amount: number;
 
@@ -137,6 +146,9 @@ export class SalesReturn {
 
     @Column({ name: 'return_code', unique: true, length: 20 })
     returnCode: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @ManyToOne(() => SalesOrder)
     @JoinColumn({ name: 'order_id' })
@@ -178,6 +190,9 @@ export class SalesReturnItem {
     @ManyToOne(() => SalesReturn, (r) => r.items)
     @JoinColumn({ name: 'return_id' })
     salesReturn: SalesReturn;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @ManyToOne(() => Product)
     @JoinColumn({ name: 'product_id' })
