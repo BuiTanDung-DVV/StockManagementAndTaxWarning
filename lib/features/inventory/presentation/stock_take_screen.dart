@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/inventory_provider.dart';
+import '../../../core/widgets/app_animations.dart';
 
 import 'stock_take_form_screen.dart';
 
@@ -38,11 +39,9 @@ class StockTakeScreen extends ConsumerWidget {
         ])),
         data: (items) {
           if (items.isEmpty) {
-            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.inventory_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text('Chưa có dữ liệu tồn kho', style: TextStyle(fontSize: 16, color: Colors.grey)),
-            ]));
+            return const AppEmpty(
+              message: 'Chưa có dữ liệu tồn kho',
+            );
           }
           return GridView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

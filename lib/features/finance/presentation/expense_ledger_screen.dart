@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
 class ExpenseLedgerScreen extends ConsumerWidget {
@@ -25,13 +26,10 @@ class ExpenseLedgerScreen extends ConsumerWidget {
           final recentItems = (data['recentItems'] as List?) ?? [];
 
           if (categories.isEmpty && recentItems.isEmpty) {
-            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.money_off_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text('Chưa có chi phí nào', style: TextStyle(fontSize: 16, color: Colors.grey)),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.money_off), label: const Text('Thêm chi phí'), onPressed: () => _showAddExpenseDialog(context, ref)),
-            ]));
+            return AppEmpty(
+              message: 'Chưa có chi phí nào',
+              action: ElevatedButton.icon(icon: const Icon(Icons.money_off), label: const Text('Thêm chi phí'), onPressed: () => _showAddExpenseDialog(context, ref)),
+            );
           }
 
           final catColors = [AppColors.primary, AppColors.danger, AppColors.warning, AppColors.success, const Color(0xFF8B5CF6), const Color(0xFFEC4899)];
