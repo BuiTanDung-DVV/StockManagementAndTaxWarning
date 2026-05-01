@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
 class CashflowForecastScreen extends ConsumerWidget {
@@ -26,13 +27,10 @@ class CashflowForecastScreen extends ConsumerWidget {
             error: (e, _) => Center(child: Text('Lỗi: $e')),
             data: (budgets) {
               if (forecasts.isEmpty && budgets.isEmpty) {
-                return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.timeline_outlined, size: 64, color: Colors.grey),
-                  const SizedBox(height: 12),
-                  const Text('Chưa có dữ liệu dự báo', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(icon: const Icon(Icons.trending_up), label: const Text('Thêm dự báo'), onPressed: () => _showAddForecastDialog(context, ref)),
-                ]));
+                return AppEmpty(
+                  message: 'Chưa có dữ liệu dự báo',
+                  action: ElevatedButton.icon(icon: const Icon(Icons.trending_up), label: const Text('Thêm dự báo'), onPressed: () => _showAddForecastDialog(context, ref)),
+                );
               }
               return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 if (forecasts.isNotEmpty) ...[

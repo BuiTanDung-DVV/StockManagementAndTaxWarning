@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../providers/inventory_provider.dart';
 import '../../suppliers/providers/supplier_provider.dart';
 import '../../products/providers/product_provider.dart';
+import '../../../core/widgets/app_animations.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -335,16 +336,7 @@ class _PurchaseOrderFormScreenState
                   ),
                   const SizedBox(height: 16),
 
-                  if (_items.isEmpty)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Text(
-                          'Chưa có sản phẩm nào',
-                          style: TextStyle(color: c.textMuted),
-                        ),
-                      ),
-                    ),
+                  if (_items.isEmpty) const AppEmpty(message: 'Chưa có sản phẩm nào'),
 
                   ..._items.asMap().entries.map((entry) {
                     final idx = entry.key;

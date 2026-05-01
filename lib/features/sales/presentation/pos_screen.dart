@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../customers/providers/customer_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../settings/providers/system_provider.dart';
@@ -206,40 +207,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               data: (data) {
                 final products = (data['items'] as List?) ?? [];
                 if (products.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _search.isEmpty ? Icons.inventory_2_outlined : Icons.search_off,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _search.isEmpty
-                              ? 'Chưa có sản phẩm'
-                              : 'Không tìm thấy "$_search"',
-                          style: TextStyle(color: c.textMuted, fontSize: 16),
-                        ),
-                        if (_search.isEmpty) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            'Thêm sản phẩm để bắt đầu bán hàng',
-                            style: TextStyle(color: c.textMuted, fontSize: 13),
-                          ),
-                          const SizedBox(height: 20),
-                          ElevatedButton.icon(
+                  return AppEmpty(
+                    message: _search.isEmpty ? 'Chưa có sản phẩm' : 'Không tìm thấy "$_search"',
+                    subtitle: _search.isEmpty ? 'Thêm sản phẩm để bắt đầu bán hàng' : null,
+                    action: _search.isEmpty
+                        ? ElevatedButton.icon(
                             onPressed: () => context.push('/products/form'),
                             icon: const Icon(Icons.inventory_2),
                             label: const Text('Thêm sản phẩm'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                          )
+                        : null,
                   );
                 }
                 return ListView.builder(

@@ -2,6 +2,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/custom_date_range_picker.dart';
 import '../providers/inventory_provider.dart';
 
 
@@ -33,8 +34,10 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
       appBar: AppBar(title: const Text('Báo cáo XNT Kho'), actions: [
         featureGuideButton(context, 'xnt_report'),
         IconButton(icon: const Icon(Icons.calendar_month), onPressed: () async {
-          final picked = await showDateRangePicker(context: context, firstDate: DateTime(2024), lastDate: DateTime.now(),
-            initialDateRange: DateTimeRange(start: DateTime.parse(_from), end: DateTime.parse(_to)));
+          final picked = await showCustomDateRangePicker(
+            context, 
+            initialRange: DateTimeRange(start: DateTime.parse(_from), end: DateTime.parse(_to)),
+          );
           if (picked != null) {
             setState(() {
               _from = picked.start.toIso8601String().split('T').first;

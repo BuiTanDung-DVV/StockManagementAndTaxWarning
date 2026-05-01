@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
 class InvoiceListScreen extends ConsumerWidget {
@@ -47,13 +48,10 @@ class InvoiceListScreen extends ConsumerWidget {
                   ]));
               },
             ),
-            if (items.isEmpty) Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(children: [
-              const Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text('Chưa có hóa đơn nào', style: TextStyle(fontSize: 16, color: Colors.grey)),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.receipt), label: const Text('Thêm hóa đơn'), onPressed: () => _showAddDialog(context, ref)),
-            ]))),
+            if (items.isEmpty) AppEmpty(
+              message: 'Chưa có hóa đơn nào',
+              action: ElevatedButton.icon(icon: const Icon(Icons.receipt), label: const Text('Thêm hóa đơn'), onPressed: () => _showAddDialog(context, ref)),
+            ),
             if (items.isNotEmpty) ...[
               const Text('Danh sách hóa đơn', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
