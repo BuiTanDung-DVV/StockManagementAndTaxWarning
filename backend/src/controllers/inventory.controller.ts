@@ -51,6 +51,14 @@ export const getExpiringProducts = async (req: Request, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+export const getSlowMoving = async (req: Request, res: Response) => {
+    try { 
+        const daysUnsold = req.query.daysUnsold ? +(req.query.daysUnsold) : 30;
+        res.json({ success: true, data: await inventoryService.getSlowMovingProducts(daysUnsold) }); 
+    }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+
 export const getPurchaseOrders = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await inventoryService.getPurchaseOrders(+(req.query.page || 1), +(req.query.limit || 20)) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
@@ -60,7 +68,19 @@ export const createPurchaseOrder = async (req: Request, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+export const getStockTakes = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await inventoryService.getStockTakes(+(req.query.page || 1), +(req.query.limit || 20)) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+
 export const createStockTake = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await inventoryService.createStockTake(req.body) }); }
+    try {
+        // Auto-generate stockTakeCode if not provided (entity has NOT NULL unique constraint)
+        const dto = {
+            ...req.body,
+            stockTakeCode: req.body.stockTakeCode || ('ST' + Date.now().toString().slice(-8)),
+        };
+        res.json({ success: true, data: await inventoryService.createStockTake(dto) });
+    }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };

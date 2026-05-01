@@ -1,5 +1,6 @@
 import { AppDataSource } from '../config/db.config';
-import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, Invoice, TaxObligation, PurchaseWithoutInvoice } from '../finance/entities';
+import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, Invoice, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
+import { ActivityLog } from '../system/entities';
 
 export class FinanceService {
     private cashTxRepo = AppDataSource.getRepository(CashTransaction);
@@ -11,6 +12,33 @@ export class FinanceService {
 
     private taxObRepo = AppDataSource.getRepository(TaxObligation);
     private purchaseNoInvRepo = AppDataSource.getRepository(PurchaseWithoutInvoice);
+    private activityLogRepo = AppDataSource.getRepository(ActivityLog);
+
+    private async logActivity(input: {
+        userId?: number;
+        action: string;
+        entityType: string;
+        entityId?: number;
+        entityName?: string;
+        oldValue?: string;
+        newValue?: string;
+        description?: string;
+        ipAddress?: string;
+    }) {
+        if (!input.userId) return;
+        const log = this.activityLogRepo.create({
+            userId: input.userId,
+            action: input.action,
+            entityType: input.entityType,
+            entityId: input.entityId,
+            entityName: input.entityName,
+            oldValue: input.oldValue,
+            newValue: input.newValue,
+            description: input.description,
+            ipAddress: input.ipAddress,
+        });
+        await this.activityLogRepo.save(log);
+    }
 
     // Cash Transactions
     async getCashTransactions(page = 1, limit = 20, type?: string, from?: string, to?: string) {
@@ -68,9 +96,70 @@ export class FinanceService {
 
         const revenue = Number(salesResult?.revenue || 0);
         const cogs = Number(salesResult?.cogs || 0);
-        const expenses = Number(expenseResult?.expenses || 0);
+        const operatingExpenses = Number(expenseResult?.expenses || 0);
         const grossProfit = revenue - cogs;
-        return { revenue, cogs, grossProfit, expenses, netProfit: grossProfit - expenses, from: fromDate, to: toDate };
+        const netProfit = grossProfit - operatingExpenses;
+        const grossMarginPct = revenue > 0 ? Number(((grossProfit / revenue) * 100).toFixed(2)) : 0;
+        const netMarginPct = revenue > 0 ? Number(((netProfit / revenue) * 100).toFixed(2)) : 0;
+        return {
+            revenue,
+            cogs,
+            grossProfit,
+            expenses: operatingExpenses,
+            operatingExpenses,
+            netProfit,
+            grossMarginPct,
+            netMarginPct,
+            from: fromDate,
+            to: toDate,
+        };
+    }
+
+    async getInvoiceReconciliation(from?: string, to?: string) {
+        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const toDate = to ? new Date(to) : new Date();
+        toDate.setHours(23, 59, 59, 999);
+
+        const rows = await this.invoiceRepo.createQueryBuilder('i')
+            .select('i.invoice_type', 'invoiceType')
+            .addSelect('COUNT(*)', 'count')
+            .addSelect('COALESCE(SUM(i.total_amount), 0)', 'totalValue')
+            .where('i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { fromDate, toDate })
+            .groupBy('i.invoice_type')
+            .getRawMany();
+
+        const inRow = rows.find((r) => r.invoiceType === 'IN');
+        const outRow = rows.find((r) => r.invoiceType === 'OUT');
+        const inbound = {
+            count: Number(inRow?.count || 0),
+            totalValue: Number(inRow?.totalValue || 0),
+        };
+        const outbound = {
+            count: Number(outRow?.count || 0),
+            totalValue: Number(outRow?.totalValue || 0),
+        };
+
+        let recommendation = 'Dữ liệu hóa đơn cân đối.';
+        let suspiciousPattern: string | null = null;
+        if (inbound.totalValue > outbound.totalValue * 1.5) {
+            suspiciousPattern = 'Đầu vào cao bất thường so với đầu ra';
+            recommendation = 'Rà soát tồn kho thực tế và chứng từ đầu ra để tránh rủi ro tồn kho ảo.';
+        } else if (outbound.totalValue > 0 && inbound.totalValue === 0) {
+            suspiciousPattern = 'Có hóa đơn đầu ra nhưng không có đầu vào';
+            recommendation = 'Bổ sung chứng từ đầu vào hợp lệ hoặc kiểm tra lại nghiệp vụ xuất hàng.';
+        }
+
+        return {
+            from: fromDate,
+            to: toDate,
+            inbound,
+            outbound,
+            analysis: {
+                inboundVsOutbound: inbound.totalValue <= outbound.totalValue ? 'Đầu vào <= Đầu ra' : 'Đầu vào > Đầu ra',
+                suspiciousPattern,
+                recommendation,
+            },
+        };
     }
 
     // Expenses by category
@@ -219,13 +308,121 @@ export class FinanceService {
     // Purchases Without Invoice
     async getPurchasesWithoutInvoice(page = 1, limit = 20) {
         const [items, total] = await this.purchaseNoInvRepo.findAndCount({
-            skip: (page - 1) * limit, take: limit, order: { purchaseDate: 'DESC' }
+            relations: ['items'],
+            skip: (page - 1) * limit,
+            take: limit,
+            order: { purchaseDate: 'DESC' },
         });
         const totalAmount = items.reduce((s, i) => s + Number(i.totalAmount), 0);
         return { items, total, totalAmount, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async createPurchaseWithoutInvoice(dto: Partial<PurchaseWithoutInvoice>) {
+
+    async createPurchaseWithoutInvoice(dto: Partial<PurchaseWithoutInvoice> & {
+        items?: Array<Partial<PurchaseWithoutInvoiceItem>>;
+        creatorUserId?: number;
+        creatorRole?: string;
+        creatorAccountType?: string;
+        requestIp?: string;
+    }) {
         if (!dto.recordCode) dto.recordCode = 'BK-' + Date.now().toString().slice(-6);
-        return this.purchaseNoInvRepo.save(this.purchaseNoInvRepo.create(dto));
+
+        const sellerName = String(dto.sellerName || '').trim();
+        const sellerIdentityNumber = String(dto.sellerIdentityNumber || '').trim();
+        if (!sellerName) throw new Error('Validation: Tên người bán là bắt buộc');
+        if (!sellerIdentityNumber) throw new Error('Validation: CCCD người bán là bắt buộc');
+
+        const rawItems = Array.isArray(dto.items) ? dto.items : [];
+        const items = rawItems
+            .map((i) => {
+                const productName = String(i.productName || '').trim();
+                const productId = i.productId ? Number(i.productId) : undefined;
+                const quantity = Number(i.quantity || 0);
+                const unitPrice = Number(i.unitPrice || 0);
+                const subtotal = Number(i.subtotal || (quantity * unitPrice));
+                if (!productName || quantity <= 0 || unitPrice < 0 || subtotal < 0) return null;
+                return { productName, productId, quantity, unitPrice, subtotal } as PurchaseWithoutInvoiceItem;
+            })
+            .filter((i): i is PurchaseWithoutInvoiceItem => !!i);
+
+        if (items.length === 0) {
+            throw new Error('Validation: Bảng kê phải có ít nhất 1 mặt hàng hợp lệ');
+        }
+
+        const computedTotal = items.reduce((sum, i) => sum + Number(i.subtotal), 0);
+        const totalAmount = computedTotal > 0 ? computedTotal : Number(dto.totalAmount || 0);
+        if (totalAmount <= 0) {
+            throw new Error('Validation: Tổng tiền bảng kê phải lớn hơn 0');
+        }
+
+        const isOwner = dto.creatorAccountType === 'SHOP';
+        const approvalStatus = isOwner ? 'APPROVED' : 'PENDING';
+        const approvedBy = isOwner ? dto.creatorUserId : null;
+        const approvedAt = isOwner ? new Date() : null;
+
+        const entity = this.purchaseNoInvRepo.create({
+            ...dto,
+            sellerName,
+            sellerIdentityNumber,
+            totalAmount,
+            items,
+            createdBy: dto.creatorUserId,
+            approvalStatus,
+            approvedBy: approvedBy as any,
+            approvedAt: approvedAt as any,
+        });
+        const saved = await this.purchaseNoInvRepo.save(entity);
+
+        await this.logActivity({
+            userId: dto.creatorUserId,
+            action: 'CREATE',
+            entityType: 'purchase_without_invoice',
+            entityId: saved.id,
+            entityName: saved.recordCode,
+            newValue: JSON.stringify({ totalAmount: saved.totalAmount, approvalStatus: saved.approvalStatus }),
+            description: isOwner
+                ? 'Chủ shop tạo bảng kê và được duyệt tự động'
+                : 'Nhân viên tạo bảng kê chờ duyệt',
+            ipAddress: dto.requestIp,
+        });
+
+        return saved;
+    }
+
+    async updatePurchaseWithoutInvoiceApproval(
+        id: number,
+        input: {
+            decision: 'APPROVED' | 'REJECTED';
+            approvalNotes?: string;
+            approverUserId?: number;
+            approverAccountType?: string;
+            requestIp?: string;
+        },
+    ) {
+        const record = await this.purchaseNoInvRepo.findOne({ where: { id } });
+        if (!record) throw new Error('Validation: Không tìm thấy bảng kê');
+
+        if (input.approverAccountType !== 'SHOP') {
+            throw new Error('Validation: Chỉ chủ shop mới có quyền duyệt bảng kê');
+        }
+
+        const oldValue = JSON.stringify({ approvalStatus: record.approvalStatus, approvalNotes: record.approvalNotes });
+        record.approvalStatus = input.decision;
+        record.approvalNotes = input.approvalNotes || null as any;
+        record.approvedBy = input.approverUserId as any;
+        record.approvedAt = new Date();
+
+        const updated = await this.purchaseNoInvRepo.save(record);
+        await this.logActivity({
+            userId: input.approverUserId,
+            action: input.decision === 'APPROVED' ? 'APPROVE' : 'REJECT',
+            entityType: 'purchase_without_invoice',
+            entityId: updated.id,
+            entityName: updated.recordCode,
+            oldValue,
+            newValue: JSON.stringify({ approvalStatus: updated.approvalStatus, approvalNotes: updated.approvalNotes }),
+            description: input.decision === 'APPROVED' ? 'Duyệt bảng kê mua hàng không hóa đơn' : 'Từ chối duyệt bảng kê mua hàng không hóa đơn',
+            ipAddress: input.requestIp,
+        });
+        return updated;
     }
 }

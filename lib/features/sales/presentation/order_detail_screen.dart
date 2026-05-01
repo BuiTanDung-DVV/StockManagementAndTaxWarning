@@ -16,7 +16,14 @@ class OrderDetailScreen extends ConsumerWidget {
     final orderAsync = ref.watch(salesDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Chi tiết đơn #$id'), actions: [featureGuideButton(context, 'order_detail')]),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('Chi tiết đơn #$id'),
+        actions: [featureGuideButton(context, 'order_detail')],
+      ),
       body: orderAsync.when(
         data: (order) {
           final createdAt = (order['createdAt'] ?? order['created_at'])?.toString();
@@ -24,8 +31,8 @@ class OrderDetailScreen extends ConsumerWidget {
           final status = (order['status'] ?? 'PENDING').toString();
           final orderCode = (order['orderCode'] ?? 'DH-$id').toString();
 
-          final totalAmount = (order['totalAmount'] ?? 0).toDouble();
-          final paidAmount = (order['paidAmount'] ?? 0).toDouble();
+          final totalAmount = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
+          final paidAmount = double.tryParse(order['paidAmount']?.toString() ?? '0') ?? 0.0;
           final remaining = (totalAmount - paidAmount) < 0 ? 0.0 : (totalAmount - paidAmount);
 
           final items = (order['items'] as List?) ?? const [];
@@ -113,9 +120,9 @@ class OrderDetailScreen extends ConsumerWidget {
                       ...items.map((raw) {
                         final it = raw as Map;
                         final name = (it['productName'] ?? it['product']?['name'] ?? 'Sản phẩm').toString();
-                        final qty = (it['quantity'] ?? 0).toDouble();
-                        final unitPrice = (it['unitPrice'] ?? 0).toDouble();
-                        final subtotal = (it['subtotal'] ?? (qty * unitPrice)).toDouble();
+                        final qty = double.tryParse(it['quantity']?.toString() ?? '0') ?? 0.0;
+                        final unitPrice = double.tryParse(it['unitPrice']?.toString() ?? '0') ?? 0.0;
+                        final subtotal = double.tryParse(it['subtotal']?.toString() ?? '0') ?? (qty * unitPrice);
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -165,7 +172,7 @@ class OrderDetailScreen extends ConsumerWidget {
                       SizedBox(height: 8),
                       ...(order['payments'] as List).map((p) {
                         final pMap = p as Map;
-                        final amt = (pMap['amount'] ?? 0).toDouble();
+                        final amt = double.tryParse(pMap['amount']?.toString() ?? '0') ?? 0.0;
                         final method = (pMap['method'] ?? 'CASH').toString();
                         final paidAt = (pMap['paidAt'] ?? pMap['paid_at'])?.toString();
                         return Container(
@@ -230,7 +237,7 @@ class OrderDetailScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               Text('Không tải được chi tiết đơn hàng.\n$e', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
               const SizedBox(height: 12),
-              ElevatedButton(onPressed: () => ref.invalidate(salesDetailProvider), child: Text('Thử lại')),
+              ElevatedButton(onPressed: () => ref.invalidate(salesDetailProvider(id)), child: Text('Thử lại')),
             ]),
           ),
         ),

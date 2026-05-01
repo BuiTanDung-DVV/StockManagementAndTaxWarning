@@ -92,7 +92,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                       final orderStatus = order['status'] ?? 'PENDING';
                       final color = orderStatus == 'COMPLETED' ? AppColors.success : orderStatus == 'PENDING' ? AppColors.warning : AppColors.danger;
                       final statusLabel = orderStatus == 'COMPLETED' ? 'Hoàn thành' : orderStatus == 'PENDING' ? 'Chờ' : 'Hủy';
-                      final total = (order['totalAmount'] ?? 0).toDouble();
+                      final total = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
                       final customerName = order['customer']?['name'] ?? 'Khách lẻ';
 
                       return GestureDetector(

@@ -16,7 +16,14 @@ class CustomerDetailScreen extends ConsumerWidget {
     final customerAsync = ref.watch(customerDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(title: Text('Khách hàng #$id'), actions: [featureGuideButton(context, 'customer_detail')]),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('Khách hàng #$id'),
+        actions: [featureGuideButton(context, 'customer_detail')],
+      ),
       body: customerAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),

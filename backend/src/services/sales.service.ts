@@ -1,6 +1,6 @@
 import { AppDataSource } from '../config/db.config';
 import { SalesOrder, SalesOrderItem, SalesReturn, SalesOrderPayment } from '../sales/entities';
-import { Customer } from '../customer/entities';
+import { Customer, Receivable } from '../customer/entities';
 import { Product } from '../product/entities';
 import { COGSService } from './cogs.service';
 
@@ -10,6 +10,7 @@ export class SalesService {
     private returnRepo = AppDataSource.getRepository(SalesReturn);
     private paymentRepo = AppDataSource.getRepository(SalesOrderPayment);
     private customerRepo = AppDataSource.getRepository(Customer);
+    private receivableRepo = AppDataSource.getRepository(Receivable);
     private productRepo = AppDataSource.getRepository(Product);
     private cogsService = new COGSService();
 
@@ -103,6 +104,25 @@ export class SalesService {
         const discountAmount = Number(dto.discountAmount || 0);
         const taxAmount = Number(dto.taxAmount || 0);
         const totalAmount = subtotal - discountAmount + taxAmount;
+        const paidAmount = Number(dto.paidAmount || 0);
+
+        if (customer && Number(customer.creditLimit || 0) > 0) {
+            const existingDebtRaw = await this.receivableRepo.createQueryBuilder('r')
+                .select('COALESCE(SUM(r.amount - r.paid_amount), 0)', 'remainingDebt')
+                .where('r.customer_id = :customerId', { customerId: customer.id })
+                .andWhere("r.status != 'PAID'")
+                .getRawOne();
+
+            const existingDebt = Number(existingDebtRaw?.remainingDebt || 0);
+            const currentExposure = Math.max(Number(customer.balance || 0), existingDebt);
+            const newDebt = Math.max(totalAmount - paidAmount, 0);
+            const projectedExposure = currentExposure + newDebt;
+            const creditLimit = Number(customer.creditLimit || 0);
+
+            if (projectedExposure > creditLimit) {
+                throw new Error(`Vượt hạn mức tín dụng: công nợ dự kiến ${projectedExposure.toFixed(0)} > hạn mức ${creditLimit.toFixed(0)}`);
+            }
+        }
 
         const order = this.orderRepo.create({
             orderCode: dto.orderCode || 'SO' + Date.now().toString().slice(-6),
@@ -113,7 +133,7 @@ export class SalesService {
             taxAmount,
             totalAmount,
             totalCogs,
-            paidAmount: Number(dto.paidAmount || 0),
+            paidAmount,
             paymentMethod: dto.paymentMethod || 'CASH',
             notes: dto.notes,
             invoiceNumber: dto.invoiceNumber,

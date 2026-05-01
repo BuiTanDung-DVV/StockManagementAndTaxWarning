@@ -1,4 +1,3 @@
-import 'customer_form_screen.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -18,7 +17,20 @@ class CustomerListScreen extends ConsumerWidget {
     final tc = AppThemeColors.of(context);
     final listAsync = ref.watch(customerListProvider((page: 1, search: null)));
     return Scaffold(
-      appBar: AppBar(title: Text('Khách hàng'), actions: [featureGuideButton(context, 'customer_list'), IconButton(icon: Icon(Icons.person_add), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerFormScreen())))]),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: Text('Khách hàng'),
+        actions: [
+          featureGuideButton(context, 'customer_list'),
+          IconButton(
+            icon: Icon(Icons.person_add),
+            onPressed: () => context.push('/customers/form'),
+          )
+        ],
+      ),
       body: listAsync.when(
         data: (data) {
           final items = (data['items'] as List?) ?? [];

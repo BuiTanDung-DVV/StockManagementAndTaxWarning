@@ -85,15 +85,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       String errorMessage = 'Đăng ký không thành công. Vui lòng thử lại.';
-      if (e is DioException && e.response?.data != null) {
-        final data = e.response!.data;
-        if (data is Map && data['message'] != null) {
-          errorMessage = data['message'].toString();
-          // Translate some common backend errors
-          if (errorMessage == 'Username already exists') {
-            errorMessage = 'Tên đăng nhập / Số điện thoại này đã tồn tại!';
-          }
-        }
+      if (e is DioException && e.error is ApiException) {
+        errorMessage = (e.error as ApiException).message;
       }
       setState(() {
         _isLoading = false;
@@ -109,16 +102,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       appBar: AppBar(
         title: Text('Đăng ký tài khoản'),
         backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
       ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: LayoutBuilder(
+              builder: (context, viewportConstraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(32),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: viewportConstraints.maxHeight - 64,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text('Tạo tài khoản mới',
                       style: TextStyle(
@@ -236,10 +240,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             width: 20,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
-                        : Text('Đăng ký'),
+                        : const Text('Đăng ký'),
                   ),
                 ],
               ),
+            ),
+          ),
+        );
+      },
             ),
           ),
         ),

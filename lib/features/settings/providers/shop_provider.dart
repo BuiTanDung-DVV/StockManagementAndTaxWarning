@@ -114,6 +114,8 @@ class ShopNotifier extends Notifier<ShopState> {
       rawPerms.forEach((k, v) => perms[k.toString()] = v.toString());
     }
 
+    _api.setShopId(current['shopId']?.toString());
+
     state = ShopState(
       currentShopId: current['shopId'] as int?,
       currentShopName: current['shopName'] as String?,
@@ -127,6 +129,7 @@ class ShopNotifier extends Notifier<ShopState> {
   }
 
   void clear() {
+    _api.setShopId(null);
     state = const ShopState();
   }
 }

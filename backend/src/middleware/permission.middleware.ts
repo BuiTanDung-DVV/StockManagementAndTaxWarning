@@ -15,7 +15,14 @@ export const requirePermission = (key: string, level: 'view' | 'full' = 'view') 
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         try {
             const userId = req.user?.sub;
-            const shopId = +(req.query.shopId || 1);
+            const headerShopId = req.headers['x-shop-id'];
+            const queryShopId = req.query.shopId;
+            const rawShopId = headerShopId || queryShopId;
+
+            if (!rawShopId) {
+                return res.status(400).json({ success: false, message: 'Thiếu thông tin cửa hàng (shopId)' });
+            }
+            const shopId = +(rawShopId);
 
             const memberRepo = AppDataSource.getRepository(ShopMember);
             const member = await memberRepo.findOne({

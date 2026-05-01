@@ -5,6 +5,10 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
+import '../../products/providers/product_provider.dart';
+import '../../inventory/providers/inventory_provider.dart';
+import '../../finance/providers/finance_provider.dart';
+import '../providers/sales_provider.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -60,6 +64,13 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
             },
           );
       setState(() => _paid = true);
+
+      // Trigger UI updates across the app
+      ref.invalidate(salesListProvider);
+      ref.invalidate(salesSummaryProvider);
+      ref.invalidate(productListProvider);
+      ref.invalidate(lowStockProvider);
+      ref.invalidate(taxObligationsProvider);
 
       // TTS announcement
       final amountText = _formatAmountForSpeech(widget.totalAmount);
@@ -171,6 +182,10 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text('Thanh toán chuyển khoản'),
         centerTitle: true,
         actions: [featureGuideButton(context, 'qr_payment')],
@@ -338,7 +353,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                       )
                     : const Icon(Icons.check_circle, size: 28),
                 label: Text(
-                  _confirming ? 'Đang xác nhận...' : '✅ ĐÃ NHẬN TIỀN',
+                  _confirming ? 'Đang xác nhận...' : 'ĐÃ NHẬN TIỀN',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

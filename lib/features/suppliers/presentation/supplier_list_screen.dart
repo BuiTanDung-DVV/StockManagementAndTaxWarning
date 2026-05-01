@@ -1,4 +1,3 @@
-import 'supplier_form_screen.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -15,7 +14,20 @@ class SupplierListScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final listAsync = ref.watch(supplierListProvider((page: 1, search: null)));
     return Scaffold(
-      appBar: AppBar(title: Text('Nhà cung cấp'), actions: [featureGuideButton(context, 'supplier_list'), IconButton(icon: Icon(Icons.add), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupplierFormScreen())))]),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        title: Text('Nhà cung cấp'),
+        actions: [
+          featureGuideButton(context, 'supplier_list'),
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: () => context.push('/suppliers/form'),
+          )
+        ],
+      ),
       body: listAsync.when(
         data: (data) {
           final items = (data['items'] as List?) ?? [];

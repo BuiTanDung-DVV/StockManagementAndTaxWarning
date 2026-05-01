@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../settings/providers/shop_provider.dart';
+import '../../core/constants/app_strings.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -24,14 +25,63 @@ class MainShell extends ConsumerWidget {
 
     // Build visible tabs based on permissions
     final allTabs = <_NavDef>[
-      _NavDef(icon: HugeIcons.strokeRoundedHome01, label: 'Trang chủ', route: '/', prefixes: ['/']),
+      _NavDef(
+        icon: HugeIcons.strokeRoundedHome01,
+        label: AppStrings.navHome,
+        route: '/',
+        prefixes: ['/'],
+      ),
       if (shop.hasPermission('pos') || shop.hasPermission('sales_view'))
-        _NavDef(icon: HugeIcons.strokeRoundedShoppingCart01, label: 'Bán hàng', route: '/sales', prefixes: ['/sales', '/pos']),
+        _NavDef(
+          icon: HugeIcons.strokeRoundedShoppingCart01,
+          label: AppStrings.navSales,
+          route: '/sales',
+          prefixes: ['/sales', '/pos'],
+        ),
       if (shop.hasPermission('inventory'))
-        _NavDef(icon: HugeIcons.strokeRoundedPackage, label: 'Kho', route: '/inventory', prefixes: ['/inventory', '/purchase', '/stock', '/xnt']),
+        _NavDef(
+          icon: HugeIcons.strokeRoundedPackage,
+          label: AppStrings.navInventory,
+          route: '/inventory',
+          prefixes: ['/inventory', '/purchase', '/stock', '/xnt'],
+        ),
       if (shop.hasPermission('finance'))
-        _NavDef(icon: HugeIcons.strokeRoundedCoinsDollar, label: 'Tài chính', route: '/finance', prefixes: ['/finance', '/daily', '/profit', '/cashflow', '/debt', '/invoices', '/tax-calculator', '/expense-ledger', '/tax-obligations', '/salary-ledger', '/tax-declaration', '/transactions']),
-      _NavDef(icon: HugeIcons.strokeRoundedSettings02, label: 'Cài đặt', route: '/settings', prefixes: ['/settings', '/activity', '/tax-config', '/tax-support', '/payment-config']),
+        _NavDef(
+          icon: HugeIcons.strokeRoundedCoinsDollar,
+          label: AppStrings.navFinance,
+          route: '/finance',
+          prefixes: [
+            '/finance',
+            '/daily',
+            '/profit',
+            '/cashflow',
+            '/debt',
+            '/invoices',
+            '/tax-calculator',
+            '/expense-ledger',
+            '/tax-obligations',
+            '/salary-ledger',
+            '/tax-declaration',
+            '/transactions',
+          ],
+        ),
+      _NavDef(
+        icon: HugeIcons.strokeRoundedSettings02,
+        label: AppStrings.navSettings,
+        route: '/settings',
+        prefixes: [
+          '/settings',
+          '/activity',
+          '/tax-config',
+          '/tax-support',
+          '/payment-config',
+          '/staff',
+          '/roles',
+          '/profile',
+          '/shop-profile',
+          '/notifications',
+        ],
+      ),
     ];
 
     final idx = _currentIndex(context, allTabs);
@@ -61,10 +111,16 @@ class MainShell extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.15),
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.15,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const HugeIcon(icon: HugeIcons.strokeRoundedStore01, color: AppColors.primary, size: 26),
+                              child: const HugeIcon(
+                                icon: HugeIcons.strokeRoundedStore01,
+                                color: AppColors.primary,
+                                size: 26,
+                              ),
                             ),
                             const SizedBox(width: 14),
                             const Expanded(
@@ -87,23 +143,37 @@ class MainShell extends ConsumerWidget {
                           itemCount: allTabs.length,
                           itemBuilder: (context, i) {
                             final isActive = i == idx;
-                            final color = isActive ? AppColors.primary : c.textSecondary;
+                            final color = isActive
+                                ? AppColors.primary
+                                : c.textSecondary;
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),
                               child: ListTile(
-                                leading: HugeIcon(icon: allTabs[i].icon, color: color, size: 24),
+                                leading: HugeIcon(
+                                  icon: allTabs[i].icon,
+                                  color: color,
+                                  size: 24,
+                                ),
                                 title: Text(
                                   allTabs[i].label,
                                   style: TextStyle(
                                     fontSize: 15,
-                                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                                    fontWeight: isActive
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
                                     color: color,
                                   ),
                                 ),
                                 selected: isActive,
-                                selectedTileColor: AppColors.primary.withValues(alpha: 0.1),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                hoverColor: AppColors.primary.withValues(alpha: 0.05),
+                                selectedTileColor: AppColors.primary.withValues(
+                                  alpha: 0.1,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                hoverColor: AppColors.primary.withValues(
+                                  alpha: 0.05,
+                                ),
                                 onTap: () => context.go(allTabs[i].route),
                               ),
                             );
@@ -130,7 +200,11 @@ class MainShell extends ConsumerWidget {
             decoration: BoxDecoration(
               color: c.surface,
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, -2)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
               ],
             ),
             child: SafeArea(
@@ -140,7 +214,12 @@ class MainShell extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     for (int i = 0; i < allTabs.length; i++)
-                      _NavItem(icon: allTabs[i].icon, label: allTabs[i].label, isActive: i == idx, onTap: () => context.go(allTabs[i].route)),
+                      _NavItem(
+                        icon: allTabs[i].icon,
+                        label: allTabs[i].label,
+                        isActive: i == idx,
+                        onTap: () => context.go(allTabs[i].route),
+                      ),
                   ],
                 ),
               ),
@@ -158,7 +237,12 @@ class _NavDef {
   final String label;
   final String route;
   final List<String> prefixes;
-  const _NavDef({required this.icon, required this.label, required this.route, required this.prefixes});
+  const _NavDef({
+    required this.icon,
+    required this.label,
+    required this.route,
+    required this.prefixes,
+  });
 
   bool matchesRoute(String location) {
     // Home is special: only exact match
@@ -172,7 +256,12 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool isActive;
   final VoidCallback onTap;
-  const _NavItem({required this.icon, required this.label, required this.isActive, required this.onTap});
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +275,9 @@ class _NavItem extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
+          color: isActive
+              ? AppColors.primary.withValues(alpha: 0.15)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -194,7 +285,14 @@ class _NavItem extends StatelessWidget {
           children: [
             HugeIcon(icon: icon, color: color, size: 22),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 10, fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: color)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                color: color,
+              ),
+            ),
           ],
         ),
       ),

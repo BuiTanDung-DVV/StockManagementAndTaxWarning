@@ -44,7 +44,7 @@ export const overdueDebts = async (req: Request, res: Response) => {
 };
 
 export const debtAging = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.getDebtAging() }); }
+    try { res.json({ success: true, data: await customerService.getDebtAging(req.query.asOf as string) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 

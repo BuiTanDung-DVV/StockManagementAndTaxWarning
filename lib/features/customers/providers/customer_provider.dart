@@ -15,7 +15,11 @@ class CustomerRepository {
   Future<Map<String, dynamic>> create(Map<String, dynamic> dto) async => await _api.post('/customers', data: dto);
   Future<Map<String, dynamic>> update(int id, Map<String, dynamic> dto) async => await _api.put('/customers/$id', data: dto);
   Future<List<dynamic>> findReceivables(int id) async => await _api.get('/customers/$id/receivables');
-  Future<Map<String, dynamic>> getDebtAging() async => await _api.get('/customers/debt-aging');
+  Future<Map<String, dynamic>> getDebtAging({String? asOf}) async {
+    final params = <String, dynamic>{};
+    if (asOf != null) params['asOf'] = asOf;
+    return await _api.get('/customers/debt-aging', params: params);
+  }
   Future<List<dynamic>> findOverdueDebts() async => await _api.get('/customers/overdue-debts');
 }
 
@@ -29,8 +33,8 @@ final customerDetailProvider = FutureProvider.family<Map<String, dynamic>, int>(
   return ref.read(customerRepoProvider).findById(id);
 });
 
-final debtAgingProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.read(customerRepoProvider).getDebtAging();
+final debtAgingProvider = FutureProvider.family<Map<String, dynamic>, String?>((ref, asOf) {
+  return ref.read(customerRepoProvider).getDebtAging(asOf: asOf);
 });
 
 final overdueDebtsProvider = FutureProvider<List<dynamic>>((ref) {

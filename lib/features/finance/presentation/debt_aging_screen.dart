@@ -12,7 +12,8 @@ class DebtAgingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final agingAsync = ref.watch(debtAgingProvider);
+    final asOf = DateTime.now().toIso8601String().split('T').first;
+    final agingAsync = ref.watch(debtAgingProvider(asOf));
     final overdueAsync = ref.watch(overdueDebtsProvider);
 
     return Scaffold(
@@ -24,12 +25,13 @@ class DebtAgingScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (agingData) {
           final buckets = agingData['buckets'] as Map<String, dynamic>? ?? {};
+          final summary = agingData['summary'] as Map<String, dynamic>? ?? {};
+          final customers = (agingData['customers'] as List?) ?? const [];
           final totalDebt = (agingData['totalDebt'] as num?) ?? 0;
           final current = (buckets['current'] as num?) ?? 0;
-          final days30 = (buckets['days30'] as num?) ?? 0;
-          final days60 = (buckets['days60'] as num?) ?? 0;
-          final days90 = (buckets['days90'] as num?) ?? 0;
-          final over90 = (buckets['over90'] as num?) ?? 0;
+          final days30 = (buckets['past30'] as num?) ?? (buckets['days30'] as num?) ?? 0;
+          final days60 = (buckets['past60'] as num?) ?? (buckets['days60'] as num?) ?? 0;
+          final over90 = (buckets['past90'] as num?) ?? (buckets['over90'] as num?) ?? 0;
 
           if (totalDebt == 0) {
             return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -47,6 +49,8 @@ class DebtAgingScreen extends ConsumerWidget {
                 Text('Tổng nợ phải thu', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 13)),
                 const SizedBox(height: 4),
                 Text(_fmt(totalDebt), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                const SizedBox(height: 8),
+                Text('Nợ quá hạn: ${(((summary['overdueRatio'] as num?) ?? 0) * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 12, color: AppColors.danger)),
               ])),
             const SizedBox(height: 16),
             const Text('Phân loại theo thời hạn', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -54,8 +58,30 @@ class DebtAgingScreen extends ConsumerWidget {
             _AgingBar('Chưa đến hạn', current / (totalDebt > 0 ? totalDebt : 1) * 100, _fmt(current), '${pct(current).toStringAsFixed(1)}%', AppColors.success),
             _AgingBar('1-30 ngày', days30 / (totalDebt > 0 ? totalDebt : 1) * 100, _fmt(days30), '${pct(days30).toStringAsFixed(1)}%', AppColors.info),
             _AgingBar('31-60 ngày', days60 / (totalDebt > 0 ? totalDebt : 1) * 100, _fmt(days60), '${pct(days60).toStringAsFixed(1)}%', AppColors.warning),
-            _AgingBar('61-90 ngày', days90 / (totalDebt > 0 ? totalDebt : 1) * 100, _fmt(days90), '${pct(days90).toStringAsFixed(1)}%', Colors.orange),
-            _AgingBar('> 90 ngày', over90 / (totalDebt > 0 ? totalDebt : 1) * 100, _fmt(over90), '${pct(over90).toStringAsFixed(1)}%', AppColors.danger),
+            _AgingBar('> 60 ngày', over90 / (totalDebt > 0 ? totalDebt : 1) * 100, _fmt(over90), '${pct(over90).toStringAsFixed(1)}%', AppColors.danger),
+            if (customers.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const Text('Top khách hàng nợ cao', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              ...customers.take(5).map<Widget>((item) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(item['customerName'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text('Quá hạn tối đa: ${item['overdueDays'] ?? 0} ngày', style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary)),
+                        ]),
+                      ),
+                      Text(_fmt((item['total'] as num?) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger)),
+                    ],
+                  ),
+                );
+              }),
+            ],
             const SizedBox(height: 20),
             const Text('KH nợ quá hạn lâu nhất', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),

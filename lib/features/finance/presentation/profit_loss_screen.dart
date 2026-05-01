@@ -44,14 +44,21 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
     final label = '${DateFormat('dd/MM').format(_range.start)} - ${DateFormat('dd/MM').format(_range.end)}';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Báo cáo KQKD'), actions: [
-        TextButton.icon(
-          onPressed: _pickDateRange,
-          icon: const Icon(Icons.date_range, size: 18),
-          label: Text(label, style: const TextStyle(fontSize: 12)),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        featureGuideButton(context, 'profit_loss'),
-      ]),
+        title: const Text('Báo cáo KQKD'),
+        actions: [
+          TextButton.icon(
+            onPressed: _pickDateRange,
+            icon: const Icon(Icons.date_range, size: 18),
+            label: Text(label, style: const TextStyle(fontSize: 12)),
+          ),
+          featureGuideButton(context, 'profit_loss'),
+        ],
+      ),
       body: plAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
