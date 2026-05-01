@@ -4,22 +4,22 @@ import { SystemService } from '../services/system.service';
 const systemService = new SystemService();
 
 export const getShopProfile = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await systemService.getShopProfile() }); }
+    try { res.json({ success: true, data: await systemService.getShopProfile((req as any).shopId) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const saveShopProfile = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await systemService.updateShopProfile(1, req.body) }); }
+    try { res.json({ success: true, data: await systemService.updateShopProfile((req as any).shopId, req.body) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const getActivityLogs = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await systemService.getActivityLogs(+(req.query.page || 1), +(req.query.limit || 20)) }); }
+    try { res.json({ success: true, data: await systemService.getActivityLogs((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20)) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const getInvoices = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await systemService.getInvoices(+(req.query.page || 1), +(req.query.limit || 20)) }); }
+    try { res.json({ success: true, data: await systemService.getInvoices((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20)) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
@@ -39,7 +39,7 @@ export const createInvoice = async (req: Request, res: Response) => {
 };
 
 export const scanInvoice = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await systemService.scanInvoice(req.body) }); }
+    try { res.json({ success: true, data: await systemService.scanInvoice((req as any).shopId, req.body) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
@@ -59,7 +59,7 @@ export const updateInvoiceScan = async (req: Request, res: Response) => {
 };
 
 export const getPurchasesWithoutInvoice = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await systemService.getPurchaseWithoutInvoice(+(req.query.page || 1), +(req.query.limit || 20)) }); }
+    try { res.json({ success: true, data: await systemService.getPurchaseWithoutInvoice((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20)) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
@@ -67,3 +67,4 @@ export const createPurchaseWithoutInvoice = async (req: Request, res: Response) 
     try { res.json({ success: true, data: {} }); } // Stub
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
+

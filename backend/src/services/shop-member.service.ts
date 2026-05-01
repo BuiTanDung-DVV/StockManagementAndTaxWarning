@@ -98,8 +98,8 @@ export class ShopMemberService {
     }
 
     /** Change a member's role */
-    async updateRole(memberId: number, roleId: number) {
-        const member = await this.memberRepo.findOneByOrFail({ id: memberId });
+    async updateRole(shopId: number, memberId: number, roleId: number) {
+        const member = await this.memberRepo.findOneByOrFail({ id: memberId, shopId });
         member.roleId = roleId;
         const saved = await this.memberRepo.save(member);
 
@@ -119,8 +119,8 @@ export class ShopMemberService {
     }
 
     /** Remove a member from shop */
-    async remove(memberId: number) {
-        const member = await this.memberRepo.findOneByOrFail({ id: memberId });
+    async remove(shopId: number, memberId: number) {
+        const member = await this.memberRepo.findOneByOrFail({ id: memberId, shopId });
         if (member.memberType === 'OWNER') throw new Error('Không thể xóa chủ shop');
         member.status = 'INACTIVE';
         member.isActive = false;
@@ -129,8 +129,8 @@ export class ShopMemberService {
     }
 
     /** Approve a join request */
-    async approve(memberId: number) {
-        const member = await this.memberRepo.findOneByOrFail({ id: memberId });
+    async approve(shopId: number, memberId: number) {
+        const member = await this.memberRepo.findOneByOrFail({ id: memberId, shopId });
         if (member.status !== 'PENDING') throw new Error('Yêu cầu không còn ở trạng thái chờ duyệt');
         member.status = 'ACTIVE';
         member.isActive = true;
@@ -149,8 +149,8 @@ export class ShopMemberService {
     }
 
     /** Reject a join request */
-    async reject(memberId: number) {
-        const member = await this.memberRepo.findOneByOrFail({ id: memberId });
+    async reject(shopId: number, memberId: number) {
+        const member = await this.memberRepo.findOneByOrFail({ id: memberId, shopId });
         if (member.status !== 'PENDING') throw new Error('Yêu cầu không còn ở trạng thái chờ duyệt');
         member.status = 'REJECTED';
         member.isActive = false;

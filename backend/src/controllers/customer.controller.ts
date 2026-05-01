@@ -4,32 +4,32 @@ import { CustomerService } from '../services/customer.service';
 const customerService = new CustomerService();
 
 export const findAll = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.findAll(+(req.query.page || 1), +(req.query.limit || 20), req.query.search as string) }); }
+    try { res.json({ success: true, data: await customerService.findAll((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.search as string) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const findOne = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.findById(+req.params.id) }); }
+    try { res.json({ success: true, data: await customerService.findById((req as any).shopId, +req.params.id) }); }
     catch (e: any) { res.status(e.message === 'Customer not found' ? 404 : 500).json({ success: false, message: e.message }); }
 };
 
 export const create = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.create(req.body) }); }
+    try { res.json({ success: true, data: await customerService.create((req as any).shopId, req.body) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const update = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.update(+req.params.id, req.body) }); }
+    try { res.json({ success: true, data: await customerService.update((req as any).shopId, +req.params.id, req.body) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const remove = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.remove(+req.params.id) }); }
+    try { res.json({ success: true, data: await customerService.remove((req as any).shopId, +req.params.id) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const receivables = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.getReceivables(+req.params.id) }); }
+    try { res.json({ success: true, data: await customerService.getReceivables((req as any).shopId, +req.params.id) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
@@ -39,17 +39,17 @@ export const createReceivable = async (req: Request, res: Response) => {
 };
 
 export const overdueDebts = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.getOverdueDebts() }); }
+    try { res.json({ success: true, data: await customerService.getOverdueDebts((req as any).shopId) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const debtAging = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.getDebtAging(req.query.asOf as string) }); }
+    try { res.json({ success: true, data: await customerService.getDebtAging((req as any).shopId, req.query.asOf as string) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const getDebtEvidence = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.getDebtEvidence(+req.params.id) }); }
+    try { res.json({ success: true, data: await customerService.getDebtEvidence((req as any).shopId, +req.params.id) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
@@ -59,6 +59,6 @@ export const addEvidence = async (req: Request, res: Response) => {
 };
 
 export const addPayment = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.addPayment(+req.params.id, +req.params.receivableId, req.body) }); }
+    try { res.json({ success: true, data: await customerService.addPayment((req as any).shopId, +req.params.id, +req.params.receivableId, req.body) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };

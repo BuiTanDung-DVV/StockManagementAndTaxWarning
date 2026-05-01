@@ -4,7 +4,7 @@ import { ShopRoleService } from '../services/shop-role.service';
 const svc = new ShopRoleService();
 
 // shopId comes from query or defaults to 1
-const shopId = (req: Request) => +(req.query.shopId || 1);
+const shopId = (req: Request) => (req as any).shopId;
 
 export const listRoles = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await svc.findAll(shopId(req)) }); }
@@ -12,7 +12,7 @@ export const listRoles = async (req: Request, res: Response) => {
 };
 
 export const getRole = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await svc.findOne(+req.params.id) }); }
+    try { res.json({ success: true, data: await svc.findOne(shopId(req), +req.params.id) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
@@ -22,11 +22,11 @@ export const createRole = async (req: Request, res: Response) => {
 };
 
 export const updateRole = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await svc.update(+req.params.id, req.body) }); }
+    try { res.json({ success: true, data: await svc.update(shopId(req), +req.params.id, req.body) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
 export const deleteRole = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await svc.remove(+req.params.id) }); }
+    try { res.json({ success: true, data: await svc.remove(shopId(req), +req.params.id) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };

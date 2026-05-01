@@ -1,6 +1,7 @@
 import { AppDataSource } from '../config/db.config';
 import { Product, Category, CostType, ProductCostItem, ProductBatch, UnitConversion, ProductPriceHistory } from '../product/entities';
 import { InventoryMovement, InventoryStock, Warehouse } from '../inventory/entities';
+import { Brackets } from 'typeorm';
 
 export class ProductService {
     private productRepo = AppDataSource.getRepository(Product);
@@ -15,16 +16,19 @@ export class ProductService {
     private warehouseRepo = AppDataSource.getRepository(Warehouse);
 
     // === PRODUCT CRUD ===
-    async findAllProducts(page = 1, limit = 20, search?: string) {
+    async findAllProducts(shopId: number, page = 1, limit = 20, search?: string) {
         const qb = this.productRepo.createQueryBuilder('p')
             .leftJoinAndSelect('p.category', 'category')
             .leftJoinAndSelect('p.costItems', 'costItems')
-            .leftJoinAndSelect('costItems.costType', 'costType');
+            .leftJoinAndSelect('costItems.costType', 'costType')
+            .where('p.shopId = :shopId', { shopId });
 
         if (search) {
-            qb.where('p.name LIKE :search', { search: `%${search}%` })
-              .orWhere('p.sku LIKE :search', { search: `%${search}%` })
-              .orWhere('p.barcode LIKE :search', { search: `%${search}%` });
+            qb.andWhere(new Brackets(sub => {
+                sub.where('p.name LIKE :search', { search: `%${search}%` })
+                   .orWhere('p.sku LIKE :search', { search: `%${search}%` })
+                   .orWhere('p.barcode LIKE :search', { search: `%${search}%` });
+            }));
         }
 
         const [items, total] = await qb.skip((page - 1) * limit)
@@ -32,53 +36,53 @@ export class ProductService {
                                        .orderBy('p.createdAt', 'DESC')
                                        .getManyAndCount();
 
-        const itemsWithStock = await this.attachCurrentStock(items);
+        const itemsWithStock = await this.attachCurrentStock(items, shopId);
         return { items: itemsWithStock, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
-    async findProductById(id: number) {
+    async findProductById(shopId: number, id: number) {
         const product = await this.productRepo.findOne({
-            where: { id }, relations: ['category', 'costItems', 'costItems.costType'],
+            where: { id, shopId }, relations: ['category', 'costItems', 'costItems.costType'],
         });
         if (!product) throw new Error('Product not found');
         const [productWithStock] = await this.attachCurrentStock([product]);
         return productWithStock;
     }
 
-    async createProduct(dto: any) {
-        const exists = await this.productRepo.findOne({ where: { sku: dto.sku as string } });
+    async createProduct(shopId: number, dto: any) {
+        const exists = await this.productRepo.findOne({ where: { sku: dto.sku as string, shopId } });
         if (exists) throw new Error('SKU already exists');
         const openingQty = Number(dto.currentStock ?? dto.openingStock ?? 0);
         const providedWarehouseId = Number(dto.warehouseId || 0);
         const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
 
-        const product = this.productRepo.create(productPayload);
-        const saved = await this.productRepo.save(product);
+        const product = this.productRepo.create({ ...productPayload, shopId });
+        const saved = await this.productRepo.save(product as any) as Product;
 
         if (openingQty > 0) {
-            const targetWarehouseId = providedWarehouseId > 0 ? providedWarehouseId : await this.ensureDefaultWarehouseId();
-            await this.upsertOpeningStock(saved.id, targetWarehouseId, openingQty);
+            const targetWarehouseId = providedWarehouseId > 0 ? providedWarehouseId : await this.ensureDefaultWarehouseId(shopId);
+            await this.upsertOpeningStock(saved.id, targetWarehouseId, openingQty, shopId);
         }
 
-        return this.findProductById(saved.id);
+        return this.findProductById(shopId, saved.id);
     }
 
-    async updateProduct(id: number, dto: Partial<Product>) {
-        const product = await this.findProductById(id);
+    async updateProduct(shopId: number, id: number, dto: Partial<Product>) {
+        const product = await this.findProductById(shopId, id);
         Object.assign(product, dto);
         return this.productRepo.save(product);
     }
 
-    async deleteProduct(id: number) {
-        const product = await this.findProductById(id);
+    async deleteProduct(shopId: number, id: number) {
+        const product = await this.findProductById(shopId, id);
         product.isActive = false;
         return this.productRepo.save(product);
     }
 
     // === PRICING ===
-    async calculateSuggestedPrice(productId: number) {
-        const product = await this.findProductById(productId);
-        const costItems = await this.costItemRepo.find({ where: { product: { id: productId } } });
+    async calculateSuggestedPrice(shopId: number, productId: number) {
+        const product = await this.findProductById(shopId, productId);
+        const costItems = await this.costItemRepo.find({ where: { product: { id: productId, shopId } as any, shopId } as any });
 
         let totalAdditional = 0;
         for (const item of costItems) {
@@ -101,61 +105,65 @@ export class ProductService {
     }
 
     // === COST TYPES ===
-    async findAllCostTypes() { return this.costTypeRepo.find({ where: { isActive: true }, order: { sortOrder: 'ASC' } }); }
-    async createCostType(dto: Partial<CostType>) {
-        if (await this.costTypeRepo.findOne({ where: { name: dto.name as string } })) throw new Error('Cost type name exists');
-        return this.costTypeRepo.save(this.costTypeRepo.create(dto));
+    async findAllCostTypes(shopId: number) { return this.costTypeRepo.find({ where: { isActive: true, shopId }, order: { sortOrder: 'ASC' } }); }
+    async createCostType(shopId: number, dto: Partial<CostType>) {
+        if (await this.costTypeRepo.findOne({ where: { name: dto.name as string, shopId } })) throw new Error('Cost type name exists');
+        return this.costTypeRepo.save(this.costTypeRepo.create({ ...dto, shopId }));
     }
 
     // === COST ITEMS ===
-    async addCostItem(productId: number, costTypeId: number, amount: number, calculationType = 'FIXED', notes?: string) {
-        const product = await this.findProductById(productId);
-        const costType = await this.costTypeRepo.findOne({ where: { id: costTypeId } });
+    async addCostItem(shopId: number, productId: number, costTypeId: number, amount: number, calculationType = 'FIXED', notes?: string) {
+        const product = await this.findProductById(shopId, productId);
+        const costType = await this.costTypeRepo.findOne({ where: { id: costTypeId, shopId } });
         if (!costType) throw new Error('Cost type not found');
-        const item = this.costItemRepo.create({ product, costType, amount, calculationType, notes });
+        const item = this.costItemRepo.create({ product, costType, amount, calculationType, notes, shopId });
         await this.costItemRepo.save(item);
-        await this.calculateSuggestedPrice(productId);
+        await this.calculateSuggestedPrice(shopId, productId);
         return item;
     }
-    async removeCostItem(id: number) {
-        const item = await this.costItemRepo.findOne({ where: { id }, relations: ['product'] });
+    async removeCostItem(shopId: number, id: number) {
+        const item = await this.costItemRepo.findOne({ where: { id, shopId }, relations: ['product'] });
         if (!item) throw new Error('Cost item not found');
         const productId = item.product.id;
         await this.costItemRepo.remove(item);
-        await this.calculateSuggestedPrice(productId);
+        await this.calculateSuggestedPrice(shopId, productId);
     }
 
     // === PRICE HISTORY ===
-    async getPriceHistory(productId: number) { return this.priceHistoryRepo.find({ where: { product: { id: productId } }, order: { changedAt: 'DESC' } }); }
+    async getPriceHistory(shopId: number, productId: number) { return this.priceHistoryRepo.find({ where: { product: { id: productId, shopId } as any, shopId } as any, order: { changedAt: 'DESC' } }); }
     
     // === BATCHES ===
-    async findBatches(productId: number) { return this.batchRepo.find({ where: { product: { id: productId }, isActive: true } }); }
-    async createBatch(productId: number, dto: Partial<ProductBatch>) {
-        const product = await this.findProductById(productId);
-        return this.batchRepo.save(this.batchRepo.create({ ...dto, product }));
+    async findBatches(shopId: number, productId: number) { return this.batchRepo.find({ where: { product: { id: productId, shopId } as any, isActive: true, shopId } as any }); }
+    async createBatch(shopId: number, productId: number, dto: Partial<ProductBatch>) {
+        const product = await this.findProductById(shopId, productId);
+        return this.batchRepo.save(this.batchRepo.create({ ...dto, product, shopId }));
     }
 
     // === UNIT CONVERSIONS ===
-    async findConversions(productId: number) { return this.unitRepo.find({ where: { product: { id: productId } } }); }
-    async createConversion(productId: number, dto: Partial<UnitConversion>) {
-        const product = await this.findProductById(productId);
-        return this.unitRepo.save(this.unitRepo.create({ ...dto, product }));
+    async findConversions(shopId: number, productId: number) { return this.unitRepo.find({ where: { product: { id: productId, shopId } as any, shopId } as any }); }
+    async createConversion(shopId: number, productId: number, dto: Partial<UnitConversion>) {
+        const product = await this.findProductById(shopId, productId);
+        return this.unitRepo.save(this.unitRepo.create({ ...dto, product, shopId }));
     }
 
     // === CATEGORIES ===
-    async findAllCategories() { return this.categoryRepo.find({ where: { isActive: true } }); }
-    async createCategory(dto: Partial<Category>) { return this.categoryRepo.save(this.categoryRepo.create(dto)); }
+    async findAllCategories(shopId: number) { return this.categoryRepo.find({ where: { isActive: true, shopId } }); }
+    async createCategory(shopId: number, dto: Partial<Category>) { return this.categoryRepo.save(this.categoryRepo.create({ ...dto, shopId })); }
 
-    private async attachCurrentStock(items: Product[]) {
+    private async attachCurrentStock(items: Product[], shopId?: number) {
         if (!items.length) return items;
 
         const productIds = items.map((item) => item.id);
-        const stockRows = await this.stockRepo.createQueryBuilder('s')
+        const qb = this.stockRepo.createQueryBuilder('s')
             .select('s.product_id', 'productId')
             .addSelect('COALESCE(SUM(s.quantity), 0)', 'qty')
-            .where('s.product_id IN (:...productIds)', { productIds })
-            .groupBy('s.product_id')
-            .getRawMany();
+            .where('s.product_id IN (:...productIds)', { productIds });
+
+        if (shopId) {
+            qb.andWhere('s.shop_id = :shopId', { shopId });
+        }
+
+        const stockRows = await qb.groupBy('s.product_id').getRawMany();
 
         const stockMap = new Map<number, number>();
         for (const row of stockRows) {
@@ -168,29 +176,27 @@ export class ProductService {
         }));
     }
 
-    private async ensureDefaultWarehouseId() {
-        let warehouse = await this.warehouseRepo.findOne({ where: { id: 1 } });
-        if (!warehouse) {
-            warehouse = await this.warehouseRepo.findOne({ where: {} });
-        }
+    private async ensureDefaultWarehouseId(shopId: number) {
+        let warehouse = await this.warehouseRepo.findOne({ where: { shopId } });
         if (!warehouse) {
             warehouse = await this.warehouseRepo.save(this.warehouseRepo.create({
                 name: 'Kho mặc định',
-                address: null,
                 isActive: true,
+                shopId
             }));
         }
         return warehouse.id;
     }
 
-    private async upsertOpeningStock(productId: number, warehouseId: number, quantity: number) {
-        let stock = await this.stockRepo.findOne({ where: { productId, warehouseId } });
+    private async upsertOpeningStock(productId: number, warehouseId: number, quantity: number, shopId: number) {
+        let stock = await this.stockRepo.findOne({ where: { productId, warehouseId, shopId } as any });
         if (!stock) {
             stock = this.stockRepo.create({
                 productId,
                 warehouseId,
                 quantity: 0,
                 updatedAt: new Date(),
+                shopId
             });
         }
         stock.quantity = Number(stock.quantity || 0) + Number(quantity);
@@ -205,6 +211,7 @@ export class ProductService {
             referenceType: 'OPENING',
             referenceId: productId,
             notes: 'Opening stock on product creation',
+            shopId
         }));
     }
 }

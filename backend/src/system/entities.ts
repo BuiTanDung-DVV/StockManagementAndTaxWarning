@@ -10,6 +10,9 @@ export class ShopProfile {
     @Column({ name: 'shop_name', length: 200 })
     shopName: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ name: 'shop_code', length: 20, unique: true, nullable: true })
     shopCode: string;
 
@@ -71,6 +74,9 @@ export class ActivityLog {
     @Column({ name: 'user_id' })
     userId: number;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ length: 50 })
     action: string; // CREATE, UPDATE, DELETE, CANCEL, LOGIN, EXPORT, IMPORT
 
@@ -106,6 +112,9 @@ export class InvoiceScan {
 
     @Column({ name: 'scan_code', unique: true, length: 20 })
     scanCode: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'image_url', length: 1000 })
     imageUrl: string;
@@ -164,6 +173,9 @@ export class Invoice {
 
     @Column({ name: 'invoice_number', length: 50 })
     invoiceNumber: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'invoice_symbol', length: 20, nullable: true })
     invoiceSymbol: string;
@@ -269,6 +281,9 @@ export class PurchaseWithoutInvoice {
 
     @Column({ name: 'record_code', unique: true, length: 20 })
     recordCode: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'purchase_date', type: 'date' })
     purchaseDate: Date;

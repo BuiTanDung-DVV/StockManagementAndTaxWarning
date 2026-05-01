@@ -15,45 +15,48 @@ export class InventoryService {
     private cogsService = new COGSService();
 
     // Stock
-    async getStock(page = 1, limit = 20) {
+    async getStock(shopId: number, page = 1, limit = 20) {
         const [items, total] = await this.stockRepo.findAndCount({ 
+            where: { shopId },
             skip: (page - 1) * limit, 
             take: limit,
             relations: ['product', 'warehouse'] 
         });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async getLowStock(threshold?: number) {
-        const query = this.stockRepo.createQueryBuilder('s');
+    async getLowStock(shopId: number, threshold?: number) {
+        const query = this.stockRepo.createQueryBuilder('s')
+            .where('s.shop_id = :shopId', { shopId });
+            
         if (threshold !== undefined && !isNaN(threshold)) {
-            query.where('s.quantity <= :threshold', { threshold });
+            query.andWhere('s.quantity <= :threshold', { threshold });
         } else {
-            query.innerJoin(Product, 'p', 'p.id = s.productId')
-                 .where('s.quantity <= p.min_stock'); // typeorm uses db column name in raw builder if not mapped as property on s
+            query.innerJoin(Product, 'p', 'p.id = s.product_id')
+                 .andWhere('s.quantity <= p.min_stock'); // typeorm uses db column name in raw builder if not mapped as property on s
         }
         return query.getMany();
     }
     
     // Movements
-    async getMovements(page = 1, limit = 20) {
-        const [items, total] = await this.movementRepo.findAndCount({ skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
+    async getMovements(shopId: number, page = 1, limit = 20) {
+        const [items, total] = await this.movementRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
     // Warehouses
-    async getWarehouses() { return this.warehouseRepo.find(); }
-    async createWarehouse(dto: Partial<Warehouse>) { return this.warehouseRepo.save(this.warehouseRepo.create(dto)); }
+    async getWarehouses(shopId: number) { return this.warehouseRepo.find({ where: { shopId } }); }
+    async createWarehouse(shopId: number, dto: Partial<Warehouse>) { return this.warehouseRepo.save(this.warehouseRepo.create({ ...dto, shopId })); }
 
     // Reports
-    async getXntReport(from?: string, to?: string, warehouseId?: number) {
+    async getXntReport(shopId: number, from?: string, to?: string, warehouseId?: number) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
 
         const qb = AppDataSource.getRepository(Product).createQueryBuilder('p')
             .select(['p.id as id', 'p.sku as sku', 'p.name as name'])
-            .leftJoin('inventory_movements', 'm', 'p.id = m.product_id' + (warehouseId ? ' AND m.warehouse_id = :warehouseId' : ''))
-            .leftJoin('inventory_stocks', 's', 'p.id = s.product_id' + (warehouseId ? ' AND s.warehouse_id = :warehouseId' : ''))
+            .where('p.shop_id = :shopId', { shopId })
+            .leftJoin('inventory_movements', 'm', 'p.id = m.product_id AND m.shop_id = :shopId' + (warehouseId ? ' AND m.warehouse_id = :warehouseId' : ''))
             .addSelect(`COALESCE(SUM(CASE WHEN m.created_at < :from AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity WHEN m.created_at < :from AND m.movement_type = 'OUT' THEN -m.quantity ELSE 0 END), 0)`, 'startQty')
             .addSelect(`COALESCE(SUM(CASE WHEN m.created_at >= :from AND m.created_at <= :to AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity ELSE 0 END), 0)`, 'importQty')
             .addSelect(`COALESCE(SUM(CASE WHEN m.created_at >= :from AND m.created_at <= :to AND m.movement_type = 'OUT' THEN m.quantity ELSE 0 END), 0)`, 'exportQty')
@@ -61,25 +64,26 @@ export class InventoryService {
             .groupBy('p.id')
             .addGroupBy('p.sku')
             .addGroupBy('p.name')
-            .setParameters({ from: fromDate, to: toDate, warehouseId });
+            .setParameters({ from: fromDate, to: toDate, warehouseId, shopId });
 
         return qb.getRawMany();
     }
     
-    async getExpiringProducts(daysAhead: number = 30) {
+    async getExpiringProducts(shopId: number, daysAhead: number = 30) {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + daysAhead);
         
         return this.batchRepo.createQueryBuilder('b')
             .innerJoinAndSelect('b.product', 'p')
-            .where('b.expiry_date IS NOT NULL')
+            .where('b.shop_id = :shopId', { shopId })
+            .andWhere('b.expiry_date IS NOT NULL')
             .andWhere('b.expiry_date <= :targetDate', { targetDate })
             .andWhere('b.quantity > 0')
             .orderBy('b.expiry_date', 'ASC')
             .getMany();
     }
 
-    async getSlowMovingProducts(daysUnsold: number = 30) {
+    async getSlowMovingProducts(shopId: number, daysUnsold: number = 30) {
         // Products that have stock but haven't been in any sales movement for daysUnsold days
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysUnsold);
@@ -87,7 +91,8 @@ export class InventoryService {
         const result = await AppDataSource.getRepository('products')
             .createQueryBuilder('p')
             .innerJoin('inventory_stocks', 's', 's.product_id = p.id')
-            .where('s.quantity > 0')
+            .where('p.shop_id = :shopId', { shopId })
+            .andWhere('s.quantity > 0')
             .andWhere((qb) => {
                 const subQuery = qb.subQuery()
                     .select('m.product_id')
@@ -109,18 +114,18 @@ export class InventoryService {
 
 
     // Purchase Orders
-    async getPurchaseOrders(page = 1, limit = 20) {
-        const [items, total] = await this.poRepo.findAndCount({ skip: (page - 1) * limit, take: limit, order: { orderDate: 'DESC' } });
+    async getPurchaseOrders(shopId: number, page = 1, limit = 20) {
+        const [items, total] = await this.poRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { orderDate: 'DESC' } });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async createPurchaseOrder(dto: any) {
+    async createPurchaseOrder(shopId: number, dto: any) {
         let totalAmount = 0;
         const items = (dto.items || []).map((i: any) => {
             const sub = i.quantity * i.unitPrice;
             totalAmount += sub;
-            return this.poItemRepo.create({ ...i, subtotal: sub });
+            return this.poItemRepo.create({ ...i, subtotal: sub, shopId });
         });
-        const po = this.poRepo.create({ ...dto, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items });
+        const po = this.poRepo.create({ ...dto, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items, shopId });
         const savedPO = await this.poRepo.save(po) as unknown as PurchaseOrder;
 
         // Tạo inventory lots cho mỗi item (để COGS tính đúng)
@@ -132,6 +137,7 @@ export class InventoryService {
                     costPrice: Number(item.unitPrice),
                     purchaseId: savedPO.id,
                     notes: `PO ${savedPO.orderCode}`,
+                    shopId,
                 });
             }
         }
@@ -140,11 +146,11 @@ export class InventoryService {
     }
 
     // Stock Takes
-    async getStockTakes(page = 1, limit = 20) {
-        const [items, total] = await this.stockTakeRepo.findAndCount({ skip: (page - 1) * limit, take: limit, order: { id: 'DESC' } });
+    async getStockTakes(shopId: number, page = 1, limit = 20) {
+        const [items, total] = await this.stockTakeRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { id: 'DESC' } });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async createStockTake(dto: any) {
+    async createStockTake(shopId: number, dto: any) {
         const items = (dto.items || []).map((i: any) => this.stockTakeItemRepo.create({
             product: { id: i.productId },
             systemQty: i.systemQty || 0,
@@ -152,6 +158,6 @@ export class InventoryService {
             difference: (i.actualQty || 0) - (i.systemQty || 0),
             notes: i.notes
         }));
-        return this.stockTakeRepo.save(this.stockTakeRepo.create({ ...dto, items }));
+        return this.stockTakeRepo.save(this.stockTakeRepo.create({ ...dto, items, shopId }));
     }
 }

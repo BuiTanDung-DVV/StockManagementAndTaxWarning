@@ -9,6 +9,9 @@ export class CashAccount {
     @Column({ length: 100 })
     name: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ name: 'account_type', length: 20 })
     accountType: string;
 
@@ -26,6 +29,9 @@ export class CashTransaction {
 
     @Column({ name: 'transaction_code', unique: true, length: 20 })
     transactionCode: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ length: 10 })
     type: string; // INCOME, EXPENSE
@@ -82,6 +88,9 @@ export class BudgetPlan {
     @Column({ length: 200 })
     name: string;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ length: 20 })
     period: string;
 
@@ -118,6 +127,9 @@ export class CashflowForecast {
     @Column({ name: 'forecast_date', type: 'date' })
     forecastDate: Date;
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ name: 'expected_income', type: 'decimal', precision: 18, scale: 2, default: 0 })
     expectedIncome: number;
 
@@ -141,6 +153,9 @@ export class DailyClosing {
 
     @Column({ name: 'closing_date', type: 'date', unique: true })
     closingDate: Date;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'opening_cash', type: 'decimal', precision: 18, scale: 2, default: 0 })
     openingCash: number;
@@ -186,6 +201,9 @@ export class Invoice {
 
     @Column({ name: 'invoice_number', length: 50 })
     invoiceNumber: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'invoice_symbol', length: 20, nullable: true })
     invoiceSymbol: string;
@@ -250,6 +268,9 @@ export class TaxObligation {
     @Column({ length: 20 })
     period: string; // e.g. 'Q1/2026'
 
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
+
     @Column({ name: 'vat_declared', type: 'decimal', precision: 18, scale: 2, default: 0 })
     vatDeclared: number;
 
@@ -279,6 +300,9 @@ export class PurchaseWithoutInvoice {
 
     @Column({ name: 'record_code', length: 20, unique: true })
     recordCode: string;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'purchase_date', type: 'date' })
     purchaseDate: Date;
@@ -343,6 +367,9 @@ export class PurchaseWithoutInvoiceItem {
     @ManyToOne(() => PurchaseWithoutInvoice, (p) => p.items, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'purchase_id' })
     purchase: PurchaseWithoutInvoice;
+
+    @Column({ name: 'shop_id', nullable: true })
+    shopId: number;
 
     @Column({ name: 'product_name', length: 200 })
     productName: string;
