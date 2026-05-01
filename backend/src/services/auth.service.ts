@@ -63,6 +63,11 @@ export class AuthService {
             config.jwtSecret as jwt.Secret,
             { expiresIn: String(config.jwtExpiresIn) } as jwt.SignOptions,
         );
+        const refreshToken = jwt.sign(
+            payload,
+            config.jwtSecret as jwt.Secret,
+            { expiresIn: '7d' } as jwt.SignOptions,
+        );
 
         let shops: any[] = [];
         try {
@@ -95,6 +100,7 @@ export class AuthService {
 
         return {
             access_token: accessToken,
+            refresh_token: refreshToken,
             user: {
                 id: user.id,
                 username: user.username,
@@ -108,6 +114,33 @@ export class AuthService {
             },
             shops,
         };
+    }
+
+    async refreshToken(refreshToken: string) {
+        if (!refreshToken) throw new Error('Missing refresh token');
+        let decoded: any;
+        try {
+            decoded = jwt.verify(refreshToken, config.jwtSecret as jwt.Secret);
+        } catch (e) {
+            throw new Error('Invalid refresh token');
+        }
+
+        const user = await this.userRepo.findOne({ where: { id: decoded.sub } });
+        if (!user || !user.isActive) throw new Error('Invalid user or inactive');
+
+        const payload = { sub: user.id, username: user.username, role: user.role, accountType: user.accountType };
+        const newAccessToken = jwt.sign(
+            payload,
+            config.jwtSecret as jwt.Secret,
+            { expiresIn: String(config.jwtExpiresIn) } as jwt.SignOptions,
+        );
+        const newRefreshToken = jwt.sign(
+            payload,
+            config.jwtSecret as jwt.Secret,
+            { expiresIn: '7d' } as jwt.SignOptions,
+        );
+
+        return { access_token: newAccessToken, refresh_token: newRefreshToken };
     }
 
     async forgotPassword(dto: any) {

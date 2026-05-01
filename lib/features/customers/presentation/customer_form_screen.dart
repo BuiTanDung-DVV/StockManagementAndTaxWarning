@@ -44,11 +44,11 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       final repo = ref.read(customerRepoProvider);
       final data = {
         'name': _nameCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
-        'email': _emailCtrl.text.trim(),
-        'address': _addressCtrl.text.trim(),
-        'note': _noteCtrl.text.trim(),
-        'taxCode': _taxCodeCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        'email': _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+        'address': _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+        'note': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        'taxCode': _taxCodeCtrl.text.trim().isEmpty ? null : _taxCodeCtrl.text.trim(),
       };
       if (_isEdit) {
         await repo.update(widget.customer!['id'], data);
@@ -84,16 +84,11 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     final c = AppThemeColors.of(context);
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(_isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng'),
-        actions: [
-          TextButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: _saving
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: AppColors.primary, size: 18),
-            label: Text(_saving ? 'Đang lưu...' : 'Lưu', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

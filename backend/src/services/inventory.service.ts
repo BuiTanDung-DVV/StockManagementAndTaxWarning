@@ -57,7 +57,7 @@ export class InventoryService {
             .addSelect(`COALESCE(SUM(CASE WHEN m.created_at < :from AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity WHEN m.created_at < :from AND m.movement_type = 'OUT' THEN -m.quantity ELSE 0 END), 0)`, 'startQty')
             .addSelect(`COALESCE(SUM(CASE WHEN m.created_at >= :from AND m.created_at <= :to AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity ELSE 0 END), 0)`, 'importQty')
             .addSelect(`COALESCE(SUM(CASE WHEN m.created_at >= :from AND m.created_at <= :to AND m.movement_type = 'OUT' THEN m.quantity ELSE 0 END), 0)`, 'exportQty')
-            .addSelect('COALESCE(MAX(s.quantity), 0)', 'endQty')
+            .addSelect(`COALESCE(SUM(CASE WHEN m.created_at <= :to AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity WHEN m.created_at <= :to AND m.movement_type = 'OUT' THEN -m.quantity ELSE 0 END), 0)`, 'endQty')
             .groupBy('p.id')
             .addGroupBy('p.sku')
             .addGroupBy('p.name')
@@ -78,6 +78,35 @@ export class InventoryService {
             .orderBy('b.expiry_date', 'ASC')
             .getMany();
     }
+
+    async getSlowMovingProducts(daysUnsold: number = 30) {
+        // Products that have stock but haven't been in any sales movement for daysUnsold days
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysUnsold);
+
+        const result = await AppDataSource.getRepository('products')
+            .createQueryBuilder('p')
+            .innerJoin('inventory_stocks', 's', 's.product_id = p.id')
+            .where('s.quantity > 0')
+            .andWhere((qb) => {
+                const subQuery = qb.subQuery()
+                    .select('m.product_id')
+                    .from('inventory_movements', 'm')
+                    .where("m.movement_type = 'OUT'")
+                    .andWhere('m.created_at >= :cutoff', { cutoff: cutoffDate })
+                    .getQuery();
+                return 'p.id NOT IN ' + subQuery;
+            })
+            .select(['p.id as id', 'p.sku as sku', 'p.name as name'])
+            .addSelect('SUM(s.quantity)', 'currentStock')
+            .groupBy('p.id')
+            .addGroupBy('p.sku')
+            .addGroupBy('p.name')
+            .getRawMany();
+
+        return result;
+    }
+
 
     // Purchase Orders
     async getPurchaseOrders(page = 1, limit = 20) {
@@ -111,6 +140,10 @@ export class InventoryService {
     }
 
     // Stock Takes
+    async getStockTakes(page = 1, limit = 20) {
+        const [items, total] = await this.stockTakeRepo.findAndCount({ skip: (page - 1) * limit, take: limit, order: { id: 'DESC' } });
+        return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
     async createStockTake(dto: any) {
         const items = (dto.items || []).map((i: any) => this.stockTakeItemRepo.create({
             product: { id: i.productId },

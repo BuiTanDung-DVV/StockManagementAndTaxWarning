@@ -35,7 +35,14 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
     final afterTax = _revenue - total;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Tính thuế HKD'), actions: [featureGuideButton(context, 'tax_calculator')]),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('Tính thuế HKD'),
+        actions: [featureGuideButton(context, 'tax_calculator')],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

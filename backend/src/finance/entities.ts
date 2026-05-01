@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn } from 'typeorm';
 
 
 @Entity('cash_accounts')
@@ -301,6 +301,9 @@ export class PurchaseWithoutInvoice {
     @Column({ name: 'total_amount', type: 'decimal', precision: 18, scale: 2 })
     totalAmount: number;
 
+    @OneToMany(() => PurchaseWithoutInvoiceItem, (i) => i.purchase, { cascade: true })
+    items: PurchaseWithoutInvoiceItem[];
+
     @Column({ name: 'payment_method', length: 20, default: 'CASH' })
     paymentMethod: string;
 
@@ -313,6 +316,15 @@ export class PurchaseWithoutInvoice {
     @Column({ length: 500, nullable: true })
     notes: string;
 
+    @Column({ name: 'approval_status', length: 20, default: 'PENDING' })
+    approvalStatus: string; // PENDING, APPROVED, REJECTED
+
+    @Column({ name: 'approval_notes', length: 500, nullable: true })
+    approvalNotes: string;
+
+    @Column({ name: 'approved_at', nullable: true })
+    approvedAt: Date;
+
     @Column({ name: 'approved_by', nullable: true })
     approvedBy: number;
 
@@ -322,3 +334,29 @@ export class PurchaseWithoutInvoice {
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 }
+
+@Entity('purchase_without_invoice_items')
+export class PurchaseWithoutInvoiceItem {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @ManyToOne(() => PurchaseWithoutInvoice, (p) => p.items, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'purchase_id' })
+    purchase: PurchaseWithoutInvoice;
+
+    @Column({ name: 'product_name', length: 200 })
+    productName: string;
+
+    @Column({ name: 'product_id', nullable: true })
+    productId: number;
+
+    @Column({ type: 'decimal', precision: 18, scale: 3, default: 0 })
+    quantity: number;
+
+    @Column({ name: 'unit_price', type: 'decimal', precision: 18, scale: 2, default: 0 })
+    unitPrice: number;
+
+    @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
+    subtotal: number;
+}
+

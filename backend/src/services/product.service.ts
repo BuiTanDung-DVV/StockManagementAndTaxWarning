@@ -1,5 +1,6 @@
 import { AppDataSource } from '../config/db.config';
 import { Product, Category, CostType, ProductCostItem, ProductBatch, UnitConversion, ProductPriceHistory } from '../product/entities';
+import { InventoryMovement, InventoryStock, Warehouse } from '../inventory/entities';
 
 export class ProductService {
     private productRepo = AppDataSource.getRepository(Product);
@@ -9,6 +10,9 @@ export class ProductService {
     private batchRepo = AppDataSource.getRepository(ProductBatch);
     private unitRepo = AppDataSource.getRepository(UnitConversion);
     private priceHistoryRepo = AppDataSource.getRepository(ProductPriceHistory);
+    private stockRepo = AppDataSource.getRepository(InventoryStock);
+    private movementRepo = AppDataSource.getRepository(InventoryMovement);
+    private warehouseRepo = AppDataSource.getRepository(Warehouse);
 
     // === PRODUCT CRUD ===
     async findAllProducts(page = 1, limit = 20, search?: string) {
@@ -28,7 +32,8 @@ export class ProductService {
                                        .orderBy('p.createdAt', 'DESC')
                                        .getManyAndCount();
 
-        return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+        const itemsWithStock = await this.attachCurrentStock(items);
+        return { items: itemsWithStock, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
     async findProductById(id: number) {
@@ -36,14 +41,26 @@ export class ProductService {
             where: { id }, relations: ['category', 'costItems', 'costItems.costType'],
         });
         if (!product) throw new Error('Product not found');
-        return product;
+        const [productWithStock] = await this.attachCurrentStock([product]);
+        return productWithStock;
     }
 
-    async createProduct(dto: Partial<Product>) {
+    async createProduct(dto: any) {
         const exists = await this.productRepo.findOne({ where: { sku: dto.sku as string } });
         if (exists) throw new Error('SKU already exists');
-        const product = this.productRepo.create(dto);
-        return this.productRepo.save(product);
+        const openingQty = Number(dto.currentStock ?? dto.openingStock ?? 0);
+        const providedWarehouseId = Number(dto.warehouseId || 0);
+        const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
+
+        const product = this.productRepo.create(productPayload);
+        const saved = await this.productRepo.save(product);
+
+        if (openingQty > 0) {
+            const targetWarehouseId = providedWarehouseId > 0 ? providedWarehouseId : await this.ensureDefaultWarehouseId();
+            await this.upsertOpeningStock(saved.id, targetWarehouseId, openingQty);
+        }
+
+        return this.findProductById(saved.id);
     }
 
     async updateProduct(id: number, dto: Partial<Product>) {
@@ -128,4 +145,66 @@ export class ProductService {
     // === CATEGORIES ===
     async findAllCategories() { return this.categoryRepo.find({ where: { isActive: true } }); }
     async createCategory(dto: Partial<Category>) { return this.categoryRepo.save(this.categoryRepo.create(dto)); }
+
+    private async attachCurrentStock(items: Product[]) {
+        if (!items.length) return items;
+
+        const productIds = items.map((item) => item.id);
+        const stockRows = await this.stockRepo.createQueryBuilder('s')
+            .select('s.product_id', 'productId')
+            .addSelect('COALESCE(SUM(s.quantity), 0)', 'qty')
+            .where('s.product_id IN (:...productIds)', { productIds })
+            .groupBy('s.product_id')
+            .getRawMany();
+
+        const stockMap = new Map<number, number>();
+        for (const row of stockRows) {
+            stockMap.set(Number(row.productId), Number(row.qty || 0));
+        }
+
+        return items.map((item: any) => ({
+            ...item,
+            currentStock: stockMap.get(item.id) ?? 0,
+        }));
+    }
+
+    private async ensureDefaultWarehouseId() {
+        let warehouse = await this.warehouseRepo.findOne({ where: { id: 1 } });
+        if (!warehouse) {
+            warehouse = await this.warehouseRepo.findOne({ where: {} });
+        }
+        if (!warehouse) {
+            warehouse = await this.warehouseRepo.save(this.warehouseRepo.create({
+                name: 'Kho mặc định',
+                address: null,
+                isActive: true,
+            }));
+        }
+        return warehouse.id;
+    }
+
+    private async upsertOpeningStock(productId: number, warehouseId: number, quantity: number) {
+        let stock = await this.stockRepo.findOne({ where: { productId, warehouseId } });
+        if (!stock) {
+            stock = this.stockRepo.create({
+                productId,
+                warehouseId,
+                quantity: 0,
+                updatedAt: new Date(),
+            });
+        }
+        stock.quantity = Number(stock.quantity || 0) + Number(quantity);
+        stock.updatedAt = new Date();
+        await this.stockRepo.save(stock);
+
+        await this.movementRepo.save(this.movementRepo.create({
+            productId,
+            warehouseId,
+            movementType: 'IN',
+            quantity: Number(quantity),
+            referenceType: 'OPENING',
+            referenceId: productId,
+            notes: 'Opening stock on product creation',
+        }));
+    }
 }

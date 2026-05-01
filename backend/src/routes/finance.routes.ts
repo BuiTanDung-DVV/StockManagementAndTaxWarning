@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as financeCtrl from '../controllers/finance.controller';
+import { authenticateJwt } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -8,6 +9,7 @@ router.get('/cash-transactions', financeCtrl.getCashTransactions);
 router.post('/cash-transactions', financeCtrl.createCashTransaction);
 router.get('/cash-transactions/summary', financeCtrl.getCashFlowSummary);
 router.get('/cash-transactions/profit-loss', financeCtrl.getProfitLoss);
+router.get('/cash-transactions/invoice-reconciliation', financeCtrl.getInvoiceReconciliation);
 router.get('/cash-transactions/expenses-by-category', financeCtrl.getExpensesByCategory);
 
 // Daily Closings
@@ -43,6 +45,8 @@ router.post('/tax-obligations', financeCtrl.createTaxObligation);
 
 // Purchases Without Invoice
 router.get('/purchases-without-invoice', financeCtrl.getPurchasesWithoutInvoice);
-router.post('/purchases-without-invoice', financeCtrl.createPurchaseWithoutInvoice);
+router.post('/purchases-without-invoice', authenticateJwt, financeCtrl.createPurchaseWithoutInvoice);
+router.post('/purchases-without-invoice/:id/approve', authenticateJwt, financeCtrl.approvePurchaseWithoutInvoice);
+router.post('/purchases-without-invoice/:id/reject', authenticateJwt, financeCtrl.rejectPurchaseWithoutInvoice);
 
 export default router;

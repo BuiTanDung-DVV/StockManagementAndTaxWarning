@@ -53,29 +53,107 @@ export class CustomerService {
         return this.paymentRepo.save(this.paymentRepo.create({ ...dto, receivable }));
     }
 
-    async getDebtAging() {
+    async getDebtAging(asOf?: string) {
         const receivables = await this.receivableRepo.find({
             where: { status: Not(In(['PAID'])) },
-            relations: ['customer'],
+            relations: ['customer', 'paymentHistory'],
         });
 
-        const now = new Date();
-        const buckets = { current: 0, days30: 0, days60: 0, days90: 0, over90: 0 };
+        const now = asOf ? new Date(asOf) : new Date();
+        now.setHours(23, 59, 59, 999);
+
+        const buckets = { current: 0, past30: 0, past60: 0, past90: 0 };
         let totalDebt = 0;
+        const byCustomer = new Map<number, {
+            customerId: number;
+            customerName: string;
+            total: number;
+            current: number;
+            past30: number;
+            past60: number;
+            past90: number;
+            overdueDays: number;
+            lastPaymentDate: Date | null;
+        }>();
 
         for (const r of receivables) {
             const remaining = Number(r.amount) - Number(r.paidAmount);
             if (remaining <= 0) continue;
             totalDebt += remaining;
+
+            const customerId = Number(r.customer?.id || 0);
+            const customerName = r.customer?.name || 'N/A';
+            if (!byCustomer.has(customerId)) {
+                byCustomer.set(customerId, {
+                    customerId,
+                    customerName,
+                    total: 0,
+                    current: 0,
+                    past30: 0,
+                    past60: 0,
+                    past90: 0,
+                    overdueDays: 0,
+                    lastPaymentDate: null,
+                });
+            }
+            const customerBucket = byCustomer.get(customerId)!;
+            customerBucket.total += remaining;
+
             const daysDiff = Math.floor((now.getTime() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-            if (daysDiff <= 0) buckets.current += remaining;
-            else if (daysDiff <= 30) buckets.days30 += remaining;
-            else if (daysDiff <= 60) buckets.days60 += remaining;
-            else if (daysDiff <= 90) buckets.days90 += remaining;
-            else buckets.over90 += remaining;
+            if (daysDiff <= 0) {
+                buckets.current += remaining;
+                customerBucket.current += remaining;
+            } else if (daysDiff <= 30) {
+                buckets.past30 += remaining;
+                customerBucket.past30 += remaining;
+                customerBucket.overdueDays = Math.max(customerBucket.overdueDays, daysDiff);
+            } else if (daysDiff <= 60) {
+                buckets.past60 += remaining;
+                customerBucket.past60 += remaining;
+                customerBucket.overdueDays = Math.max(customerBucket.overdueDays, daysDiff);
+            } else {
+                buckets.past90 += remaining;
+                customerBucket.past90 += remaining;
+                customerBucket.overdueDays = Math.max(customerBucket.overdueDays, daysDiff);
+            }
+
+            if (Array.isArray(r.paymentHistory) && r.paymentHistory.length > 0) {
+                const lastPayment = r.paymentHistory
+                    .map((p) => new Date(p.paymentDate))
+                    .sort((a, b) => b.getTime() - a.getTime())[0];
+                if (!customerBucket.lastPaymentDate || lastPayment > customerBucket.lastPaymentDate) {
+                    customerBucket.lastPaymentDate = lastPayment;
+                }
+            }
         }
 
-        return { buckets, totalDebt, receivableCount: receivables.length };
+        const customers = Array.from(byCustomer.values())
+            .sort((a, b) => b.total - a.total)
+            .map((c) => ({
+                ...c,
+                lastPaymentDate: c.lastPaymentDate ? c.lastPaymentDate.toISOString() : null,
+            }));
+
+        const overdueDebt = buckets.past30 + buckets.past60 + buckets.past90;
+        return {
+            asOf: now,
+            buckets: {
+                ...buckets,
+                // Backward-compatible aliases for old UI keys.
+                days30: buckets.past30,
+                days60: buckets.past60,
+                days90: buckets.past90,
+                over90: buckets.past90,
+            },
+            totalDebt,
+            receivableCount: receivables.length,
+            customers,
+            summary: {
+                totalDebt,
+                currentRatio: totalDebt > 0 ? Number((buckets.current / totalDebt).toFixed(4)) : 0,
+                overdueRatio: totalDebt > 0 ? Number((overdueDebt / totalDebt).toFixed(4)) : 0,
+            },
+        };
     }
 
     async getOverdueDebts() {

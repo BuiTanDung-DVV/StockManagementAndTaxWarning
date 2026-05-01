@@ -17,7 +17,6 @@ class AppVersionWidget extends StatelessWidget {
         }
         final packageInfo = snapshot.data!;
         final version = packageInfo.version;
-        final buildNumber = packageInfo.buildNumber;
         final c = AppThemeColors.of(context);
         
         return Text(

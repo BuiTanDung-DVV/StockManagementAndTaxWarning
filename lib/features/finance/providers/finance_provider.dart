@@ -21,6 +21,9 @@ class FinanceRepository {
   Future<Map<String, dynamic>> getProfitLoss(String from, String to) async =>
       await _api.get('/cash-transactions/profit-loss', params: {'from': from, 'to': to});
 
+  Future<Map<String, dynamic>> getInvoiceReconciliation(String from, String to) async =>
+      await _api.get('/cash-transactions/invoice-reconciliation', params: {'from': from, 'to': to});
+
   Future<Map<String, dynamic>> getExpensesByCategory({String? from, String? to}) async {
     final params = <String, dynamic>{};
     if (from != null) params['from'] = from;
@@ -75,6 +78,12 @@ class FinanceRepository {
   Future<Map<String, dynamic>> createPurchaseNoInvoice(Map<String, dynamic> dto) async =>
       await _api.post('/purchases-without-invoice', data: dto);
 
+  Future<Map<String, dynamic>> approvePurchaseNoInvoice(int id, {String? approvalNotes}) async =>
+      await _api.post('/purchases-without-invoice/$id/approve', data: {'approvalNotes': approvalNotes});
+
+  Future<Map<String, dynamic>> rejectPurchaseNoInvoice(int id, {String? approvalNotes}) async =>
+      await _api.post('/purchases-without-invoice/$id/reject', data: {'approvalNotes': approvalNotes});
+
   // Tax Obligations
   Future<Map<String, dynamic>> getTaxObligations() async => await _api.get('/tax-obligations');
   Future<Map<String, dynamic>> createTaxObligation(Map<String, dynamic> dto) async => await _api.post('/tax-obligations', data: dto);
@@ -92,6 +101,10 @@ final cashSummaryProvider = FutureProvider.family<Map<String, dynamic>, ({String
 
 final profitLossProvider = FutureProvider.family<Map<String, dynamic>, ({String from, String to})>((ref, args) {
   return ref.read(financeRepoProvider).getProfitLoss(args.from, args.to);
+});
+
+final invoiceReconciliationProvider = FutureProvider.family<Map<String, dynamic>, ({String from, String to})>((ref, args) {
+  return ref.read(financeRepoProvider).getInvoiceReconciliation(args.from, args.to);
 });
 
 final expensesByCategoryProvider = FutureProvider<Map<String, dynamic>>((ref) {

@@ -20,6 +20,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _costPriceCtrl = TextEditingController();
   final _sellPriceCtrl = TextEditingController();
   final _wholesalePriceCtrl = TextEditingController();
+  final _currentStockCtrl = TextEditingController();
   final _minStockCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
 
@@ -36,8 +37,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _barcodeCtrl.text = p['barcode'] ?? '';
       _unitCtrl.text = p['unit'] ?? '';
       _costPriceCtrl.text = '${p['costPrice'] ?? p['cost_price'] ?? ''}';
-      _sellPriceCtrl.text = '${p['sellPrice'] ?? p['sell_price'] ?? ''}';
+      _sellPriceCtrl.text = '${p['sellingPrice'] ?? p['sellPrice'] ?? p['selling_price'] ?? p['sell_price'] ?? ''}';
       _wholesalePriceCtrl.text = '${p['wholesalePrice'] ?? p['wholesale_price'] ?? ''}';
+      _currentStockCtrl.text = '${p['currentStock'] ?? p['stock'] ?? ''}';
       _minStockCtrl.text = '${p['minStock'] ?? p['min_stock'] ?? ''}';
       _descCtrl.text = p['description'] ?? '';
     }
@@ -48,14 +50,28 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     setState(() => _saving = true);
     try {
       final repo = ref.read(productRepoProvider);
+      final name = _nameCtrl.text.trim();
+      final sellingPrice = double.tryParse(_sellPriceCtrl.text.trim()) ?? 0;
+
+      if (name.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập tên sản phẩm'), backgroundColor: AppColors.danger));
+        return;
+      }
+      if (sellingPrice <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Giá bán phải lớn hơn 0'), backgroundColor: AppColors.danger));
+        setState(() => _saving = false);
+        return;
+      }
+
       final data = {
-        'name': _nameCtrl.text.trim(),
-        'sku': _skuCtrl.text.trim(),
-        'barcode': _barcodeCtrl.text.trim(),
-        'unit': _unitCtrl.text.trim(),
+        'name': name,
+        'sku': _skuCtrl.text.trim().isEmpty ? null : _skuCtrl.text.trim(),
+        'barcode': _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
+        'unit': _unitCtrl.text.trim().isEmpty ? 'Cái' : _unitCtrl.text.trim(),
         'costPrice': double.tryParse(_costPriceCtrl.text.trim()) ?? 0,
-        'sellPrice': double.tryParse(_sellPriceCtrl.text.trim()) ?? 0,
+        'sellingPrice': sellingPrice,
         'wholesalePrice': double.tryParse(_wholesalePriceCtrl.text.trim()) ?? 0,
+        'currentStock': int.tryParse(_currentStockCtrl.text.trim()) ?? 0,
         'minStock': int.tryParse(_minStockCtrl.text.trim()) ?? 0,
         'description': _descCtrl.text.trim(),
       };
@@ -64,7 +80,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       } else {
         await repo.create(data);
       }
-      ref.invalidate(productListProvider);
+      // FutureProvider.family cần invalidate với args cụ thể
+      ref.invalidate(productListProvider((page: 1, search: null)));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_isEdit ? 'Cập nhật thành công!' : 'Thêm sản phẩm thành công!'), backgroundColor: AppColors.success),
@@ -81,11 +98,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     if (mounted) setState(() => _saving = false);
   }
 
+
   @override
   void dispose() {
     _nameCtrl.dispose(); _skuCtrl.dispose(); _barcodeCtrl.dispose();
     _unitCtrl.dispose(); _costPriceCtrl.dispose(); _sellPriceCtrl.dispose();
-    _wholesalePriceCtrl.dispose(); _minStockCtrl.dispose(); _descCtrl.dispose();
+    _wholesalePriceCtrl.dispose(); _currentStockCtrl.dispose(); _minStockCtrl.dispose(); _descCtrl.dispose();
     super.dispose();
   }
 
@@ -95,15 +113,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm'),
-        actions: [
-          TextButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: _saving
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: AppColors.primary, size: 18),
-            label: Text(_saving ? 'Đang lưu...' : 'Lưu', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
-          ),
-        ],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -138,6 +151,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
             const SizedBox(height: 24),
             _sectionHeader('Kho'),
+            const SizedBox(height: 12),
+            _field('Tồn hiện có', _currentStockCtrl, HugeIcons.strokeRoundedPackageSearch, c, keyboardType: TextInputType.number, hint: 'Số lượng tồn ban đầu'),
             const SizedBox(height: 12),
             _field('Tồn tối thiểu', _minStockCtrl, HugeIcons.strokeRoundedWarehouse, c, keyboardType: TextInputType.number, hint: 'Cảnh báo khi dưới mức này'),
 

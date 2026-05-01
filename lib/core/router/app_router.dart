@@ -38,6 +38,14 @@ import '../../features/finance/presentation/tax_obligation_screen.dart';
 import '../../features/finance/presentation/salary_ledger_screen.dart';
 import '../../features/finance/presentation/tax_declaration_screen.dart';
 import '../../features/finance/presentation/transaction_history_screen.dart';
+import '../../features/settings/presentation/notification_list_screen.dart';
+import '../../features/settings/presentation/staff_management_screen.dart';
+import '../../features/settings/presentation/profile_screen.dart';
+import '../../features/settings/presentation/shop_profile_screen.dart';
+import '../../features/products/presentation/product_form_screen.dart';
+import '../../features/customers/presentation/customer_form_screen.dart';
+import '../../features/suppliers/presentation/supplier_form_screen.dart';
+
 
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
@@ -50,8 +58,8 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 class _RouterNotifier extends ChangeNotifier {
   final Ref _ref;
   _RouterNotifier(this._ref) {
-    _ref.listen(authProvider, (_, __) => notifyListeners());
-    _ref.listen(shopProvider, (_, __) => notifyListeners());
+    _ref.listen(authProvider, (_, _) => notifyListeners());
+    _ref.listen(shopProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -114,12 +122,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/sales/:id', builder: (_, state) => OrderDetailScreen(id: int.parse(state.pathParameters['id']!))),
           // Products
           GoRoute(path: '/products', builder: (_, _) => const ProductListScreen()),
+          GoRoute(path: '/products/form', builder: (_, state) => ProductFormScreen(product: state.extra as Map<String, dynamic>?)),
           GoRoute(path: '/products/:id', builder: (_, state) => ProductDetailScreen(id: int.parse(state.pathParameters['id']!))),
           // Customers
           GoRoute(path: '/customers', builder: (_, _) => const CustomerListScreen()),
+          GoRoute(path: '/customers/form', builder: (_, state) => CustomerFormScreen(customer: state.extra as Map<String, dynamic>?)),
           GoRoute(path: '/customers/:id', builder: (_, state) => CustomerDetailScreen(id: int.parse(state.pathParameters['id']!))),
           // Suppliers
           GoRoute(path: '/suppliers', builder: (_, _) => const SupplierListScreen()),
+          GoRoute(path: '/suppliers/form', builder: (_, state) => SupplierFormScreen(supplier: state.extra as Map<String, dynamic>?)),
           GoRoute(path: '/suppliers/:id', builder: (_, state) => SupplierDetailScreen(id: int.parse(state.pathParameters['id']!))),
           // Inventory
           GoRoute(path: '/inventory', builder: (_, _) => const InventoryScreen()),
@@ -146,7 +157,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/tax-config', builder: (_, _) => const TaxConfigScreen()),
           GoRoute(path: '/tax-support', builder: (_, _) => const TaxSupportScreen()),
           GoRoute(path: '/payment-config', builder: (_, _) => const PaymentConfigScreen()),
+          GoRoute(path: '/notifications', builder: (_, _) => const NotificationListScreen()),
+          GoRoute(path: '/staff', builder: (_, _) => const StaffManagementScreen()),
+          GoRoute(path: '/roles', builder: (_, _) => const RoleConfigScreen()),
+          GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+          GoRoute(path: '/shop-profile', builder: (_, _) => const ShopProfileScreen()),
         ],
+
       ),
     ],
   );

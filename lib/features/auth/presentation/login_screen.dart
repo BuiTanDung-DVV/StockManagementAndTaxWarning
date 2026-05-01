@@ -52,9 +52,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(32),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            child: LayoutBuilder(
+              builder: (context, viewportConstraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(32),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: viewportConstraints.maxHeight - 64,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
               // App Logo
               Container(
                 width: 96,
@@ -145,8 +154,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ]),
               const SizedBox(height: 32),
               const AppVersionWidget(),
-            ]),
+              ]),
             ),
+          ),
+        );
+      },
+      ),
           ),
         ),
       ),

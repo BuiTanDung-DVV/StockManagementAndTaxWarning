@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { FinanceService } from '../services/finance.service';
+import { AuthRequest } from '../middleware/auth.middleware';
 
 const financeService = new FinanceService();
 
@@ -17,6 +18,10 @@ export const getCashFlowSummary = async (req: Request, res: Response) => {
 };
 export const getProfitLoss = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.getProfitLoss(req.query.from as string, req.query.to as string) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+export const getInvoiceReconciliation = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await financeService.getInvoiceReconciliation(req.query.from as string, req.query.to as string) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 export const getExpensesByCategory = async (req: Request, res: Response) => {
@@ -109,7 +114,68 @@ export const getPurchasesWithoutInvoice = async (req: Request, res: Response) =>
     try { res.json({ success: true, data: await financeService.getPurchasesWithoutInvoice(+(req.query.page || 1), +(req.query.limit || 20)) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
-export const createPurchaseWithoutInvoice = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.createPurchaseWithoutInvoice(req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+export const createPurchaseWithoutInvoice = async (req: AuthRequest, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await financeService.createPurchaseWithoutInvoice({
+                ...req.body,
+                creatorUserId: req.user?.sub,
+                creatorRole: req.user?.role,
+                creatorAccountType: req.user?.accountType,
+                requestIp: req.ip,
+            }),
+        });
+    }
+    catch (e: any) {
+        if (String(e.message || '').startsWith('Validation:')) {
+            res.status(400).json({ success: false, message: String(e.message).replace('Validation: ', '') });
+            return;
+        }
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+export const approvePurchaseWithoutInvoice = async (req: AuthRequest, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await financeService.updatePurchaseWithoutInvoiceApproval(+req.params.id, {
+                decision: 'APPROVED',
+                approvalNotes: req.body?.approvalNotes,
+                approverUserId: req.user?.sub,
+                approverAccountType: req.user?.accountType,
+                requestIp: req.ip,
+            }),
+        });
+    }
+    catch (e: any) {
+        if (String(e.message || '').startsWith('Validation:')) {
+            res.status(400).json({ success: false, message: String(e.message).replace('Validation: ', '') });
+            return;
+        }
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+export const rejectPurchaseWithoutInvoice = async (req: AuthRequest, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await financeService.updatePurchaseWithoutInvoiceApproval(+req.params.id, {
+                decision: 'REJECTED',
+                approvalNotes: req.body?.approvalNotes,
+                approverUserId: req.user?.sub,
+                approverAccountType: req.user?.accountType,
+                requestIp: req.ip,
+            }),
+        });
+    }
+    catch (e: any) {
+        if (String(e.message || '').startsWith('Validation:')) {
+            res.status(400).json({ success: false, message: String(e.message).replace('Validation: ', '') });
+            return;
+        }
+        res.status(500).json({ success: false, message: e.message });
+    }
 };

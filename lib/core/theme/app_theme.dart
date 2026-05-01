@@ -36,30 +36,30 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 
   // ── Dark palette (warm gray, high contrast) ──
   static const dark = AppThemeColors(
-    bg: Color(0xFF111827),       // deep charcoal
+    bg: Color(0xFF020A2F),       // deep charcoal/navy
     surface: Color(0xFF1F2937),   // elevated surface
     card: Color(0xFF1F2937),      // same as surface for consistency
     cardAlt: Color(0xFF273549),   // slightly lighter alt
     textPrimary: Color(0xFFF9FAFB),  // near-white for max readability
-    textSecondary: Color(0xFFD1D5DB), // light gray — much more readable
-    textMuted: Color(0xFF9CA3AF),     // medium gray — still visible
+    textSecondary: Color(0xFFD1D5DB), // light gray
+    textMuted: Color(0xFF9CA3AF),     // medium gray
     divider: Color(0xFF374151),
     inputFill: Color(0xFF1F2937),
-    inputBorder: Color(0xFF4B5563),   // visible border
+    inputBorder: Color(0xFF4B5563),
   );
 
-  // ── Light palette (clean, warm) ──
+  // ── Light palette (Lumina POS style - Vivid & Clean) ──
   static const light = AppThemeColors(
-    bg: Color(0xFFF0F2F5),       // Gray-100/150 - darker background for better card contrast
-    surface: Colors.white,
-    card: Colors.white,
-    cardAlt: Color(0xFFE5E7EB),  // Gray-200
-    textPrimary: Color(0xFF111827),   // near-black for crisp text
-    textSecondary: Color(0xFF4B5563), // dark gray
-    textMuted: Color(0xFF9CA3AF),     // medium gray
-    divider: Color(0xFFD1D5DB),       // Gray-300 (darker divider for better borders)
-    inputFill: Color(0xFFF3F4F6),
-    inputBorder: Color(0xFFD1D5DB),
+    bg: Color(0xFFF7F5FF),       // Lumina Background
+    surface: Color(0xFFEFEFFF),  // Structural Sections (Surface Container Low)
+    card: Color(0xFFFFFFFF),     // Interactive/Lifted (Lowest)
+    cardAlt: Color(0xFFD5DBFF),  // Active States (Highest)
+    textPrimary: Color(0xFF232C51),   // On Surface (no pure black)
+    textSecondary: Color(0xFF515981), // On Surface Variant
+    textMuted: Color(0xFFA2ABD7),     // Outline Variant (Ghost)
+    divider: Color(0xFFD5DBFF),       // Soft tone shifts instead of hard lines
+    inputFill: Color(0xFFEFEFFF),
+    inputBorder: Color(0x26A2ABD7),   // 15% opacity Ghost Border
   );
 
   @override
@@ -99,36 +99,24 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 }
 
 // ─────────────────────────────────────────────
-// Legacy static colors (semantic colors stay, dark-specific removed gradually)
+// Legacy static colors
 // ─────────────────────────────────────────────
 
 class AppColors {
-  // Primary brand — vibrant blue
-  static const primary = Color(0xFF3B82F6);
-  static const primaryLight = Color(0xFF60A5FA);
-  static const primaryDark = Color(0xFF2563EB);
+  // Lumina POS Primary brand
+  static const primary = Color(0xFF0058BB);
+  static const primaryLight = Color(0xFF6C9FFF);
+  static const primaryDark = Color(0xFF004CA4);
 
-  // Semantic — slightly adjusted for both modes
+  // Semantic
   static const success = Color(0xFF22C55E);
   static const warning = Color(0xFFF59E0B);
-  static const danger = Color(0xFFEF4444);
+  static const danger = Color(0xFFB31B25);
   static const info = Color(0xFF06B6D4);
 
-  // ── LEGACY dark-only references (kept for backward compat during migration) ──
-  static const darkBg = Color(0xFF0F172A);
-  static const darkSurface = Color(0xFF1E293B);
-  static const darkCard = Color(0xFF16213E);
-  static const darkCardAlt = Color(0xFF1A1A2E);
-  static const lightBg = Color(0xFFF8FAFC);
-  static const lightSurface = Colors.white;
-  static const textPrimary = Color(0xFFF1F5F9);
-  static const textSecondary = Color(0xFF94A3B8);
-  static const textMuted = Color(0xFF64748B);
-  static const textDark = Color(0xFF0F172A);
-
-  // Gradients
+  // Lumina Button Gradient
   static const primaryGradient = LinearGradient(
-    colors: [Color(0xFF1E3A5F), Color(0xFF2D8C8C)],
+    colors: [primary, primaryLight],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -164,7 +152,12 @@ class AppTheme {
       scaffoldBackgroundColor: colors.bg,
       cardColor: colors.card,
       dividerColor: colors.divider,
-      textTheme: GoogleFonts.beVietnamProTextTheme(base.textTheme).apply(
+      dividerTheme: DividerThemeData(
+        color: colors.divider,
+        thickness: 1,
+        space: 16,
+      ),
+      textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
         bodyColor: colors.textPrimary,
         displayColor: colors.textPrimary,
       ),
@@ -172,18 +165,19 @@ class AppTheme {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
-          fontSize: 20, fontWeight: FontWeight.bold, color: colors.textPrimary,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 22, fontWeight: FontWeight.bold, color: colors.textPrimary,
         ),
         iconTheme: IconThemeData(color: colors.textPrimary),
       ),
       cardTheme: CardThemeData(
         color: colors.card,
-        elevation: isDark ? 0 : 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: isDark ? 0 : 0, // No shadow by default to preserve the glass feel
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // xl corner radius
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: colors.surface,
+        backgroundColor: colors.card,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: colors.textMuted,
         type: BottomNavigationBarType.fixed,
@@ -193,43 +187,48 @@ class AppTheme {
         filled: true,
         fillColor: colors.inputFill,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colors.inputBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colors.inputBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primaryLight, width: 2),
         ),
         hintStyle: TextStyle(color: colors.textMuted),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // xl radius
+          textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+          elevation: 2,
+          shadowColor: AppColors.primaryDark.withValues(alpha: 0.4),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: colors.card,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        backgroundColor: colors.card.withValues(alpha: 0.9), // Glassmorphism base
+        elevation: 20,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: colors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // xl radius
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: colors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }

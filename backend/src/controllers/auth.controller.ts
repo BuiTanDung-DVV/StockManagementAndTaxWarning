@@ -31,6 +31,15 @@ export const login = async (req: Request, res: Response) => {
     }
 };
 
+export const refreshToken = async (req: Request, res: Response) => {
+    try {
+        const result = await authService.refreshToken(req.body.refresh_token);
+        res.json({ success: true, data: result, message: 'Token refreshed' });
+    } catch (error: any) {
+        res.status(401).json({ success: false, message: error.message });
+    }
+};
+
 export const forgotPassword = async (req: Request, res: Response) => {
     try {
         const data = await authService.forgotPassword(req.body);
