@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../settings/providers/shop_provider.dart';
 
 class StaffManagementScreen extends ConsumerStatefulWidget {
@@ -178,13 +179,10 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _members.isEmpty
-              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.people_outline, size: 64, color: c.textMuted),
-                  const SizedBox(height: 12),
-                  Text('Chưa có nhân viên nào', style: TextStyle(color: c.textSecondary, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  Text('Nhấn "Thêm" để mời nhân viên', style: TextStyle(color: c.textMuted, fontSize: 13)),
-                ]))
+              ? const AppEmpty(
+                  message: 'Chưa có nhân viên nào',
+                  subtitle: 'Nhấn "Thêm" để mời nhân viên',
+                )
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.separated(
@@ -403,13 +401,10 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _roles.isEmpty
-              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.admin_panel_settings_outlined, size: 64, color: c.textMuted),
-                  const SizedBox(height: 12),
-                  Text('Chưa có vai trò nào', style: TextStyle(color: c.textSecondary, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  Text('Tạo vai trò để phân quyền nhân viên', style: TextStyle(color: c.textMuted, fontSize: 13)),
-                ]))
+              ? const AppEmpty(
+                  message: 'Chưa có vai trò nào',
+                  subtitle: 'Tạo vai trò để phân quyền nhân viên',
+                )
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.separated(

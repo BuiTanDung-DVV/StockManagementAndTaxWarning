@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
 class DailyClosingScreen extends ConsumerWidget {
@@ -29,13 +30,26 @@ class DailyClosingScreen extends ConsumerWidget {
           final transactions = data['transactions'] as List? ?? [];
 
           return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)]), borderRadius: BorderRadius.circular(14)),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24), 
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient, 
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Column(children: [
                 Text(today, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 8),
-                Text(_fmt(netProfit), style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-                const Text('Lợi nhuận ròng', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                if (closed) Container(margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: const Text('Đã kết ca', style: TextStyle(color: AppColors.success, fontSize: 12))),
+                Text(_fmt(netProfit), style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                const Text('Lợi nhuận ròng', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                if (closed) Container(margin: const EdgeInsets.only(top: 12), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: const Text('Đã kết ca', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600))),
               ])),
             const SizedBox(height: 16),
             Row(children: [
@@ -62,11 +76,7 @@ class DailyClosingScreen extends ConsumerWidget {
                 ]),
               )),
             ],
-            if (transactions.isEmpty && !closed) Center(child: Padding(padding: const EdgeInsets.all(32), child: Column(children: [
-              const Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
-              const SizedBox(height: 8),
-              const Text('Chưa có giao dịch hôm nay', style: TextStyle(color: Colors.grey)),
-            ]))),
+            if (transactions.isEmpty && !closed) const AppEmpty(message: 'Chưa có giao dịch hôm nay', size: 120),
           ]));
         },
       ),

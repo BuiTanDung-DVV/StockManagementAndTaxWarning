@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/inventory_provider.dart';
+import '../../../core/widgets/app_animations.dart';
 import 'purchase_order_form_screen.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
@@ -41,11 +42,9 @@ class PurchaseOrderScreen extends ConsumerWidget {
         data: (data) {
           final items = (data['items'] as List?) ?? [];
           if (items.isEmpty) {
-            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.move_to_inbox_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text('Chưa có đơn mua hàng', style: TextStyle(fontSize: 16, color: Colors.grey)),
-            ]));
+            return const AppEmpty(
+              message: 'Chưa có đơn mua hàng',
+            );
           }
           return GridView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/custom_date_range_picker.dart';
 import '../providers/finance_provider.dart';
 
 class ProfitLossScreen extends ConsumerStatefulWidget {
@@ -24,12 +26,9 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
   String _fmt(num v) => NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(v);
 
   Future<void> _pickDateRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: _range,
-      locale: const Locale('vi'),
+    final picked = await showCustomDateRangePicker(
+      context,
+      initialRange: _range,
     );
     if (picked != null) {
       setState(() => _range = picked);
@@ -72,13 +71,10 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
           final netPct = revenue > 0 ? (netProfit / revenue * 100).toStringAsFixed(1) : '0.0';
 
           if (revenue == 0 && cogs == 0 && expenses == 0) {
-            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.assessment_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text('Chưa có dữ liệu giao dịch', style: TextStyle(fontSize: 16, color: Colors.grey)),
-              const SizedBox(height: 8),
-              const Text('Thêm giao dịch thu/chi để xem báo cáo KQKD', style: TextStyle(fontSize: 13, color: Colors.grey)),
-            ]));
+            return const AppEmpty(
+              message: 'Chưa có dữ liệu giao dịch',
+              subtitle: 'Thêm giao dịch thu/chi để xem báo cáo KQKD',
+            );
           }
 
           return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

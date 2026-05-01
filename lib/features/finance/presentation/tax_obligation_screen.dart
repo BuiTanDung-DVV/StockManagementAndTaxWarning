@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
 class TaxObligationScreen extends ConsumerWidget {
@@ -24,13 +25,10 @@ class TaxObligationScreen extends ConsumerWidget {
           final totalOwed = (data['totalOwed'] as num?) ?? 0;
 
           if (items.isEmpty) {
-            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.account_balance_outlined, size: 64, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text('Chưa có dữ liệu nghĩa vụ thuế', style: TextStyle(fontSize: 16, color: Colors.grey)),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.account_balance), label: const Text('Thêm kỳ thuế'), onPressed: () => _showAddDialog(context, ref)),
-            ]));
+            return AppEmpty(
+              message: 'Chưa có dữ liệu nghĩa vụ thuế',
+              action: ElevatedButton.icon(icon: const Icon(Icons.account_balance), label: const Text('Thêm kỳ thuế'), onPressed: () => _showAddDialog(context, ref)),
+            );
           }
 
           return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

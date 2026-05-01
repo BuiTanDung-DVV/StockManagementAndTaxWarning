@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
 /// Salary Ledger — shows SALARY-category cash transactions.
@@ -31,13 +32,10 @@ class SalaryLedgerScreen extends ConsumerWidget {
           final totalSalary = items.fold<num>(0, (s, t) => s + ((t['amount'] as num?) ?? 0));
 
           if (items.isEmpty) {
-            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.people_outline, size: 64, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text('Chưa có chi lương nào', style: TextStyle(fontSize: 16, color: Colors.grey)),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(icon: const Icon(Icons.payments), label: const Text('Thêm chi lương'), onPressed: () => _showAddDialog(context, ref)),
-            ]));
+            return AppEmpty(
+              message: 'Chưa có chi lương nào',
+              action: ElevatedButton.icon(icon: const Icon(Icons.payments), label: const Text('Thêm chi lương'), onPressed: () => _showAddDialog(context, ref)),
+            );
           }
 
           return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
