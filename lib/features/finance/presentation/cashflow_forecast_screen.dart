@@ -90,7 +90,13 @@ class CashflowForecastScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(onPressed: () => _showAddForecastDialog(context, ref), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddForecastDialog(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
     );
   }
 

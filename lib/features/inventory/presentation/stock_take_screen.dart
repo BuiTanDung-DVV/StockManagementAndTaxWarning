@@ -17,10 +17,16 @@ class StockTakeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Kiểm kê Kho'), actions: [
         featureGuideButton(context, 'stock_take'),
-        IconButton(icon: const Icon(Icons.add), onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const StockTakeFormScreen()));
-        }),
       ]),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const StockTakeFormScreen()));
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Kiểm kê'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
       body: stockAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [

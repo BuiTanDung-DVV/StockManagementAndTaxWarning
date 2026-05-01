@@ -92,7 +92,13 @@ class InvoiceListScreen extends ConsumerWidget {
           ]));
         },
       ),
-      floatingActionButton: FloatingActionButton(onPressed: () => _showAddDialog(context, ref), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddDialog(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
     );
   }
 

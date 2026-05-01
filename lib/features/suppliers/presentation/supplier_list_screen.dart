@@ -22,11 +22,14 @@ class SupplierListScreen extends ConsumerWidget {
         title: Text('Nhà cung cấp'),
         actions: [
           featureGuideButton(context, 'supplier_list'),
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => context.push('/suppliers/form'),
-          )
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/suppliers/form'),
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
       ),
       body: listAsync.when(
         data: (data) {

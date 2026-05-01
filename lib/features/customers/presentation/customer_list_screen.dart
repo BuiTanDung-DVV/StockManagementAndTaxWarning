@@ -25,11 +25,14 @@ class CustomerListScreen extends ConsumerWidget {
         title: Text('Khách hàng'),
         actions: [
           featureGuideButton(context, 'customer_list'),
-          IconButton(
-            icon: Icon(Icons.person_add),
-            onPressed: () => context.push('/customers/form'),
-          )
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/customers/form'),
+        icon: const Icon(Icons.person_add),
+        label: const Text('Thêm'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
       ),
       body: listAsync.when(
         data: (data) {
