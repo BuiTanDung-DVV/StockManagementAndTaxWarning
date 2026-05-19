@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
@@ -29,7 +30,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
           // Filter only SALARY category
           final items = allItems.where((t) => t['category'] == 'SALARY').toList();
 
-          final totalSalary = items.fold<num>(0, (s, t) => s + ((t['amount'] as num?) ?? 0));
+          final totalSalary = items.fold<num>(0, (s, t) => s + asNum(t['amount']));
 
           if (items.isEmpty) {
             return AppEmpty(
@@ -63,7 +64,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
                     Text(t['notes'] ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 12)),
                     Text(t['transactionDate']?.toString().split('T').first ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 11)),
                   ])),
-                  Text(_fmt((t['amount'] as num?) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.danger)),
+                  Text(_fmt(asNum(t['amount'])), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.danger)),
                 ]));
             }),
           ]));

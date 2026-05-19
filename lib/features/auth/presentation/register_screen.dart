@@ -17,6 +17,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
+  final _fullNameFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  final _confirmPasswordFocus = FocusNode();
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
@@ -29,6 +33,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
+    _fullNameFocus.dispose();
+    _phoneFocus.dispose();
+    _passwordFocus.dispose();
+    _confirmPasswordFocus.dispose();
     super.dispose();
   }
 
@@ -161,6 +169,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   SizedBox(height: 16),
                   TextField(
                     controller: _fullNameCtrl,
+                    focusNode: _fullNameFocus,
+                    textInputAction: TextInputAction.next,
+                    onSubmitted: (_) => _phoneFocus.requestFocus(),
                     decoration: InputDecoration(
                       hintText: 'Họ và tên của bạn',
                       prefixIcon: Icon(Icons.badge, color: c.textMuted),
@@ -169,6 +180,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   SizedBox(height: 16),
                   TextField(
                     controller: _phoneCtrl,
+                    focusNode: _phoneFocus,
+                    textInputAction: TextInputAction.next,
+                    onSubmitted: (_) => _passwordFocus.requestFocus(),
                     decoration: InputDecoration(
                       hintText: 'SĐT hoặc Tên đăng nhập',
                       prefixIcon: Icon(Icons.account_circle,
@@ -178,7 +192,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   SizedBox(height: 16),
                   TextField(
                     controller: _passwordCtrl,
+                    focusNode: _passwordFocus,
                     obscureText: _obscure,
+                    textInputAction: TextInputAction.next,
+                    onSubmitted: (_) => _confirmPasswordFocus.requestFocus(),
                     decoration: InputDecoration(
                       hintText: 'Mật khẩu',
                       prefixIcon: Icon(Icons.lock_outline,
@@ -197,7 +214,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   SizedBox(height: 16),
                   TextField(
                     controller: _confirmPasswordCtrl,
+                    focusNode: _confirmPasswordFocus,
                     obscureText: _obscureConfirm,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _register(),
                     decoration: InputDecoration(
                       hintText: 'Xác nhận mật khẩu',
                       prefixIcon: Icon(Icons.lock_outline,

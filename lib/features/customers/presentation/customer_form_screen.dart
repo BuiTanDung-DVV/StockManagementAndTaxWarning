@@ -32,7 +32,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       _phoneCtrl.text = c['phone'] ?? '';
       _emailCtrl.text = c['email'] ?? '';
       _addressCtrl.text = c['address'] ?? '';
-      _noteCtrl.text = c['note'] ?? '';
+      _noteCtrl.text = c['notes'] ?? c['note'] ?? '';
       _taxCodeCtrl.text = c['taxCode'] ?? c['tax_code'] ?? '';
     }
   }
@@ -47,7 +47,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
         'phone': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         'address': _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
-        'note': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
         'taxCode': _taxCodeCtrl.text.trim().isEmpty ? null : _taxCodeCtrl.text.trim(),
       };
       if (_isEdit) {

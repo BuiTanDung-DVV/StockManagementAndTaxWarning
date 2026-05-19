@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../providers/finance_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
@@ -40,9 +41,9 @@ class FinanceScreen extends ConsumerWidget {
               // ── Balance Card ──
               summaryAsync.when(
                 data: (data) {
-                  final balance = (data['balance'] ?? data['currentBalance'] ?? 0).toDouble();
-                  final income = (data['totalIncome'] ?? data['income'] ?? 0).toDouble();
-                  final expense = (data['totalExpense'] ?? data['expense'] ?? 0).toDouble();
+                  final balance = asDouble(data['balance'] ?? data['currentBalance']);
+                  final income = asDouble(data['totalIncome'] ?? data['income']);
+                  final expense = asDouble(data['totalExpense'] ?? data['expense']);
                   return Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -207,7 +208,7 @@ class FinanceScreen extends ConsumerWidget {
                   return Column(
                     children: items.take(5).map((tx) {
                       final isIncome = tx['type'] == 'INCOME' || tx['type'] == 'income';
-                      final amount = (tx['amount'] ?? 0).toDouble();
+                      final amount = asDouble(tx['amount']);
                       return Container(
                         margin: EdgeInsets.only(bottom: 8),
                         padding: EdgeInsets.all(12),

@@ -14,12 +14,16 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _usernameFocus = FocusNode();
+  final _passwordFocus = FocusNode();
   bool _obscure = true;
 
   @override
   void dispose() {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _usernameFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -99,7 +103,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               SizedBox(height: 40),
               TextField(
                 controller: _usernameCtrl,
+                focusNode: _usernameFocus,
                 keyboardType: TextInputType.text,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _passwordFocus.requestFocus(),
                 decoration: InputDecoration(
                   hintText: 'SĐT hoặc Tên đăng nhập',
                   prefixIcon: Icon(Icons.person_outline, color: c.textMuted),
@@ -108,7 +115,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               SizedBox(height: 16),
               TextField(
                 controller: _passwordCtrl,
+                focusNode: _passwordFocus,
                 obscureText: _obscure,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _login(),
                 decoration: InputDecoration(
                   hintText: 'Mật khẩu',
                   prefixIcon: Icon(Icons.lock_outline, color: c.textMuted),

@@ -37,9 +37,9 @@ class CashflowForecastScreen extends ConsumerWidget {
                   const Text('Dự báo theo ngày', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   ...forecasts.map<Widget>((f) {
-                    final income = (f['expectedIncome'] as num?) ?? 0;
-                    final expense = (f['expectedExpense'] as num?) ?? 0;
-                    final balance = (f['expectedBalance'] as num?) ?? (income - expense);
+                    final income = num.tryParse(f['expectedIncome']?.toString() ?? '0') ?? 0;
+                    final expense = num.tryParse(f['expectedExpense']?.toString() ?? '0') ?? 0;
+                    final balance = num.tryParse(f['expectedBalance']?.toString() ?? '0') ?? (income - expense);
                     return Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -60,10 +60,10 @@ class CashflowForecastScreen extends ConsumerWidget {
                   const Text('Ngân sách', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   ...budgets.map<Widget>((b) {
-                    final plannedIncome = (b['plannedIncome'] as num?) ?? 0;
-                    final actualIncome = (b['actualIncome'] as num?) ?? 0;
-                    final plannedExpense = (b['plannedExpense'] as num?) ?? 0;
-                    final actualExpense = (b['actualExpense'] as num?) ?? 0;
+                    final plannedIncome = num.tryParse(b['plannedIncome']?.toString() ?? '0') ?? 0;
+                    final actualIncome = num.tryParse(b['actualIncome']?.toString() ?? '0') ?? 0;
+                    final plannedExpense = num.tryParse(b['plannedExpense']?.toString() ?? '0') ?? 0;
+                    final actualExpense = num.tryParse(b['actualExpense']?.toString() ?? '0') ?? 0;
                     final pct = plannedIncome > 0 ? (actualIncome / plannedIncome) : 0.0;
                     return Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

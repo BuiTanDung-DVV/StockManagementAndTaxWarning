@@ -9,6 +9,7 @@ router.get('/customers/debt-aging', customerCtrl.debtAging);
 router.get('/customers/:id', customerCtrl.findOne);
 router.post('/customers', customerCtrl.create);
 router.put('/customers/:id', customerCtrl.update);
+router.delete('/customers/:id', customerCtrl.remove);
 
 // Receivables
 router.get('/customers/:id/receivables', customerCtrl.receivables);

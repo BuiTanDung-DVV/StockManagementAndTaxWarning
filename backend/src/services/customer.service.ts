@@ -10,7 +10,7 @@ export class CustomerService {
 
     async findAll(shopId: number, page = 1, limit = 20, search?: string) {
         const qb = this.customerRepo.createQueryBuilder('c')
-            .where('c.shopId = :shopId', { shopId });
+            .where('c.shopId = :shopId AND c.isActive = :isActive', { shopId, isActive: true });
         if (search) {
             qb.andWhere('(c.name LIKE :s OR c.phone LIKE :s OR c.code LIKE :s)', { s: `%${search}%` });
         }
@@ -25,12 +25,12 @@ export class CustomerService {
     }
 
     async create(shopId: number, dto: Partial<Customer>) {
-        return this.customerRepo.save(this.customerRepo.create({ ...dto, shopId, code: 'CUS' + Date.now().toString().slice(-6) }));
+        return this.customerRepo.save(this.customerRepo.create({ ...this.normalizeCustomerDto(dto), shopId, code: 'CUS' + Date.now().toString().slice(-6) }));
     }
 
     async update(shopId: number, id: number, dto: Partial<Customer>) {
         const customer = await this.findById(shopId, id);
-        Object.assign(customer, dto);
+        Object.assign(customer, this.normalizeCustomerDto(dto));
         return this.customerRepo.save(customer);
     }
 
@@ -180,5 +180,14 @@ export class CustomerService {
             .sort((a, b) => b.remaining - a.remaining);
 
         return overdueItems;
+    }
+
+    private normalizeCustomerDto(dto: any) {
+        const normalized = { ...dto };
+        if (normalized.notes === undefined && normalized.note !== undefined) {
+            normalized.notes = normalized.note;
+        }
+        delete normalized.note;
+        return normalized;
     }
 }

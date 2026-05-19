@@ -7,7 +7,7 @@ export class SupplierService {
 
     async findAll(shopId: number, page = 1, limit = 20, search?: string) {
         const qb = this.supplierRepo.createQueryBuilder('s')
-            .where('s.shop_id = :shopId', { shopId });
+            .where('s.shop_id = :shopId AND s.is_active = :isActive', { shopId, isActive: true });
         if (search) {
             qb.andWhere('(s.name LIKE :s OR s.phone LIKE :s OR s.code LIKE :s)', { s: `%${search}%` });
         }
@@ -22,12 +22,12 @@ export class SupplierService {
     }
 
     async create(shopId: number, dto: Partial<Supplier>) {
-        return this.supplierRepo.save(this.supplierRepo.create({ ...dto, shopId, code: 'SUP' + Date.now().toString().slice(-6) }));
+        return this.supplierRepo.save(this.supplierRepo.create({ ...this.normalizeSupplierDto(dto), shopId, code: 'SUP' + Date.now().toString().slice(-6) }));
     }
 
     async update(shopId: number, id: number, dto: Partial<Supplier>) {
         const supplier = await this.findById(shopId, id);
-        Object.assign(supplier, dto);
+        Object.assign(supplier, this.normalizeSupplierDto(dto));
         return this.supplierRepo.save(supplier);
     }
 
@@ -39,5 +39,18 @@ export class SupplierService {
 
     async getPayables(shopId: number, supplierId: number) {
         return this.payableRepo.find({ where: { shopId, supplierId } });
+    }
+
+    private normalizeSupplierDto(dto: any) {
+        const normalized = { ...dto };
+        if (normalized.notes === undefined && normalized.note !== undefined) {
+            normalized.notes = normalized.note;
+        }
+        if (normalized.contactPerson === undefined && normalized.contactName !== undefined) {
+            normalized.contactPerson = normalized.contactName;
+        }
+        delete normalized.note;
+        delete normalized.contactName;
+        return normalized;
     }
 }

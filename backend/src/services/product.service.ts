@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/db.config';
 import { Product, Category, CostType, ProductCostItem, ProductBatch, UnitConversion, ProductPriceHistory } from '../product/entities';
 import { InventoryMovement, InventoryStock, Warehouse } from '../inventory/entities';
 import { Brackets } from 'typeorm';
+import { COGSService } from './cogs.service';
 
 export class ProductService {
     private productRepo = AppDataSource.getRepository(Product);
@@ -14,6 +15,7 @@ export class ProductService {
     private stockRepo = AppDataSource.getRepository(InventoryStock);
     private movementRepo = AppDataSource.getRepository(InventoryMovement);
     private warehouseRepo = AppDataSource.getRepository(Warehouse);
+    private cogsService = new COGSService();
 
     // === PRODUCT CRUD ===
     async findAllProducts(shopId: number, page = 1, limit = 20, search?: string) {
@@ -21,7 +23,7 @@ export class ProductService {
             .leftJoinAndSelect('p.category', 'category')
             .leftJoinAndSelect('p.costItems', 'costItems')
             .leftJoinAndSelect('costItems.costType', 'costType')
-            .where('p.shopId = :shopId', { shopId });
+            .where('p.shopId = :shopId AND p.isActive = :isActive', { shopId, isActive: true });
 
         if (search) {
             qb.andWhere(new Brackets(sub => {
@@ -41,40 +43,58 @@ export class ProductService {
     }
 
     async findProductById(shopId: number, id: number) {
-        const product = await this.productRepo.findOne({
-            where: { id, shopId }, relations: ['category', 'costItems', 'costItems.costType'],
-        });
-        if (!product) throw new Error('Product not found');
-        const [productWithStock] = await this.attachCurrentStock([product]);
+        const product = await this.loadProductEntity(shopId, id);
+        const [productWithStock] = await this.attachCurrentStock([product], shopId);
         return productWithStock;
     }
 
     async createProduct(shopId: number, dto: any) {
-        const exists = await this.productRepo.findOne({ where: { sku: dto.sku as string, shopId } });
+        const sku = String(dto.sku || '').trim() || `SKU${Date.now().toString().slice(-8)}`;
+        const exists = await this.productRepo.findOne({ where: { sku, shopId } });
         if (exists) throw new Error('SKU already exists');
         const openingQty = Number(dto.currentStock ?? dto.openingStock ?? 0);
         const providedWarehouseId = Number(dto.warehouseId || 0);
         const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
 
-        const product = this.productRepo.create({ ...productPayload, shopId });
+        const product = this.productRepo.create({ ...productPayload, sku, shopId });
         const saved = await this.productRepo.save(product as any) as Product;
 
         if (openingQty > 0) {
             const targetWarehouseId = providedWarehouseId > 0 ? providedWarehouseId : await this.ensureDefaultWarehouseId(shopId);
             await this.upsertOpeningStock(saved.id, targetWarehouseId, openingQty, shopId);
+            await this.cogsService.addInventoryLot({
+                productId: saved.id,
+                quantity: openingQty,
+                costPrice: Number(productPayload.costPrice || 0),
+                notes: 'Opening stock on product creation',
+                shopId,
+            });
         }
 
         return this.findProductById(shopId, saved.id);
     }
 
-    async updateProduct(shopId: number, id: number, dto: Partial<Product>) {
-        const product = await this.findProductById(shopId, id);
-        Object.assign(product, dto);
-        return this.productRepo.save(product);
+    async updateProduct(shopId: number, id: number, dto: any) {
+        const product = await this.loadProductEntity(shopId, id);
+        const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
+        Object.assign(product, productPayload);
+        await this.productRepo.save(product);
+
+        const nextStock = currentStock ?? openingStock;
+        if (nextStock !== undefined && nextStock !== null && nextStock !== '') {
+            await this.setCurrentStock(
+                product.id,
+                Number(warehouseId || 0) || undefined,
+                Number(nextStock),
+                shopId,
+            );
+        }
+
+        return this.findProductById(shopId, id);
     }
 
     async deleteProduct(shopId: number, id: number) {
-        const product = await this.findProductById(shopId, id);
+        const product = await this.loadProductEntity(shopId, id);
         product.isActive = false;
         return this.productRepo.save(product);
     }
@@ -150,6 +170,15 @@ export class ProductService {
     async findAllCategories(shopId: number) { return this.categoryRepo.find({ where: { isActive: true, shopId } }); }
     async createCategory(shopId: number, dto: Partial<Category>) { return this.categoryRepo.save(this.categoryRepo.create({ ...dto, shopId })); }
 
+    private async loadProductEntity(shopId: number, id: number) {
+        const product = await this.productRepo.findOne({
+            where: { id, shopId },
+            relations: ['category', 'costItems', 'costItems.costType'],
+        });
+        if (!product) throw new Error('Product not found');
+        return product;
+    }
+
     private async attachCurrentStock(items: Product[], shopId?: number) {
         if (!items.length) return items;
 
@@ -180,7 +209,7 @@ export class ProductService {
         let warehouse = await this.warehouseRepo.findOne({ where: { shopId } });
         if (!warehouse) {
             warehouse = await this.warehouseRepo.save(this.warehouseRepo.create({
-                name: 'Kho mặc định',
+                name: `Kho mac dinh ${shopId}`,
                 isActive: true,
                 shopId
             }));
@@ -213,5 +242,43 @@ export class ProductService {
             notes: 'Opening stock on product creation',
             shopId
         }));
+    }
+
+    private async setCurrentStock(productId: number, warehouseId: number | undefined, quantity: number, shopId: number) {
+        const targetWarehouseId = warehouseId ?? await this.ensureDefaultWarehouseId(shopId);
+        const warehouse = await this.warehouseRepo.findOne({ where: { id: targetWarehouseId, shopId, isActive: true } as any });
+        if (!warehouse) throw new Error('Warehouse not found');
+
+        let stock = await this.stockRepo.findOne({ where: { productId, warehouseId: targetWarehouseId, shopId } as any });
+        if (!stock) {
+            stock = this.stockRepo.create({
+                productId,
+                warehouseId: targetWarehouseId,
+                quantity: 0,
+                updatedAt: new Date(),
+                shopId,
+            });
+        }
+
+        const previousQty = Number(stock.quantity || 0);
+        const nextQty = Number.isFinite(quantity) && quantity >= 0 ? quantity : 0;
+        const difference = nextQty - previousQty;
+
+        stock.quantity = nextQty;
+        stock.updatedAt = new Date();
+        await this.stockRepo.save(stock);
+
+        if (difference !== 0) {
+            await this.movementRepo.save(this.movementRepo.create({
+                productId,
+                warehouseId: targetWarehouseId,
+                movementType: difference > 0 ? 'IN' : 'OUT',
+                quantity: Math.abs(difference),
+                referenceType: 'PRODUCT_ADJUSTMENT',
+                referenceId: productId,
+                notes: 'Stock adjusted from product update',
+                shopId,
+            }));
+        }
     }
 }

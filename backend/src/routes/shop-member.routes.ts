@@ -14,6 +14,6 @@ router.post('/shop-members/:id/approve', authenticateJwt, ctrl.approveMember);
 router.post('/shop-members/:id/reject', authenticateJwt, ctrl.rejectMember);
 
 // For shop switching: returns all shops the current user belongs to
-router.get('/my-shops', authenticateJwt, ctrl.getMyShops);
+// Moved to index.ts to bypass requireShopId
 
 export default router;

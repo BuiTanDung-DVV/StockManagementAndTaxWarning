@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/product_provider.dart';
@@ -55,6 +56,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
       if (name.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập tên sản phẩm'), backgroundColor: AppColors.danger));
+        setState(() => _saving = false);
         return;
       }
       if (sellingPrice <= 0) {
@@ -80,14 +82,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       } else {
         await repo.create(data);
       }
+      if (!mounted) return;
       // FutureProvider.family cần invalidate với args cụ thể
       ref.invalidate(productListProvider((page: 1, search: null)));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_isEdit ? 'Cập nhật thành công!' : 'Thêm sản phẩm thành công!'), backgroundColor: AppColors.success),
-        );
-        Navigator.pop(context, true);
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_isEdit ? 'Cập nhật thành công!' : 'Thêm sản phẩm thành công!'), backgroundColor: AppColors.success),
+      );
+      context.pop(true);
+      return;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
