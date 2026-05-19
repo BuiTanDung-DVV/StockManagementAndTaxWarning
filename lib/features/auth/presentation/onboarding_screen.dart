@@ -154,6 +154,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   if (_needsUsername) ...[
                     TextField(
                       controller: _usernameCtrl,
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Tên đăng nhập mới',
                         hintText: 'VD: nguyenvan_a123',
@@ -166,6 +167,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     TextField(
                       controller: _phoneCtrl,
                       keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Số điện thoại',
                         hintText: 'VD: 0987654321',
@@ -176,6 +178,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ],
                   TextField(
                     controller: _fullNameCtrl,
+                    textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       labelText: 'Họ và tên của bạn',
                       prefixIcon: Icon(Icons.badge, color: c.textMuted),
@@ -185,6 +188,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: _shopNameCtrl,
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Tên cửa hàng / Doanh nghiệp *',
                         prefixIcon: Icon(Icons.store, color: c.textMuted),
@@ -193,6 +197,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: _ownerNameCtrl,
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Tên chủ cửa hàng / Đại diện',
                         prefixIcon: Icon(Icons.person, color: c.textMuted),
@@ -201,6 +206,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: _addressCtrl,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
                         labelText: 'Địa chỉ kinh doanh',
                         prefixIcon: Icon(Icons.location_on, color: c.textMuted),
@@ -266,6 +273,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _shopCodeCtrl,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _submit(),
                         decoration: InputDecoration(
                           labelText: 'Mã cửa hàng (Tra cứu trực tiếp qua mã) *',
                           hintText: 'Nhập mã 6 ký tự được cung cấp',
@@ -299,6 +308,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _shopCodeCtrl,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _submit(),
                         decoration: InputDecoration(
                           labelText: 'Xác thực Mã cửa hàng *',
                           hintText: 'Nhập mã 6 ký tự được cung cấp',

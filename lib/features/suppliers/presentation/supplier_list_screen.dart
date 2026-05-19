@@ -42,23 +42,23 @@ class SupplierListScreen extends ConsumerWidget {
               itemCount: items.length,
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 450,
-                mainAxisExtent: 85,
+                mainAxisExtent: 100,
                 crossAxisSpacing: 12,
-                mainAxisSpacing: 0,
+                mainAxisSpacing: 10,
               ),
               itemBuilder: (_, i) {
               final s = items[i];
               return GestureDetector(
                 onTap: () => context.push('/suppliers/${s['id']}'),
-                child: Container(margin: EdgeInsets.only(bottom: 10), padding: EdgeInsets.all(14),
+                child: Container(padding: EdgeInsets.all(14),
                   decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
                   child: Row(children: [
                     Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.business, color: AppColors.info)),
                     SizedBox(width: 12),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(s['name'] ?? '', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text('MST: ${s['taxCode'] ?? 'N/A'}', style: TextStyle(fontSize: 11, color: c.textSecondary)),
-                      if (s['paymentTermDays'] != null) Text('Thanh toán: ${s['paymentTermDays']} ngày', style: TextStyle(fontSize: 11, color: c.textMuted)),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Text(s['name'] ?? '', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text('MST: ${s['taxCode'] ?? 'N/A'}', style: TextStyle(fontSize: 11, color: c.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      if (s['paymentTermDays'] != null) Text('Thanh toán: ${s['paymentTermDays']} ngày', style: TextStyle(fontSize: 11, color: c.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ])),
                     Icon(Icons.chevron_right, color: c.textMuted),
                   ]),

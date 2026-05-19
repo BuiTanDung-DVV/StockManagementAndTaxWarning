@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../providers/inventory_provider.dart';
 import '../../../core/widgets/app_animations.dart';
 import 'purchase_order_form_screen.dart';
@@ -59,7 +60,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
               final po = items[i] as Map;
               final code = po['orderCode'] ?? po['code'] ?? 'PO-${po['id'] ?? i}';
               final supplierName = po['supplier']?['name'] ?? po['supplierName'] ?? '';
-              final totalAmount = (po['totalAmount'] as num?)?.toDouble() ?? 0;
+              final totalAmount = asDouble(po['totalAmount']);
               final createdAt = po['createdAt']?.toString().split('T').first ?? '';
               final invoiceNumber = po['invoiceNumber'] ?? '';
               final status = po['status'] ?? '';

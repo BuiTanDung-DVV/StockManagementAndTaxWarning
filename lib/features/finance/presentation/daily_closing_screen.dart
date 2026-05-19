@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
@@ -22,8 +23,8 @@ class DailyClosingScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (data) {
-          final totalIncome = (data['totalIncome'] as num?) ?? 0;
-          final totalExpense = (data['totalExpense'] as num?) ?? 0;
+          final totalIncome = asNum(data['totalIncome']);
+          final totalExpense = asNum(data['totalExpense']);
           final netProfit = totalIncome - totalExpense;
           final orderCount = (data['orderCount'] as num?) ?? 0;
           final closed = data['closed'] == true;
@@ -72,7 +73,7 @@ class DailyClosingScreen extends ConsumerWidget {
                     Text(t['category'] ?? '', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
                     Text(t['counterparty'] ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 12)),
                   ]),
-                  Text(_fmt((t['amount'] as num?) ?? 0), style: TextStyle(fontWeight: FontWeight.bold, color: t['type'] == 'INCOME' ? AppColors.success : AppColors.danger)),
+                  Text(_fmt(asNum(t['amount'])), style: TextStyle(fontWeight: FontWeight.bold, color: t['type'] == 'INCOME' ? AppColors.success : AppColors.danger)),
                 ]),
               )),
             ],

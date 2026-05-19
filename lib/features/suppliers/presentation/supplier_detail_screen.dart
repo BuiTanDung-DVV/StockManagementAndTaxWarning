@@ -35,16 +35,16 @@ class SupplierDetailScreen extends ConsumerWidget {
         ])),
         data: (s) {
           final name = s['name'] ?? 'Nhà cung cấp $id';
-          final contactName = s['contactName'] ?? s['contact'] ?? '';
+          final contactName = s['contactName'] ?? s['contactPerson'] ?? s['contact'] ?? '';
           final phone = s['phone'] ?? '';
           final email = s['email'] ?? '';
           final address = s['address'] ?? '';
           final taxCode = s['taxCode'] ?? '';
           final bankName = s['bankName'] ?? '';
           final bankAccount = s['bankAccount'] ?? '';
-          final paymentTerms = s['paymentTerms'] ?? '';
-          final balance = (s['balance'] as num?)?.toDouble() ?? 0;
-          final totalPurchase = (s['totalPurchase'] as num?)?.toDouble() ?? 0;
+          final paymentTerms = s['paymentTerms'] ?? s['paymentTermDays'] ?? '';
+          final balance = num.tryParse(s['balance']?.toString() ?? '')?.toDouble() ?? 0;
+          final totalPurchase = num.tryParse(s['totalPurchase']?.toString() ?? '')?.toDouble() ?? 0;
 
           return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(children: [
             Container(width: 70, height: 70, decoration: BoxDecoration(color: AppColors.info.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16)),

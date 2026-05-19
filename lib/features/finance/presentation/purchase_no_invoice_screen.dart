@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../products/providers/product_provider.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/finance_provider.dart';
@@ -32,10 +33,10 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (data) {
           final rawItems = (data['items'] as List?) ?? [];
-          final totalPages = (data['totalPages'] as num?)?.toInt() ?? 1;
+          final totalPages = asInt(data['totalPages'], fallback: 1);
           final items = rawItems.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
           final filtered = _filterItems(items, pendingTabOnly: pendingTabOnly);
-          final totalAmount = filtered.fold<num>(0, (s, i) => s + ((i['totalAmount'] as num?) ?? 0));
+          final totalAmount = filtered.fold<num>(0, (s, i) => s + asNum(i['totalAmount']));
 
           if (filtered.isEmpty) {
             return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -121,7 +122,7 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                       Text(p['recordCode'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text(_fmt((p['totalAmount'] as num?) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary)),
+                      Text(_fmt(asNum(p['totalAmount'])), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary)),
                     ]),
                     const SizedBox(height: 6),
                     _buildApprovalChip(approvalStatus),
@@ -138,7 +139,7 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
                       Text('Mặt hàng: ${detailItems.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
                       ...detailItems.take(3).map<Widget>((it) => Text(
-                        '- ${it['productName'] ?? ''}: ${it['quantity'] ?? 0} x ${_fmt((it['unitPrice'] as num?) ?? 0)}',
+                        '- ${it['productName'] ?? ''}: ${it['quantity'] ?? 0} x ${_fmt(asNum(it['unitPrice']))}',
                         style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 11),
                       )),
                     ],
@@ -531,7 +532,7 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
               itemBuilder: (_, i) {
                 final p = products[i] as Map<String, dynamic>;
                 final name = p['name']?.toString() ?? 'Sản phẩm';
-                final unitPrice = (p['costPrice'] ?? p['cost_price'] ?? p['sellingPrice'] ?? p['selling_price'] ?? 0).toDouble();
+                final unitPrice = asDouble(p['costPrice'] ?? p['cost_price'] ?? p['sellingPrice'] ?? p['selling_price']);
                 return ListTile(
                   title: Text(name),
                   subtitle: Text('Giá gợi ý: ${widget.formatCurrency(unitPrice)}'),
@@ -550,5 +551,3 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
     );
   }
 }
-
-

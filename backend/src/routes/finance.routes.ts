@@ -7,6 +7,8 @@ const router = Router();
 // Cash Transactions
 router.get('/cash-transactions', financeCtrl.getCashTransactions);
 router.post('/cash-transactions', financeCtrl.createCashTransaction);
+router.put('/cash-transactions/:id', financeCtrl.updateCashTransaction);
+router.delete('/cash-transactions/:id', financeCtrl.deleteCashTransaction);
 router.get('/cash-transactions/summary', financeCtrl.getCashFlowSummary);
 router.get('/cash-transactions/profit-loss', financeCtrl.getProfitLoss);
 router.get('/cash-transactions/invoice-reconciliation', financeCtrl.getInvoiceReconciliation);
@@ -37,11 +39,15 @@ router.get('/invoices', financeCtrl.getInvoices);
 router.get('/invoices/summary', financeCtrl.getInvoiceSummary);
 router.get('/invoices/:id', financeCtrl.getInvoiceById);
 router.post('/invoices', financeCtrl.createInvoice);
+router.put('/invoices/:id', financeCtrl.updateInvoice);
+router.delete('/invoices/:id', financeCtrl.deleteInvoice);
 
 
 // Tax Obligations
 router.get('/tax-obligations', financeCtrl.getTaxObligations);
 router.post('/tax-obligations', financeCtrl.createTaxObligation);
+router.put('/tax-obligations/:id', financeCtrl.updateTaxObligation);
+router.delete('/tax-obligations/:id', financeCtrl.deleteTaxObligation);
 
 // Purchases Without Invoice
 router.get('/purchases-without-invoice', financeCtrl.getPurchasesWithoutInvoice);

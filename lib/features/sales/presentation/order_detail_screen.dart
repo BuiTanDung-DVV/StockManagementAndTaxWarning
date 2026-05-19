@@ -200,7 +200,7 @@ class OrderDetailScreen extends ConsumerWidget {
                 ),
               ),
               // Bottom payment button
-              if (!isFullyPaid && !isCancelled)
+              if (!isCancelled)
                 Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -208,20 +208,43 @@ class OrderDetailScreen extends ConsumerWidget {
                     boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, -2))],
                   ),
                   child: SafeArea(
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showPaymentDialog(context, ref, id, remaining),
-                        icon: const Icon(Icons.payment, size: 20),
-                        label: Text('Thanh toán (${_currFmt.format(remaining)})'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                        ),
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!isFullyPaid)
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showPaymentDialog(context, ref, id, remaining),
+                              icon: const Icon(Icons.payment, size: 20),
+                              label: Text('Thanh toán (${_currFmt.format(remaining)})'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.success,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        if (status == 'DELIVERED' || status == 'COMPLETED' || isFullyPaid) ...[
+                          if (!isFullyPaid) const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showReturnDialog(context, ref, id, items, paidAmount),
+                              icon: const Icon(Icons.assignment_return, size: 20, color: AppColors.danger),
+                              label: const Text('Trả hàng', style: TextStyle(color: AppColors.danger)),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: AppColors.danger),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -332,6 +355,12 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                     );
                     return;
                   }
+                  if (amount > remaining) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Số tiền không được vượt quá ${_currFmt.format(remaining)}'), backgroundColor: AppColors.danger),
+                    );
+                    return;
+                  }
                   Navigator.of(ctx).pop();
                   try {
                     await ref.read(salesRepoProvider).addPayment(orderId, {
@@ -361,6 +390,147 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                 label: Text('Xác nhận thanh toán'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ]),
+        ]),
+      ),
+    ),
+  );
+}
+
+void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? items, double maxRefund) {
+  final c = AppThemeColors.of(context);
+  final amountCtrl = TextEditingController(text: maxRefund.toStringAsFixed(0));
+  String selectedMethod = 'CASH';
+  final reasonCtrl = TextEditingController();
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: c.card,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) => Padding(
+        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(
+            child: Container(width: 40, height: 4, decoration: BoxDecoration(color: c.textMuted, borderRadius: BorderRadius.circular(2))),
+          ),
+          const SizedBox(height: 16),
+          const Text('Trả hàng & Hoàn tiền', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.danger)),
+          const SizedBox(height: 4),
+          Text('Số tiền đã nhận: ${_currFmt.format(maxRefund)}', style: TextStyle(fontSize: 13, color: c.textSecondary)),
+          const SizedBox(height: 20),
+
+          // Amount field
+          const Text('Số tiền hoàn (<= đã nhận)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: amountCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              hintText: 'Nhập số tiền hoàn',
+              suffixText: '₫',
+              filled: true, fillColor: c.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Payment method
+          const Text('Phương thức hoàn tiền', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          Wrap(spacing: 8, children: [
+            _MethodChip('CASH', 'Tiền mặt', Icons.money, selectedMethod, (v) => setState(() => selectedMethod = v)),
+            _MethodChip('TRANSFER', 'Chuyển khoản', Icons.account_balance, selectedMethod, (v) => setState(() => selectedMethod = v)),
+          ]),
+          const SizedBox(height: 16),
+
+          // Reason
+          const Text('Lý do trả hàng', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: reasonCtrl,
+            decoration: InputDecoration(
+              hintText: 'Lý do trả hàng',
+              filled: true, fillColor: c.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Submit buttons
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: c.textMuted),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: const Text('Hủy'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final amount = double.tryParse(amountCtrl.text) ?? 0;
+                  if (amount < 0 || amount > maxRefund) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Số tiền hoàn phải hợp lệ (0 - ${_currFmt.format(maxRefund)})'), backgroundColor: AppColors.danger),
+                    );
+                    return;
+                  }
+                  Navigator.of(ctx).pop();
+                  try {
+                    final returnItems = (items ?? []).map((i) {
+                      final it = i as Map;
+                      return {
+                        'productId': it['productId'] ?? it['product']?['id'],
+                        'quantity': it['quantity'],
+                        'unitPrice': it['unitPrice'],
+                        'subtotal': it['subtotal'],
+                        'reason': reasonCtrl.text.trim(),
+                      };
+                    }).where((item) => item['productId'] != null).toList();
+
+                    await ref.read(salesRepoProvider).createReturn(orderId, {
+                      'refundAmount': amount,
+                      'refundMethod': selectedMethod,
+                      'reason': reasonCtrl.text.trim(),
+                      'items': returnItems,
+                    });
+                    ref.invalidate(salesDetailProvider(orderId));
+                    ref.invalidate(salesListProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Đã xử lý trả hàng và hoàn ${_currFmt.format(amount)}'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.assignment_return, size: 18),
+                label: const Text('Xác nhận trả hàng'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 14),

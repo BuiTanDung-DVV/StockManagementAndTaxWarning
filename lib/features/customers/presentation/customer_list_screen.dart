@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../providers/customer_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
@@ -51,7 +52,7 @@ class CustomerListScreen extends ConsumerWidget {
               ),
               itemBuilder: (_, i) {
                 final cust = items[i];
-                final debt = (cust['totalDebt'] ?? 0).toDouble();
+                final debt = asDouble(cust['totalDebt'] ?? cust['balance']);
                 return GestureDetector(
                   onTap: () => context.push('/customers/${cust['id']}'),
                   child: Container(

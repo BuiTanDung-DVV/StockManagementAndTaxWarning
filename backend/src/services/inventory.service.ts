@@ -66,7 +66,27 @@ export class InventoryService {
             .addGroupBy('p.name')
             .setParameters({ from: fromDate, to: toDate, warehouseId, shopId });
 
-        return qb.getRawMany();
+        const rows = await qb.getRawMany();
+        const items = rows.map((row) => ({
+            id: Number(row.id),
+            sku: row.sku,
+            name: row.name,
+            productName: row.name,
+            openingStock: Number(row.startQty || 0),
+            totalImport: Number(row.importQty || 0),
+            imported: Number(row.importQty || 0),
+            totalExport: Number(row.exportQty || 0),
+            exported: Number(row.exportQty || 0),
+            closingStock: Number(row.endQty || 0),
+        }));
+        const summary = items.reduce((acc, item) => ({
+            openingStock: acc.openingStock + item.openingStock,
+            totalImport: acc.totalImport + item.totalImport,
+            totalExport: acc.totalExport + item.totalExport,
+            closingStock: acc.closingStock + item.closingStock,
+        }), { openingStock: 0, totalImport: 0, totalExport: 0, closingStock: 0 });
+
+        return { items, summary, from: fromDate, to: toDate };
     }
     
     async getExpiringProducts(shopId: number, daysAhead: number = 30) {
@@ -119,13 +139,17 @@ export class InventoryService {
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
     async createPurchaseOrder(shopId: number, dto: any) {
+        const targetWarehouseId = dto.warehouseId
+            ? Number(dto.warehouseId)
+            : await this.ensureDefaultWarehouseId(shopId);
+        await this.assertWarehouseBelongsToShop(shopId, targetWarehouseId);
         let totalAmount = 0;
         const items = (dto.items || []).map((i: any) => {
             const sub = i.quantity * i.unitPrice;
             totalAmount += sub;
             return this.poItemRepo.create({ ...i, subtotal: sub, shopId });
         });
-        const po = this.poRepo.create({ ...dto, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items, shopId });
+        const po = this.poRepo.create({ ...dto, warehouseId: targetWarehouseId, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items, shopId });
         const savedPO = await this.poRepo.save(po) as unknown as PurchaseOrder;
 
         // Tạo inventory lots cho mỗi item (để COGS tính đúng)
@@ -139,10 +163,34 @@ export class InventoryService {
                     notes: `PO ${savedPO.orderCode}`,
                     shopId,
                 });
+                await this.increaseStock(
+                    shopId,
+                    Number(item.productId),
+                    targetWarehouseId,
+                    Number(item.quantity),
+                    savedPO.id,
+                );
             }
         }
 
         return savedPO;
+    }
+
+    async updatePurchaseOrder(shopId: number, id: number, dto: any) {
+        const po = await this.poRepo.findOne({ where: { id, shopId } });
+        if (!po) throw new Error('PurchaseOrder not found');
+        if (dto.warehouseId) {
+            await this.assertWarehouseBelongsToShop(shopId, Number(dto.warehouseId));
+            po.warehouseId = Number(dto.warehouseId);
+        }
+        po.status = dto.status || po.status;
+        return this.poRepo.save(po);
+    }
+
+    async deletePurchaseOrder(shopId: number, id: number) {
+        const po = await this.poRepo.findOne({ where: { id, shopId } });
+        if (po) await this.poRepo.remove(po);
+        return { success: true };
     }
 
     // Stock Takes
@@ -159,5 +207,57 @@ export class InventoryService {
             notes: i.notes
         }));
         return this.stockTakeRepo.save(this.stockTakeRepo.create({ ...dto, items, shopId }));
+    }
+
+    async updateStockTake(shopId: number, id: number, dto: any) {
+        const stockTake = await this.stockTakeRepo.findOne({ where: { id, shopId }, relations: ['items'] });
+        if (!stockTake) throw new Error('StockTake not found');
+        stockTake.status = dto.status || stockTake.status;
+        stockTake.notes = dto.notes !== undefined ? dto.notes : stockTake.notes;
+        return this.stockTakeRepo.save(stockTake);
+    }
+
+    async deleteStockTake(shopId: number, id: number) {
+        const stockTake = await this.stockTakeRepo.findOne({ where: { id, shopId } });
+        if (stockTake) await this.stockTakeRepo.remove(stockTake);
+        return { success: true };
+    }
+
+    private async assertWarehouseBelongsToShop(shopId: number, warehouseId: number) {
+        const warehouse = await this.warehouseRepo.findOne({ where: { id: warehouseId, shopId, isActive: true } as any });
+        if (!warehouse) throw new Error('Warehouse not found for shop');
+    }
+
+    private async ensureDefaultWarehouseId(shopId: number) {
+        let warehouse = await this.warehouseRepo.findOne({ where: { shopId, isActive: true } as any });
+        if (!warehouse) {
+            warehouse = await this.warehouseRepo.save(this.warehouseRepo.create({
+                name: `Kho mac dinh ${shopId}`,
+                shopId,
+                isActive: true,
+            }));
+        }
+        return warehouse.id;
+    }
+
+    private async increaseStock(shopId: number, productId: number, warehouseId: number, quantity: number, purchaseOrderId: number) {
+        let stock = await this.stockRepo.findOne({ where: { shopId, productId, warehouseId } as any });
+        if (!stock) {
+            stock = this.stockRepo.create({ shopId, productId, warehouseId, quantity: 0, updatedAt: new Date() });
+        }
+        stock.quantity = Number(stock.quantity || 0) + quantity;
+        stock.updatedAt = new Date();
+        await this.stockRepo.save(stock);
+
+        await this.movementRepo.save(this.movementRepo.create({
+            shopId,
+            productId,
+            warehouseId,
+            movementType: 'IN',
+            quantity,
+            referenceType: 'PURCHASE_ORDER',
+            referenceId: purchaseOrderId,
+            notes: `Purchase order #${purchaseOrderId}`,
+        }));
     }
 }

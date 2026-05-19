@@ -43,7 +43,7 @@ class MainShell extends ConsumerWidget {
           icon: HugeIcons.strokeRoundedPackage,
           label: AppStrings.navInventory,
           route: '/inventory',
-          prefixes: ['/inventory', '/purchase', '/stock', '/xnt'],
+          prefixes: ['/inventory', '/purchase-orders', '/stock', '/xnt'],
         ),
       if (shop.hasPermission('finance'))
         _NavDef(
@@ -63,6 +63,7 @@ class MainShell extends ConsumerWidget {
             '/salary-ledger',
             '/tax-declaration',
             '/transactions',
+            '/purchases-no-invoice',
           ],
         ),
       _NavDef(

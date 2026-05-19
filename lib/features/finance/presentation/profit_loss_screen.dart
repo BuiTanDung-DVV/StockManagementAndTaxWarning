@@ -62,11 +62,11 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (data) {
-          final revenue = (data['revenue'] as num?) ?? 0;
-          final cogs = (data['cogs'] as num?) ?? 0;
-          final grossProfit = (data['grossProfit'] as num?) ?? 0;
-          final expenses = (data['expenses'] as num?) ?? 0;
-          final netProfit = (data['netProfit'] as num?) ?? 0;
+          final revenue = num.tryParse(data['revenue']?.toString() ?? '0') ?? 0;
+          final cogs = num.tryParse(data['cogs']?.toString() ?? '0') ?? 0;
+          final grossProfit = num.tryParse(data['grossProfit']?.toString() ?? '0') ?? 0;
+          final expenses = num.tryParse(data['expenses']?.toString() ?? '0') ?? 0;
+          final netProfit = num.tryParse(data['netProfit']?.toString() ?? '0') ?? 0;
           final grossPct = revenue > 0 ? (grossProfit / revenue * 100).toStringAsFixed(1) : '0.0';
           final netPct = revenue > 0 ? (netProfit / revenue * 100).toStringAsFixed(1) : '0.0';
 

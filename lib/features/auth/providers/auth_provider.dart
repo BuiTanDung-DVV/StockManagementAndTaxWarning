@@ -86,6 +86,10 @@ class AuthNotifier extends Notifier<AuthState> {
       final accountType = user?['accountType'] as String? ?? 'PERSONAL';
       final isOnboarded = user?['isOnboarded'] as bool? ?? true;
 
+      // Initialize shop provider with shops from login response
+      final shops = data['shops'] as List? ?? [];
+      ref.read(shopProvider.notifier).initFromLogin(shops);
+
       state = AuthState(
         isLoggedIn: true,
         token: token,
@@ -93,10 +97,6 @@ class AuthNotifier extends Notifier<AuthState> {
         accountType: accountType,
         isOnboarded: isOnboarded,
       );
-
-      // Initialize shop provider with shops from login response
-      final shops = data['shops'] as List? ?? [];
-      ref.read(shopProvider.notifier).initFromLogin(shops);
 
       return true;
     } catch (e) {
@@ -138,6 +138,9 @@ class AuthNotifier extends Notifier<AuthState> {
       final updatedUser = response['user'] is Map
           ? Map<String, dynamic>.from(response['user'])
           : null;
+      // Reload shops to get the updated status (ACTIVE / PENDING)
+      await ref.read(shopProvider.notifier).loadUserShops();
+
       if (updatedUser != null) {
         state = state.copyWith(
           user: {...?state.user, ...updatedUser},
@@ -147,9 +150,6 @@ class AuthNotifier extends Notifier<AuthState> {
       } else {
         state = state.copyWith(isOnboarded: true, isLoading: false);
       }
-
-      // Reload shops to get the updated status (ACTIVE / PENDING)
-      await ref.read(shopProvider.notifier).loadUserShops();
 
       return true;
     } catch (e) {
@@ -166,6 +166,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    state = const AuthState();
     await _api.clearToken();
     ref.read(shopProvider.notifier).clear();
 
@@ -208,8 +209,6 @@ class AuthNotifier extends Notifier<AuthState> {
     ref.invalidate(notificationProvider);
     ref.invalidate(costingProvider);
     ref.invalidate(taxConfigProvider);
-
-    state = const AuthState();
   }
 
   Future<List<Map<String, dynamic>>> searchShops(String query) async {

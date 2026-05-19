@@ -69,6 +69,16 @@ export const createPurchaseOrder = async (req: Request, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+export const updatePurchaseOrder = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await inventoryService.updatePurchaseOrder((req as any).shopId, +req.params.id, req.body) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+export const deletePurchaseOrder = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await inventoryService.deletePurchaseOrder((req as any).shopId, +req.params.id) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+
 export const getStockTakes = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await inventoryService.getStockTakes((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20)) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
@@ -83,5 +93,15 @@ export const createStockTake = async (req: Request, res: Response) => {
         };
         res.json({ success: true, data: await inventoryService.createStockTake((req as any).shopId, dto) });
     }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+export const updateStockTake = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await inventoryService.updateStockTake((req as any).shopId, +req.params.id, req.body) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+export const deleteStockTake = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await inventoryService.deleteStockTake((req as any).shopId, +req.params.id) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };

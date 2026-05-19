@@ -16,9 +16,13 @@ router.get('/inventory/slow-moving', inventoryCtrl.getSlowMoving);
 // Purchase Orders
 router.get('/purchase-orders', inventoryCtrl.getPurchaseOrders);
 router.post('/purchase-orders', inventoryCtrl.createPurchaseOrder);
+router.put('/purchase-orders/:id', inventoryCtrl.updatePurchaseOrder);
+router.delete('/purchase-orders/:id', inventoryCtrl.deletePurchaseOrder);
 
 // Stock Takes
 router.get('/stock-takes', inventoryCtrl.getStockTakes);
 router.post('/stock-takes', inventoryCtrl.createStockTake);
+router.put('/stock-takes/:id', inventoryCtrl.updateStockTake);
+router.delete('/stock-takes/:id', inventoryCtrl.deleteStockTake);
 
 export default router;

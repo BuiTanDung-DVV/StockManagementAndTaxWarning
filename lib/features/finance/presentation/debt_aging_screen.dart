@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../customers/providers/customer_provider.dart';
 
 class DebtAgingScreen extends ConsumerWidget {
@@ -27,11 +28,11 @@ class DebtAgingScreen extends ConsumerWidget {
           final buckets = agingData['buckets'] as Map<String, dynamic>? ?? {};
           final summary = agingData['summary'] as Map<String, dynamic>? ?? {};
           final customers = (agingData['customers'] as List?) ?? const [];
-          final totalDebt = (agingData['totalDebt'] as num?) ?? 0;
-          final current = (buckets['current'] as num?) ?? 0;
-          final days30 = (buckets['past30'] as num?) ?? (buckets['days30'] as num?) ?? 0;
-          final days60 = (buckets['past60'] as num?) ?? (buckets['days60'] as num?) ?? 0;
-          final over90 = (buckets['past90'] as num?) ?? (buckets['over90'] as num?) ?? 0;
+          final totalDebt = asNum(agingData['totalDebt']);
+          final current = asNum(buckets['current']);
+          final days30 = asNum(buckets['past30'] ?? buckets['days30']);
+          final days60 = asNum(buckets['past60'] ?? buckets['days60']);
+          final over90 = asNum(buckets['past90'] ?? buckets['over90']);
 
           if (totalDebt == 0) {
             return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -50,7 +51,7 @@ class DebtAgingScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(_fmt(totalDebt), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.primary)),
                 const SizedBox(height: 8),
-                Text('Nợ quá hạn: ${(((summary['overdueRatio'] as num?) ?? 0) * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 12, color: AppColors.danger)),
+                Text('Nợ quá hạn: ${(asNum(summary['overdueRatio']) * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 12, color: AppColors.danger)),
               ])),
             const SizedBox(height: 16),
             const Text('Phân loại theo thời hạn', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -76,7 +77,7 @@ class DebtAgingScreen extends ConsumerWidget {
                           Text('Quá hạn tối đa: ${item['overdueDays'] ?? 0} ngày', style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary)),
                         ]),
                       ),
-                      Text(_fmt((item['total'] as num?) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger)),
+                      Text(_fmt(asNum(item['total'])), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger)),
                     ],
                   ),
                 );
@@ -101,10 +102,10 @@ class DebtAgingScreen extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(item['customerName'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        Text('${_fmt((item['remaining'] as num?) ?? 0)} • ${item['daysOverdue'] ?? 0} ngày quá hạn', style: const TextStyle(fontSize: 11, color: AppColors.danger)),
+                        Text('${_fmt(asNum(item['remaining']))} • ${item['daysOverdue'] ?? 0} ngày quá hạn', style: const TextStyle(fontSize: 11, color: AppColors.danger)),
                       ])),
                       ElevatedButton.icon(
-                        onPressed: () => _showRemindDialog(context, item['customerName'] ?? '', _fmt((item['remaining'] as num?) ?? 0)),
+                        onPressed: () => _showRemindDialog(context, item['customerName'] ?? '', _fmt(asNum(item['remaining']))),
                         style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), minimumSize: Size.zero),
                         icon: const Icon(Icons.message, size: 14), label: const Text('Nhắc nợ', style: TextStyle(fontSize: 11))),
                     ]));

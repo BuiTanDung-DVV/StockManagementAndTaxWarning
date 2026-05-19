@@ -35,7 +35,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
       _addressCtrl.text = s['address'] ?? '';
       _taxCodeCtrl.text = s['taxCode'] ?? s['tax_code'] ?? '';
       _contactPersonCtrl.text = s['contactPerson'] ?? s['contact_person'] ?? '';
-      _noteCtrl.text = s['note'] ?? '';
+      _noteCtrl.text = s['notes'] ?? s['note'] ?? '';
     }
   }
 
@@ -51,7 +51,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
         'address': _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
         'taxCode': _taxCodeCtrl.text.trim().isEmpty ? null : _taxCodeCtrl.text.trim(),
         'contactPerson': _contactPersonCtrl.text.trim().isEmpty ? null : _contactPersonCtrl.text.trim(),
-        'note': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       };
       if (_isEdit) {
         await repo.update(widget.supplier!['id'], data);

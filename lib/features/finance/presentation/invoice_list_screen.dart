@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
@@ -33,9 +34,9 @@ class InvoiceListScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (_, st) => const SizedBox(),
               data: (summary) {
-                final vatIn = (summary['vatIn'] as num?) ?? 0;
-                final vatOut = (summary['vatOut'] as num?) ?? 0;
-                final vatOwed = (summary['vatOwed'] as num?) ?? 0;
+                final vatIn = asNum(summary['vatIn']);
+                final vatOut = asNum(summary['vatOut']);
+                final vatOwed = asNum(summary['vatOwed']);
                 return Container(padding: const EdgeInsets.all(14), margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
                   child: Column(children: [
                     const Text('Thuế VAT tháng này', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -80,8 +81,8 @@ class InvoiceListScreen extends ConsumerWidget {
                         Text(inv['invoiceDate']?.toString().split('T').first ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 11)),
                       ])),
                       Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                        Text(_fmt((inv['totalAmount'] as num?) ?? 0), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isOut ? AppColors.danger : AppColors.success)),
-                        Text('VAT: ${_fmt((inv['taxAmount'] as num?) ?? 0)}', style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary)),
+                        Text(_fmt(asNum(inv['totalAmount'])), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isOut ? AppColors.danger : AppColors.success)),
+                        Text('VAT: ${_fmt(asNum(inv['taxAmount']))}', style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary)),
                       ]),
                     ]));
                 },
@@ -121,10 +122,19 @@ class InvoiceListScreen extends ConsumerWidget {
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
         ElevatedButton(onPressed: () async {
+          final partnerName = partnerC.text.trim();
+          final subtotal = double.tryParse(amountC.text) ?? 0;
+          final taxAmount = double.tryParse(vatC.text) ?? 0;
+          if (partnerName.isEmpty || subtotal <= 0 || taxAmount < 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Vui lòng nhập đối tác, số tiền > 0 và VAT hợp lệ'), backgroundColor: AppColors.danger),
+            );
+            return;
+          }
           await ref.read(financeRepoProvider).createInvoice({
-            'invoiceType': type, 'invoiceNumber': numC.text, 'partnerName': partnerC.text,
-            'subtotal': double.tryParse(amountC.text) ?? 0, 'taxAmount': double.tryParse(vatC.text) ?? 0,
-            'totalAmount': (double.tryParse(amountC.text) ?? 0) + (double.tryParse(vatC.text) ?? 0),
+            'invoiceType': type, 'invoiceNumber': numC.text.trim().isEmpty ? null : numC.text.trim(), 'partnerName': partnerName,
+            'subtotal': subtotal, 'taxAmount': taxAmount,
+            'totalAmount': subtotal + taxAmount,
             'invoiceDate': DateTime.now().toIso8601String().split('T').first,
           });
           ref.invalidate(invoiceListProvider);

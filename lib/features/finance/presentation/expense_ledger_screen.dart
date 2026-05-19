@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../providers/finance_provider.dart';
 
@@ -22,7 +23,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (data) {
           final categories = (data['categories'] as List?) ?? [];
-          final total = (data['total'] as num?) ?? 0;
+          final total = asNum(data['total']);
           final recentItems = (data['recentItems'] as List?) ?? [];
 
           if (categories.isEmpty && recentItems.isEmpty) {
@@ -47,7 +48,8 @@ class ExpenseLedgerScreen extends ConsumerWidget {
             ...categories.asMap().entries.map<Widget>((entry) {
               final c = entry.value;
               final color = catColors[entry.key % catColors.length];
-              final pct = total > 0 ? ((c['amount'] as num) / total * 100).toStringAsFixed(1) : '0';
+              final amount = asNum(c['amount']);
+              final pct = total > 0 ? (amount / total * 100).toStringAsFixed(1) : '0';
               return Container(margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(10)),
                 child: Row(children: [
                   Container(width: 4, height: 36, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
@@ -57,7 +59,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                     Text('${c['count']} giao dịch', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 11)),
                   ])),
                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    Text(_fmt((c['amount'] as num?) ?? 0), style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
+                    Text(_fmt(amount), style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
                     Text('$pct%', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 11)),
                   ]),
                 ]));
@@ -72,7 +74,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                     Text(t['counterparty'] ?? _categoryLabel(t['category']), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
                     Text(t['transactionDate']?.toString().split('T').first ?? '', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 11)),
                   ]),
-                  Text(_fmt((t['amount'] as num?) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger, fontSize: 13)),
+                  Text(_fmt(asNum(t['amount'])), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger, fontSize: 13)),
                 ]))),
             ],
           ]));
