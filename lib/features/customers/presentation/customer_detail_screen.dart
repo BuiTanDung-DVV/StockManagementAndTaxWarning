@@ -33,8 +33,8 @@ class CustomerDetailScreen extends ConsumerWidget {
           final email = c['email'] ?? '';
           final address = c['address'] ?? '';
           final customerType = c['customerType'] ?? 'RETAIL';
-          final balance = (c['balance'] as num?) ?? 0;
-          final creditLimit = (c['creditLimit'] as num?) ?? 0;
+          final balance = num.tryParse(c['balance']?.toString() ?? '') ?? 0;
+          final creditLimit = num.tryParse(c['creditLimit']?.toString() ?? '') ?? 0;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),

@@ -10,6 +10,11 @@ export const AppDataSource = new DataSource({
         host: config.dbHost,
         database: config.dbDatabase,
       }),
+  extra: {
+    max: 10,
+    connectionTimeoutMillis: 3000,
+    idleTimeoutMillis: 10000,
+  },
   synchronize: false, // Schema managed by Supabase — never auto-sync
   entities: [
     path.join(__dirname, '../**/entities{.ts,.js}'),

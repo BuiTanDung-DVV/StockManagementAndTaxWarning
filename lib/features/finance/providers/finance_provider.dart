@@ -5,6 +5,18 @@ class FinanceRepository {
   final ApiClient _api;
   FinanceRepository(this._api);
 
+  List<dynamic> _normalizeList(dynamic value) {
+    if (value is List) return value;
+    if (value is Map) {
+      final nested = value['items'] ?? value['data'];
+      if (nested is List) return nested;
+      if (nested is Map && nested.isNotEmpty) return [nested];
+      if (value.isEmpty) return [];
+      if (value.containsKey('id')) return [value];
+    }
+    return [];
+  }
+
   Future<Map<String, dynamic>> findTransactions({int page = 1, int limit = 20, String? type, String? from, String? to}) async {
     final params = <String, dynamic>{'page': '$page', 'limit': '$limit'};
     if (type != null) params['type'] = type;
@@ -40,20 +52,20 @@ class FinanceRepository {
   Future<Map<String, dynamic>> createDailyClosing(Map<String, dynamic> dto) async =>
       await _api.post('/daily-closings', data: dto);
 
-  Future<List<dynamic>> findAccounts() async => await _api.get('/cash-accounts');
+  Future<List<dynamic>> findAccounts() async => _normalizeList(await _api.get('/cash-accounts'));
 
   Future<List<dynamic>> findForecasts({String? from, String? to}) async {
     final params = <String, dynamic>{};
     if (from != null) params['from'] = from;
     if (to != null) params['to'] = to;
-    return await _api.get('/cashflow-forecasts', params: params);
+    return _normalizeList(await _api.get('/cashflow-forecasts', params: params));
   }
 
   Future<Map<String, dynamic>> createForecast(Map<String, dynamic> dto) async => await _api.post('/cashflow-forecasts', data: dto);
   Future<Map<String, dynamic>> updateForecast(int id, Map<String, dynamic> dto) async => await _api.put('/cashflow-forecasts/$id', data: dto);
   Future<void> deleteForecast(int id) async => await _api.delete('/cashflow-forecasts/$id');
 
-  Future<List<dynamic>> findBudgetPlans() async => await _api.get('/budget-plans');
+  Future<List<dynamic>> findBudgetPlans() async => _normalizeList(await _api.get('/budget-plans'));
   Future<Map<String, dynamic>> createBudgetPlan(Map<String, dynamic> dto) async => await _api.post('/budget-plans', data: dto);
   Future<Map<String, dynamic>> updateBudgetPlan(int id, Map<String, dynamic> dto) async => await _api.put('/budget-plans/$id', data: dto);
   Future<void> deleteBudgetPlan(int id) async => await _api.delete('/budget-plans/$id');
@@ -87,6 +99,8 @@ class FinanceRepository {
   // Tax Obligations
   Future<Map<String, dynamic>> getTaxObligations() async => await _api.get('/tax-obligations');
   Future<Map<String, dynamic>> createTaxObligation(Map<String, dynamic> dto) async => await _api.post('/tax-obligations', data: dto);
+  Future<Map<String, dynamic>> updateTaxObligation(int id, Map<String, dynamic> dto) async => await _api.put('/tax-obligations/$id', data: dto);
+  Future<void> deleteTaxObligation(int id) async => await _api.delete('/tax-obligations/$id');
 }
 
 final financeRepoProvider = Provider<FinanceRepository>((ref) => FinanceRepository(ref.read(apiClientProvider)));

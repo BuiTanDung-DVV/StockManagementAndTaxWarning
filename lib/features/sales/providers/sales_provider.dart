@@ -15,6 +15,7 @@ class SalesRepository {
   Future<Map<String, dynamic>> create(Map<String, dynamic> dto) async => await _api.post('/sales-orders', data: dto);
   Future<Map<String, dynamic>> cancel(int id) async => await _api.post('/sales-orders/$id/cancel');
   Future<Map<String, dynamic>> addPayment(int id, Map<String, dynamic> dto) async => await _api.post('/sales-orders/$id/payments', data: dto);
+  Future<Map<String, dynamic>> createReturn(int id, Map<String, dynamic> dto) async => await _api.post('/sales-orders/$id/returns', data: dto);
 
   Future<Map<String, dynamic>> getSummary(String from, String to) async =>
       await _api.get('/sales-orders/summary', params: {'from': from, 'to': to});

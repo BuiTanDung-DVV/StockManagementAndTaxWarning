@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../providers/finance_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
@@ -32,7 +33,7 @@ class TransactionHistoryScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final tx = items[index];
               final isIncome = tx['type'] == 'INCOME' || tx['type'] == 'income';
-              final amount = (tx['amount'] ?? 0).toDouble();
+              final amount = asDouble(tx['amount']);
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: EdgeInsets.all(12),

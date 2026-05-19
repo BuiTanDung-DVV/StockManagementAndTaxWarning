@@ -7,6 +7,7 @@ router.get('/suppliers', supplierCtrl.findAll);
 router.get('/suppliers/:id', supplierCtrl.findOne);
 router.post('/suppliers', supplierCtrl.create);
 router.put('/suppliers/:id', supplierCtrl.update);
+router.delete('/suppliers/:id', supplierCtrl.remove);
 router.get('/suppliers/:id/payables', supplierCtrl.payables);
 
 export default router;

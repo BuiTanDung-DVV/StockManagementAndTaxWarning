@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,24 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../settings/providers/shop_provider.dart';
+
+List<Map<String, dynamic>> _normalizeMapList(dynamic raw) {
+  final value = raw is List
+      ? raw
+      : raw is Map
+          ? (raw['data'] ?? raw['items'] ?? (raw.isEmpty ? [] : raw))
+          : [];
+  if (value is List) {
+    return value
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+  if (value is Map && value.isNotEmpty) {
+    return [Map<String, dynamic>.from(value)];
+  }
+  return [];
+}
 
 class StaffManagementScreen extends ConsumerStatefulWidget {
   const StaffManagementScreen({super.key});
@@ -27,12 +46,12 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
     final api = ref.read(apiClientProvider);
     final shopId = ref.read(shopProvider).currentShopId ?? 1;
     try {
-      final members = await api.get('/shop-members?shopId=$shopId');
-      final roles = await api.get('/shop-roles?shopId=$shopId');
+      final membersRaw = await api.get('/shop-members?shopId=$shopId');
+      final rolesRaw = await api.get('/shop-roles?shopId=$shopId');
       if (!mounted) return;
       setState(() {
-        _members = (members as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _roles = (roles as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _members = _normalizeMapList(membersRaw);
+        _roles = _normalizeMapList(rolesRaw);
         _loading = false;
       });
     } catch (e) {
@@ -271,7 +290,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
       final data = await api.get('/shop-roles?shopId=$shopId');
       if (!mounted) return;
       setState(() {
-        _roles = (data as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _roles = _normalizeMapList(data);
         _loading = false;
       });
     } catch (_) {
@@ -304,12 +323,22 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlg) => AlertDialog(
+        builder: (ctx, setDlg) {
+          final nameEmpty = nameCtrl.text.trim().isEmpty;
+          return AlertDialog(
           title: Text(existing == null ? 'Tạo vai trò mới' : 'Sửa vai trò'),
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Tên vai trò', hintText: 'VD: Thu ngân, Thủ kho')),
+              TextField(
+                controller: nameCtrl,
+                onChanged: (_) => setDlg(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Tên vai trò',
+                  hintText: 'VD: Thu ngân, Thủ kho',
+                  errorText: nameEmpty ? 'Vui lòng nhập tên vai trò' : null,
+                ),
+              ),
               const SizedBox(height: 16),
               const Align(alignment: Alignment.centerLeft, child: Text('Phân quyền:', style: TextStyle(fontWeight: FontWeight.w600))),
               const SizedBox(height: 8),
@@ -331,9 +360,10 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Lưu')),
+            FilledButton(onPressed: nameEmpty ? null : () => Navigator.pop(ctx, true), child: const Text('Lưu')),
           ],
-        ),
+          );
+        },
       ),
     );
 
@@ -383,7 +413,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
   }
 
   dynamic _parseJson(String s) {
-    try { return Uri.decodeFull(s); } catch (_) { return {}; }
+    try { return jsonDecode(s); } catch (_) { return {}; }
   }
 
   @override

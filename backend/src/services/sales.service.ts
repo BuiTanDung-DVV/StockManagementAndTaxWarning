@@ -3,6 +3,8 @@ import { SalesOrder, SalesOrderItem, SalesReturn, SalesOrderPayment } from '../s
 import { Customer, Receivable } from '../customer/entities';
 import { Product } from '../product/entities';
 import { COGSService } from './cogs.service';
+import { FinanceService } from './finance.service';
+import { InventoryMovement, InventoryStock } from '../inventory/entities';
 
 export class SalesService {
     private orderRepo = AppDataSource.getRepository(SalesOrder);
@@ -12,7 +14,10 @@ export class SalesService {
     private customerRepo = AppDataSource.getRepository(Customer);
     private receivableRepo = AppDataSource.getRepository(Receivable);
     private productRepo = AppDataSource.getRepository(Product);
+    private stockRepo = AppDataSource.getRepository(InventoryStock);
+    private movementRepo = AppDataSource.getRepository(InventoryMovement);
     private cogsService = new COGSService();
+    private financeService = new FinanceService();
 
     async findAll(shopId: number, page = 1, limit = 20) {
         const [items, total] = await this.orderRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
@@ -40,7 +45,7 @@ export class SalesService {
     }
 
     async findById(shopId: number, id: number) {
-        const order = await this.orderRepo.findOne({ where: { id, shopId }, relations: ['items', 'payments'] });
+        const order = await this.orderRepo.findOne({ where: { id, shopId }, relations: ['items', 'items.product', 'payments'] });
         if (!order) throw new Error('Order not found');
 
         const returns = await this.returnRepo.find({
@@ -49,7 +54,7 @@ export class SalesService {
             order: { createdAt: 'DESC' } as any,
         });
 
-        return { ...(order as any), returns };
+        return { ...(this.withItemProductIds(order) as any), returns };
     }
 
     async create(shopId: number, dto: any) {
@@ -63,23 +68,29 @@ export class SalesService {
         let totalCogs = 0;
         const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
         const allLotDeductions: { lotId: number; qty: number }[] = [];
+        const stockDeductions: { productId: number; quantity: number }[] = [];
 
         const items: SalesOrderItem[] = [];
         for (const i of rawItems) {
             const quantity = Number(i.quantity || 0);
             const unitPrice = Number(i.unitPrice || 0);
+            if (quantity <= 0) throw new Error('Validation: Quantity must be greater than 0');
+            if (unitPrice < 0) throw new Error('Validation: Unit price cannot be negative');
             const lineSubtotal = quantity * unitPrice;
             subtotal += lineSubtotal;
 
             const product = i.productId
                 ? await this.productRepo.findOne({ where: { id: Number(i.productId), shopId } })
                 : null;
+            if (!product) throw new Error('Validation: Product not found');
+            await this.assertStockAvailable(shopId, product.id, quantity);
+            stockDeductions.push({ productId: product.id, quantity });
 
             // Tính giá vốn cho item này
             let costPrice = 0;
             if (product && quantity > 0) {
                 try {
-                    const cogsResult = await this.cogsService.calculateCOGS(product.id, quantity);
+                    const cogsResult = await this.cogsService.calculateCOGS(product.id, quantity, undefined, shopId);
                     costPrice = cogsResult.unitCost;
                     totalCogs += cogsResult.totalCost;
                     allLotDeductions.push(...cogsResult.lotDeductions);
@@ -143,28 +154,93 @@ export class SalesService {
             items,
         } as any);
 
-        const savedOrder = await this.orderRepo.save(order);
+        const savedOrder = await this.orderRepo.save(order) as unknown as SalesOrder;
+
+        if (paidAmount > 0) {
+            await this.paymentRepo.save(this.paymentRepo.create({
+                shopId,
+                order: savedOrder,
+                amount: paidAmount,
+                method: dto.paymentMethod || 'CASH',
+                referenceCode: dto.qrPaymentRef,
+                notes: 'Thanh toán khi tạo đơn hàng'
+            }));
+
+            await this.financeService.createCashTransaction(shopId, {
+                amount: paidAmount,
+                type: 'INCOME',
+                category: 'SALES',
+                paymentMethod: dto.paymentMethod || 'CASH',
+                referenceType: 'SALES_ORDER',
+                referenceId: savedOrder.id,
+                referenceCode: savedOrder.orderCode,
+                description: `Thanh toán cho đơn hàng ${savedOrder.orderCode}`,
+                transactionDate: savedOrder.orderDate,
+                status: 'COMPLETED'
+            } as any);
+        }
 
         // Commit: trừ tồn kho các lô
         if (allLotDeductions.length > 0) {
             await this.cogsService.commitLotDeductions(allLotDeductions);
         }
+        if (stockDeductions.length > 0) {
+            await this.commitStockDeductions(shopId, stockDeductions, savedOrder.id);
+        }
 
-        return savedOrder;
+        return this.findById(shopId, savedOrder.id);
     }
 
     async cancel(shopId: number, id: number) {
-        const order = await this.findById(shopId, id);
+        const order = await this.orderRepo.findOne({ where: { id, shopId } });
+        if (!order) throw new Error('Order not found');
         order.status = 'CANCELLED';
-        return this.orderRepo.save(order);
+        await this.orderRepo.save(order);
+        return this.findById(shopId, id);
+    }
+
+    async updateOrder(shopId: number, id: number, dto: Partial<SalesOrder>) {
+        const order = await this.orderRepo.findOne({ where: { id, shopId } });
+        if (!order) throw new Error('Order not found');
+        // Only allow updating non-financial fields after creation
+        const allowedFields: (keyof SalesOrder)[] = ['status', 'notes', 'invoiceNumber', 'paymentMethod'];
+        for (const field of allowedFields) {
+            if (dto[field] !== undefined) {
+                (order as any)[field] = dto[field];
+            }
+        }
+        await this.orderRepo.save(order);
+        return this.findById(shopId, id);
     }
 
     async addPayment(shopId: number, orderId: number, dto: Partial<SalesOrderPayment>) {
-        const order = await this.findById(shopId, orderId);
+        const order = await this.orderRepo.findOne({ where: { id: orderId, shopId } });
+        if (!order) throw new Error('Order not found');
+        const amount = Number(dto.amount || 0);
+        if (amount <= 0) throw new Error('Validation: Payment amount must be greater than 0');
+        const currentPaid = Number(order.paidAmount || 0);
+        const totalAmount = Number(order.totalAmount || 0);
+        if (currentPaid + amount > totalAmount) {
+            throw new Error('Validation: Payment amount exceeds remaining order balance');
+        }
         const payment = await this.paymentRepo.save(this.paymentRepo.create({ ...dto, shopId, order }));
-        order.paidAmount = Number(order.paidAmount || 0) + Number(dto.amount);
-        order.status = (order.paidAmount >= order.totalAmount) ? 'DELIVERED' : 'PENDING';
+        order.paidAmount = currentPaid + amount;
+        order.status = (Number(order.paidAmount) >= totalAmount) ? 'DELIVERED' : 'PENDING';
         await this.orderRepo.save(order);
+
+        await this.financeService.createCashTransaction(shopId, {
+            amount,
+            type: 'INCOME',
+            category: 'SALES',
+            paymentMethod: (dto as any).method || 'CASH',
+            referenceType: 'SALES_ORDER',
+            referenceId: order.id,
+            referenceCode: order.orderCode,
+            description: `Thanh toán thêm cho đơn hàng ${order.orderCode}`,
+            transactionDate: new Date(),
+            status: 'COMPLETED'
+        } as any);
+
         return payment;
     }
 
@@ -172,6 +248,7 @@ export class SalesService {
         // Use base order entity (not the aggregated object returned by findById).
         const order = await this.orderRepo.findOne({ where: { id: orderId, shopId } });
         if (!order) throw new Error('Order not found');
+        if (order.status === 'CANCELLED') throw new Error('Cannot return a cancelled order');
 
         // return_date is NOT NULL in schema → always set.
         const returnDate = dto.returnDate ? new Date(dto.returnDate) : new Date();
@@ -215,6 +292,83 @@ export class SalesService {
             }
         }
 
-        return this.returnRepo.save(entity);
+        const savedReturn = await this.returnRepo.save(entity) as unknown as SalesReturn;
+
+        order.returnStatus = 'RETURNED';
+        await this.orderRepo.save(order);
+
+        if (refundAmount > 0) {
+            await this.financeService.createCashTransaction(shopId, {
+                amount: refundAmount,
+                type: 'EXPENSE',
+                category: 'REFUND',
+                paymentMethod: dto.refundMethod || 'CASH',
+                referenceType: 'SALES_RETURN',
+                referenceId: savedReturn.id,
+                referenceCode: savedReturn.returnCode,
+                description: `Hoàn tiền cho khách trả hàng ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
+                transactionDate: savedReturn.returnDate,
+                status: 'COMPLETED'
+            } as any);
+        }
+
+        return savedReturn;
+    }
+
+    private async assertStockAvailable(shopId: number, productId: number, quantity: number) {
+        const raw = await this.stockRepo.createQueryBuilder('s')
+            .select('COALESCE(SUM(s.quantity), 0)', 'available')
+            .where('s.shop_id = :shopId AND s.product_id = :productId', { shopId, productId })
+            .getRawOne();
+        const available = Number(raw?.available || 0);
+        if (available < quantity) {
+            throw new Error(`Validation: Insufficient stock for product ${productId}: ${available} available, ${quantity} requested`);
+        }
+    }
+
+    private withItemProductIds(order: SalesOrder) {
+        if (Array.isArray((order as any).items)) {
+            (order as any).items = (order as any).items.map((item: any) => ({
+                ...item,
+                productId: item.productId ?? item.product?.id ?? null,
+            }));
+        }
+        return order;
+    }
+
+    private async commitStockDeductions(shopId: number, deductions: { productId: number; quantity: number }[], orderId: number) {
+        for (const deduction of deductions) {
+            let remaining = deduction.quantity;
+            const stocks = await this.stockRepo.find({
+                where: { shopId, productId: deduction.productId } as any,
+                order: { updatedAt: 'ASC', id: 'ASC' } as any,
+            });
+
+            for (const stock of stocks) {
+                if (remaining <= 0) break;
+                const available = Number(stock.quantity || 0);
+                if (available <= 0) continue;
+
+                const take = Math.min(available, remaining);
+                stock.quantity = available - take;
+                stock.updatedAt = new Date();
+                await this.stockRepo.save(stock);
+                await this.movementRepo.save(this.movementRepo.create({
+                    shopId,
+                    productId: deduction.productId,
+                    warehouseId: stock.warehouseId,
+                    movementType: 'OUT',
+                    quantity: take,
+                    referenceType: 'SALES_ORDER',
+                    referenceId: orderId,
+                    notes: `Sales order #${orderId}`,
+                }));
+                remaining -= take;
+            }
+
+            if (remaining > 0) {
+                throw new Error(`Validation: Unable to deduct full stock for product ${deduction.productId}`);
+            }
+        }
     }
 }

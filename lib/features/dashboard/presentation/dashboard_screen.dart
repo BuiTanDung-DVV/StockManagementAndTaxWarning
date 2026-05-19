@@ -145,7 +145,7 @@ class DashboardScreen extends ConsumerWidget {
                 // Sales summary cards
                 salesAsync.when(
                   data: (data) {
-                    final revenue = (data['totalRevenue'] ?? 0).toDouble();
+                    final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
                     final orders =
                         data['totalOrders'] ?? data['orderCount'] ?? 0;
                     final avgOrder = orders > 0 ? revenue / orders : 0.0;
@@ -228,7 +228,7 @@ class DashboardScreen extends ConsumerWidget {
                 // Revenue threshold warning
                 salesAsync.whenOrNull(
                       data: (data) {
-                        final revenue = (data['totalRevenue'] ?? 0).toDouble();
+                        final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
                         if (revenue <= 0) return const SizedBox.shrink();
                         final progress = RevenueThreshold.getProgress(
                           revenue,
@@ -478,12 +478,12 @@ class _TaxObligationReminder extends ConsumerWidget {
             children: pending.map<Widget>((t) {
               final period = t['period'] ?? '';
               final dueDateStr = t['dueDate']?.toString().split('T').first;
-              final vatOwed =
-                  ((t['vatDeclared'] as num?) ?? 0) -
-                  ((t['vatPaid'] as num?) ?? 0);
-              final pitOwed =
-                  ((t['pitDeclared'] as num?) ?? 0) -
-                  ((t['pitPaid'] as num?) ?? 0);
+              final vatDeclared = num.tryParse(t['vatDeclared']?.toString() ?? '0') ?? 0;
+              final vatPaid = num.tryParse(t['vatPaid']?.toString() ?? '0') ?? 0;
+              final pitDeclared = num.tryParse(t['pitDeclared']?.toString() ?? '0') ?? 0;
+              final pitPaid = num.tryParse(t['pitPaid']?.toString() ?? '0') ?? 0;
+              final vatOwed = vatDeclared - vatPaid;
+              final pitOwed = pitDeclared - pitPaid;
               final totalOwed = vatOwed + pitOwed;
               final status = t['status'] ?? 'pending';
 

@@ -12,6 +12,14 @@ export const createCashTransaction = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.createCashTransaction((req as any).shopId, req.body) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
+export const updateCashTransaction = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await financeService.updateCashTransaction((req as any).shopId, +req.params.id, req.body) }); }
+    catch (e: any) { res.status(e.message === 'Cash transaction not found' ? 404 : 500).json({ success: false, message: e.message }); }
+};
+export const deleteCashTransaction = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await financeService.deleteCashTransaction((req as any).shopId, +req.params.id) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
 export const getCashFlowSummary = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.getCashFlowSummary((req as any).shopId, req.query.period as string) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
@@ -98,6 +106,14 @@ export const createInvoice = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.createInvoice((req as any).shopId, req.body) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
+export const updateInvoice = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await financeService.updateInvoice((req as any).shopId, +req.params.id, req.body) }); }
+    catch (e: any) { res.status(e.message === 'Invoice not found' ? 404 : 500).json({ success: false, message: e.message }); }
+};
+export const deleteInvoice = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await financeService.deleteInvoice((req as any).shopId, +req.params.id) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
 
 // Tax Obligations
 export const getTaxObligations = async (req: Request, res: Response) => {
@@ -106,6 +122,14 @@ export const getTaxObligations = async (req: Request, res: Response) => {
 };
 export const createTaxObligation = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.createTaxObligation((req as any).shopId, req.body) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+export const updateTaxObligation = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await financeService.updateTaxObligation((req as any).shopId, +req.params.id, req.body) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+export const deleteTaxObligation = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await financeService.deleteTaxObligation((req as any).shopId, +req.params.id) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 

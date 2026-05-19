@@ -129,6 +129,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   ] else ...[
                     TextField(
                       controller: _phoneCtrl,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
                         hintText: 'Nhập số điện thoại/Email',
                         prefixIcon: Icon(Icons.contact_mail,

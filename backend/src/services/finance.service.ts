@@ -53,8 +53,36 @@ export class FinanceService {
     }
     async createCashTransaction(shopId: number, dto: Partial<CashTransaction>) {
         if (!dto.transactionCode) dto.transactionCode = 'PT' + Date.now().toString().slice(-6);
+        if (!dto.transactionDate) dto.transactionDate = new Date();
         return this.cashTxRepo.save(this.cashTxRepo.create({ ...dto, shopId }));
     }
+
+    async updateCashTransaction(shopId: number, id: number, dto: Partial<CashTransaction>) {
+        const tx = await this.cashTxRepo.findOne({ where: { id, shopId } });
+        if (!tx) throw new Error('Cash transaction not found');
+        Object.assign(tx, dto);
+        return this.cashTxRepo.save(tx);
+    }
+
+    async deleteCashTransaction(shopId: number, id: number) {
+        const tx = await this.cashTxRepo.findOne({ where: { id, shopId } });
+        if (tx) await this.cashTxRepo.remove(tx);
+        return { success: true };
+    }
+
+    async updateInvoice(shopId: number, id: number, dto: Partial<Invoice>) {
+        const invoice = await this.invoiceRepo.findOne({ where: { id, shopId } });
+        if (!invoice) throw new Error('Invoice not found');
+        Object.assign(invoice, dto);
+        return this.invoiceRepo.save(invoice);
+    }
+
+    async deleteInvoice(shopId: number, id: number) {
+        const invoice = await this.invoiceRepo.findOne({ where: { id, shopId } });
+        if (invoice) await this.invoiceRepo.remove(invoice);
+        return { success: true };
+    }
+
     async getCashFlowSummary(shopId: number, period?: string) {
         const now = new Date();
         let fromDate: Date;
@@ -232,7 +260,10 @@ export class FinanceService {
     }
 
     // Cashflow Forecasts
-    async getForecasts(shopId: number) { return this.forecastRepo.find({ where: { shopId }, order: { forecastDate: 'ASC' } }); }
+    async getForecasts(shopId: number) {
+        const items = await this.forecastRepo.find({ where: { shopId }, order: { forecastDate: 'ASC' } });
+        return Array.isArray(items) ? items : (items ? [items] : []);
+    }
     async createForecast(shopId: number, dto: Partial<CashflowForecast>) { return this.forecastRepo.save(this.forecastRepo.create({ ...dto, shopId })); }
     async updateForecast(shopId: number, id: number, dto: Partial<CashflowForecast>) {
         const record = await this.forecastRepo.findOne({ where: { id, shopId } });
@@ -304,7 +335,18 @@ export class FinanceService {
         return { items, totalVat, totalPit, totalPaidVat, totalPaidPit, totalOwed: (totalVat + totalPit) - (totalPaidVat + totalPaidPit) };
     }
     async createTaxObligation(shopId: number, dto: Partial<TaxObligation>) {
-        return this.taxObRepo.save(this.taxObRepo.create({ ...dto, shopId }));
+        return this.taxObRepo.save(this.taxObRepo.create({ ...this.normalizeTaxObligationDto(dto), shopId }));
+    }
+    async updateTaxObligation(shopId: number, id: number, dto: Partial<TaxObligation>) {
+        const record = await this.taxObRepo.findOne({ where: { id, shopId } });
+        if (!record) throw new Error('Tax obligation not found');
+        Object.assign(record, this.normalizeTaxObligationDto(dto));
+        return this.taxObRepo.save(record);
+    }
+    async deleteTaxObligation(shopId: number, id: number) {
+        const record = await this.taxObRepo.findOne({ where: { id, shopId } });
+        if (record) await this.taxObRepo.remove(record);
+        return { success: true };
     }
 
     // Purchases Without Invoice
@@ -429,5 +471,26 @@ export class FinanceService {
             ipAddress: input.requestIp,
         });
         return updated;
+    }
+
+    private normalizeTaxObligationDto(dto: any) {
+        const normalized = { ...dto };
+        if (normalized.vatDeclared === undefined && normalized.vatAmount !== undefined) {
+            normalized.vatDeclared = normalized.vatAmount;
+        }
+        if (normalized.pitDeclared === undefined && normalized.pitAmount !== undefined) {
+            normalized.pitDeclared = normalized.pitAmount;
+        }
+        if (normalized.vatPaid === undefined && normalized.paidVatAmount !== undefined) {
+            normalized.vatPaid = normalized.paidVatAmount;
+        }
+        if (normalized.pitPaid === undefined && normalized.paidPitAmount !== undefined) {
+            normalized.pitPaid = normalized.paidPitAmount;
+        }
+        delete normalized.vatAmount;
+        delete normalized.pitAmount;
+        delete normalized.paidVatAmount;
+        delete normalized.paidPitAmount;
+        return normalized;
     }
 }
