@@ -115,6 +115,14 @@ export const deleteInvoice = async (req: Request, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+import { EInvoiceService } from '../services/einvoice.service';
+const eInvoiceService = new EInvoiceService();
+
+export const issueEInvoice = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await eInvoiceService.issueInvoice((req as any).shopId, +req.params.id) }); }
+    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+
 // Tax Obligations
 export const getTaxObligations = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.getTaxObligations((req as any).shopId) }); }

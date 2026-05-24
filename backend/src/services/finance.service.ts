@@ -1,6 +1,9 @@
 import { AppDataSource } from '../config/db.config';
 import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, Invoice, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
+import { JournalEntry, JournalLine } from '../finance/ledger.entity';
 import { ActivityLog } from '../system/entities';
+import { PostingService } from './posting.service';
+import { EntityManager } from 'typeorm';
 
 export class FinanceService {
     private cashTxRepo = AppDataSource.getRepository(CashTransaction);
@@ -13,6 +16,7 @@ export class FinanceService {
     private taxObRepo = AppDataSource.getRepository(TaxObligation);
     private purchaseNoInvRepo = AppDataSource.getRepository(PurchaseWithoutInvoice);
     private activityLogRepo = AppDataSource.getRepository(ActivityLog);
+    private postingService = new PostingService();
 
     private async logActivity(input: {
         userId?: number;
@@ -51,10 +55,43 @@ export class FinanceService {
             .skip((page - 1) * limit).take(limit).getManyAndCount();
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async createCashTransaction(shopId: number, dto: Partial<CashTransaction>) {
+    async createCashTransaction(shopId: number, dto: Partial<CashTransaction>, manager?: EntityManager) {
+        const repo = manager ? manager.getRepository(CashTransaction) : this.cashTxRepo;
         if (!dto.transactionCode) dto.transactionCode = 'PT' + Date.now().toString().slice(-6);
         if (!dto.transactionDate) dto.transactionDate = new Date();
-        return this.cashTxRepo.save(this.cashTxRepo.create({ ...dto, shopId }));
+        const saved = await repo.save(repo.create({ ...dto, shopId }));
+
+        // === Journal Ledger: Chỉ ghi bút toán cho các giao dịch độc lập (không liên kết với Sales/Purchase) ===
+        const linkedRefTypes = ['SALES_ORDER', 'SALES_RETURN', 'PURCHASE_ORDER'];
+        const refType = (dto as any).referenceType;
+        if (!refType || !linkedRefTypes.includes(refType)) {
+            const txType = dto.type || (dto as any).type;
+            const amount = Number(dto.amount || 0);
+            if (amount > 0) {
+                const lines: { accountCode: string; amount: number; entryType: 'DEBIT' | 'CREDIT' }[] = [];
+                if (txType === 'INCOME') {
+                    // Thu nhập: Nợ TK 111 (Tiền mặt) / Có TK 511 (Doanh thu)
+                    lines.push({ accountCode: '111', amount, entryType: 'DEBIT' });
+                    lines.push({ accountCode: '511', amount, entryType: 'CREDIT' });
+                } else if (txType === 'EXPENSE') {
+                    // Chi phí: Nợ TK 642 (Chi phí) / Có TK 111 (Tiền mặt)
+                    lines.push({ accountCode: '642', amount, entryType: 'DEBIT' });
+                    lines.push({ accountCode: '111', amount, entryType: 'CREDIT' });
+                }
+                if (lines.length > 0) {
+                    await this.postingService.postJournal(
+                        shopId,
+                        'CASH_TRANSACTION',
+                        saved.id,
+                        (dto as any).description || `Giao dịch ${txType === 'INCOME' ? 'thu' : 'chi'} tiền mặt`,
+                        lines,
+                        manager
+                    );
+                }
+            }
+        }
+
+        return saved;
     }
 
     async updateCashTransaction(shopId: number, id: number, dto: Partial<CashTransaction>) {
@@ -109,22 +146,31 @@ export class FinanceService {
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
 
-        // Doanh thu + Giá vốn thực tế từ sales_orders (COGS per-item)
-        const salesResult = await AppDataSource.createQueryBuilder()
-            .select("COALESCE(SUM(o.total_amount), 0)", 'revenue')
-            .addSelect("COALESCE(SUM(o.total_cogs), 0)", 'cogs')
-            .from('sales_orders', 'o')
-            .where("o.shop_id = :shopId AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { shopId, fromDate, toDate })
+        const journalLineRepo = AppDataSource.getRepository(JournalLine);
+
+        // Doanh thu (CREDIT 511 - Doanh thu bán hàng)
+        const revenueResult = await journalLineRepo.createQueryBuilder('l')
+            .innerJoin('l.journalEntry', 'e')
+            .select("COALESCE(SUM(l.amount), 0)", 'revenue')
+            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '511' AND l.entry_type = 'CREDIT'", { shopId, fromDate, toDate })
             .getRawOne();
 
-        // Chi phí vận hành (loại trừ PURCHASE vì đã tính trong COGS)
-        const expenseResult = await this.cashTxRepo.createQueryBuilder('t')
-            .select("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.category != 'PURCHASE' THEN t.amount ELSE 0 END), 0)", 'expenses')
-            .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate', { shopId, fromDate, toDate })
+        // Giá vốn (DEBIT 632 - Giá vốn hàng bán)
+        const cogsResult = await journalLineRepo.createQueryBuilder('l')
+            .innerJoin('l.journalEntry', 'e')
+            .select("COALESCE(SUM(l.amount), 0)", 'cogs')
+            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '632' AND l.entry_type = 'DEBIT'", { shopId, fromDate, toDate })
             .getRawOne();
 
-        const revenue = Number(salesResult?.revenue || 0);
-        const cogs = Number(salesResult?.cogs || 0);
+        // Chi phí vận hành (DEBIT 642 - Chi phí quản lý kinh doanh)
+        const expenseResult = await journalLineRepo.createQueryBuilder('l')
+            .innerJoin('l.journalEntry', 'e')
+            .select("COALESCE(SUM(l.amount), 0)", 'expenses')
+            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '642' AND l.entry_type = 'DEBIT'", { shopId, fromDate, toDate })
+            .getRawOne();
+
+        const revenue = Number(revenueResult?.revenue || 0);
+        const cogs = Number(cogsResult?.cogs || 0);
         const operatingExpenses = Number(expenseResult?.expenses || 0);
         const grossProfit = revenue - cogs;
         const netProfit = grossProfit - operatingExpenses;
@@ -230,14 +276,29 @@ export class FinanceService {
             // Return today's summary from transactions
             const d = new Date(date);
             const summary = await this.cashTxRepo.createQueryBuilder('t')
-                .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'totalIncome')
-                .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'totalExpense')
+                .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)", 'cashIncome')
+                .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)", 'cashExpense')
+                .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)", 'bankIncome')
+                .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)", 'bankExpense')
                 .addSelect("COUNT(*)", 'orderCount')
                 .where('t.shop_id = :shopId AND CAST(t.transaction_date AS DATE) = :d', { shopId, d: date })
                 .getRawOne();
 
-            const totalIncome = Number(summary?.totalIncome || 0);
-            const totalExpense = Number(summary?.totalExpense || 0);
+            const cashIncome = Number(summary?.cashIncome || 0);
+            const cashExpense = Number(summary?.cashExpense || 0);
+            const bankIncome = Number(summary?.bankIncome || 0);
+            const bankExpense = Number(summary?.bankExpense || 0);
+            const totalIncome = cashIncome + bankIncome;
+            const totalExpense = cashExpense + bankExpense;
+
+            // Find the most recent daily closing before this date to get openingCash
+            const lastClosing = await this.closingRepo.createQueryBuilder('c')
+                .where('c.shop_id = :shopId AND c.closing_date < :d', { shopId, d: date })
+                .orderBy('c.closing_date', 'DESC')
+                .getOne();
+            
+            const openingCash = lastClosing ? Number(lastClosing.closingCash) : 0;
+            const expectedCash = openingCash + cashIncome - cashExpense;
 
             // Get recent transactions for the day
             const transactions = await this.cashTxRepo.find({
@@ -246,11 +307,29 @@ export class FinanceService {
                 take: 20,
             });
 
-            return { closingDate: date, totalIncome, totalExpense, netProfit: totalIncome - totalExpense, orderCount: Number(summary?.orderCount || 0), transactions, closed: false };
+            return { 
+                closingDate: date, 
+                totalIncome, 
+                totalExpense, 
+                cashIncome,
+                cashExpense,
+                bankIncome,
+                bankExpense,
+                openingCash,
+                expectedCash,
+                netProfit: totalIncome - totalExpense, 
+                orderCount: Number(summary?.orderCount || 0), 
+                transactions, 
+                closed: false 
+            };
         }
         return { ...closing, closed: true };
     }
     async createDailyClosing(shopId: number, dto: Partial<DailyClosing>) {
+        const cashDifference = Number(dto.cashDifference || 0);
+        if (Math.abs(cashDifference) > 50000 && (!dto.notes || dto.notes.trim().length === 0)) {
+            throw new Error('Chênh lệch két vượt quá 50,000đ. Vui lòng nhập lý do giải trình vào phần ghi chú.');
+        }
         return this.closingRepo.save(this.closingRepo.create({ ...dto, shopId }));
     }
 

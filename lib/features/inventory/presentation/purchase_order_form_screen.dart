@@ -79,10 +79,22 @@ class _PurchaseOrderFormScreenState
 
   void _nextStep() {
     if (_currentStep == 0) {
-      if (_supplierId == null) {
+      final suppliersAsync = ref.read(supplierListProvider((page: 1, search: null)));
+      final hasSuppliers = ((suppliersAsync.value?['items'] as List?)?.isNotEmpty ?? false);
+      if (_supplierId == null && hasSuppliers) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Vui lòng chọn Nhà cung cấp!'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+      if (!hasSuppliers) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chưa có Nhà cung cấp nào. Vui lòng tạo Nhà cung cấp trước!'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: AppColors.danger,
           ),
@@ -396,6 +408,19 @@ class _PurchaseOrderFormScreenState
               suppliersAsync.when(
                 data: (data) {
                   final items = (data['items'] as List?) ?? [];
+                  if (items.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Chưa có Nhà cung cấp. Vui lòng vào phân hệ Đối Tác để thêm Nhà cung cấp trước khi nhập hàng.',
+                        style: TextStyle(color: AppColors.danger, fontSize: 13),
+                      ),
+                    );
+                  }
                   return DropdownButtonFormField<int>(
                     initialValue: _supplierId,
                     dropdownColor: c.card,
@@ -447,7 +472,15 @@ class _PurchaseOrderFormScreenState
               // Chọn Kho
               warehousesAsync.when(
                 data: (data) {
-                  if (data.isEmpty) return const SizedBox.shrink();
+                  if (data.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Chưa có kho hàng nào được tạo. (Sẽ dùng kho mặc định)',
+                        style: TextStyle(color: c.textSecondary, fontStyle: FontStyle.italic),
+                      ),
+                    );
+                  }
                   
                   // Auto-select first warehouse if none selected
                   if (_warehouseId == null && data.isNotEmpty) {

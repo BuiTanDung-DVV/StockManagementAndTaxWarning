@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, Unique } from 'typeorm';
 
 
 @Entity('cash_accounts')
@@ -42,7 +42,7 @@ export class CashTransaction {
     @Column({ type: 'decimal', precision: 18, scale: 2 })
     amount: number;
 
-    @Column({ name: 'payment_method', length: 10, default: 'CASH' })
+    @Column({ name: 'payment_method', length: 20, default: 'CASH' })
     paymentMethod: string;
 
     @ManyToOne(() => CashAccount, { nullable: true })
@@ -147,11 +147,12 @@ export class CashflowForecast {
 }
 
 @Entity('daily_closings')
+@Unique(['shopId', 'closingDate'])
 export class DailyClosing {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ name: 'closing_date', type: 'date', unique: true })
+    @Column({ name: 'closing_date', type: 'date' })
     closingDate: Date;
 
     @Column({ name: 'shop_id', nullable: true })

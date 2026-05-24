@@ -62,7 +62,9 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
 
   void _nextStep() {
     if (_currentStep == 0) {
-      if (_warehouseId == null) {
+      final warehousesAsync = ref.read(warehousesProvider);
+      final hasWarehouses = (warehousesAsync.value?.isNotEmpty ?? false);
+      if (_warehouseId == null && hasWarehouses) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Vui lòng chọn kho kiểm kê trước khi tiếp tục!'),
@@ -71,6 +73,9 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
           ),
         );
         return;
+      }
+      if (!hasWarehouses) {
+        _warehouseId = null; // Proceed with null if no warehouses
       }
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
@@ -331,7 +336,15 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                 // Chọn Kho dropdown
                 warehousesAsync.when(
                   data: (data) {
-                    if (data.isEmpty) return const SizedBox.shrink();
+                    if (data.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          'Chưa có kho hàng nào được tạo.\n(Hệ thống sẽ lưu vào kho mặc định)',
+                          style: TextStyle(color: c.textSecondary, fontStyle: FontStyle.italic),
+                        ),
+                      );
+                    }
                     return DropdownButtonFormField<int>(
                       initialValue: _warehouseId,
                       isExpanded: true,
@@ -361,7 +374,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                           if (wh != null) _warehouseName = wh['name'] ?? '';
                         });
                       },
-                      validator: (v) => v == null ? 'Vui lòng chọn kho' : null,
+                      validator: (v) => v == null && data.isNotEmpty ? 'Vui lòng chọn kho' : null,
                     );
                   },
                   loading: () => const LinearProgressIndicator(),

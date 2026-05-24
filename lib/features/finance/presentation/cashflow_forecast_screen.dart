@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -70,6 +71,66 @@ class CashflowForecastScreen extends ConsumerWidget {
                           style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary)
                         ),
                       ),
+                      
+                      // Beautiful trend chart
+                      Container(
+                        height: 180,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.only(left: 10, right: 16, top: 18, bottom: 8),
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6, bottom: 12),
+                              child: Text(
+                                'Xu hướng biến động dòng tiền',
+                                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: c.textSecondary),
+                              ),
+                            ),
+                            Expanded(
+                              child: LineChart(
+                                LineChartData(
+                                  gridData: const FlGridData(show: false),
+                                  titlesData: const FlTitlesData(
+                                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  ),
+                                  borderData: FlBorderData(show: false),
+                                  lineBarsData: [
+                                    LineChartBarData(
+                                      spots: forecasts.asMap().entries.map((entry) {
+                                        final idx = entry.key.toDouble();
+                                        final f = entry.value;
+                                        final income = num.tryParse(f['expectedIncome']?.toString() ?? '0') ?? 0;
+                                        final expense = num.tryParse(f['expectedExpense']?.toString() ?? '0') ?? 0;
+                                        final balance = num.tryParse(f['expectedBalance']?.toString() ?? '0') ?? (income - expense);
+                                        return FlSpot(idx, balance.toDouble());
+                                      }).toList(),
+                                      isCurved: true,
+                                      color: theme.colorScheme.primary,
+                                      barWidth: 3.5,
+                                      isStrokeCapRound: true,
+                                      dotData: const FlDotData(show: true),
+                                      belowBarData: BarAreaData(
+                                        show: true,
+                                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       ...forecasts.map<Widget>((f) {
                         final income = num.tryParse(f['expectedIncome']?.toString() ?? '0') ?? 0;
                         final expense = num.tryParse(f['expectedExpense']?.toString() ?? '0') ?? 0;

@@ -2,6 +2,8 @@ import { AppDataSource } from '../config/db.config';
 import { InventoryStock, InventoryMovement, Warehouse, PurchaseOrder, PurchaseOrderItem, StockTake, StockTakeItem } from '../inventory/entities';
 import { Product, ProductBatch } from '../product/entities';
 import { COGSService } from './cogs.service';
+import { PostingService } from './posting.service';
+import { EntityManager } from 'typeorm';
 
 export class InventoryService {
     private stockRepo = AppDataSource.getRepository(InventoryStock);
@@ -13,6 +15,7 @@ export class InventoryService {
     private stockTakeItemRepo = AppDataSource.getRepository(StockTakeItem);
     private batchRepo = AppDataSource.getRepository(ProductBatch);
     private cogsService = new COGSService();
+    private postingService = new PostingService();
 
     // Stock
     async getStock(shopId: number, page = 1, limit = 20) {
@@ -135,45 +138,82 @@ export class InventoryService {
 
     // Purchase Orders
     async getPurchaseOrders(shopId: number, page = 1, limit = 20) {
-        const [items, total] = await this.poRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { orderDate: 'DESC' } });
+        const [items, total] = await this.poRepo.findAndCount({ 
+            where: { shopId }, 
+            skip: (page - 1) * limit, 
+            take: limit, 
+            order: { orderDate: 'DESC' },
+            relations: ['items', 'items.product', 'supplier']
+        });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
     async createPurchaseOrder(shopId: number, dto: any) {
-        const targetWarehouseId = dto.warehouseId
-            ? Number(dto.warehouseId)
-            : await this.ensureDefaultWarehouseId(shopId);
-        await this.assertWarehouseBelongsToShop(shopId, targetWarehouseId);
-        let totalAmount = 0;
-        const items = (dto.items || []).map((i: any) => {
-            const sub = i.quantity * i.unitPrice;
-            totalAmount += sub;
-            return this.poItemRepo.create({ ...i, subtotal: sub, shopId });
-        });
-        const po = this.poRepo.create({ ...dto, warehouseId: targetWarehouseId, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items, shopId });
-        const savedPO = await this.poRepo.save(po) as unknown as PurchaseOrder;
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        // Tạo inventory lots cho mỗi item (để COGS tính đúng)
-        for (const item of (dto.items || [])) {
-            if (item.productId && item.quantity > 0 && item.unitPrice > 0) {
-                await this.cogsService.addInventoryLot({
-                    productId: Number(item.productId),
-                    quantity: Number(item.quantity),
-                    costPrice: Number(item.unitPrice),
-                    purchaseId: savedPO.id,
-                    notes: `PO ${savedPO.orderCode}`,
+        try {
+            const manager = queryRunner.manager;
+
+            const targetWarehouseId = dto.warehouseId
+                ? Number(dto.warehouseId)
+                : await this.ensureDefaultWarehouseId(shopId, manager);
+            await this.assertWarehouseBelongsToShop(shopId, targetWarehouseId, manager);
+
+            let totalAmount = 0;
+            const items = (dto.items || []).map((i: any) => {
+                const sub = i.quantity * i.unitPrice;
+                totalAmount += sub;
+                return manager.create(PurchaseOrderItem, { ...i, subtotal: sub, shopId });
+            });
+
+            const po = manager.create(PurchaseOrder, { ...dto, warehouseId: targetWarehouseId, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items, shopId });
+            const savedPO = await manager.save(PurchaseOrder, po);
+
+            // Tạo inventory lots cho mỗi item (để COGS tính đúng)
+            for (const item of (dto.items || [])) {
+                if (item.productId && item.quantity > 0 && item.unitPrice > 0) {
+                    await this.cogsService.addInventoryLot({
+                        productId: Number(item.productId),
+                        quantity: Number(item.quantity),
+                        costPrice: Number(item.unitPrice),
+                        purchaseId: savedPO.id,
+                        notes: `PO ${savedPO.orderCode}`,
+                        shopId,
+                    }, manager);
+                    await this.increaseStock(
+                        shopId,
+                        Number(item.productId),
+                        targetWarehouseId,
+                        Number(item.quantity),
+                        savedPO.id,
+                        manager
+                    );
+                }
+            }
+            // === Journal Ledger: Ghi bút toán nhập kho (Nợ TK 156 / Có TK 331) ===
+            if (totalAmount > 0) {
+                await this.postingService.postJournal(
                     shopId,
-                });
-                await this.increaseStock(
-                    shopId,
-                    Number(item.productId),
-                    targetWarehouseId,
-                    Number(item.quantity),
+                    'PURCHASE_ORDER',
                     savedPO.id,
+                    `Nhập kho - Đơn ${savedPO.orderCode}`,
+                    [
+                        { accountCode: '156', amount: totalAmount, entryType: 'DEBIT' },
+                        { accountCode: '331', amount: totalAmount, entryType: 'CREDIT' },
+                    ],
+                    manager
                 );
             }
-        }
 
-        return savedPO;
+            await queryRunner.commitTransaction();
+            return savedPO;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
     async updatePurchaseOrder(shopId: number, id: number, dto: any) {
@@ -224,15 +264,17 @@ export class InventoryService {
         return { success: true };
     }
 
-    private async assertWarehouseBelongsToShop(shopId: number, warehouseId: number) {
-        const warehouse = await this.warehouseRepo.findOne({ where: { id: warehouseId, shopId, isActive: true } as any });
+    private async assertWarehouseBelongsToShop(shopId: number, warehouseId: number, manager?: EntityManager) {
+        const repo = manager ? manager.getRepository(Warehouse) : this.warehouseRepo;
+        const warehouse = await repo.findOne({ where: { id: warehouseId, shopId, isActive: true } as any });
         if (!warehouse) throw new Error('Warehouse not found for shop');
     }
 
-    private async ensureDefaultWarehouseId(shopId: number) {
-        let warehouse = await this.warehouseRepo.findOne({ where: { shopId, isActive: true } as any });
+    private async ensureDefaultWarehouseId(shopId: number, manager?: EntityManager) {
+        const repo = manager ? manager.getRepository(Warehouse) : this.warehouseRepo;
+        let warehouse = await repo.findOne({ where: { shopId, isActive: true } as any });
         if (!warehouse) {
-            warehouse = await this.warehouseRepo.save(this.warehouseRepo.create({
+            warehouse = await repo.save(repo.create({
                 name: `Kho mac dinh ${shopId}`,
                 shopId,
                 isActive: true,
@@ -241,16 +283,19 @@ export class InventoryService {
         return warehouse.id;
     }
 
-    private async increaseStock(shopId: number, productId: number, warehouseId: number, quantity: number, purchaseOrderId: number) {
-        let stock = await this.stockRepo.findOne({ where: { shopId, productId, warehouseId } as any });
+    private async increaseStock(shopId: number, productId: number, warehouseId: number, quantity: number, purchaseOrderId: number, manager?: EntityManager) {
+        const stockRepo = manager ? manager.getRepository(InventoryStock) : this.stockRepo;
+        const movementRepo = manager ? manager.getRepository(InventoryMovement) : this.movementRepo;
+
+        let stock = await stockRepo.findOne({ where: { shopId, productId, warehouseId } as any });
         if (!stock) {
-            stock = this.stockRepo.create({ shopId, productId, warehouseId, quantity: 0, updatedAt: new Date() });
+            stock = stockRepo.create({ shopId, productId, warehouseId, quantity: 0, updatedAt: new Date() });
         }
         stock.quantity = Number(stock.quantity || 0) + quantity;
         stock.updatedAt = new Date();
-        await this.stockRepo.save(stock);
+        await stockRepo.save(stock);
 
-        await this.movementRepo.save(this.movementRepo.create({
+        await movementRepo.save(movementRepo.create({
             shopId,
             productId,
             warehouseId,

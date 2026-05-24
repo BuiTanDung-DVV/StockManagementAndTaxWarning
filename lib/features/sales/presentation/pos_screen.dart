@@ -760,7 +760,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               subtitle: Text(c['phone']?.toString() ?? ''),
                               onTap: () {
                                 setState(() {
-                                  _selectedCustomerId = c['id'] as int?;
+                                  _selectedCustomerId = int.tryParse(c['id'].toString());
                                   _selectedCustomerName = c['name']?.toString();
                                 });
                                 Navigator.pop(ctx);
@@ -822,7 +822,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     if (phoneCtrl.text.trim().isNotEmpty)
                       'phone': phoneCtrl.text.trim(),
                   });
-                  final newId = result['id'] as int?;
+                  final newId = int.tryParse(result['id'].toString());
                   setState(() {
                     _selectedCustomerId = newId;
                     _selectedCustomerName = name;
@@ -877,7 +877,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   if (phoneCtrl.text.trim().isNotEmpty)
                     'phone': phoneCtrl.text.trim(),
                 });
-                final newId = result['id'] as int?;
+                final newId = int.tryParse(result['id'].toString());
                 setState(() {
                   _selectedCustomerId = newId;
                   _selectedCustomerName = name;
@@ -1072,28 +1072,8 @@ class _CashConfirmDialog extends StatefulWidget {
 }
 
 class _CashConfirmDialogState extends State<_CashConfirmDialog> {
-  int _seconds = 5;
-  late final Stream<int> _stream;
-  late final dynamic _sub;
-
-  @override
-  void initState() {
-    super.initState();
-    _stream = Stream.periodic(const Duration(seconds: 1), (i) => 4 - i).take(5);
-    _sub = _stream.listen((s) {
-      if (mounted) setState(() => _seconds = s);
-    });
-  }
-
-  @override
-  void dispose() {
-    _sub.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final done = _seconds <= 0;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
@@ -1119,30 +1099,6 @@ class _CashConfirmDialogState extends State<_CashConfirmDialog> {
               color: AppColors.primary,
             ),
           ),
-          const SizedBox(height: 20),
-          if (!done)
-            SizedBox(
-              width: 56,
-              height: 56,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    value: _seconds / 5,
-                    strokeWidth: 4,
-                    color: AppColors.primary,
-                    backgroundColor: Colors.grey.shade200,
-                  ),
-                  Text(
-                    '$_seconds',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
       actions: [
@@ -1151,22 +1107,20 @@ class _CashConfirmDialogState extends State<_CashConfirmDialog> {
           child: const Text('Hủy'),
         ),
         ElevatedButton(
-          onPressed: done
-              ? () {
-                  Navigator.pop(context);
-                  widget.onConfirm();
-                }
-              : null,
+          onPressed: () {
+            Navigator.pop(context);
+            widget.onConfirm();
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.success,
             foregroundColor: Colors.white,
           ),
-          child: Row(
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (done) const Icon(Icons.check, size: 18),
-              if (done) const SizedBox(width: 6),
-              Text(done ? 'Xác nhận' : 'Chờ ${_seconds}s...'),
+              Icon(Icons.check, size: 18),
+              SizedBox(width: 6),
+              Text('Xác nhận'),
             ],
           ),
         ),

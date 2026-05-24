@@ -94,10 +94,21 @@ class SalaryLedgerScreen extends ConsumerWidget {
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
         ElevatedButton(onPressed: () async {
+          final amount = double.tryParse(amountC.text) ?? 0;
+          if (amount <= 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Vui lòng nhập số tiền hợp lệ (> 0)'),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
           await ref.read(financeRepoProvider).createTransaction({
             'type': 'EXPENSE', 'category': 'SALARY',
             'counterparty': nameC.text,
-            'amount': double.tryParse(amountC.text) ?? 0,
+            'amount': amount,
             'notes': notesC.text.isEmpty ? 'Chi lương' : notesC.text,
             'transactionDate': DateTime.now().toIso8601String().split('T').first,
           });
