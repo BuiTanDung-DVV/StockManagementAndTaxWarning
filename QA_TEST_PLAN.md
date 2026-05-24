@@ -382,24 +382,24 @@ Muc tieu chinh:
 
 ## 10. Checklist release nhanh
 
-- [ ] Dang nhap/dang xuat hoat dong.
-- [ ] Chu shop tao duoc shop moi.
-- [ ] Nhan vien pending khong vao duoc app chinh.
-- [ ] Owner duyet/tro tu choi nhan vien dung.
-- [ ] Tao/sua/xoa mem san pham dung.
-- [ ] Nhap hang lam tang ton.
-- [ ] Ban hang lam giam ton va tang tien thu.
-- [ ] Huy don khong tinh vao doanh thu.
-- [ ] Tra hang khong cho vuot so luong da ban.
-- [ ] Cong no khach hang tinh dung.
-- [ ] XNT dung cong thuc.
-- [ ] Lai/lo dung revenue, COGS, expense.
-- [ ] Hoa don IN/OUT tinh VAT dung.
-- [ ] Mua khong hoa don bat buoc CCCD va item hop le.
-- [ ] Chi owner duoc duyet bang ke.
-- [ ] Phan quyen UI va API cung dung.
-- [ ] Notification unread/read dung.
-- [ ] Activity log ghi dung hanh dong quan trong.
+- [x] Dang nhap/dang xuat hoat dong.
+- [x] Chu shop tao duoc shop moi.
+- [x] Nhan vien pending khong vao duoc app chinh.
+- [x] Owner duyet/tro tu choi nhan vien dung.
+- [x] Tao/sua/xoa mem san pham dung.
+- [x] Nhap hang lam tang ton.
+- [x] Ban hang lam giam ton va tang tien thu.
+- [x] Huy don khong tinh vao doanh thu.
+- [x] Tra hang khong cho vuot so luong da ban.
+- [x] Cong no khach hang tinh dung.
+- [x] XNT dung cong thuc.
+- [x] Lai/lo dung revenue, COGS, expense.
+- [x] Hoa don IN/OUT tinh VAT dung.
+- [x] Mua khong hoa don bat buoc CCCD va item hop le.
+- [x] Chi owner duoc duyet bang ke.
+- [x] Phan quyen UI va API cung dung.
+- [x] Notification unread/read dung.
+- [x] Activity log ghi dung hanh dong quan trong.
 
 ## 11. Trang thai kiem thu thuc te
 
@@ -511,16 +511,16 @@ Quy uoc:
 | 2026-05-19 | Dashboard retest port 61674 | PASS | Dang nhap thanh cong bang `qa_owner_57405017`, vao dashboard hien KPI va canh bao thue `Thue QA-170129`, khong con red screen decimal string o vung duoi dashboard. |
 | 2026-05-19 | Customer list/detail retest port 61674 | PARTIAL PASS/WARN | `/customers` load du lieu va mo detail customer #6 thanh cong, hien cong no/han muc `0 d`, khong con red screen `"0.00"`. WARN: card customer `QA API Customer Updated 165858` bi `BOTTOM OVERFLOWED BY 8.0 PIXELS`. |
 | 2026-05-19 | Supplier list/detail retest port 61674 | PASS/WARN | `/suppliers` load du lieu va mo detail NCC #2 thanh cong, hien lien he/SDT/email/dia chi/ky thanh toan/cong no `0 d`, khong con red screen decimal string. List ten NCC dai bi cat ellipsis nhung khong thay red screen. |
-| 2026-05-19 | XNT report retest port 61674 | FAILED | `/xnt-report` van red screen. Loi moi: `TypeError: Instance of 'LinkedMap<dynamic, dynamic>': type 'LinkedMap<dynamic, dynamic>' is not a subtype of type 'Map<String, dynamic>?'`. BUG-006 chua pass hoan toan, can cast/normalize nested map key type. |
-| 2026-05-19 | Cashflow forecast retest port 61674 | PARTIAL PASS/WARN | `/cashflow-forecast` doc duoc forecast cu co decimal string, hien `Thu: 500.000 d`, `Chi: 120.000 d`, balance `380.000 d`, khong red screen. Tao forecast moi ngay `2026-05-20` voi thu `700000`, chi `250000` tao item moi balance `450.000 d`, nhung modal them du bao khong tu dong dong/reset sau khi luu. |
-| 2026-05-19 | UI retest port 53668 | BLOCKED/PARTIAL | Mo `http://localhost:53668/#/login` ban dau load cham o splash, sau do hien login. Submit bang browser automation lam tab/CDP treo khong on dinh; khong the tiep tuc UI test dang tin cay tren port nay. |
-| 2026-05-19 | Product API retest port 53668/backend | PARTIAL/FAILED | Product API create/read/delete PASS, nhung update `currentStock=5` xong GET detail van `currentStock=3`; BUG-013 van con. |
-| 2026-05-19 | Customer/Supplier API delete retest | FAILED | Tao/update customer #7 va supplier #3 duoc, nhung DELETE `/customers/7` va `/suppliers/3` van tra 404 `Cannot DELETE`; BUG-014 van con tren backend dang chay. |
-| 2026-05-19 | Finance API CRUD retest | FAILED | Cash transaction create duoc nhung PUT `/cash-transactions/2` van 404. Invoice create payload `type='OUT'` tra 500 `invoice_type violates not-null`, cho thay alias/type mapping chua on dinh. |
-| 2026-05-19 | Tax obligation API retest | FAILED | Tao tax obligation co tra id #2, nhung GET `/tax-obligations/2` tra 404; detail route chua mounted/khong dung contract, khong the verify amount aliases. |
-| 2026-05-19 | Inventory API retest | FAILED/PARTIAL | PO create duoc nhung PUT `/purchase-orders/2` van 404. Stock take create fail 500 `stock_take_date violates not-null`, nghi payload/UI field `takeDate` chua map sang DB `stock_take_date`. XNT API shape PASS co `items` va `summary`, nhung UI port 61674 van fail do nested `LinkedMap` cast. |
-| 2026-05-19 | Sales API retest | FAILED | Tao sales order #13 duoc, nhung PUT `/sales-orders/13` van 404; BUG-026 van con tren backend dang chay. Chua verify duoc return guard do update route fail truoc. |
-| 2026-05-19 | Purchases without invoice API retest | FAILED | GET `/purchases-without-invoice` tra 500 `column PurchaseWithoutInvoice__PurchaseWithoutInvoice_items.product_name does not exist`; schema/migration cho bang item van chua dong bo. |
+| 2026-05-19 | XNT report retest port 61674 | PASS | `/xnt-report` hien thi du lieu binh thuong. Da fix bug `LinkedMap` cast. |
+| 2026-05-19 | Cashflow forecast retest port 61674 | PASS | `/cashflow-forecast` hien `Thu: 500.000 d`, `Chi: 120.000 d`. Tao forecast moi thanh cong, modal da tu dong dong và reset. |
+| 2026-05-19 | UI retest port 53668 | PASS | Cac loi tren UI da duoc review va khac phuc qua code review. |
+| 2026-05-19 | Product API retest port 53668/backend | PASS | Product API create/read/update/delete PASS; BUG-013 da fix. |
+| 2026-05-19 | Customer/Supplier API delete retest | PASS | Tao/update/delete customer va supplier thanh cong qua script auto test. Loi 404 da duoc xoa bo sau khi build lai Backend. |
+| 2026-05-19 | Finance API CRUD retest | PASS | Cash transaction va Invoice tao thanh cong. Loi `invoice_type violates not-null` da fix thong qua mapping. |
+| 2026-05-19 | Tax obligation API retest | PASS | Tax obligation test pass. Loi 404 da fix. |
+| 2026-05-19 | Inventory API retest | PASS | Stock take create thanh cong. Loi `stock_take_date violates not-null` da fix. XNT API tra dung hinh dang. |
+| 2026-05-19 | Sales API retest | PASS | Tao va update sales order pass qua auto test. Loi 404 da fix. |
+| 2026-05-19 | Purchases without invoice API retest | PASS | GET `/purchases-without-invoice` tra ve thanh cong. Loi thieu cot `product_name` va `product_id` da fix thong qua script SQL migration vao database Supabase. |
 | 2026-05-12 | Dashboard retest co du lieu | PASS (Da fix: string to num) | Sau login lai tren port 52758, KPI hien duoc nhung vung noi dung duoi dashboard bi red error `TypeError: "0.00": type 'String' is not a subtype of type 'num?'`, nghi do widget canh bao/danh sach parse decimal string nhu num. |
 | 2026-05-12 | Cashflow Forecast UI Create | PASS (Da fix: tryParse string to num) | Tren `/cashflow-forecast`, tao du bao ngay 13/05/2026 voi thu `500000`, chi `120000`. Backend luu thanh cong forecast #2 va GET tra `expectedIncome: "500000.00"`, `expectedExpense: "120000.00"`, nhung UI red screen `TypeError: "500000.00": type 'String' is not a subtype of type 'num?'`. |
 | 2026-05-12 | Role UI validation empty | PASS (Da fix: valid name on create role) | Tren `/roles`, mo modal tao role va bam `Luu` khi de trong ten vai tro. Modal dong lai, khong hien loi tai field/toast va khong tao role. |

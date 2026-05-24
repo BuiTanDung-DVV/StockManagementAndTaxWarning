@@ -78,12 +78,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.lock_reset, size: 64, color: AppColors.primary),
+                  Icon(Icons.lock_reset, size: 64, color: AppColors.primary),
                   const SizedBox(height: 24),
                   Text('Khôi phục mật khẩu',
                       textAlign: TextAlign.center,

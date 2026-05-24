@@ -92,7 +92,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
                     if (supplierName.isNotEmpty) Text('NCC: $supplierName', style: TextStyle(fontSize: 11, color: c.textSecondary)),
                     Text('${createdAt.isNotEmpty ? createdAt : ''}${invoiceNumber.isNotEmpty ? ' • HĐ: $invoiceNumber' : ''}', style: TextStyle(fontSize: 11, color: c.textMuted)),
                   ])),
-                  Text(_currFmt.format(totalAmount), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13)),
+                  Text(_currFmt.format(totalAmount), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13)),
                 ]),
               );
             },

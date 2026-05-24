@@ -105,7 +105,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                              child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
+                              child: Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
                             ),
                             SizedBox(width: 12),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -114,7 +114,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                               Text(customerName, style: TextStyle(fontSize: 12, color: c.textSecondary)),
                             ])),
                             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                              Text(_currFmt.format(total), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                              Text(_currFmt.format(total), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                               const SizedBox(height: 4),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

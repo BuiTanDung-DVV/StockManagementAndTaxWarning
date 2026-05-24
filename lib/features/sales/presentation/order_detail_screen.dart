@@ -136,7 +136,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                     style: TextStyle(fontSize: 12, color: c.textSecondary)),
                               ]),
                             ),
-                            Text(_currFmt.format(subtotal), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                            Text(_currFmt.format(subtotal), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                           ]),
                         );
                       }),

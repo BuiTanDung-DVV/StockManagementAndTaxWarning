@@ -114,7 +114,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
                     child: Row(children: [
-                      Container(width: 55, height: 55, decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.inventory_2, color: AppColors.primary)),
+                      Container(width: 55, height: 55, decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.inventory_2, color: AppColors.primary)),
                       const SizedBox(width: 12),
                       Expanded(child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start, 
@@ -126,7 +126,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         const SizedBox(height: 2),
                         Text('Tồn: $stock', style: TextStyle(fontSize: 11, color: stock < 10 ? AppColors.danger : c.textSecondary)),
                       ])),
-                      Text(_currFmt.format(price), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                      Text(_currFmt.format(price), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                     ]),
                   ),
                 );

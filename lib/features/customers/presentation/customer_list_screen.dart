@@ -61,7 +61,7 @@ class CustomerListScreen extends ConsumerWidget {
                     decoration: BoxDecoration(color: tc.card, borderRadius: BorderRadius.circular(12)),
                     child: Row(children: [
                       CircleAvatar(radius: 22, backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                        child: Text((cust['name'] ?? 'K')[0].toUpperCase(), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))),
+                        child: Text((cust['name'] ?? 'K')[0].toUpperCase(), style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))),
                       SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(cust['name'] ?? '', style: TextStyle(fontWeight: FontWeight.w600)),

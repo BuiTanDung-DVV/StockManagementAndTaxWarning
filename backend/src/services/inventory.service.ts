@@ -206,6 +206,7 @@ export class InventoryService {
             difference: (i.actualQty || 0) - (i.systemQty || 0),
             notes: i.notes
         }));
+        if (!dto.stockTakeDate && dto.takeDate) dto.stockTakeDate = dto.takeDate;
         return this.stockTakeRepo.save(this.stockTakeRepo.create({ ...dto, items, shopId }));
     }
 

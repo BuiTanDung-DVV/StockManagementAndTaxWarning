@@ -54,17 +54,17 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(children: [
-              const Icon(Icons.business, size: 18, color: AppColors.primary),
+              Icon(Icons.business, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   config.businessType.label,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.primary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.primary),
                 ),
               ),
               Text(
                 'GTGT ${(config.effectiveVatRate * 100).toStringAsFixed(1)}% • TNCN ${(config.businessType.pitRate * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(fontSize: 11, color: AppColors.primary),
+                style: TextStyle(fontSize: 11, color: AppColors.primary),
               ),
             ]),
           ),

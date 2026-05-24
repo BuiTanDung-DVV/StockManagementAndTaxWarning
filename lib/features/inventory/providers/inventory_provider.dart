@@ -27,7 +27,7 @@ class InventoryRepository {
     if (warehouseId != null) params['warehouseId'] = '$warehouseId';
     final result = await _api.get('/inventory/xnt-report', params: params);
     if (result is List) return {'items': result, 'summary': {}};
-    return result as Map<String, dynamic>;
+    return Map<String, dynamic>.from(result as Map);
   }
 
   Future<List<dynamic>> getExpiringProducts({int daysAhead = 30}) async =>

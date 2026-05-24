@@ -135,14 +135,15 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     TextInputType? keyboardType, int maxLines = 1, String? hint,
     String? Function(String?)? validator,
   }) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
     return TextFormField(
       controller: ctrl, keyboardType: keyboardType, maxLines: maxLines, validator: validator,
       decoration: InputDecoration(
         labelText: label, hintText: hint,
-        prefixIcon: Padding(padding: const EdgeInsets.all(12), child: HugeIcon(icon: icon, size: 20, color: AppColors.primary)),
+        prefixIcon: Padding(padding: const EdgeInsets.all(12), child: HugeIcon(icon: icon, size: 20, color: primaryColor)),
         filled: true, fillColor: c.card,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 1.5)),
         errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.danger)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),

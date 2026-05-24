@@ -48,8 +48,8 @@ class DebtAgingScreen extends ConsumerWidget {
             Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
               child: Column(children: [
                 Text('Tổng nợ phải thu', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 13)),
-                const SizedBox(height: 4),
-                Text(_fmt(totalDebt), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                SizedBox(height: 4),
+                Text(_fmt(totalDebt), style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.primary)),
                 const SizedBox(height: 8),
                 Text('Nợ quá hạn: ${(asNum(summary['overdueRatio']) * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 12, color: AppColors.danger)),
               ])),
