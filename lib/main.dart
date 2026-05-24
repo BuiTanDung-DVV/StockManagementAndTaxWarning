@@ -32,13 +32,17 @@ class MyApp extends ConsumerWidget {
     // Watch auth state to react to login/logout
     ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
+    final brandColor = ref.watch(brandColorProvider);
     final router = ref.watch(routerProvider);
+    
+    // Đồng bộ hóa AppColors động toàn cục trước khi dựng widget tree
+    AppColors.updateColors(brandColor.color, brandColor.isDark);
     
     return MaterialApp.router(
       title: 'Quản lý Bán hàng & Kho hàng',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme(brandColor.color),
+      darkTheme: AppTheme.darkTheme(brandColor.color),
       themeMode: themeMode,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

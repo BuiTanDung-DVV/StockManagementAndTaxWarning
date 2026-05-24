@@ -21,6 +21,7 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
+    final primaryColor = Theme.of(context).colorScheme.primary;
     final shop = ref.watch(shopProvider);
 
     // Build visible tabs based on permissions
@@ -112,25 +113,25 @@ class MainShell extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(
+                                color: primaryColor.withValues(
                                   alpha: 0.15,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const HugeIcon(
+                              child: HugeIcon(
                                 icon: HugeIcons.strokeRoundedStore01,
-                                color: AppColors.primary,
+                                color: primaryColor,
                                 size: 26,
                               ),
                             ),
                             const SizedBox(width: 14),
-                            const Expanded(
+                            Expanded(
                               child: Text(
                                 'SmartStock',
                                 style: TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
+                                  color: primaryColor,
                                 ),
                               ),
                             ),
@@ -197,32 +198,33 @@ class MainShell extends ConsumerWidget {
               child: child,
             ),
           ),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: c.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    for (int i = 0; i < allTabs.length; i++)
-                      _NavItem(
-                        icon: allTabs[i].icon,
-                        label: allTabs[i].label,
-                        isActive: i == idx,
-                        onTap: () => context.go(allTabs[i].route),
-                      ),
-                  ],
-                ),
+          bottomNavigationBar: SafeArea(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              decoration: BoxDecoration(
+                color: c.card.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  for (int i = 0; i < allTabs.length; i++)
+                    _NavItem(
+                      icon: allTabs[i].icon,
+                      label: allTabs[i].label,
+                      isActive: i == idx,
+                      onTap: () => context.go(allTabs[i].route),
+                    ),
+                ],
               ),
             ),
           ),

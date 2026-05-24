@@ -37,14 +37,14 @@ class CustomerDetailScreen extends ConsumerWidget {
           final creditLimit = num.tryParse(c['creditLimit']?.toString() ?? '') ?? 0;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(children: [
               CircleAvatar(radius: 40, backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                child: Text(name.isNotEmpty ? name[0] : '?', style: const TextStyle(fontSize: 24, color: AppColors.primary, fontWeight: FontWeight.bold))),
+                child: Text(name.isNotEmpty ? name[0] : '?', style: TextStyle(fontSize: 24, color: AppColors.primary, fontWeight: FontWeight.bold))),
               const SizedBox(height: 12),
               Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              if (customerType.isNotEmpty) Container(margin: const EdgeInsets.only(top: 4), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                child: Text(customerType, style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold))),
+              if (customerType.isNotEmpty) Container(margin: EdgeInsets.only(top: 4), padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text(customerType, style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold))),
               const SizedBox(height: 24),
               _Card([
                 if (phone.isNotEmpty) _Row('SĐT', phone),

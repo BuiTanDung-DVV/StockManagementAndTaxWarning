@@ -117,12 +117,18 @@ class CashflowForecastScreen extends ConsumerWidget {
         ElevatedButton(onPressed: () async {
           final income = double.tryParse(incomeC.text) ?? 0;
           final expense = double.tryParse(expenseC.text) ?? 0;
-          await ref.read(financeRepoProvider).createForecast({
-            'forecastDate': selectedDate.toIso8601String().split('T').first,
-            'expectedIncome': income, 'expectedExpense': expense, 'expectedBalance': income - expense,
-          });
-          ref.invalidate(forecastsProvider);
-          if (ctx.mounted) Navigator.pop(ctx);
+          try {
+            await ref.read(financeRepoProvider).createForecast({
+              'forecastDate': selectedDate.toIso8601String().split('T').first,
+              'expectedIncome': income, 'expectedExpense': expense, 'expectedBalance': income - expense,
+            });
+            ref.invalidate(forecastsProvider);
+            if (ctx.mounted) Navigator.pop(ctx);
+          } catch (e) {
+            if (ctx.mounted) {
+              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+            }
+          }
         }, child: const Text('Lưu')),
       ],
     ));

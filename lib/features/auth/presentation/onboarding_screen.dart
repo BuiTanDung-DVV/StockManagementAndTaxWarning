@@ -139,12 +139,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.person_pin, size: 80, color: AppColors.primary),
+                  Icon(Icons.person_pin, size: 80, color: AppColors.primary),
                   const SizedBox(height: 24),
                   const Text('Hoàn tất thông tin', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                   const SizedBox(height: 8),

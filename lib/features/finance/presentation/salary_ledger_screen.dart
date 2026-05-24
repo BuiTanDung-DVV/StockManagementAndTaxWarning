@@ -57,7 +57,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
               return Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
                 child: Row(children: [
                   CircleAvatar(radius: 20, backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: const Icon(Icons.payments_outlined, color: AppColors.primary, size: 20)),
+                    child: Icon(Icons.payments_outlined, color: AppColors.primary, size: 20)),
                   const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(t['counterparty'] ?? 'Nhân viên', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),

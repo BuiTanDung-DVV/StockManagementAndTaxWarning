@@ -172,7 +172,7 @@ class TaxSupportScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.language, size: 48, color: AppColors.primary),
+            Icon(Icons.language, size: 48, color: AppColors.primary),
             const SizedBox(height: 16),
             Text('Chuyển hướng đến $title', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
             SizedBox(height: 8),

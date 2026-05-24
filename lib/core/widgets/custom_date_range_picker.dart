@@ -42,19 +42,19 @@ class _CustomDateRangePickerContentState extends State<_CustomDateRangePickerCon
       initialDate: initial,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
-      locale: const Locale('vi'),
+      locale: Locale('vi'),
       builder: (context, child) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: isDark
-                ? const ColorScheme.dark(
+                ? ColorScheme.dark(
                     primary: AppColors.primaryLight,
                     onPrimary: Colors.white,
                     surface: Color(0xFF1F2937),
                     onSurface: Colors.white,
                   )
-                : const ColorScheme.light(
+                : ColorScheme.light(
                     primary: AppColors.primary,
                     onPrimary: Colors.white,
                     surface: Colors.white,
@@ -166,10 +166,10 @@ class _DateBox extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label, style: TextStyle(fontSize: 12, color: c.textMuted)),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 16, color: AppColors.primaryLight),
+                Icon(Icons.calendar_today, size: 16, color: AppColors.primaryLight),
                 const SizedBox(width: 8),
                 Text(date, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
               ],
