@@ -1,7 +1,8 @@
-import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
@@ -37,30 +38,41 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     final from = _range.start.toIso8601String().split('T').first;
     final to = _range.end.toIso8601String().split('T').first;
     final plAsync = ref.watch(profitLossProvider((from: from, to: to)));
     final label = '${DateFormat('dd/MM').format(_range.start)} - ${DateFormat('dd/MM').format(_range.end)}';
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('Báo cáo KQKD'),
+        title: Text(
+          'Báo cáo Kết quả Kinh doanh',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
+        centerTitle: true,
         actions: [
           TextButton.icon(
             onPressed: _pickDateRange,
-            icon: const Icon(Icons.date_range, size: 18),
-            label: Text(label, style: const TextStyle(fontSize: 12)),
+            icon: const Icon(Icons.date_range_rounded, size: 16),
+            label: Text(label, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
           ),
           featureGuideButton(context, 'profit_loss'),
         ],
       ),
       body: plAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
+        error: (e, _) => Center(child: Text('Lỗi: $e', style: TextStyle(color: AppColors.danger))),
         data: (data) {
           final revenue = num.tryParse(data['revenue']?.toString() ?? '0') ?? 0;
           final cogs = num.tryParse(data['cogs']?.toString() ?? '0') ?? 0;
@@ -72,39 +84,160 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
 
           if (revenue == 0 && cogs == 0 && expenses == 0) {
             return const AppEmpty(
-              message: 'Chưa có dữ liệu giao dịch',
+              message: 'Chưa có dữ liệu giao dịch phát sinh',
               subtitle: 'Thêm giao dịch thu/chi để xem báo cáo KQKD',
             );
           }
 
-          return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(10)),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.calendar_today, size: 16, color: AppColors.primary), SizedBox(width: 8), Text('$from → $to', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500))])),
-            const SizedBox(height: 16),
-            _MetricCard('Tổng doanh thu', _fmt(revenue), AppColors.primary, Icons.trending_up),
-            _MetricCard('Giá vốn hàng bán', _fmt(cogs), AppColors.danger, Icons.shopping_cart),
-            Container(padding: const EdgeInsets.all(14), margin: const EdgeInsets.only(bottom: 10), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.success.withValues(alpha: 0.3))),
-              child: Row(children: [
-                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.auto_graph, color: AppColors.success, size: 20)),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Lãi gộp', style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 12)), Text(_fmt(grossProfit), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.success))])),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)), child: Text('$grossPct%', style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13))),
-              ])),
-            _MetricCard('Chi phí vận hành', _fmt(expenses), AppColors.warning, Icons.settings),
-            Container(padding: const EdgeInsets.all(14), margin: const EdgeInsets.only(bottom: 10), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)]), borderRadius: BorderRadius.circular(12)),
-              child: Row(children: [
-                Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Icon(Icons.stars, color: AppColors.primaryLight, size: 20)),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Lợi nhuận ròng', style: TextStyle(color: Colors.white70, fontSize: 12)), Text(_fmt(netProfit), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white))])),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Text('$netPct%', style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13))),
-              ])),
-            const SizedBox(height: 16),
-            const Text('Chi tiết', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            _DetailRow('Thu nhập bán hàng', _fmt(revenue), true),
-            _DetailRow('Chi phí nhập hàng', _fmt(cogs), false),
-            _DetailRow('Chi phí vận hành', _fmt(expenses), false),
-          ]));
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Active range badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), 
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.08), 
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center, 
+                    children: [
+                      Icon(Icons.calendar_month_rounded, size: 16, color: theme.colorScheme.primary), 
+                      const SizedBox(width: 8), 
+                      Text(
+                        'Kỳ đối chiếu: $from → $to', 
+                        style: GoogleFonts.outfit(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 13)
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Metrics grid list
+                _MetricCard('Tổng doanh thu bán hàng', _fmt(revenue), theme.colorScheme.primary, Icons.trending_up_rounded),
+                _MetricCard('Giá vốn hàng bán (COGS)', _fmt(cogs), AppColors.danger, Icons.shopping_cart_rounded),
+                
+                // Gross Profit Card (Emerald highlighted)
+                Container(
+                  padding: const EdgeInsets.all(16), 
+                  margin: const EdgeInsets.only(bottom: 12), 
+                  decoration: BoxDecoration(
+                    color: c.card, 
+                    borderRadius: BorderRadius.circular(24), 
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.25), width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8), 
+                        decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), 
+                        child: const Icon(Icons.auto_graph_rounded, color: AppColors.success, size: 20)
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, 
+                          children: [
+                            Text('Lợi nhuận gộp', style: TextStyle(color: c.textSecondary, fontSize: 12, fontWeight: FontWeight.w500)), 
+                            const SizedBox(height: 2),
+                            Text(
+                              _fmt(grossProfit), 
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.success)
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), 
+                        decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(30)), 
+                        child: Text(
+                          '$grossPct%', 
+                          style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12)
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                _MetricCard('Chi phí vận hành (OPEX)', _fmt(expenses), AppColors.warning, Icons.settings_suggest_rounded),
+                
+                // Net Profit Card (Dynamic Brand-Gradient themed)
+                Container(
+                  padding: const EdgeInsets.all(18), 
+                  margin: const EdgeInsets.only(bottom: 20), 
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.primary.withValues(alpha: 0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ), 
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8), 
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(12)), 
+                        child: const Icon(Icons.stars_rounded, color: Colors.white, size: 20)
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, 
+                          children: [
+                            Text(
+                              'Lợi nhuận ròng (P&L)', 
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w500)
+                            ), 
+                            const SizedBox(height: 2),
+                            Text(
+                              _fmt(netProfit), 
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white)
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), 
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.22), borderRadius: BorderRadius.circular(30)), 
+                        child: Text(
+                          '$netPct%', 
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                Text(
+                  'Chi tiết danh mục tài khoản', 
+                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary)
+                ),
+                const SizedBox(height: 12),
+                
+                _DetailRow('Doanh thu bán lẻ quầy', _fmt(revenue), true),
+                _DetailRow('Giá vốn nhập hàng kho', _fmt(cogs), false),
+                _DetailRow('Chi phí vận hành & chi khác', _fmt(expenses), false),
+              ],
+            ),
+          );
         },
       ),
     );
@@ -112,19 +245,92 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
 }
 
 class _MetricCard extends StatelessWidget {
-  final String label, value; final Color color; final IconData icon;
+  final String label, value; 
+  final Color color; 
+  final IconData icon;
   const _MetricCard(this.label, this.value, this.color, this.icon);
-  @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(14), margin: const EdgeInsets.only(bottom: 10), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
-    child: Row(children: [
-      Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 20)),
-      const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: TextStyle(color: AppThemeColors.of(context).textSecondary, fontSize: 12)), Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color))])),
-    ]));
+  
+  @override 
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16), 
+      margin: const EdgeInsets.only(bottom: 12), 
+      decoration: BoxDecoration(
+        color: c.card, 
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8), 
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), 
+            child: Icon(icon, color: color, size: 20)
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, 
+              children: [
+                Text(
+                  label, 
+                  style: TextStyle(color: c.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ), 
+                const SizedBox(height: 2),
+                Text(
+                  value, 
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: color)
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DetailRow extends StatelessWidget {
-  final String label, amount; final bool isIncome;
+  final String label, amount; 
+  final bool isIncome;
   const _DetailRow(this.label, this.amount, this.isIncome);
-  @override Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(bottom: 6), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(10)),
-    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: const TextStyle(fontSize: 13)), Text(amount, style: TextStyle(fontWeight: FontWeight.bold, color: isIncome ? AppColors.success : AppColors.danger))]));
+  
+  @override 
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8), 
+      padding: const EdgeInsets.all(14), 
+      decoration: BoxDecoration(
+        color: c.card, 
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: c.divider.withValues(alpha: 0.4), width: 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+        children: [
+          Expanded(
+            child: Text(
+              label, 
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: c.textPrimary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis, // Prevention of text overflow
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            amount, 
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold, 
+              fontSize: 14,
+              color: isIncome ? AppColors.success : AppColors.danger
+            )
+          ),
+        ],
+      ),
+    );
+  }
 }

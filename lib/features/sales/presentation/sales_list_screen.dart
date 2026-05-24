@@ -1,11 +1,12 @@
-import '../../../core/guides/feature_guide_sheet.dart';
-import '../../../core/widgets/app_shimmer.dart';
-import '../../../core/widgets/app_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_shimmer.dart';
 import '../providers/sales_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
@@ -31,98 +32,241 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     final listAsync = ref.watch(salesListProvider((page: _page, status: _status)));
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(children: [
-          Padding(padding: EdgeInsets.all(16), child: Row(children: [
-            const Expanded(child: Text('Đơn hàng', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
-            featureGuideButton(context, 'sales_list'),
-            IconButton(icon: Icon(_searching ? Icons.close : Icons.search, color: c.textSecondary), onPressed: () => setState(() { _searching = !_searching; if (!_searching) _searchCtrl.clear(); })),
-          ])),
+      backgroundColor: c.bg,
+      appBar: AppBar(
+        title: Text(
+          'Lịch Sử Đơn Hàng',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          featureGuideButton(context, 'sales_list'),
+          IconButton(
+            icon: Icon(_searching ? Icons.close_rounded : Icons.search_rounded, color: c.textSecondary),
+            onPressed: () => setState(() {
+              _searching = !_searching;
+              if (!_searching) _searchCtrl.clear();
+            }),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Column(
+        children: [
           if (_searching)
-            Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), child: TextField(
-              controller: _searchCtrl, autofocus: true,
-              decoration: InputDecoration(hintText: 'Tìm đơn hàng, khách hàng...', prefixIcon: Icon(Icons.search, color: c.textMuted),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), filled: true, fillColor: c.card),
-            )),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                style: GoogleFonts.inter(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Tìm theo mã đơn, khách hàng...',
+                  prefixIcon: Icon(Icons.search_rounded, color: c.textMuted, size: 20),
+                  filled: true,
+                  fillColor: c.card,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: c.divider),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: c.divider),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                  ),
+                ),
+              ),
+            ),
+          
+          // Stepper Chips for filtering states
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 16),
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [null, 'PENDING', 'COMPLETED', 'CANCELLED'].map((s) {
                 final label = s == null ? 'Tất cả' : s == 'PENDING' ? 'Chờ xử lý' : s == 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy';
                 final selected = _status == s;
                 return Padding(
-                  padding: EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
                     label: Text(label),
                     selected: selected,
-                    onSelected: (_) => setState(() { _status = s; _page = 1; }),
-                    selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                    labelStyle: TextStyle(color: selected ? AppColors.primary : c.textSecondary, fontSize: 12),
-                    side: BorderSide(color: selected ? AppColors.primary : Colors.white.withValues(alpha: 0.1)),
+                    onSelected: (_) => setState(() {
+                      _status = s;
+                      _page = 1;
+                    }),
+                    selectedColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    checkmarkColor: theme.colorScheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    labelStyle: GoogleFonts.outfit(
+                      color: selected ? theme.colorScheme.primary : c.textSecondary,
+                      fontSize: 12,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                    side: BorderSide(
+                      color: selected ? theme.colorScheme.primary : c.divider.withValues(alpha: 0.8),
+                      width: selected ? 1.5 : 1,
+                    ),
                   ),
                 );
               }).toList(),
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 8),
+          
           Expanded(
             child: listAsync.when(
               data: (data) {
                 final items = (data['items'] as List?) ?? [];
                 if (items.isEmpty) {
-                  return AppEmpty(message: 'Chưa có đơn hàng nào', subtitle: 'Tạo đơn hàng đầu tiên từ màn hình POS');
+                  return const AppEmpty(
+                    message: 'Không tìm thấy đơn hàng nào.',
+                    subtitle: 'Hãy bắt đầu tạo đơn hàng mới từ màn hình máy POS bán hàng.',
+                  );
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(salesListProvider),
                   child: GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                     itemCount: items.length,
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 450,
-                      mainAxisExtent: 85,
+                      mainAxisExtent: 92,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 0,
                     ),
                     itemBuilder: (_, i) {
                       final order = items[i];
                       final orderStatus = order['status'] ?? 'PENDING';
-                      final color = (orderStatus == 'COMPLETED' || orderStatus == 'DELIVERED') ? AppColors.success : orderStatus == 'PENDING' ? AppColors.warning : AppColors.danger;
-                      final statusLabel = (orderStatus == 'COMPLETED' || orderStatus == 'DELIVERED') ? 'Hoàn thành' : orderStatus == 'PENDING' ? 'Chờ' : 'Hủy';
-                      final total = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
-                      final customerName = order['customer']?['name'] ?? 'Khách lẻ';
+                      
+                      Color statusColor;
+                      String statusLabel;
+                      switch (orderStatus) {
+                        case 'COMPLETED':
+                        case 'DELIVERED':
+                          statusColor = AppColors.success;
+                          statusLabel = 'Hoàn thành';
+                          break;
+                        case 'PENDING':
+                          statusColor = AppColors.warning;
+                          statusLabel = 'Chờ xử lý';
+                          break;
+                        case 'CANCELLED':
+                        default:
+                          statusColor = AppColors.danger;
+                          statusLabel = 'Đã hủy';
+                          break;
+                      }
 
-                      return GestureDetector(
-                        onTap: () => context.push('/sales/${order['id']}'),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: EdgeInsets.all(14),
-                          decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
-                          child: Row(children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                              child: Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('DH-${order['id']}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                              SizedBox(height: 2),
-                              Text(customerName, style: TextStyle(fontSize: 12, color: c.textSecondary)),
-                            ])),
-                            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                              Text(_currFmt.format(total), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                                child: Text(statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+                      final total = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
+                      final customerName = order['customer']?['name'] ?? 'Khách mua lẻ';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: () => context.push('/sales/${order['id']}'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Icon(
+                                      Icons.receipt_long_rounded,
+                                      color: theme.colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'Mã: DH-${order['id']}',
+                                          style: GoogleFonts.outfit(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: c.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          customerName,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: c.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _currFmt.format(total),
+                                        style: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.w800,
+                                          color: theme.colorScheme.primary,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: statusColor.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          statusLabel,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            color: statusColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            ]),
-                          ]),
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -130,17 +274,28 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 );
               },
               loading: () => const ShimmerList(),
-              error: (e, _) => AppError(message: 'Lỗi: $e', onRetry: () => ref.invalidate(salesListProvider)),
+              error: (e, _) => AppError(
+                message: 'Lỗi tải dữ liệu: $e',
+                onRetry: () => ref.invalidate(salesListProvider),
+              ),
             ),
           ),
-        ]),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/pos'),
-        icon: const Icon(Icons.point_of_sale),
-        label: const Text('Bán hàng'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 3,
+        icon: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 20),
+        label: Text(
+          'Màn POS Bán Hàng',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
       ),
     );
   }

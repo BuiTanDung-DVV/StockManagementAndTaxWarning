@@ -75,6 +75,8 @@ export class ShopMemberService {
             userId: user.id,
             roleId: roleId || undefined,
             memberType: 'EMPLOYEE',
+            status: 'ACTIVE',
+            isActive: true,
         });
         const saved = await this.memberRepo.save(member);
 
