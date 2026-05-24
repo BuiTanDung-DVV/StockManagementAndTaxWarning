@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/network/api_client.dart';
 
 /// Ngành nghề kinh doanh theo Sổ tay HKD
 enum BusinessType {
@@ -18,10 +19,10 @@ enum BusinessType {
 
 /// Ngưỡng doanh thu theo Sổ tay HKD
 class RevenueThreshold {
-  static const double tier1 = 100000000;   // 100 triệu
-  static const double tier2 = 300000000;   // 300 triệu
-  static const double tier3 = 500000000;   // 500 triệu
-  static const double tier4 = 1000000000;  // 1 tỷ
+  static double tier1 = 100000000;   // 100 triệu
+  static double tier2 = 300000000;   // 300 triệu
+  static double tier3 = 500000000;   // 500 triệu
+  static double tier4 = 1000000000;  // 1 tỷ
 
   static String getObligation(double revenue) {
     if (revenue <= tier1) return 'Không phải nộp thuế GTGT, TNCN';
@@ -116,6 +117,49 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
     final json = prefs.getString(_key);
     if (json != null) {
       state = TaxConfig.fromJson(jsonDecode(json));
+    }
+    
+    // Load cached thresholds
+    final thresholdsJson = prefs.getString('tax_thresholds');
+    if (thresholdsJson != null) {
+      final th = jsonDecode(thresholdsJson);
+      RevenueThreshold.tier1 = (th['tier1'] as num?)?.toDouble() ?? RevenueThreshold.tier1;
+      RevenueThreshold.tier2 = (th['tier2'] as num?)?.toDouble() ?? RevenueThreshold.tier2;
+      RevenueThreshold.tier3 = (th['tier3'] as num?)?.toDouble() ?? RevenueThreshold.tier3;
+      RevenueThreshold.tier4 = (th['tier4'] as num?)?.toDouble() ?? RevenueThreshold.tier4;
+    }
+
+    // Fetch dynamic config from backend
+    _fetchConfigFromBackend();
+  }
+
+  Future<void> _fetchConfigFromBackend() async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.get('/tax/config');
+      if (res['success'] == true && res['data'] != null) {
+        final data = res['data'];
+        
+        if (data['thresholds'] != null) {
+          final th = data['thresholds'] as Map<String, dynamic>;
+          RevenueThreshold.tier1 = (th['tier1'] as num?)?.toDouble() ?? RevenueThreshold.tier1;
+          RevenueThreshold.tier2 = (th['tier2'] as num?)?.toDouble() ?? RevenueThreshold.tier2;
+          RevenueThreshold.tier3 = (th['tier3'] as num?)?.toDouble() ?? RevenueThreshold.tier3;
+          RevenueThreshold.tier4 = (th['tier4'] as num?)?.toDouble() ?? RevenueThreshold.tier4;
+
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('tax_thresholds', jsonEncode(th));
+        }
+        
+        if (data['currentPolicies'] != null) {
+           final policies = data['currentPolicies'];
+           if (policies['vatReductionActive'] != null) {
+             setVatReduction20(policies['vatReductionActive']);
+           }
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch tax config from backend: $e');
     }
   }
 

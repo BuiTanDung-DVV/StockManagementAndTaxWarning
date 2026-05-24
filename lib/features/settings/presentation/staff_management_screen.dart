@@ -89,10 +89,15 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                     controller: usernameCtrl,
                     style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
                     decoration: InputDecoration(
-                      labelText: 'Tên đăng nhập *',
-                      hintText: 'Nhập tên tài khoản của nhân viên',
+                      labelText: 'Tên đăng nhập (đã có trên hệ thống) *',
+                      hintText: 'VD: nhanvien01 (tài khoản đã đăng ký)',
                       prefixIcon: Icon(Icons.person_outline_rounded, color: c.textMuted, size: 20),
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Lưu ý: Nhân viên cần tự đăng ký tài khoản trên ứng dụng trước khi được thêm vào cửa hàng.',
+                    style: GoogleFonts.inter(fontSize: 11, color: c.textMuted, fontStyle: FontStyle.italic),
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<int>(

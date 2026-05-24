@@ -2,6 +2,8 @@ import { DataSource } from 'typeorm';
 import { config } from './env.config';
 import * as path from 'path';
 
+import { AuditLogSubscriber } from '../system/audit-log.subscriber';
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
   ...(config.dbUrl 
@@ -21,5 +23,5 @@ export const AppDataSource = new DataSource({
     path.join(__dirname, '../**/*.entity{.ts,.js}'),
   ],
   migrations: [],
-  subscribers: [],
+  subscribers: [AuditLogSubscriber],
 });

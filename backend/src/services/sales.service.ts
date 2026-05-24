@@ -4,7 +4,10 @@ import { Customer, Receivable } from '../customer/entities';
 import { Product } from '../product/entities';
 import { COGSService } from './cogs.service';
 import { FinanceService } from './finance.service';
+import { PostingService } from './posting.service';
+import { JournalEntry } from '../finance/ledger.entity';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
+import { EntityManager } from 'typeorm';
 
 export class SalesService {
     private orderRepo = AppDataSource.getRepository(SalesOrder);
@@ -18,6 +21,7 @@ export class SalesService {
     private movementRepo = AppDataSource.getRepository(InventoryMovement);
     private cogsService = new COGSService();
     private financeService = new FinanceService();
+    private postingService = new PostingService();
 
     async findAll(shopId: number, page = 1, limit = 20) {
         const [items, total] = await this.orderRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
@@ -58,145 +62,251 @@ export class SalesService {
     }
 
     async create(shopId: number, dto: any) {
-        const orderDate = dto.orderDate ? new Date(dto.orderDate) : new Date();
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        const customer = dto.customerId
-            ? await this.customerRepo.findOne({ where: { id: Number(dto.customerId), shopId } })
-            : null;
+        try {
+            const manager = queryRunner.manager;
 
-        let subtotal = 0;
-        let totalCogs = 0;
-        const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
-        const allLotDeductions: { lotId: number; qty: number }[] = [];
-        const stockDeductions: { productId: number; quantity: number }[] = [];
+            const orderDate = dto.orderDate ? new Date(dto.orderDate) : new Date();
 
-        const items: SalesOrderItem[] = [];
-        for (const i of rawItems) {
-            const quantity = Number(i.quantity || 0);
-            const unitPrice = Number(i.unitPrice || 0);
-            if (quantity <= 0) throw new Error('Validation: Quantity must be greater than 0');
-            if (unitPrice < 0) throw new Error('Validation: Unit price cannot be negative');
-            const lineSubtotal = quantity * unitPrice;
-            subtotal += lineSubtotal;
-
-            const product = i.productId
-                ? await this.productRepo.findOne({ where: { id: Number(i.productId), shopId } })
+            const customer = dto.customerId
+                ? await manager.findOne(Customer, { where: { id: Number(dto.customerId), shopId } })
                 : null;
-            if (!product) throw new Error('Validation: Product not found');
-            await this.assertStockAvailable(shopId, product.id, quantity);
-            stockDeductions.push({ productId: product.id, quantity });
 
-            // Tính giá vốn cho item này
-            let costPrice = 0;
-            if (product && quantity > 0) {
-                try {
-                    const cogsResult = await this.cogsService.calculateCOGS(product.id, quantity, undefined, shopId);
-                    costPrice = cogsResult.unitCost;
-                    totalCogs += cogsResult.totalCost;
-                    allLotDeductions.push(...cogsResult.lotDeductions);
-                } catch {
-                    costPrice = Number(product.costPrice || 0);
-                    totalCogs += costPrice * quantity;
+            let subtotal = 0;
+            let totalCogs = 0;
+            const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
+            const allLotDeductions: { lotId: number; qty: number }[] = [];
+            const stockDeductions: { productId: number; quantity: number }[] = [];
+
+            const items: SalesOrderItem[] = [];
+            for (const i of rawItems) {
+                const quantity = Number(i.quantity || 0);
+                const unitPrice = Number(i.unitPrice || 0);
+                if (quantity <= 0) throw new Error('Validation: Quantity must be greater than 0');
+                if (unitPrice < 0) throw new Error('Validation: Unit price cannot be negative');
+                const lineSubtotal = quantity * unitPrice;
+                subtotal += lineSubtotal;
+
+                const product = i.productId
+                    ? await manager.findOne(Product, { where: { id: Number(i.productId), shopId } })
+                    : null;
+                if (!product) throw new Error('Validation: Product not found');
+                await this.assertStockAvailable(shopId, product.id, quantity, manager);
+                stockDeductions.push({ productId: product.id, quantity });
+
+                // Tính giá vốn cho item này
+                let costPrice = 0;
+                if (product && quantity > 0) {
+                    try {
+                        const cogsResult = await this.cogsService.calculateCOGS(product.id, quantity, undefined, shopId);
+                        costPrice = cogsResult.unitCost;
+                        totalCogs += cogsResult.totalCost;
+                        allLotDeductions.push(...cogsResult.lotDeductions);
+                    } catch {
+                        costPrice = Number(product.costPrice || 0);
+                        totalCogs += costPrice * quantity;
+                    }
+                }
+
+                const item = manager.create(SalesOrderItem, {
+                    shopId,
+                    quantity,
+                    unitPrice,
+                    subtotal: lineSubtotal,
+                    costPrice,
+                    taxRate: Number(i.taxRate || 0),
+                    taxAmount: Number(i.taxAmount || 0),
+                    ...(product ? { product } : {}),
+                });
+                items.push(item);
+            }
+
+            const discountAmount = Number(dto.discountAmount || 0);
+            const taxAmount = Number(dto.taxAmount || 0);
+            const totalAmount = subtotal - discountAmount + taxAmount;
+            const paidAmount = Number(dto.paidAmount || 0);
+            const unpaidAmount = Math.max(totalAmount - paidAmount, 0);
+
+            if (customer && Number(customer.creditLimit || 0) > 0) {
+                const existingDebtRaw = await manager.createQueryBuilder(Receivable, 'r')
+                    .select('COALESCE(SUM(r.amount - r.paid_amount), 0)', 'remainingDebt')
+                    .where('r.customer_id = :customerId AND r.shop_id = :shopId', { customerId: customer.id, shopId })
+                    .andWhere("r.status != 'PAID'")
+                    .getRawOne();
+
+                const existingDebt = Number(existingDebtRaw?.remainingDebt || 0);
+                const currentExposure = Math.max(Number(customer.balance || 0), existingDebt);
+                const newDebt = unpaidAmount;
+                const projectedExposure = currentExposure + newDebt;
+                const creditLimit = Number(customer.creditLimit || 0);
+
+                if (projectedExposure > creditLimit) {
+                    throw new Error(`Vượt hạn mức tín dụng: công nợ dự kiến ${projectedExposure.toFixed(0)} > hạn mức ${creditLimit.toFixed(0)}`);
                 }
             }
 
-            const item = (this.orderItemRepo as any).create({
+            const order = manager.create(SalesOrder, {
                 shopId,
-                quantity,
-                unitPrice,
-                subtotal: lineSubtotal,
-                costPrice,
-                taxRate: Number(i.taxRate || 0),
-                taxAmount: Number(i.taxAmount || 0),
-                ...(product ? { product } : {}),
-            }) as SalesOrderItem;
-            items.push(item as SalesOrderItem);
-        }
-
-        const discountAmount = Number(dto.discountAmount || 0);
-        const taxAmount = Number(dto.taxAmount || 0);
-        const totalAmount = subtotal - discountAmount + taxAmount;
-        const paidAmount = Number(dto.paidAmount || 0);
-
-        if (customer && Number(customer.creditLimit || 0) > 0) {
-            const existingDebtRaw = await this.receivableRepo.createQueryBuilder('r')
-                .select('COALESCE(SUM(r.amount - r.paid_amount), 0)', 'remainingDebt')
-                .where('r.customer_id = :customerId AND r.shop_id = :shopId', { customerId: customer.id, shopId })
-                .andWhere("r.status != 'PAID'")
-                .getRawOne();
-
-            const existingDebt = Number(existingDebtRaw?.remainingDebt || 0);
-            const currentExposure = Math.max(Number(customer.balance || 0), existingDebt);
-            const newDebt = Math.max(totalAmount - paidAmount, 0);
-            const projectedExposure = currentExposure + newDebt;
-            const creditLimit = Number(customer.creditLimit || 0);
-
-            if (projectedExposure > creditLimit) {
-                throw new Error(`Vượt hạn mức tín dụng: công nợ dự kiến ${projectedExposure.toFixed(0)} > hạn mức ${creditLimit.toFixed(0)}`);
-            }
-        }
-
-        const order = this.orderRepo.create({
-            shopId,
-            orderCode: dto.orderCode || 'SO' + Date.now().toString().slice(-6),
-            orderDate,
-            status: dto.status || 'PENDING',
-            subtotal,
-            discountAmount,
-            taxAmount,
-            totalAmount,
-            totalCogs,
-            paidAmount,
-            paymentMethod: dto.paymentMethod || 'CASH',
-            notes: dto.notes,
-            invoiceNumber: dto.invoiceNumber,
-            ...(customer ? { customer } : {}),
-            items,
-        } as any);
-
-        const savedOrder = await this.orderRepo.save(order) as unknown as SalesOrder;
-
-        if (paidAmount > 0) {
-            await this.paymentRepo.save(this.paymentRepo.create({
-                shopId,
-                order: savedOrder,
-                amount: paidAmount,
-                method: dto.paymentMethod || 'CASH',
-                referenceCode: dto.qrPaymentRef,
-                notes: 'Thanh toán khi tạo đơn hàng'
-            }));
-
-            await this.financeService.createCashTransaction(shopId, {
-                amount: paidAmount,
-                type: 'INCOME',
-                category: 'SALES',
+                orderCode: dto.orderCode || 'SO' + Date.now().toString().slice(-6),
+                orderDate,
+                status: dto.status || 'PENDING',
+                subtotal,
+                discountAmount,
+                taxAmount,
+                totalAmount,
+                totalCogs,
+                paidAmount,
                 paymentMethod: dto.paymentMethod || 'CASH',
-                referenceType: 'SALES_ORDER',
-                referenceId: savedOrder.id,
-                referenceCode: savedOrder.orderCode,
-                description: `Thanh toán cho đơn hàng ${savedOrder.orderCode}`,
-                transactionDate: savedOrder.orderDate,
-                status: 'COMPLETED'
-            } as any);
-        }
+                notes: dto.notes,
+                invoiceNumber: dto.invoiceNumber,
+                ...(customer ? { customer } : {}),
+                items,
+            });
 
-        // Commit: trừ tồn kho các lô
-        if (allLotDeductions.length > 0) {
-            await this.cogsService.commitLotDeductions(allLotDeductions);
-        }
-        if (stockDeductions.length > 0) {
-            await this.commitStockDeductions(shopId, stockDeductions, savedOrder.id);
-        }
+            const savedOrder = await manager.save(SalesOrder, order);
 
-        return this.findById(shopId, savedOrder.id);
+            if (paidAmount > 0) {
+                await manager.save(SalesOrderPayment, manager.create(SalesOrderPayment, {
+                    shopId,
+                    order: savedOrder,
+                    amount: paidAmount,
+                    method: dto.paymentMethod || 'CASH',
+                    referenceCode: dto.qrPaymentRef,
+                    notes: 'Thanh toán khi tạo đơn hàng'
+                }));
+
+                await this.financeService.createCashTransaction(shopId, {
+                    amount: paidAmount,
+                    type: 'INCOME',
+                    category: 'SALES',
+                    paymentMethod: dto.paymentMethod || 'CASH',
+                    referenceType: 'SALES_ORDER',
+                    referenceId: savedOrder.id,
+                    referenceCode: savedOrder.orderCode,
+                    description: `Thanh toán cho đơn hàng ${savedOrder.orderCode}`,
+                    transactionDate: savedOrder.orderDate,
+                    status: 'COMPLETED'
+                } as any, manager);
+            }
+
+            if (unpaidAmount > 0 && customer) {
+                const receivable = manager.create(Receivable, {
+                    shopId,
+                    customer,
+                    order: savedOrder,
+                    amount: unpaidAmount,
+                    paidAmount: 0,
+                    dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+                    status: 'UNPAID',
+                    notes: `Công nợ từ đơn hàng ${savedOrder.orderCode}`
+                });
+                await manager.save(Receivable, receivable);
+
+                customer.balance = Number(customer.balance || 0) + unpaidAmount;
+                await manager.save(Customer, customer);
+            }
+
+            // Commit: trừ tồn kho các lô
+            if (allLotDeductions.length > 0) {
+                await this.cogsService.commitLotDeductions(allLotDeductions, manager);
+            }
+            if (stockDeductions.length > 0) {
+                await this.commitStockDeductions(shopId, stockDeductions, savedOrder.id, manager);
+            }
+
+            // === Journal Ledger: Ghi bút toán kép cho đơn hàng ===
+            const journalLines: { accountCode: string; amount: number; entryType: 'DEBIT' | 'CREDIT' }[] = [];
+
+            // Doanh thu: Có TK 511
+            journalLines.push({ accountCode: '511', amount: totalAmount, entryType: 'CREDIT' });
+
+            // Tiền mặt thu được: Nợ TK 111
+            if (paidAmount > 0) {
+                journalLines.push({ accountCode: '111', amount: paidAmount, entryType: 'DEBIT' });
+            }
+
+            // Phải thu khách hàng: Nợ TK 131
+            if (unpaidAmount > 0 && customer) {
+                journalLines.push({ accountCode: '131', amount: unpaidAmount, entryType: 'DEBIT' });
+            }
+
+            // Giá vốn hàng bán: Nợ TK 632, Có TK 156 (Hàng hóa)
+            if (totalCogs > 0) {
+                journalLines.push({ accountCode: '632', amount: totalCogs, entryType: 'DEBIT' });
+                journalLines.push({ accountCode: '156', amount: totalCogs, entryType: 'CREDIT' });
+            }
+
+            await this.postingService.postJournal(
+                shopId,
+                'SALES_ORDER',
+                savedOrder.id,
+                `Bán hàng - Đơn ${savedOrder.orderCode}`,
+                journalLines,
+                manager
+            );
+
+            await queryRunner.commitTransaction();
+            return this.findById(shopId, savedOrder.id);
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
     async cancel(shopId: number, id: number) {
-        const order = await this.orderRepo.findOne({ where: { id, shopId } });
-        if (!order) throw new Error('Order not found');
-        order.status = 'CANCELLED';
-        await this.orderRepo.save(order);
-        return this.findById(shopId, id);
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const manager = queryRunner.manager;
+            const order = await manager.findOne(SalesOrder, { where: { id, shopId } });
+            if (!order) throw new Error('Order not found');
+            
+            order.status = 'CANCELLED';
+            await manager.save(SalesOrder, order);
+
+            const receivable = await manager.findOne(Receivable, { 
+                where: { shopId, order: { id } } as any, 
+                relations: ['customer'] 
+            });
+            if (receivable && receivable.status !== 'CANCELLED') {
+                receivable.status = 'CANCELLED';
+                await manager.save(Receivable, receivable);
+
+                const unpaidAmount = Number(receivable.amount) - Number(receivable.paidAmount || 0);
+                if (unpaidAmount > 0 && receivable.customer) {
+                    const customer = await manager.findOne(Customer, { where: { id: receivable.customer.id, shopId } });
+                    if (customer) {
+                        customer.balance = Number(customer.balance || 0) - unpaidAmount;
+                        await manager.save(Customer, customer);
+                    }
+                }
+            }
+
+            // === Journal Ledger: Đánh dấu bút toán gốc là đã hủy ===
+            const journalEntryRepo = manager.getRepository(JournalEntry);
+            const originalEntry = await journalEntryRepo.findOne({
+                where: { shopId, referenceType: 'SALES_ORDER', referenceId: id }
+            });
+            if (originalEntry && !originalEntry.isVoided) {
+                originalEntry.isVoided = true;
+                await journalEntryRepo.save(originalEntry);
+            }
+
+            await queryRunner.commitTransaction();
+            return this.findById(shopId, id);
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
     async updateOrder(shopId: number, id: number, dto: Partial<SalesOrder>) {
@@ -214,112 +324,183 @@ export class SalesService {
     }
 
     async addPayment(shopId: number, orderId: number, dto: Partial<SalesOrderPayment>) {
-        const order = await this.orderRepo.findOne({ where: { id: orderId, shopId } });
-        if (!order) throw new Error('Order not found');
-        const amount = Number(dto.amount || 0);
-        if (amount <= 0) throw new Error('Validation: Payment amount must be greater than 0');
-        const currentPaid = Number(order.paidAmount || 0);
-        const totalAmount = Number(order.totalAmount || 0);
-        if (currentPaid + amount > totalAmount) {
-            throw new Error('Validation: Payment amount exceeds remaining order balance');
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const manager = queryRunner.manager;
+            const order = await manager.findOne(SalesOrder, { where: { id: orderId, shopId } });
+            if (!order) throw new Error('Order not found');
+            const amount = Number(dto.amount || 0);
+            if (amount <= 0) throw new Error('Validation: Payment amount must be greater than 0');
+            const currentPaid = Number(order.paidAmount || 0);
+            const totalAmount = Number(order.totalAmount || 0);
+            if (currentPaid + amount > totalAmount) {
+                throw new Error('Validation: Payment amount exceeds remaining order balance');
+            }
+            const payment = await manager.save(SalesOrderPayment, manager.create(SalesOrderPayment, { ...dto, shopId, order }));
+            order.paidAmount = currentPaid + amount;
+            order.status = (Number(order.paidAmount) >= totalAmount) ? 'DELIVERED' : 'PENDING';
+            await manager.save(SalesOrder, order);
+
+            await this.financeService.createCashTransaction(shopId, {
+                amount,
+                type: 'INCOME',
+                category: 'SALES',
+                paymentMethod: (dto as any).method || 'CASH',
+                referenceType: 'SALES_ORDER',
+                referenceId: order.id,
+                referenceCode: order.orderCode,
+                description: `Thanh toán thêm cho đơn hàng ${order.orderCode}`,
+                transactionDate: new Date(),
+                status: 'COMPLETED'
+            } as any, manager);
+
+            // === Journal Ledger: Thu nợ khách hàng (Nợ TK 111 / Có TK 131) ===
+            await this.postingService.postJournal(
+                shopId,
+                'DEBT_COLLECTION',
+                order.id,
+                `Thu nợ khách hàng - Đơn ${order.orderCode}`,
+                [
+                    { accountCode: '111', amount, entryType: 'DEBIT' },
+                    { accountCode: '131', amount, entryType: 'CREDIT' },
+                ],
+                manager
+            );
+
+            // Cập nhật Receivable nếu tồn tại
+            const receivable = await manager.findOne(Receivable, {
+                where: { shopId, order: { id: orderId } } as any,
+            });
+            if (receivable && receivable.status !== 'PAID' && receivable.status !== 'CANCELLED') {
+                receivable.paidAmount = Number(receivable.paidAmount || 0) + amount;
+                if (Number(receivable.paidAmount) >= Number(receivable.amount)) {
+                    receivable.status = 'PAID';
+                }
+                await manager.save(Receivable, receivable);
+
+                // Giảm số dư nợ khách hàng
+                const customer = await manager.findOne(Customer, {
+                    where: { id: (receivable as any).customerId || (receivable as any).customer?.id, shopId }
+                });
+                if (customer) {
+                    customer.balance = Math.max(Number(customer.balance || 0) - amount, 0);
+                    await manager.save(Customer, customer);
+                }
+            }
+
+            await queryRunner.commitTransaction();
+            return payment;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
-        const payment = await this.paymentRepo.save(this.paymentRepo.create({ ...dto, shopId, order }));
-        order.paidAmount = currentPaid + amount;
-        order.status = (Number(order.paidAmount) >= totalAmount) ? 'DELIVERED' : 'PENDING';
-        await this.orderRepo.save(order);
-
-        await this.financeService.createCashTransaction(shopId, {
-            amount,
-            type: 'INCOME',
-            category: 'SALES',
-            paymentMethod: (dto as any).method || 'CASH',
-            referenceType: 'SALES_ORDER',
-            referenceId: order.id,
-            referenceCode: order.orderCode,
-            description: `Thanh toán thêm cho đơn hàng ${order.orderCode}`,
-            transactionDate: new Date(),
-            status: 'COMPLETED'
-        } as any);
-
-        return payment;
     }
 
     async createReturn(shopId: number, orderId: number, dto: any) {
-        // Use base order entity (not the aggregated object returned by findById).
-        const order = await this.orderRepo.findOne({ where: { id: orderId, shopId } });
-        if (!order) throw new Error('Order not found');
-        if (order.status === 'CANCELLED') throw new Error('Cannot return a cancelled order');
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
 
-        // return_date is NOT NULL in schema → always set.
-        const returnDate = dto.returnDate ? new Date(dto.returnDate) : new Date();
+        try {
+            const manager = queryRunner.manager;
+            const order = await manager.findOne(SalesOrder, { where: { id: orderId, shopId } });
+            if (!order) throw new Error('Order not found');
+            if (order.status === 'CANCELLED') throw new Error('Cannot return a cancelled order');
 
-        const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
-        let refundAmount = Number(dto.refundAmount || 0);
+            const returnDate = dto.returnDate ? new Date(dto.returnDate) : new Date();
 
-        // If items are provided and refundAmount isn't, derive it.
-        if (!refundAmount && rawItems.length) {
-            refundAmount = rawItems.reduce((sum, i) => sum + Number(i.subtotal || (Number(i.quantity || 0) * Number(i.unitPrice || 0))), 0);
-        }
+            const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
+            let refundAmount = Number(dto.refundAmount || 0);
 
-        const entity = this.returnRepo.create({
-            shopId,
-            returnCode: dto.returnCode || 'RT' + Date.now().toString().slice(-6),
-            order,
-            returnDate,
-            reason: dto.reason || '',
-            refundAmount,
-            refundMethod: dto.refundMethod || 'CASH',
-            status: dto.status || 'PENDING',
-            notes: dto.notes,
-            // items handled below (needs Product lookup)
-        } as any);
-
-        if (rawItems.length) {
-            (entity as any).items = [];
-            for (const i of rawItems) {
-                const product = i.productId
-                    ? await this.productRepo.findOne({ where: { id: Number(i.productId), shopId } })
-                    : null;
-
-                (entity as any).items.push({
-                    shopId,
-                    ...(product ? { product } : {}),
-                    quantity: Number(i.quantity || 0),
-                    unitPrice: Number(i.unitPrice || 0),
-                    subtotal: Number(i.subtotal || (Number(i.quantity || 0) * Number(i.unitPrice || 0))),
-                    reason: i.reason,
-                });
+            if (!refundAmount && rawItems.length) {
+                refundAmount = rawItems.reduce((sum: number, i: any) => sum + Number(i.subtotal || (Number(i.quantity || 0) * Number(i.unitPrice || 0))), 0);
             }
-        }
 
-        const savedReturn = await this.returnRepo.save(entity) as unknown as SalesReturn;
-
-        order.returnStatus = 'RETURNED';
-        await this.orderRepo.save(order);
-
-        if (refundAmount > 0) {
-            await this.financeService.createCashTransaction(shopId, {
-                amount: refundAmount,
-                type: 'EXPENSE',
-                category: 'REFUND',
-                paymentMethod: dto.refundMethod || 'CASH',
-                referenceType: 'SALES_RETURN',
-                referenceId: savedReturn.id,
-                referenceCode: savedReturn.returnCode,
-                description: `Hoàn tiền cho khách trả hàng ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
-                transactionDate: savedReturn.returnDate,
-                status: 'COMPLETED'
+            const entity = manager.create(SalesReturn, {
+                shopId,
+                returnCode: dto.returnCode || 'RT' + Date.now().toString().slice(-6),
+                order,
+                returnDate,
+                reason: dto.reason || '',
+                refundAmount,
+                refundMethod: dto.refundMethod || 'CASH',
+                status: dto.status || 'PENDING',
+                notes: dto.notes,
             } as any);
-        }
 
-        return savedReturn;
+            if (rawItems.length) {
+                (entity as any).items = [];
+                for (const i of rawItems) {
+                    const product = i.productId
+                        ? await manager.findOne(Product, { where: { id: Number(i.productId), shopId } })
+                        : null;
+
+                    (entity as any).items.push({
+                        shopId,
+                        ...(product ? { product } : {}),
+                        quantity: Number(i.quantity || 0),
+                        unitPrice: Number(i.unitPrice || 0),
+                        subtotal: Number(i.subtotal || (Number(i.quantity || 0) * Number(i.unitPrice || 0))),
+                        reason: i.reason,
+                    });
+                }
+            }
+
+            const savedReturn = await manager.save(SalesReturn, entity) as unknown as SalesReturn;
+
+            order.returnStatus = 'RETURNED';
+            await manager.save(SalesOrder, order);
+
+            if (refundAmount > 0) {
+                await this.financeService.createCashTransaction(shopId, {
+                    amount: refundAmount,
+                    type: 'EXPENSE',
+                    category: 'REFUND',
+                    paymentMethod: dto.refundMethod || 'CASH',
+                    referenceType: 'SALES_RETURN',
+                    referenceId: savedReturn.id,
+                    referenceCode: savedReturn.returnCode,
+                    description: `Hoàn tiền cho khách trả hàng ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
+                    transactionDate: savedReturn.returnDate,
+                    status: 'COMPLETED'
+                } as any, manager);
+
+                // === Journal Ledger: Hoàn tiền trả hàng (Nợ TK 511 / Có TK 111) ===
+                await this.postingService.postJournal(
+                    shopId,
+                    'SALES_RETURN',
+                    savedReturn.id,
+                    `Trả hàng - ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
+                    [
+                        { accountCode: '511', amount: refundAmount, entryType: 'DEBIT' },
+                        { accountCode: '111', amount: refundAmount, entryType: 'CREDIT' },
+                    ],
+                    manager
+                );
+            }
+
+            await queryRunner.commitTransaction();
+            return savedReturn;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
-    private async assertStockAvailable(shopId: number, productId: number, quantity: number) {
-        const raw = await this.stockRepo.createQueryBuilder('s')
-            .select('COALESCE(SUM(s.quantity), 0)', 'available')
-            .where('s.shop_id = :shopId AND s.product_id = :productId', { shopId, productId })
-            .getRawOne();
+    private async assertStockAvailable(shopId: number, productId: number, quantity: number, manager?: EntityManager) {
+        const qb = manager
+            ? manager.createQueryBuilder(InventoryStock, 's')
+            : this.stockRepo.createQueryBuilder('s');
+        qb.select('COALESCE(SUM(s.quantity), 0)', 'available')
+            .where('s.shop_id = :shopId AND s.product_id = :productId', { shopId, productId });
+        const raw = await qb.getRawOne();
         const available = Number(raw?.available || 0);
         if (available < quantity) {
             throw new Error(`Validation: Insufficient stock for product ${productId}: ${available} available, ${quantity} requested`);
@@ -336,10 +517,13 @@ export class SalesService {
         return order;
     }
 
-    private async commitStockDeductions(shopId: number, deductions: { productId: number; quantity: number }[], orderId: number) {
+    private async commitStockDeductions(shopId: number, deductions: { productId: number; quantity: number }[], orderId: number, manager?: EntityManager) {
+        const stockRepo = manager ? manager.getRepository(InventoryStock) : this.stockRepo;
+        const movementRepo = manager ? manager.getRepository(InventoryMovement) : this.movementRepo;
+
         for (const deduction of deductions) {
             let remaining = deduction.quantity;
-            const stocks = await this.stockRepo.find({
+            const stocks = await stockRepo.find({
                 where: { shopId, productId: deduction.productId } as any,
                 order: { updatedAt: 'ASC', id: 'ASC' } as any,
             });
@@ -352,8 +536,8 @@ export class SalesService {
                 const take = Math.min(available, remaining);
                 stock.quantity = available - take;
                 stock.updatedAt = new Date();
-                await this.stockRepo.save(stock);
-                await this.movementRepo.save(this.movementRepo.create({
+                await stockRepo.save(stock);
+                await movementRepo.save(movementRepo.create({
                     shopId,
                     productId: deduction.productId,
                     warehouseId: stock.warehouseId,

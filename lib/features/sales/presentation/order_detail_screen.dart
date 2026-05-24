@@ -35,6 +35,15 @@ class OrderDetailScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           featureGuideButton(context, 'order_detail'),
+          IconButton(
+            icon: const Icon(Icons.print_rounded, size: 20),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Đang kết nối máy in... Tính năng in hóa đơn sẽ sớm ra mắt!')),
+              );
+            },
+            tooltip: 'In hóa đơn',
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -43,6 +52,7 @@ class OrderDetailScreen extends ConsumerWidget {
           final createdAt = (order['createdAt'] ?? order['created_at'])?.toString();
           final customerName = (order['customer']?['name'] ?? order['customerName'] ?? 'Khách mua lẻ').toString();
           final status = (order['status'] ?? 'PENDING').toString();
+          final returnStatus = order['returnStatus']?.toString();
           final orderCode = (order['orderCode'] ?? 'DH-$id').toString();
 
           final totalAmount = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
@@ -54,6 +64,7 @@ class OrderDetailScreen extends ConsumerWidget {
           // Payment status
           final bool isFullyPaid = remaining <= 0;
           final bool isCancelled = status == 'CANCELLED';
+          final bool isReturned = returnStatus == 'RETURNED';
 
           Color statusColor;
           String statusLabel;
@@ -394,22 +405,23 @@ class OrderDetailScreen extends ConsumerWidget {
                           ),
                         if (status == 'DELIVERED' || status == 'COMPLETED' || isFullyPaid) ...[
                           if (!isFullyPaid) const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _showReturnDialog(context, ref, id, items, paidAmount),
-                              icon: const Icon(Icons.assignment_return_rounded, size: 18, color: AppColors.danger),
-                              label: Text(
-                                'Yêu Cầu Trả Hàng',
-                                style: GoogleFonts.outfit(color: AppColors.danger, fontWeight: FontWeight.bold),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: AppColors.danger, width: 1.5),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          if (!isReturned)
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showReturnDialog(context, ref, id, items, paidAmount),
+                                icon: const Icon(Icons.assignment_return_rounded, size: 18, color: AppColors.danger),
+                                label: Text(
+                                  'Yêu Cầu Trả Hàng',
+                                  style: GoogleFonts.outfit(color: AppColors.danger, fontWeight: FontWeight.bold),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppColors.danger, width: 1.5),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ],
                     ),

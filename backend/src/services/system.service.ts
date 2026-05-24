@@ -1,5 +1,6 @@
 import { AppDataSource } from '../config/db.config';
-import { ShopProfile, ActivityLog, InvoiceScan, Invoice, InvoiceItem, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../system/entities';
+import { ShopProfile, ActivityLog, InvoiceScan, Invoice, InvoiceItem } from '../system/entities';
+import { PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
 
 export class SystemService {
     private profileRepo = AppDataSource.getRepository(ShopProfile);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -81,6 +82,9 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
           final netProfit = num.tryParse(data['netProfit']?.toString() ?? '0') ?? 0;
           final grossPct = revenue > 0 ? (grossProfit / revenue * 100).toStringAsFixed(1) : '0.0';
           final netPct = revenue > 0 ? (netProfit / revenue * 100).toStringAsFixed(1) : '0.0';
+          
+          final cogsPct = revenue > 0 ? (cogs / revenue * 100).toStringAsFixed(1) : '0.0';
+          final expensesPct = revenue > 0 ? (expenses / revenue * 100).toStringAsFixed(1) : '0.0';
 
           if (revenue == 0 && cogs == 0 && expenses == 0) {
             return const AppEmpty(
@@ -116,6 +120,107 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                // Vibrant Chart Card (Glassmorphic Container with Pie Chart)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cơ cấu dòng tiền & Lợi nhuận',
+                        style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: c.textPrimary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Phân bổ dòng tiền dựa trên tổng doanh thu',
+                        style: TextStyle(fontSize: 11, color: c.textSecondary),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          // Pie Chart
+                          SizedBox(
+                            width: 130,
+                            height: 130,
+                            child: PieChart(
+                              PieChartData(
+                                sectionsSpace: 3,
+                                centerSpaceRadius: 30,
+                                startDegreeOffset: -90,
+                                sections: [
+                                  if (netProfit > 0)
+                                    PieChartSectionData(
+                                      color: AppColors.success,
+                                      value: netProfit.toDouble(),
+                                      title: '$netPct%',
+                                      radius: 28,
+                                      titleStyle: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  if (cogs > 0)
+                                    PieChartSectionData(
+                                      color: AppColors.danger,
+                                      value: cogs.toDouble(),
+                                      title: '$cogsPct%',
+                                      radius: 28,
+                                      titleStyle: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  if (expenses > 0)
+                                    PieChartSectionData(
+                                      color: AppColors.warning,
+                                      value: expenses.toDouble(),
+                                      title: '$expensesPct%',
+                                      radius: 28,
+                                      titleStyle: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          // Legends
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _ChartLegend('Lợi nhuận ròng', AppColors.success, '$netPct%'),
+                                const SizedBox(height: 10),
+                                _ChartLegend('Giá vốn (COGS)', AppColors.danger, '$cogsPct%'),
+                                const SizedBox(height: 10),
+                                _ChartLegend('Vận hành (OPEX)', AppColors.warning, '$expensesPct%'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
                 
                 // Metrics grid list
                 _MetricCard('Tổng doanh thu bán hàng', _fmt(revenue), theme.colorScheme.primary, Icons.trending_up_rounded),
@@ -334,3 +439,39 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
+
+class _ChartLegend extends StatelessWidget {
+  final String label;
+  final Color color;
+  final String pct;
+  const _ChartLegend(this.label, this.color, this.pct);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          pct,
+          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: c.textPrimary),
+        ),
+      ],
+    );
+  }
+}
+

@@ -211,7 +211,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          'Mã: DH-${order['id']}',
+                                          'Mã: ${order['orderCode'] ?? 'DH-${order['id']}'}',
                                           style: GoogleFonts.outfit(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 14,

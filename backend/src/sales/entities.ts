@@ -42,7 +42,7 @@ export class SalesOrder {
     @Column({ name: 'paid_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
     paidAmount: number;
 
-    @Column({ name: 'payment_method', length: 10, default: 'CASH' })
+    @Column({ name: 'payment_method', length: 20, default: 'CASH' })
     paymentMethod: string;
 
     @Column({ length: 500, nullable: true })
