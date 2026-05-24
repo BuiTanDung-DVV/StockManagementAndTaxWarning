@@ -126,7 +126,7 @@ class DashboardScreen extends ConsumerWidget {
                                           style: GoogleFonts.inter(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w500,
-                                            color: Colors.white.withOpacity(0.85),
+                                            color: Colors.white.withValues(alpha: 0.85),
                                           ),
                                         ),
                                         const SizedBox(height: 6),
