@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
@@ -17,10 +18,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _phoneCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
+  
   final _fullNameFocus = FocusNode();
   final _phoneFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
+
+  bool _fullNameHasFocus = false;
+  bool _phoneHasFocus = false;
+  bool _passwordHasFocus = false;
+  bool _confirmPasswordHasFocus = false;
+
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
@@ -28,11 +36,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String _accountType = 'SHOP';
 
   @override
+  void initState() {
+    super.initState();
+    _fullNameFocus.addListener(() => setState(() => _fullNameHasFocus = _fullNameFocus.hasFocus));
+    _phoneFocus.addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
+    _passwordFocus.addListener(() => setState(() => _passwordHasFocus = _passwordFocus.hasFocus));
+    _confirmPasswordFocus.addListener(() => setState(() => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus));
+  }
+
+  @override
   void dispose() {
     _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
+    
     _fullNameFocus.dispose();
     _phoneFocus.dispose();
     _passwordFocus.dispose();
@@ -69,8 +87,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final api = ref.read(apiClientProvider);
-      // Backend expects fields based on TypeORM entity in backend/src/auth/entities.ts:
-      // { username, passwordHash, fullName }
       await api.post(
         '/auth/register',
         data: {
@@ -85,7 +101,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
+          content: Text('Đăng ký tài khoản thành công! Vui lòng đăng nhập.'),
+          behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.success,
         ),
       );
@@ -106,12 +123,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
-        title: Text('Đăng ký tài khoản'),
+        title: Text(
+          'Đăng Ký Tài Khoản',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
+        centerTitle: true,
         backgroundColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => context.pop(),
         ),
       ),
@@ -122,154 +150,240 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             child: LayoutBuilder(
               builder: (context, viewportConstraints) {
                 return SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: viewportConstraints.maxHeight - 64,
+                      minHeight: viewportConstraints.maxHeight - 32,
                     ),
                     child: IntrinsicHeight(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Tạo tài khoản mới',
-                      style: TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 8),
-                  Text(
-                      _accountType == 'SHOP'
-                          ? 'để bắt đầu quản lý bán hàng & kho hàng'
-                          : 'để tham gia hệ thống với tư cách nhân viên',
-                      style: TextStyle(
-                          fontSize: 14, color: c.textSecondary)),
-                  SizedBox(height: 24),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment<String>(
-                        value: 'SHOP',
-                        label: Text('Chủ cửa hàng'),
-                        icon: Icon(Icons.store),
+                        children: [
+                          Text(
+                            'Tạo tài khoản mới',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: c.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _accountType == 'SHOP'
+                                ? 'để bắt đầu quản lý bán hàng & kho hàng doanh nghiệp'
+                                : 'để tham gia hệ thống kinh doanh với vai trò nhân viên',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: c.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Elegant Segmented Select Button
+                          SegmentedButton<String>(
+                            segments: [
+                              ButtonSegment<String>(
+                                value: 'SHOP',
+                                label: Text('Chủ cửa hàng', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
+                                icon: const Icon(Icons.store_rounded, size: 18),
+                              ),
+                              ButtonSegment<String>(
+                                value: 'PERSONAL',
+                                label: Text('Nhân viên', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
+                                icon: const Icon(Icons.person_rounded, size: 18),
+                              ),
+                            ],
+                            selected: {_accountType},
+                            onSelectionChanged: (Set<String> newSelection) {
+                              setState(() {
+                                _accountType = newSelection.first;
+                              });
+                            },
+                            style: SegmentedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Full Name Input
+                          _buildGlowingField(
+                            controller: _fullNameCtrl,
+                            focusNode: _fullNameFocus,
+                            hasFocus: _fullNameHasFocus,
+                            hintText: 'Họ và tên của bạn',
+                            icon: Icons.person_outline_rounded,
+                            c: c,
+                            theme: theme,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Phone/Username Input
+                          _buildGlowingField(
+                            controller: _phoneCtrl,
+                            focusNode: _phoneFocus,
+                            hasFocus: _phoneHasFocus,
+                            hintText: 'Số điện thoại hoặc Tên đăng nhập',
+                            icon: Icons.phone_android_rounded,
+                            c: c,
+                            theme: theme,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Password Input
+                          _buildGlowingField(
+                            controller: _passwordCtrl,
+                            focusNode: _passwordFocus,
+                            hasFocus: _passwordHasFocus,
+                            hintText: 'Mật khẩu',
+                            icon: Icons.lock_outline_rounded,
+                            c: c,
+                            theme: theme,
+                            obscureText: _obscure,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                color: c.textMuted,
+                                size: 20,
+                              ),
+                              onPressed: () => setState(() => _obscure = !_obscure),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Confirm Password Input
+                          _buildGlowingField(
+                            controller: _confirmPasswordCtrl,
+                            focusNode: _confirmPasswordFocus,
+                            hasFocus: _confirmPasswordHasFocus,
+                            hintText: 'Xác nhận mật khẩu',
+                            icon: Icons.lock_clock_outlined,
+                            c: c,
+                            theme: theme,
+                            obscureText: _obscureConfirm,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                color: c.textMuted,
+                                size: 20,
+                              ),
+                              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                            ),
+                          ),
+
+                          if (_error != null) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.danger.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _error!,
+                                      style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 28),
+
+                          // Submit Action
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _register,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                    )
+                                  : Text(
+                                      'Đăng Ký Thành Viên',
+                                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                       ),
-                      ButtonSegment<String>(
-                        value: 'PERSONAL',
-                        label: Text('Nhân viên'),
-                        icon: Icon(Icons.person),
-                      ),
-                    ],
-                    selected: {_accountType},
-                    onSelectionChanged: (Set<String> newSelection) {
-                      setState(() {
-                        _accountType = newSelection.first;
-                      });
-                    },
-                    style: SegmentedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _fullNameCtrl,
-                    focusNode: _fullNameFocus,
-                    textInputAction: TextInputAction.next,
-                    onSubmitted: (_) => _phoneFocus.requestFocus(),
-                    decoration: InputDecoration(
-                      hintText: 'Họ và tên của bạn',
-                      prefixIcon: Icon(Icons.badge, color: c.textMuted),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _phoneCtrl,
-                    focusNode: _phoneFocus,
-                    textInputAction: TextInputAction.next,
-                    onSubmitted: (_) => _passwordFocus.requestFocus(),
-                    decoration: InputDecoration(
-                      hintText: 'SĐT hoặc Tên đăng nhập',
-                      prefixIcon: Icon(Icons.account_circle,
-                          color: c.textMuted),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _passwordCtrl,
-                    focusNode: _passwordFocus,
-                    obscureText: _obscure,
-                    textInputAction: TextInputAction.next,
-                    onSubmitted: (_) => _confirmPasswordFocus.requestFocus(),
-                    decoration: InputDecoration(
-                      hintText: 'Mật khẩu',
-                      prefixIcon: Icon(Icons.lock_outline,
-                          color: c.textMuted),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                            _obscure
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: c.textMuted),
-                        onPressed: () =>
-                            setState(() => _obscure = !_obscure),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _confirmPasswordCtrl,
-                    focusNode: _confirmPasswordFocus,
-                    obscureText: _obscureConfirm,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _register(),
-                    decoration: InputDecoration(
-                      hintText: 'Xác nhận mật khẩu',
-                      prefixIcon: Icon(Icons.lock_outline,
-                          color: c.textMuted),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                            _obscureConfirm
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: c.textMuted),
-                        onPressed: () => setState(
-                            () => _obscureConfirm = !_obscureConfirm),
-                      ),
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Row(children: [
-                        const Icon(Icons.error_outline,
-                            color: AppColors.danger, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                            child: Text(_error!,
-                                style: const TextStyle(
-                                    color: AppColors.danger, fontSize: 13))),
-                      ]),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : const Text('Đăng ký'),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlowingField({
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required bool hasFocus,
+    required String hintText,
+    required IconData icon,
+    required AppThemeColors c,
+    required ThemeData theme,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          if (hasFocus)
+            BoxShadow(
+              color: theme.colorScheme.primary.withValues(alpha: 0.15),
+              blurRadius: 12,
+              spreadRadius: 2,
             ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        obscureText: obscureText,
+        style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+        decoration: InputDecoration(
+          hintText: hintText,
+          prefixIcon: Icon(icon, color: c.textMuted, size: 20),
+          suffixIcon: suffixIcon,
+          filled: true,
+          fillColor: c.card,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: c.divider),
           ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: c.divider),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );

@@ -244,26 +244,31 @@ export class AuthService {
                 await manager.save(member);
             } 
             else if (user.accountType === 'PERSONAL') {
-                status = 'PENDING';
-                const submittedShopCode = dto.shopCode?.toString().trim();
-                const submittedShopId = dto.shopId ? parseInt(dto.shopId, 10) : null;
+                const existingMember = await manager.findOne(ShopMember, { where: { userId: user.id } });
+                if (existingMember) {
+                    status = existingMember.status;
+                } else {
+                    status = 'PENDING';
+                    const submittedShopCode = dto.shopCode?.toString().trim();
+                    const submittedShopId = dto.shopId ? parseInt(dto.shopId, 10) : null;
 
-                if (!submittedShopCode) throw new Error('Yêu cầu bắt buộc phải có mã cửa hàng.');
+                    if (!submittedShopCode) throw new Error('Yêu cầu bắt buộc phải có mã cửa hàng.');
 
-                const whereClause: any = { shopCode: submittedShopCode };
-                if (submittedShopId) whereClause.id = submittedShopId;
+                    const whereClause: any = { shopCode: submittedShopCode };
+                    if (submittedShopId) whereClause.id = submittedShopId;
 
-                const targetShop = await manager.findOne(ShopProfile, { where: whereClause });
-                if (!targetShop) throw new Error('Không tìm thấy Cửa hàng khớp với yêu cầu của bạn.');
+                    const targetShop = await manager.findOne(ShopProfile, { where: whereClause });
+                    if (!targetShop) throw new Error('Không tìm thấy Cửa hàng khớp với yêu cầu của bạn.');
 
-                const member = manager.create(ShopMember, {
-                    shopId: targetShop.id,
-                    userId: user.id,
-                    memberType: 'EMPLOYEE',
-                    status: 'PENDING',
-                    isActive: true, // They technically exist, but status blocks features
-                });
-                await manager.save(member);
+                    const member = manager.create(ShopMember, {
+                        shopId: targetShop.id,
+                        userId: user.id,
+                        memberType: 'EMPLOYEE',
+                        status: 'PENDING',
+                        isActive: true, // They technically exist, but status blocks features
+                    });
+                    await manager.save(member);
+                }
             }
         });
 

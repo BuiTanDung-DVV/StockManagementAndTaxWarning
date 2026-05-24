@@ -1,10 +1,11 @@
-import '../../../core/guides/feature_guide_sheet.dart';
-import '../../../core/widgets/app_shimmer.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../providers/finance_provider.dart';
@@ -16,171 +17,236 @@ final _to = _today.toIso8601String().split('T')[0];
 
 class FinanceScreen extends ConsumerWidget {
   const FinanceScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     final summaryAsync = ref.watch(cashSummaryProvider((from: _from, to: _to)));
     final txAsync = ref.watch(transactionsProvider((page: 1, type: null, from: _from, to: _to)));
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
-        title: Text('Tài chính'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(
+          'Tài chính & Số cái',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
         actions: [featureGuideButton(context, 'finance')],
       ),
       body: RefreshIndicator(
+        color: theme.colorScheme.primary,
         onRefresh: () async {
           ref.invalidate(cashSummaryProvider);
           ref.invalidate(transactionsProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Balance Card ──
+              // Balance Card (Luxury Gradient)
               summaryAsync.when(
                 data: (data) {
                   final balance = asDouble(data['balance'] ?? data['currentBalance']);
                   final income = asDouble(data['totalIncome'] ?? data['income']);
                   final expense = asDouble(data['totalExpense'] ?? data['expense']);
                   return Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
                       gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                    child: Column(children: [
-                      Text(
-                        'Số dư quỹ tiền mặt',
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
-                      const SizedBox(height: 6),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          _currFmt.format(balance),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
+                    child: Column(
+                      children: [
+                        Text(
+                          'Số dư quỹ tiền mặt',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8), 
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Thu / Chi panel
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 8),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _currFmt.format(balance),
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        child: IntrinsicHeight(
-                          child: Row(children: [
-                            // Thu
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
+                        const SizedBox(height: 20),
+                        
+                        // Thu / Chi panel inside gradient card
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              width: 1,
+                            ),
+                          ),
+                          child: IntrinsicHeight(
+                            child: Row(
+                              children: [
+                                // Income Flow
+                                Expanded(
+                                  child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(3),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF6BE8A0).withValues(alpha: 0.3),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: const Icon(Icons.arrow_downward, size: 12, color: Color(0xFFA5F3C4)),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF6BE8A0).withValues(alpha: 0.25),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const Icon(Icons.arrow_downward_rounded, size: 12, color: Color(0xFFA5F3C4)),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Tổng thu', 
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(alpha: 0.85), 
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500
+                                            )
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text('Thu', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                      const SizedBox(height: 6),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          _currFmt.format(income),
+                                          style: GoogleFonts.outfit(
+                                            color: const Color(0xFFA5F3C4),
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  const SizedBox(height: 6),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      _currFmt.format(income),
-                                      style: const TextStyle(
-                                        color: Color(0xFFA5F3C4),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Divider
-                            Container(width: 1, color: Colors.white24),
-                            // Chi
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
+                                ),
+                                
+                                // Elegant vertical divider line
+                                Container(width: 1, color: Colors.white.withValues(alpha: 0.2)),
+                                
+                                // Expense Flow
+                                Expanded(
+                                  child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(3),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFFF8A80).withValues(alpha: 0.3),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: const Icon(Icons.arrow_upward, size: 12, color: Color(0xFFFFB4AB)),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFF8A80).withValues(alpha: 0.25),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const Icon(Icons.arrow_upward_rounded, size: 12, color: Color(0xFFFFB4AB)),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Tổng chi', 
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(alpha: 0.85), 
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500
+                                            )
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text('Chi', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                      const SizedBox(height: 6),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          _currFmt.format(expense),
+                                          style: GoogleFonts.outfit(
+                                            color: const Color(0xFFFFB4AB),
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  const SizedBox(height: 6),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      _currFmt.format(expense),
-                                      style: const TextStyle(
-                                        color: Color(0xFFFFB4AB),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ]),
+                          ),
                         ),
-                      ),
-                    ]),
+                      ],
+                    ),
                   );
                 },
                 loading: () => AppShimmer(
                   child: Container(
-                    height: 160,
+                    height: 170,
                     decoration: BoxDecoration(
                       color: Colors.grey,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                   ),
                 ),
                 error: (e, _) => Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.danger.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.danger.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
                   ),
-                  child: Text('Lỗi: $e', style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+                  child: Text(
+                    'Lỗi tải sổ quỹ: $e', 
+                    style: const TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500)
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // ── Navigation cards ──
+              // Navigation cards section
               Text(
-                'Báo cáo & Công cụ',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                'Báo cáo & Công cụ tài chính',
+                style: GoogleFonts.outfit(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold,
+                  color: c.textPrimary,
+                ),
               ),
               const SizedBox(height: 12),
+              
               _NavCard('Báo cáo KQKD (Lãi/Lỗ)', HugeIcons.strokeRoundedAnalytics01, () => context.push('/profit-loss')),
               _NavCard('Phân tích Tuổi nợ', HugeIcons.strokeRoundedChartIncrease, () => context.push('/debt-aging')),
               _NavCard('Quản lý Hóa đơn', HugeIcons.strokeRoundedInvoice01, () => context.push('/invoices')),
@@ -192,73 +258,112 @@ class FinanceScreen extends ConsumerWidget {
               _NavCard('Theo dõi nghĩa vụ thuế', HugeIcons.strokeRoundedFlag01, () => context.push('/tax-obligations')),
               _NavCard('Sổ lương nhân viên', HugeIcons.strokeRoundedUserMultiple, () => context.push('/salary-ledger')),
               _NavCard('Kê khai thuế', HugeIcons.strokeRoundedInvoice01, () => context.push('/tax-declaration')),
-              const SizedBox(height: 20),
+              
+              const SizedBox(height: 24),
 
-              // ── Recent transactions ──
+              // Recent transactions section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Giao dịch gần đây', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  TextButton(onPressed: () => context.push('/transactions'), child: Text('Xem tất cả')),
+                  Text(
+                    'Giao dịch gần đây', 
+                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary)
+                  ),
+                  TextButton.icon(
+                    onPressed: () => context.push('/transactions'), 
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                    label: const Text('Xem tất cả', style: TextStyle(fontSize: 12)),
+                  ),
                 ],
               ),
+              const SizedBox(height: 8),
+              
               txAsync.when(
                 data: (data) {
                   final items = (data['items'] as List?) ?? [];
+                  if (items.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'Chưa phát sinh giao dịch nào hôm nay',
+                          style: TextStyle(fontSize: 13, color: c.textMuted),
+                        ),
+                      ),
+                    );
+                  }
                   return Column(
                     children: items.take(5).map((tx) {
                       final isIncome = tx['type'] == 'INCOME' || tx['type'] == 'income';
                       final amount = asDouble(tx['amount']);
                       return Container(
-                        margin: EdgeInsets.only(bottom: 8),
-                        padding: EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: c.card,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: c.divider.withValues(alpha: 0.5),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.01),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        child: Row(children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: (isIncome ? AppColors.success : AppColors.danger).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: (isIncome ? AppColors.success : AppColors.danger).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                size: 18,
+                                color: isIncome ? AppColors.success : AppColors.danger,
+                              ),
                             ),
-                            child: Icon(
-                              isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                              size: 18,
-                              color: isIncome ? AppColors.success : AppColors.danger,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    tx['description'] ?? tx['note'] ?? (isIncome ? 'Giao dịch thu' : 'Giao dịch chi'),
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: c.textPrimary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis, // Prevention of text overflow
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    tx['paymentMethod']?.toString() ?? 'Tiền mặt',
+                                    style: TextStyle(fontSize: 11, color: c.textSecondary, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tx['description'] ?? tx['note'] ?? (isIncome ? 'Thu' : 'Chi'),
-                                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                                ),
-                                Text(
-                                  tx['paymentMethod'] ?? '',
-                                  style: TextStyle(fontSize: 11, color: c.textSecondary),
-                                ),
-                              ],
+                            const SizedBox(width: 12),
+                            Text(
+                              '${isIncome ? '+' : '-'}${_currFmt.format(amount)}',
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                                color: isIncome ? AppColors.success : AppColors.danger,
+                              ),
                             ),
-                          ),
-                          Text(
-                            '${isIncome ? '+' : '-'}${_currFmt.format(amount)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isIncome ? AppColors.success : AppColors.danger,
-                            ),
-                          ),
-                        ]),
+                          ],
+                        ),
                       );
                     }).toList(),
                   );
                 },
                 loading: () => const ShimmerList(count: 3),
-                error: (_, _) => const SizedBox.shrink(),
+                error: (e, s) => const SizedBox.shrink(),
               ),
             ],
           ),
@@ -268,7 +373,7 @@ class FinanceScreen extends ConsumerWidget {
   }
 }
 
-// ── Navigation Card ──
+// Navigation Card
 class _NavCard extends StatelessWidget {
   final String title;
   final dynamic icon;
@@ -278,30 +383,52 @@ class _NavCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: c.card,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: c.divider.withValues(alpha: 0.5),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.015),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-            child: HugeIcon(icon: icon, color: AppColors.primary, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(title, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-          ),
-          HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: c.textMuted, size: 18),
-        ]),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: HugeIcon(icon: icon, color: theme.colorScheme.primary, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title, 
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 13,
+                  color: c.textPrimary,
+                )
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios_rounded, color: c.textMuted, size: 14),
+          ],
+        ),
       ),
     );
   }

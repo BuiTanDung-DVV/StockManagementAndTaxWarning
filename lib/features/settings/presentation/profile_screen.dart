@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -14,12 +15,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  
+  final _nameFocus = FocusNode();
+  final _emailFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+
+  bool _nameHasFocus = false;
+  bool _emailHasFocus = false;
+  bool _phoneHasFocus = false;
+
   bool _loading = true;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
+    _nameFocus.addListener(() => setState(() => _nameHasFocus = _nameFocus.hasFocus));
+    _emailFocus.addListener(() => setState(() => _emailHasFocus = _emailFocus.hasFocus));
+    _phoneFocus.addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
     _loadProfile();
   }
 
@@ -56,12 +69,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final merged = Map<String, dynamic>.from({...?currentAuth.user, ...updatedUser});
       ref.read(authProvider.notifier).updateUser(merged);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cập nhật thành công!'), backgroundColor: AppColors.success));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cập nhật thành công!'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.success,
+          ),
+        );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     }
     setState(() => _saving = false);
@@ -72,102 +97,217 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _nameFocus.dispose();
+    _emailFocus.dispose();
+    _phoneFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     final auth = ref.watch(authProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Thông tin cá nhân')),
+      backgroundColor: c.bg,
+      appBar: AppBar(
+        title: Text(
+          'Thông tin cá nhân',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: c.textPrimary),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(children: [
-                // Avatar
-                Center(child: Stack(children: [
-                  CircleAvatar(
-                    radius: 45,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                    child: Text(
-                      (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?').toUpperCase(),
-                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppColors.primary),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  // Avatar with Premium Glassmorphism Feel
+                  Center(
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 96,
+                          height: 96,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2), width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?').toUpperCase(),
+                            style: GoogleFonts.outfit(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: c.card, width: 2.5),
+                            ),
+                            child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Positioned(
-                    bottom: 0, right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle, border: Border.all(color: c.surface, width: 2)),
-                      child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                    ),
+                  const SizedBox(height: 16),
+                  Text(
+                    auth.user?['username'] ?? '',
+                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary),
                   ),
-                ])),
-                const SizedBox(height: 8),
-                Text(auth.user?['username'] ?? '', style: TextStyle(fontSize: 13, color: c.textSecondary)),
-                Text(
-                  auth.accountType == 'SHOP' ? 'Tài khoản hộ kinh doanh' : 'Tài khoản cá nhân',
-                  style: TextStyle(fontSize: 11, color: c.textMuted),
-                ),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 4),
+                  Text(
+                    auth.accountType == 'SHOP' ? 'Tài khoản chủ doanh nghiệp' : 'Tài khoản nhân viên',
+                    style: GoogleFonts.inter(fontSize: 12, color: c.textMuted, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 32),
 
-                // Form fields
-                _buildField('Họ và tên', _nameCtrl, Icons.person, c),
-                const SizedBox(height: 14),
-                _buildField('Email', _emailCtrl, Icons.email, c, keyboardType: TextInputType.emailAddress),
-                const SizedBox(height: 14),
-                _buildField('Số điện thoại', _phoneCtrl, Icons.phone, c, keyboardType: TextInputType.phone),
-                const SizedBox(height: 28),
+                  // Form fields
+                  _buildGlowingField(
+                    labelText: 'Họ và tên *',
+                    controller: _nameCtrl,
+                    focusNode: _nameFocus,
+                    hasFocus: _nameHasFocus,
+                    icon: Icons.person_outline_rounded,
+                    c: c,
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildGlowingField(
+                    labelText: 'Email',
+                    controller: _emailCtrl,
+                    focusNode: _emailFocus,
+                    hasFocus: _emailHasFocus,
+                    icon: Icons.mail_outline_rounded,
+                    keyboardType: TextInputType.emailAddress,
+                    c: c,
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildGlowingField(
+                    labelText: 'Số điện thoại',
+                    controller: _phoneCtrl,
+                    focusNode: _phoneFocus,
+                    hasFocus: _phoneHasFocus,
+                    icon: Icons.phone_android_rounded,
+                    keyboardType: TextInputType.phone,
+                    c: c,
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 40),
 
-                // Save button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save),
-                    label: Text(_saving ? 'Đang lưu...' : 'Lưu thay đổi'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  // Save button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _saving ? null : _save,
+                      icon: _saving 
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                          : const Icon(Icons.save_rounded, size: 20),
+                      label: Text(_saving ? 'Đang lưu...' : 'Lưu thay đổi', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
-                // Change password
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showChangePasswordDialog(context),
-                    icon: const Icon(Icons.lock_outline),
-                    label: const Text('Đổi mật khẩu'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  // Change password
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showChangePasswordDialog(context),
+                      icon: const Icon(Icons.lock_reset_rounded, size: 20),
+                      label: Text('Đổi mật khẩu bảo mật', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: c.textPrimary,
+                        side: BorderSide(color: c.divider),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
                     ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
     );
   }
 
-  Widget _buildField(String label, TextEditingController ctrl, IconData icon, AppThemeColors c, {TextInputType? keyboardType}) {
-    return TextField(
-      controller: ctrl,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 20),
-        filled: true,
-        fillColor: c.card,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary)),
+  Widget _buildGlowingField({
+    required String labelText,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required bool hasFocus,
+    required IconData icon,
+    required AppThemeColors c,
+    required ThemeData theme,
+    TextInputType? keyboardType,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          if (hasFocus)
+            BoxShadow(
+              color: theme.colorScheme.primary.withValues(alpha: 0.15),
+              blurRadius: 12,
+              spreadRadius: 2,
+            ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+        decoration: InputDecoration(
+          labelText: labelText,
+          prefixIcon: Icon(icon, color: c.textMuted, size: 20),
+          filled: true,
+          fillColor: c.card,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: c.divider),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: c.divider),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
       ),
     );
   }
@@ -176,38 +316,107 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final currentCtrl = TextEditingController();
     final newCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Đổi mật khẩu'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: currentCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu hiện tại')),
-          const SizedBox(height: 10),
-          TextField(controller: newCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu mới')),
-          const SizedBox(height: 10),
-          TextField(controller: confirmCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Xác nhận mật khẩu mới')),
-        ]),
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          'Đổi mật khẩu',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18, color: c.textPrimary),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: currentCtrl,
+                obscureText: true,
+                style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Mật khẩu hiện tại',
+                  prefixIcon: Icon(Icons.lock_outline_rounded, color: c.textMuted, size: 20),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newCtrl,
+                obscureText: true,
+                style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Mật khẩu mới',
+                  prefixIcon: Icon(Icons.lock_open_rounded, color: c.textMuted, size: 20),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: true,
+                style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Xác nhận mật khẩu mới',
+                  prefixIcon: Icon(Icons.lock_clock_outlined, color: c.textMuted, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Hủy', style: GoogleFonts.outfit(color: c.textMuted, fontWeight: FontWeight.w600)),
+          ),
           ElevatedButton(
             onPressed: () async {
               if (newCtrl.text != confirmCtrl.text) {
-                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Mật khẩu xác nhận không khớp'), backgroundColor: AppColors.danger));
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Mật khẩu xác nhận không khớp'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: AppColors.danger,
+                  ),
+                );
                 return;
               }
               try {
                 final api = ref.read(apiClientProvider);
-                await api.put('/profile/password', data: {'currentPassword': currentCtrl.text, 'newPassword': newCtrl.text});
+                await api.put('/profile/password', data: {
+                  'currentPassword': currentCtrl.text,
+                  'newPassword': newCtrl.text,
+                });
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Đổi mật khẩu thành công!'), backgroundColor: AppColors.success));
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đổi mật khẩu thành công!'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
                 }
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger));
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(
+                      content: Text('Lỗi: $e'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                }
               }
             },
-            child: const Text('Xác nhận'),
+            style: ElevatedButton.styleFrom(
+              elevation: 0,
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Xác nhận', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
