@@ -103,6 +103,67 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/';
       }
 
+      // Check route-level permission guards
+      bool checkRoutePermission(String path) {
+        if (shopState.isOwner) return true;
+        
+        // Define route mappings
+        if (path.startsWith('/finance') ||
+            path.startsWith('/daily-closing') ||
+            path.startsWith('/profit-loss') ||
+            path.startsWith('/cashflow-forecast') ||
+            path.startsWith('/debt-aging') ||
+            path.startsWith('/invoices') ||
+            path.startsWith('/purchases-no-invoice') ||
+            path.startsWith('/tax-calculator') ||
+            path.startsWith('/expense-ledger') ||
+            path.startsWith('/tax-obligations') ||
+            path.startsWith('/salary-ledger') ||
+            path.startsWith('/tax-declaration') ||
+            path.startsWith('/transactions')) {
+          return shopState.hasPermission('finance');
+        }
+        
+        if (path.startsWith('/pos') || path.startsWith('/sales')) {
+          return shopState.hasPermission('pos') || shopState.hasPermission('sales_view');
+        }
+        
+        if (path.startsWith('/products')) {
+          return shopState.hasPermission('products');
+        }
+        
+        if (path.startsWith('/customers')) {
+          return shopState.hasPermission('customers');
+        }
+        
+        if (path.startsWith('/suppliers')) {
+          return shopState.hasPermission('suppliers');
+        }
+        
+        if (path.startsWith('/inventory') ||
+            path.startsWith('/stock-take') ||
+            path.startsWith('/purchase-orders') ||
+            path.startsWith('/xnt-report')) {
+          return shopState.hasPermission('inventory');
+        }
+        
+        if (path.startsWith('/shop-profile') ||
+            path.startsWith('/payment-config') ||
+            path.startsWith('/tax-config')) {
+          return shopState.hasPermission('settings');
+        }
+        
+        if (path.startsWith('/staff') || path.startsWith('/roles')) {
+          return false; // Owner only
+        }
+        
+        return true;
+      }
+
+      if (!checkRoutePermission(state.matchedLocation)) {
+        return '/'; // Redirect unauthorized users to dashboard
+      }
+
       return null;
     },
     routes: [

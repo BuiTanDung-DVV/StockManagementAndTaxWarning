@@ -164,6 +164,7 @@ export class ShopMemberService {
     async getUserShops(userId: number) {
         const members = await this.memberRepo.find({
             where: { userId }, // include all so frontend knows about pending
+            relations: ['role'],
         });
         const shopIds = members.map(m => m.shopId);
         const shops = shopIds.length

@@ -11,7 +11,7 @@ import { ShopMember } from '../shop/entities';
  *
  * Usage: router.get('/products', authenticateJwt, requirePermission('products', 'view'), ctrl.list);
  */
-export const requirePermission = (key: string, level: 'view' | 'full' = 'view') => {
+export const requirePermission = (key: string | string[], level: 'view' | 'edit' | 'full' = 'view') => {
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         try {
             const userId = req.user?.sub;
@@ -43,17 +43,18 @@ export const requirePermission = (key: string, level: 'view' | 'full' = 'view') 
                 try { permissions = JSON.parse(member.role.permissions); } catch {}
             }
 
-            const userLevel = permissions[key];
-            if (!userLevel || userLevel === 'none') {
-                return res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập chức năng này' });
-            }
+            const keys = Array.isArray(key) ? key : [key];
+            const hasAny = keys.some(k => {
+                const userLevel = permissions[k];
+                if (!userLevel || userLevel === 'none') return false;
+                const hierarchy = ['none', 'view', 'edit', 'full'];
+                const userIdx = hierarchy.indexOf(userLevel);
+                const requiredIdx = hierarchy.indexOf(level);
+                return userIdx >= requiredIdx;
+            });
 
-            // Check hierarchy: none < view < edit < full
-            const hierarchy = ['none', 'view', 'edit', 'full'];
-            const userIdx = hierarchy.indexOf(userLevel);
-            const requiredIdx = hierarchy.indexOf(level);
-            if (userIdx < requiredIdx) {
-                return res.status(403).json({ success: false, message: `Bạn chỉ có quyền "${userLevel}", cần quyền "${level}"` });
+            if (!hasAny) {
+                return res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập chức năng này' });
             }
 
             next();

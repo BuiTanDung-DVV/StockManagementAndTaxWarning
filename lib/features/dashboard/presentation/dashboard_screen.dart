@@ -37,8 +37,12 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final salesAsync = ref.watch(salesSummaryProvider((from: _from, to: _to)));
-    final lowStockAsync = ref.watch(lowStockProvider);
+    final shopState = ref.watch(shopProvider);
+    final hasFinance = shopState.isOwner || shopState.hasPermission('finance');
+    final hasInventory = shopState.isOwner || shopState.hasPermission('inventory');
+
+    final salesAsync = hasFinance ? ref.watch(salesSummaryProvider((from: _from, to: _to))) : null;
+    final lowStockAsync = hasInventory ? ref.watch(lowStockProvider) : null;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -46,9 +50,13 @@ class DashboardScreen extends ConsumerWidget {
         child: RefreshIndicator(
           color: theme.colorScheme.primary,
           onRefresh: () async {
-            ref.invalidate(salesSummaryProvider);
-            ref.invalidate(lowStockProvider);
-            ref.invalidate(taxObligationsProvider);
+            if (hasFinance) {
+              ref.invalidate(salesSummaryProvider);
+              ref.invalidate(taxObligationsProvider);
+            }
+            if (hasInventory) {
+              ref.invalidate(lowStockProvider);
+            }
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -175,198 +183,234 @@ class DashboardScreen extends ConsumerWidget {
                 ),
 
                 // Sales summary cards
-                salesAsync.when(
-                  data: (data) {
-                    final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                    final orders = data['totalOrders'] ?? data['orderCount'] ?? 0;
-                    final avgOrder = orders > 0 ? revenue / orders : 0.0;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _SummaryCard(
-                                'Doanh thu',
-                                _currFmt.format(revenue),
-                                HugeIcons.strokeRoundedChartIncrease,
-                                theme.colorScheme.primary,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _SummaryCard(
-                                'Đơn hàng',
-                                '$orders',
-                                HugeIcons.strokeRoundedInvoice03,
-                                AppColors.success,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _SummaryCard(
-                                AppStrings.dashboardAvgOrder,
-                                _currFmt.format(avgOrder),
-                                HugeIcons.strokeRoundedAnalytics01,
-                                AppColors.info,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: lowStockAsync.when(
-                                data: (items) => _SummaryCard(
-                                  AppStrings.dashboardLowStock,
-                                  '${items.length}',
-                                  HugeIcons.strokeRoundedAlert02,
-                                  items.isEmpty ? AppColors.success : AppColors.danger,
-                                ),
-                                loading: () => _SummaryCard(
-                                  AppStrings.dashboardLowStock,
-                                  '...',
-                                  HugeIcons.strokeRoundedAlert02,
-                                  AppColors.warning,
-                                ),
-                                error: (_, _) => _SummaryCard(
-                                  AppStrings.dashboardLowStock,
-                                  '?',
-                                  HugeIcons.strokeRoundedAlert02,
-                                  AppColors.danger,
+                if (hasFinance && salesAsync != null) ...[
+                  salesAsync.when(
+                    data: (data) {
+                      final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                      final orders = data['totalOrders'] ?? data['orderCount'] ?? 0;
+                      final avgOrder = orders > 0 ? revenue / orders : 0.0;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _SummaryCard(
+                                  'Doanh thu',
+                                  _currFmt.format(revenue),
+                                  HugeIcons.strokeRoundedChartIncrease,
+                                  theme.colorScheme.primary,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
-                  loading: () => const ShimmerDashboard(),
-                  error: (e, _) => AppError(
-                    message: 'Không thể kết nối server\n$e',
-                    onRetry: () {
-                      ref.invalidate(salesSummaryProvider);
-                      ref.invalidate(lowStockProvider);
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Revenue threshold warning (Glow progress meter)
-                salesAsync.whenOrNull(
-                  data: (data) {
-                    final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                    if (revenue <= 0) return const SizedBox.shrink();
-                    final progress = RevenueThreshold.getProgress(revenue).clamp(0.0, 1.0);
-                    final color = RevenueThreshold.getColor(revenue);
-                    final nextThreshold = RevenueThreshold.getNextThreshold(revenue);
-                    return GestureDetector(
-                      onTap: () => context.push('/tax-calculator'),
-                      child: Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: color.withValues(alpha: 0.25),
-                            width: 1.5,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _SummaryCard(
+                                  'Đơn hàng',
+                                  '$orders',
+                                  HugeIcons.strokeRoundedInvoice03,
+                                  AppColors.success,
+                                ),
+                              ),
+                            ],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: color.withValues(alpha: 0.03),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _SummaryCard(
+                                  AppStrings.dashboardAvgOrder,
+                                  _currFmt.format(avgOrder),
+                                  HugeIcons.strokeRoundedAnalytics01,
+                                  AppColors.info,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: hasInventory && lowStockAsync != null
+                                    ? lowStockAsync.when(
+                                        data: (items) => _SummaryCard(
+                                          AppStrings.dashboardLowStock,
+                                          '${items.length}',
+                                          HugeIcons.strokeRoundedAlert02,
+                                          items.isEmpty ? AppColors.success : AppColors.danger,
+                                        ),
+                                        loading: () => _SummaryCard(
+                                          AppStrings.dashboardLowStock,
+                                          '...',
+                                          HugeIcons.strokeRoundedAlert02,
+                                          AppColors.warning,
+                                        ),
+                                        error: (_, _) => _SummaryCard(
+                                          AppStrings.dashboardLowStock,
+                                          '?',
+                                          HugeIcons.strokeRoundedAlert02,
+                                          AppColors.danger,
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => const ShimmerDashboard(),
+                    error: (e, _) => AppError(
+                      message: 'Không thể kết nối server\n$e',
+                      onRetry: () {
+                        ref.invalidate(salesSummaryProvider);
+                        if (hasInventory) ref.invalidate(lowStockProvider);
+                      },
+                    ),
+                  ),
+                ] else if (hasInventory && lowStockAsync != null) ...[
+                  // If no finance permission but has inventory, only show low stock card aligned nicely
+                  Row(
+                    children: [
+                      Expanded(
+                        child: lowStockAsync.when(
+                          data: (items) => _SummaryCard(
+                            AppStrings.dashboardLowStock,
+                            '${items.length}',
+                            HugeIcons.strokeRoundedAlert02,
+                            items.isEmpty ? AppColors.success : AppColors.danger,
+                          ),
+                          loading: () => _SummaryCard(
+                            AppStrings.dashboardLowStock,
+                            '...',
+                            HugeIcons.strokeRoundedAlert02,
+                            AppColors.warning,
+                          ),
+                          error: (_, _) => _SummaryCard(
+                            AppStrings.dashboardLowStock,
+                            '?',
+                            HugeIcons.strokeRoundedAlert02,
+                            AppColors.danger,
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: color.withValues(alpha: 0.12),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: HugeIcon(
-                                    icon: HugeIcons.strokeRoundedFlag01,
-                                    size: 16,
-                                    color: color,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Ngưỡng DT: ${RevenueThreshold.getTierLabel(revenue)}',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: color,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  size: 12,
-                                  color: c.textMuted,
-                                ),
-                              ],
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(child: SizedBox.shrink()),
+                    ],
+                  ),
+                ],
+
+                if (hasFinance && salesAsync != null) ...[
+                  const SizedBox(height: 20),
+
+                  // Revenue threshold warning (Glow progress meter)
+                  salesAsync.whenOrNull(
+                    data: (data) {
+                      final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                      if (revenue <= 0) return const SizedBox.shrink();
+                      final progress = RevenueThreshold.getProgress(revenue).clamp(0.0, 1.0);
+                      final color = RevenueThreshold.getColor(revenue);
+                      final nextThreshold = RevenueThreshold.getNextThreshold(revenue);
+                      return GestureDetector(
+                        onTap: () => context.push('/tax-calculator'),
+                        child: Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: color.withValues(alpha: 0.25),
+                              width: 1.5,
                             ),
-                            const SizedBox(height: 14),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Stack(
+                            boxShadow: [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.03),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
                                   Container(
-                                    height: 8,
-                                    color: c.surface,
-                                  ),
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 500),
-                                    height: 8,
-                                    width: MediaQuery.of(context).size.width * 0.8 * progress,
+                                    padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(6),
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          color,
-                                          color.withValues(alpha: 0.7),
-                                        ],
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: color.withValues(alpha: 0.35),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
+                                      color: color.withValues(alpha: 0.12),
+                                      shape: BoxShape.circle,
                                     ),
+                                    child: HugeIcon(
+                                      icon: HugeIcons.strokeRoundedFlag01,
+                                      size: 16,
+                                      color: color,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Ngưỡng DT: ${RevenueThreshold.getTierLabel(revenue)}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: color,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 12,
+                                    color: c.textMuted,
                                   ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              '${RevenueThreshold.getObligation(revenue)} • Ngưỡng tiếp: ${_currFmt.format(nextThreshold)}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: c.textSecondary,
+                              const SizedBox(height: 14),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      height: 8,
+                                      color: c.surface,
+                                    ),
+                                    AnimatedContainer(
+                                      duration: const Duration(milliseconds: 500),
+                                      height: 8,
+                                      width: MediaQuery.of(context).size.width * 0.8 * progress,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(6),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            color,
+                                            color.withValues(alpha: 0.7),
+                                          ],
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: color.withValues(alpha: 0.35),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 10),
+                              Text(
+                                '${RevenueThreshold.getObligation(revenue)} • Ngưỡng tiếp: ${_currFmt.format(nextThreshold)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: c.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ) ?? const SizedBox.shrink(),
+                      );
+                    },
+                  ) ?? const SizedBox.shrink(),
 
-                // Real Tax Obligation Reminder
-                const _TaxObligationReminder(),
+                  // Real Tax Obligation Reminder
+                  const _TaxObligationReminder(),
+                ],
 
                 const SizedBox(height: 28),
                 Text(
@@ -385,47 +429,55 @@ class DashboardScreen extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   children: [
-                    _QuickAction(
-                      HugeIcons.strokeRoundedStore01,
-                      'Tạo đơn',
-                      () => context.push('/pos'),
-                    ),
-                    _QuickAction(
-                      HugeIcons.strokeRoundedPackage,
-                      'Sản phẩm',
-                      () => context.push('/products'),
-                    ),
-                    _QuickAction(
-                      HugeIcons.strokeRoundedUserGroup,
-                      'Khách hàng',
-                      () => context.push('/customers'),
-                    ),
-                    _QuickAction(
-                      HugeIcons.strokeRoundedTruck,
-                      'NCC',
-                      () => context.push('/suppliers'),
-                    ),
-                    _QuickAction(
-                      HugeIcons.strokeRoundedTask01,
-                      'Kiểm kê',
-                      () => context.push('/stock-take'),
-                    ),
-                    _QuickAction(
-                      HugeIcons.strokeRoundedCheckmarkCircle02,
-                      'Chốt sổ',
-                      () => context.push('/daily-closing'),
-                    ),
-                    _QuickAction(
-                      HugeIcons.strokeRoundedAnalytics01,
-                      'Lãi/Lỗ',
-                      () => context.push('/profit-loss'),
-                    ),
-                    _QuickAction(
-                      HugeIcons.strokeRoundedInvoice01,
-                      'Hóa đơn',
-                      () => context.push('/invoices'),
-                    ),
-                    if (ref.watch(shopProvider).isOwner) ...[
+                    if (shopState.isOwner || shopState.hasPermission('pos'))
+                      _QuickAction(
+                        HugeIcons.strokeRoundedStore01,
+                        'Tạo đơn',
+                        () => context.push('/pos'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('products'))
+                      _QuickAction(
+                        HugeIcons.strokeRoundedPackage,
+                        'Sản phẩm',
+                        () => context.push('/products'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('customers'))
+                      _QuickAction(
+                        HugeIcons.strokeRoundedUserGroup,
+                        'Khách hàng',
+                        () => context.push('/customers'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('suppliers'))
+                      _QuickAction(
+                        HugeIcons.strokeRoundedTruck,
+                        'NCC',
+                        () => context.push('/suppliers'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('inventory'))
+                      _QuickAction(
+                        HugeIcons.strokeRoundedTask01,
+                        'Kiểm kê',
+                        () => context.push('/stock-take'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('finance'))
+                      _QuickAction(
+                        HugeIcons.strokeRoundedCheckmarkCircle02,
+                        'Chốt sổ',
+                        () => context.push('/daily-closing'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('finance'))
+                      _QuickAction(
+                        HugeIcons.strokeRoundedAnalytics01,
+                        'Lãi/Lỗ',
+                        () => context.push('/profit-loss'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('finance'))
+                      _QuickAction(
+                        HugeIcons.strokeRoundedInvoice01,
+                        'Hóa đơn',
+                        () => context.push('/invoices'),
+                      ),
+                    if (shopState.isOwner) ...[
                       _QuickAction(
                         HugeIcons.strokeRoundedUserMultiple,
                         'Nhân viên',
@@ -442,8 +494,9 @@ class DashboardScreen extends ConsumerWidget {
 
                 const SizedBox(height: 28),
                 // Low stock warnings
-                lowStockAsync.when(
-                  data: (items) {
+                if (hasInventory && lowStockAsync != null)
+                  lowStockAsync.when(
+                    data: (items) {
                     if (items.isEmpty) return const SizedBox.shrink();
                     final display = items.take(5).toList();
                     return Column(

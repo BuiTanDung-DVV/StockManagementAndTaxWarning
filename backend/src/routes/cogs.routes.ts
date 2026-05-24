@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { COGSService } from '../services/cogs.service';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { requirePermission } from '../middleware/permission.middleware';
 
 const router = Router();
 const svc = new COGSService();
 
 // GET /api/cogs/method — Phương pháp tính giá vốn hiện tại
-router.get('/method', async (req: Request, res: Response) => {
+router.get('/method', requirePermission('settings', 'view'), async (req: Request, res: Response) => {
     try {
         const shopId = (req as AuthRequest).shopId;
         const method = await svc.getCostingMethod(shopId);
@@ -17,7 +18,7 @@ router.get('/method', async (req: Request, res: Response) => {
 });
 
 // GET /api/cogs/avg-cost/:productId — Giá bình quân gia quyền
-router.get('/avg-cost/:productId', async (req: Request, res: Response) => {
+router.get('/avg-cost/:productId', requirePermission('inventory', 'view'), async (req: Request, res: Response) => {
     try {
         const shopId = (req as AuthRequest).shopId;
         const cost = await svc.getWeightedAvgCost(Number(req.params.productId), shopId);
@@ -28,7 +29,7 @@ router.get('/avg-cost/:productId', async (req: Request, res: Response) => {
 });
 
 // GET /api/cogs/valuation — Giá trị tồn kho
-router.get('/valuation', async (req: Request, res: Response) => {
+router.get('/valuation', requirePermission('finance', 'view'), async (req: Request, res: Response) => {
     try {
         const shopId = (req as AuthRequest).shopId;
         const productId = req.query.productId ? Number(req.query.productId) : undefined;
@@ -40,7 +41,7 @@ router.get('/valuation', async (req: Request, res: Response) => {
 });
 
 // GET /api/cogs/lots/:productId — Danh sách lô tồn kho
-router.get('/lots/:productId', async (req: Request, res: Response) => {
+router.get('/lots/:productId', requirePermission('inventory', 'view'), async (req: Request, res: Response) => {
     try {
         const shopId = (req as AuthRequest).shopId;
         const lots = await svc.getLotsByProduct(Number(req.params.productId), shopId);
@@ -51,7 +52,7 @@ router.get('/lots/:productId', async (req: Request, res: Response) => {
 });
 
 // POST /api/cogs/lots — Thêm lô tồn kho thủ công
-router.post('/lots', async (req: Request, res: Response) => {
+router.post('/lots', requirePermission('inventory', 'edit'), async (req: Request, res: Response) => {
     try {
         const shopId = (req as AuthRequest).shopId;
         const lot = await svc.addInventoryLot({ ...req.body, shopId });
@@ -62,4 +63,3 @@ router.post('/lots', async (req: Request, res: Response) => {
 });
 
 export default router;
-

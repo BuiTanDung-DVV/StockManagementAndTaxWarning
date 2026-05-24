@@ -251,17 +251,20 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                 }, c),
-                _SettingItem(HugeIcons.strokeRoundedClock04, 'Nhật ký hoạt động hệ thống', () => context.push('/activity-logs'), c),
+                if (shopState.isOwner || shopState.hasPermission('settings'))
+                  _SettingItem(HugeIcons.strokeRoundedClock04, 'Nhật ký hoạt động hệ thống', () => context.push('/activity-logs'), c),
               ],
               c,
             ),
 
-            _CostingMethodTile(c: c),
+            if (shopState.isOwner || shopState.hasPermission('settings'))
+              _CostingMethodTile(c: c),
 
             _SettingGroup(
               'Cửa hàng & Thanh toán',
               [
-                _SettingItem(HugeIcons.strokeRoundedStore01, 'Thông tin cấu hình cửa hàng', () => context.push('/shop-profile'), c),
+                if (shopState.isOwner || shopState.hasPermission('settings'))
+                  _SettingItem(HugeIcons.strokeRoundedStore01, 'Thông tin cấu hình cửa hàng', () => context.push('/shop-profile'), c),
                 _SettingItem(HugeIcons.strokeRoundedInvoice01, 'Tùy biến mẫu hóa đơn in ấn', () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -271,7 +274,8 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   );
                 }, c),
-                _SettingItem(HugeIcons.strokeRoundedCreditCard, 'Thiết lập VietQR & TK nhận tiền', () => context.push('/payment-config'), c),
+                if (shopState.isOwner || shopState.hasPermission('settings'))
+                  _SettingItem(HugeIcons.strokeRoundedCreditCard, 'Thiết lập VietQR & TK nhận tiền', () => context.push('/payment-config'), c),
                 _SettingItem(HugeIcons.strokeRoundedTruck, 'Đơn vị vận chuyển đối tác', () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -288,7 +292,8 @@ class SettingsScreen extends ConsumerWidget {
             _SettingGroup(
               'Thuế & Nghĩa vụ kê khai',
               [
-                _SettingItem(HugeIcons.strokeRoundedCalculator01, 'Cấu hình sắc thuế mặc định', () => context.push('/tax-config'), c),
+                if (shopState.isOwner || shopState.hasPermission('settings'))
+                  _SettingItem(HugeIcons.strokeRoundedCalculator01, 'Cấu hình sắc thuế mặc định', () => context.push('/tax-config'), c),
                 _SettingItem(HugeIcons.strokeRoundedCustomerSupport, 'Kênh hỗ trợ giải đáp luật thuế', () => context.push('/tax-support'), c),
               ],
               c,
