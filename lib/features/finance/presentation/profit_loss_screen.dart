@@ -78,8 +78,8 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
           }
 
           return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(10)),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.calendar_today, size: 16, color: AppColors.primary), const SizedBox(width: 8), Text('$from → $to', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500))])),
+            Container(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(10)),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.calendar_today, size: 16, color: AppColors.primary), SizedBox(width: 8), Text('$from → $to', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500))])),
             const SizedBox(height: 16),
             _MetricCard('Tổng doanh thu', _fmt(revenue), AppColors.primary, Icons.trending_up),
             _MetricCard('Giá vốn hàng bán', _fmt(cogs), AppColors.danger, Icons.shopping_cart),
@@ -93,7 +93,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
             _MetricCard('Chi phí vận hành', _fmt(expenses), AppColors.warning, Icons.settings),
             Container(padding: const EdgeInsets.all(14), margin: const EdgeInsets.only(bottom: 10), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)]), borderRadius: BorderRadius.circular(12)),
               child: Row(children: [
-                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.stars, color: AppColors.primaryLight, size: 20)),
+                Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Icon(Icons.stars, color: AppColors.primaryLight, size: 20)),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Lợi nhuận ròng', style: TextStyle(color: Colors.white70, fontSize: 12)), Text(_fmt(netProfit), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white))])),
                 Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)), child: Text('$netPct%', style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13))),

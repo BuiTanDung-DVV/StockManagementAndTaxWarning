@@ -14,6 +14,7 @@ import '../../inventory/providers/inventory_provider.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../providers/sales_provider.dart';
 import 'qr_payment_screen.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -174,7 +175,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         children: [
           // Search bar
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               controller: _searchCtrl,
               decoration: InputDecoration(
@@ -182,20 +183,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 prefixIcon: Icon(Icons.search, color: c.textMuted),
                 suffixIcon: _search.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
+                        icon: Icon(Icons.clear, size: 18, color: c.textSecondary),
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() => _search = '');
                         },
                       )
                     : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
               ),
               onChanged: (v) => setState(() => _search = v),
             ),
@@ -225,9 +219,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 }
                 return ListView.builder(
                   padding: EdgeInsets.only(
-                    left: 12,
-                    right: 12,
-                    bottom: cart.items.isNotEmpty ? 100 : 16,
+                    left: 16,
+                    right: 16,
+                    bottom: cart.items.isNotEmpty ? 120 : 24,
+                    top: 8,
                   ),
                   itemCount: products.length,
                   itemBuilder: (_, i) {
@@ -244,28 +239,41 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         .firstOrNull;
 
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
+                      margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: c.card,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: c.divider.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.015),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
                           Container(
-                            width: 48,
-                            height: 48,
+                            width: 52,
+                            height: 52,
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
+                              color: AppColors.primary.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Icon(
-                              Icons.inventory_2,
-                              color: AppColors.primary,
-                              size: 22,
+                            child: Center(
+                              child: HugeIcon(
+                                icon: HugeIcons.strokeRoundedPackage,
+                                color: AppColors.primary,
+                                size: 24,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,29 +281,40 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 Text(
                                   name,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 4),
                                 Row(
                                   children: [
                                     Text(
                                       _currFmt.format(price),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: AppColors.primary,
-                                        fontSize: 13,
+                                        fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Kho: $stock',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: c.textMuted,
+                                    const SizedBox(width: 10),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: c.surface,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'Kho: $stock',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: c.textSecondary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -315,13 +334,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
+                                    horizontal: 10,
                                   ),
                                   child: Text(
                                     '${cartItem.quantity}',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                                      fontSize: 16,
                                     ),
                                   ),
                                 ),
@@ -344,15 +363,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                       .add(id, name, price);
                                   HapticFeedback.lightImpact();
                                 },
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.add_shopping_cart,
                                   color: AppColors.primary,
-                                  size: 22,
+                                  size: 20,
                                 ),
                                 style: IconButton.styleFrom(
                                   backgroundColor: AppColors.primary.withValues(
-                                    alpha: 0.1,
+                                    alpha: 0.08,
                                   ),
+                                  shape: const CircleBorder(),
                                 ),
                               ),
                             ),
@@ -375,17 +395,17 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           // Bottom bar
           if (cart.items.isNotEmpty)
             Container(
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
+                color: c.card.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: c.divider.withValues(alpha: 0.5)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
                   ),
                 ],
               ),
@@ -403,12 +423,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               color: c.textSecondary,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             _currFmt.format(cart.total),
-                            style: const TextStyle(
-                              fontSize: 20,
+                            style: TextStyle(
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
                             ),
@@ -420,12 +442,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       onPressed: _creating
                           ? null
                           : () => _showCheckout(context),
-                      icon: const Icon(Icons.payment),
+                      icon: const Icon(Icons.payment, size: 18),
                       label: const Text('Thanh toán'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
-                          vertical: 14,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
                       ),
                     ),
@@ -536,7 +561,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       Text('Tổng:', style: TextStyle(fontSize: 16)),
                       Text(
                         _currFmt.format(cart.total),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
@@ -590,7 +615,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   ),
                   Text(
                     _currFmt.format(cart.total),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
@@ -709,7 +734,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           label: const Text('+ Thêm khách hàng mới'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
+                            side: BorderSide(color: AppColors.primary),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
@@ -1088,7 +1113,7 @@ class _CashConfirmDialogState extends State<_CashConfirmDialog> {
           const SizedBox(height: 16),
           Text(
             _currFmt.format(widget.total),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: AppColors.primary,

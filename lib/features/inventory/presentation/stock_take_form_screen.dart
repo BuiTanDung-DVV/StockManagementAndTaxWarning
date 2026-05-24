@@ -175,7 +175,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.info_outline,
                         size: 18,
                         color: AppColors.primary,
@@ -259,7 +259,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                     children: [
                       Row(
                         children: [
-                          const HugeIcon(
+                          HugeIcon(
                             icon: HugeIcons.strokeRoundedPackage,
                             size: 18,
                             color: AppColors.primary,

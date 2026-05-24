@@ -34,18 +34,18 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
   static AppThemeColors of(BuildContext context) =>
       Theme.of(context).extension<AppThemeColors>()!;
 
-  // ── Dark palette (warm gray, high contrast) ──
+  // ── Dark palette (Sleek Dark Obsidian & Space Navy) ──
   static const dark = AppThemeColors(
-    bg: Color(0xFF020A2F),       // deep charcoal/navy
-    surface: Color(0xFF1F2937),   // elevated surface
-    card: Color(0xFF1F2937),      // same as surface for consistency
-    cardAlt: Color(0xFF273549),   // slightly lighter alt
-    textPrimary: Color(0xFFF9FAFB),  // near-white for max readability
-    textSecondary: Color(0xFFD1D5DB), // light gray
-    textMuted: Color(0xFF9CA3AF),     // medium gray
-    divider: Color(0xFF374151),
-    inputFill: Color(0xFF1F2937),
-    inputBorder: Color(0xFF4B5563),
+    bg: Color(0xFF080C16),          // deep space navy
+    surface: Color(0xFF101625),     // dark container surface
+    card: Color(0xFF171E30),        // elevated slate-navy card
+    cardAlt: Color(0xFF20293F),     // high-contrast active state
+    textPrimary: Color(0xFFF8FAFC), // crisp slate-50 white text
+    textSecondary: Color(0xFFCBD5E1), // slate-300 secondary text
+    textMuted: Color(0xFF64748B),     // slate-500 muted text
+    divider: Color(0xFF1E293B),
+    inputFill: Color(0xFF101625),
+    inputBorder: Color(0xFF334155),
   );
 
   // ── Light palette (Lumina POS style - Vivid & Clean) ──
@@ -61,6 +61,39 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     inputFill: Color(0xFFEFEFFF),
     inputBorder: Color(0x26A2ABD7),   // 15% opacity Ghost Border
   );
+
+  // ── Create dynamic light palette (Dynamic Tinting via HSLColor) ──
+  static AppThemeColors createLight(Color primary) {
+    final hsl = HSLColor.fromColor(primary);
+    
+    // Nền sáng và các thẻ (surface) pha nhẹ màu chính
+    final bg = hsl.withLightness(0.97).withSaturation(0.08).toColor();
+    final surface = hsl.withLightness(0.94).withSaturation(0.12).toColor();
+    const card = Colors.white;
+    final cardAlt = hsl.withLightness(0.88).withSaturation(0.18).toColor();
+    
+    // Chữ tương phản cao có sắc tố pha từ màu chính
+    final textPrimary = hsl.withLightness(0.15).withSaturation(0.30).toColor();
+    final textSecondary = hsl.withLightness(0.32).withSaturation(0.20).toColor();
+    final textMuted = hsl.withLightness(0.50).withSaturation(0.15).toColor();
+    
+    final divider = hsl.withLightness(0.92).withSaturation(0.10).toColor();
+    final inputFill = hsl.withLightness(0.96).withSaturation(0.06).toColor();
+    final inputBorder = primary.withValues(alpha: 0.15);
+    
+    return AppThemeColors(
+      bg: bg,
+      surface: surface,
+      card: card,
+      cardAlt: cardAlt,
+      textPrimary: textPrimary,
+      textSecondary: textSecondary,
+      textMuted: textMuted,
+      divider: divider,
+      inputFill: inputFill,
+      inputBorder: inputBorder,
+    );
+  }
 
   @override
   AppThemeColors copyWith({
@@ -103,10 +136,9 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 // ─────────────────────────────────────────────
 
 class AppColors {
-  // Lumina POS Primary brand
-  static const primary = Color(0xFF0058BB);
-  static const primaryLight = Color(0xFF6C9FFF);
-  static const primaryDark = Color(0xFF004CA4);
+  static Color primary = const Color(0xFF0058BB);
+  static Color primaryLight = const Color(0xFF6C9FFF);
+  static Color primaryDark = const Color(0xFF004CA4);
 
   // Semantic
   static const success = Color(0xFF22C55E);
@@ -115,11 +147,22 @@ class AppColors {
   static const info = Color(0xFF06B6D4);
 
   // Lumina Button Gradient
-  static const primaryGradient = LinearGradient(
+  static LinearGradient get primaryGradient => LinearGradient(
     colors: [primary, primaryLight],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  static void updateColors(Color brandColor, bool isDark) {
+    primary = brandColor;
+    if (isDark) {
+      primaryLight = const Color(0xFF818CF8);
+      primaryDark = const Color(0xFF312E81);
+    } else {
+      primaryLight = Color.alphaBlend(Colors.white.withValues(alpha: 0.35), brandColor);
+      primaryDark = Color.alphaBlend(Colors.black.withValues(alpha: 0.25), brandColor);
+    }
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -127,12 +170,38 @@ class AppColors {
 // ─────────────────────────────────────────────
 
 class AppTheme {
-  static ThemeData get darkTheme => _buildTheme(Brightness.dark, AppThemeColors.dark);
-  static ThemeData get lightTheme => _buildTheme(Brightness.light, AppThemeColors.light);
+  static ThemeData darkTheme(Color primaryColor) => _buildTheme(Brightness.dark, AppThemeColors.dark, primaryColor);
+  static ThemeData lightTheme(Color primaryColor) => _buildTheme(Brightness.light, AppThemeColors.createLight(primaryColor), primaryColor);
 
-  static ThemeData _buildTheme(Brightness brightness, AppThemeColors colors) {
+  static ThemeData _buildTheme(Brightness brightness, AppThemeColors colors, Color primaryColor) {
     final isDark = brightness == Brightness.dark;
     final base = isDark ? ThemeData.dark() : ThemeData.light();
+    final primaryLight = Color.alphaBlend(Colors.white.withValues(alpha: 0.35), primaryColor);
+    final primaryDark = Color.alphaBlend(Colors.black.withValues(alpha: 0.25), primaryColor);
+
+    final outfitTextTheme = GoogleFonts.outfitTextTheme(base.textTheme);
+    final interTextTheme = GoogleFonts.interTextTheme(base.textTheme);
+
+    final textTheme = base.textTheme.copyWith(
+      displayLarge: outfitTextTheme.displayLarge,
+      displayMedium: outfitTextTheme.displayMedium,
+      displaySmall: outfitTextTheme.displaySmall,
+      headlineLarge: outfitTextTheme.headlineLarge,
+      headlineMedium: outfitTextTheme.headlineMedium,
+      headlineSmall: outfitTextTheme.headlineSmall,
+      titleLarge: outfitTextTheme.titleLarge,
+      titleMedium: outfitTextTheme.titleMedium,
+      titleSmall: outfitTextTheme.titleSmall,
+      bodyLarge: interTextTheme.bodyLarge,
+      bodyMedium: interTextTheme.bodyMedium,
+      bodySmall: interTextTheme.bodySmall,
+      labelLarge: interTextTheme.labelLarge,
+      labelMedium: interTextTheme.labelMedium,
+      labelSmall: interTextTheme.labelSmall,
+    ).apply(
+      bodyColor: colors.textPrimary,
+      displayColor: colors.textPrimary,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -140,9 +209,9 @@ class AppTheme {
       extensions: [colors],
       colorScheme: ColorScheme(
         brightness: brightness,
-        primary: AppColors.primary,
+        primary: primaryColor,
         onPrimary: Colors.white,
-        secondary: AppColors.primaryLight,
+        secondary: primaryLight,
         onSecondary: Colors.white,
         surface: colors.surface,
         onSurface: colors.textPrimary,
@@ -157,15 +226,12 @@ class AppTheme {
         thickness: 1,
         space: 16,
       ),
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
-        bodyColor: colors.textPrimary,
-        displayColor: colors.textPrimary,
-      ),
+      textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.outfit(
           fontSize: 22, fontWeight: FontWeight.bold, color: colors.textPrimary,
         ),
         iconTheme: IconThemeData(color: colors.textPrimary),
@@ -178,7 +244,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: colors.card,
-        selectedItemColor: AppColors.primary,
+        selectedItemColor: primaryColor,
         unselectedItemColor: colors.textMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -196,26 +262,26 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primaryLight, width: 2),
+          borderSide: BorderSide(color: primaryLight, width: 2),
         ),
         hintStyle: TextStyle(color: colors.textMuted),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: primaryColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // xl radius
-          textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600),
           elevation: 2,
-          shadowColor: AppColors.primaryDark.withValues(alpha: 0.4),
+          shadowColor: primaryDark.withValues(alpha: 0.4),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: colors.card.withValues(alpha: 0.9), // Glassmorphism base

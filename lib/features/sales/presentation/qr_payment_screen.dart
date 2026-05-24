@@ -1,8 +1,10 @@
-import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../products/providers/product_provider.dart';
@@ -83,7 +85,11 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text('Lỗi: $e'), 
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     } finally {
@@ -95,19 +101,31 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hủy đơn hàng?'),
-        content: const Text('Bạn có chắc muốn hủy đơn này?'),
+        title: Text(
+          'Hủy đơn hàng?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('Bạn có chắc chắn muốn hủy đơn hàng này không? Dữ liệu không thể khôi phục.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Không'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Hủy đơn',
-              style: TextStyle(color: AppColors.danger),
+            child: Text(
+              'Không', 
+              style: TextStyle(color: AppThemeColors.of(context).textSecondary),
             ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger.withValues(alpha: 0.1),
+              foregroundColor: AppColors.danger,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Hủy đơn'),
           ),
         ],
       ),
@@ -121,7 +139,11 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text('Lỗi: $e'), 
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     }
@@ -138,107 +160,203 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     return '${amount.toInt()} đồng';
   }
 
+  void _copyToClipboard(String label, String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text('Đã sao chép $label thành công!'),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        backgroundColor: AppColors.success,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
 
     if (_paid) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.success.withValues(alpha: 0.05),
+                c.bg,
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.success.withValues(alpha: 0.25),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    size: 88,
+                    color: AppColors.success,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.check_circle,
-                  size: 80,
-                  color: AppColors.success,
+                const SizedBox(height: 32),
+                Text(
+                  'Thanh toán thành công!',
+                  style: GoogleFonts.outfit(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.success,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Thanh toán thành công!',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.success,
+                const SizedBox(height: 12),
+                Text(
+                  _currFmt.format(widget.totalAmount),
+                  style: GoogleFonts.outfit(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: c.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _currFmt.format(widget.totalAmount),
-                style: TextStyle(fontSize: 20, color: c.textSecondary),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'Mã giao dịch: ${widget.orderCode}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: c.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('Thanh toán chuyển khoản'),
+        title: Text(
+          'Thanh toán chuyển khoản',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
+        elevation: 0,
         centerTitle: true,
         actions: [featureGuideButton(context, 'qr_payment')],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Amount display
+            // Amount display card (Glassmorphic)
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.1),
-                    AppColors.info.withValues(alpha: 0.05),
-                  ],
+                color: c.card,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                  width: 1.5,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.04),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   Text(
-                    'Số tiền cần chuyển',
-                    style: TextStyle(fontSize: 13, color: c.textSecondary),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _currFmt.format(widget.totalAmount),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                    'Số tiền cần thanh toán',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: c.textSecondary,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SelectableText(
+                        _currFmt.format(widget.totalAmount),
+                        style: GoogleFonts.outfit(
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(Icons.copy_rounded, size: 20, color: theme.colorScheme.primary),
+                        onPressed: () => _copyToClipboard('số tiền', widget.totalAmount.toInt().toString()),
+                        tooltip: 'Sao chép số tiền',
+                        splashRadius: 24,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                      horizontal: 14,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(30),
                     ),
-                    child: Text(
-                      'Mã đơn: ${widget.orderCode}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.receipt_long_rounded, 
+                          size: 14, 
+                          color: theme.colorScheme.primary
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Mã đơn: ${widget.orderCode}',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -246,143 +364,191 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
             ),
             const SizedBox(height: 20),
 
-            // QR Code
+            // QR Code display container
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
               child: Column(
                 children: [
                   Text(
-                    'Quét mã QR để thanh toán',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    'Quét mã VietQR tự động nhập liệu',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: const Color(0xFF1E293B), // High contrast slate-800
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      _qrUrl,
-                      width: 250,
-                      height: 250,
-                      loadingBuilder: (_, child, progress) => progress == null
-                          ? child
-                          : SizedBox(
-                              width: 250,
-                              height: 250,
-                              child: Center(child: CircularProgressIndicator()),
-                            ),
-                      errorBuilder: (_, e, s) => SizedBox(
-                        width: 250,
-                        height: 250,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.error,
-                                color: AppColors.danger,
-                                size: 40,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Không tải được QR\nKiểm tra cấu hình NH',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: c.textSecondary,
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                        width: 2,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        _qrUrl,
+                        width: 240,
+                        height: 240,
+                        loadingBuilder: (_, child, progress) => progress == null
+                            ? child
+                            : const SizedBox(
+                                width: 240,
+                                height: 240,
+                                child: Center(
+                                  child: CircularProgressIndicator(strokeWidth: 3),
                                 ),
                               ),
-                            ],
+                        errorBuilder: (_, e, s) => SizedBox(
+                          width: 240,
+                          height: 240,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: AppColors.danger,
+                                  size: 48,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Không tải được mã QR\nKiểm tra lại cấu hình NH',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: c.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Nội dung CK tự đông: ${widget.orderCode}',
-                    style: TextStyle(fontSize: 11, color: c.textSecondary),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () => _copyToClipboard('nội dung chuyển khoản', widget.orderCode),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.copy_rounded, size: 14, color: c.textSecondary),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Nội dung CK: ${widget.orderCode}',
+                            style: TextStyle(
+                              fontSize: 12, 
+                              color: c.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // Bank info
+            // Bank details card
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 color: c.card,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: c.divider.withValues(alpha: 0.5),
+                  width: 1,
+                ),
               ),
               child: Column(
                 children: [
-                  _infoRow('Ngân hàng', widget.bankId, c),
-                  Divider(height: 16, color: c.surface),
-                  _infoRow('Số TK', widget.accountNo, c),
-                  Divider(height: 16, color: c.surface),
-                  _infoRow('Chủ TK', widget.accountName, c),
+                  _infoRow('Ngân hàng', widget.bankId, c, isBold: true),
+                  Divider(height: 24, color: c.divider.withValues(alpha: 0.5)),
+                  _infoRow('Số tài khoản', widget.accountNo, c, canCopy: true),
+                  Divider(height: 24, color: c.divider.withValues(alpha: 0.5)),
+                  _infoRow('Chủ tài khoản', widget.accountName, c),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
-            // Confirm button — BIG
+            // Action Buttons
             SizedBox(
-              width: double.infinity,
-              height: 60,
+              height: 56,
               child: ElevatedButton.icon(
                 onPressed: _confirming ? null : _confirmPayment,
                 icon: _confirming
-                    ? SizedBox(
-                        width: 24,
-                        height: 24,
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                          strokeWidth: 2.5,
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.check_circle, size: 28),
+                    : const Icon(Icons.check_circle_rounded, size: 22),
                 label: Text(
-                  _confirming ? 'Đang xác nhận...' : 'ĐÃ NHẬN TIỀN',
-                  style: const TextStyle(
-                    fontSize: 18,
+                  _confirming ? 'ĐANG XÁC NHẬN...' : 'ĐÃ NHẬN TIỀN',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
+                  shadowColor: AppColors.success.withValues(alpha: 0.3),
+                  elevation: 4,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(24),
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 12),
 
-            // Cancel button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _cancelOrder,
-                icon: const Icon(Icons.cancel, color: AppColors.danger),
-                label: const Text(
-                  'Hủy đơn hàng',
-                  style: TextStyle(color: AppColors.danger),
+            OutlinedButton.icon(
+              onPressed: _cancelOrder,
+              icon: const Icon(Icons.cancel_outlined, size: 20, color: AppColors.danger),
+              label: Text(
+                'Hủy đơn hàng này',
+                style: GoogleFonts.outfit(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.bold,
                 ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.danger),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.danger, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
                 ),
               ),
             ),
@@ -392,14 +558,51 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     );
   }
 
-  Widget _infoRow(String label, String value, AppThemeColors c) {
+  Widget _infoRow(String label, String value, AppThemeColors c, {bool canCopy = false, bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: 13, color: c.textSecondary)),
         Text(
-          value,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          label, 
+          style: TextStyle(
+            fontSize: 13, 
+            color: c.textSecondary,
+            fontWeight: FontWeight.w500,
+          )
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: SelectableText(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    fontSize: 13, 
+                    fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+                    color: c.textPrimary,
+                  ),
+                ),
+              ),
+              if (canCopy) ...[
+                const SizedBox(width: 4),
+                InkWell(
+                  onTap: () => _copyToClipboard(label.toLowerCase(), value),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Icon(
+                      Icons.copy_rounded, 
+                      size: 16, 
+                      color: Theme.of(context).colorScheme.primary
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );

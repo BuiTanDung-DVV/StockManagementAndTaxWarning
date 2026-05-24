@@ -1,20 +1,21 @@
-import '../../../core/guides/feature_guide_sheet.dart';
-import '../../../core/widgets/app_shimmer.dart';
-import '../../../core/widgets/app_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/constants/app_strings.dart';
 import '../../sales/providers/sales_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../settings/providers/tax_config_provider.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../../auth/providers/auth_provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import '../../../core/constants/app_strings.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -35,12 +36,15 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     final salesAsync = ref.watch(salesSummaryProvider((from: _from, to: _to)));
     final lowStockAsync = ref.watch(lowStockProvider);
 
     return Scaffold(
+      backgroundColor: c.bg,
       body: SafeArea(
         child: RefreshIndicator(
+          color: theme.colorScheme.primary,
           onRefresh: () async {
             ref.invalidate(salesSummaryProvider);
             ref.invalidate(lowStockProvider);
@@ -48,42 +52,55 @@ class DashboardScreen extends ConsumerWidget {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Banner with Profile
+                // Header Banner Profile with Glassmorphism
                 Container(
                   margin: const EdgeInsets.only(bottom: 24),
+                  height: 150,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(24),
                     child: Stack(
                       children: [
-                        // Background Banner Image
-                        SizedBox(
-                          height: 140,
-                          width: double.infinity,
+                        // Background Banner Image with sophisticated dark blend
+                        Positioned.fill(
                           child: CachedNetworkImage(
-                            imageUrl:
-                                'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop',
+                            imageUrl: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop',
                             fit: BoxFit.cover,
-                            color: Colors.black.withValues(alpha: 0.4),
+                            color: Colors.black.withValues(alpha: 0.55),
                             colorBlendMode: BlendMode.darken,
                             placeholder: (context, url) => Container(
-                              color: AppColors.primary.withValues(alpha: 0.1),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
                             ),
                             errorWidget: (context, url, error) => Container(
-                              color: AppColors.primary.withValues(alpha: 0.1),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                            ),
+                          ),
+                        ),
+                        // Glassy gradient glow overlay
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  theme.colorScheme.primary.withValues(alpha: 0.3),
+                                  Colors.transparent,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                             ),
                           ),
                         ),
@@ -92,46 +109,62 @@ class DashboardScreen extends ConsumerWidget {
                           left: 20,
                           bottom: 20,
                           right: 20,
-                          child: Row(
+                          top: 20,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Xin chào, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'}',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.white70,
-                                      ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Xin chào, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'} 👋',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.white.withOpacity(0.85),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Tổng quan hôm nay',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    const Text(
-                                      'Tổng quan hôm nay',
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              featureGuideButton(context, 'dashboard'),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: const HugeIcon(
-                                    icon: HugeIcons.strokeRoundedNotification03,
-                                    color: Colors.white,
-                                    size: 22,
                                   ),
-                                  onPressed: () =>
-                                      context.push('/notifications'),
-                                ),
+                                  const SizedBox(width: 8),
+                                  featureGuideButton(context, 'dashboard'),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.18),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.25),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: IconButton(
+                                      icon: const HugeIcon(
+                                        icon: HugeIcons.strokeRoundedNotification03,
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
+                                      onPressed: () => context.push('/notifications'),
+                                      tooltip: 'Thông báo',
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -140,16 +173,15 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
 
                 // Sales summary cards
                 salesAsync.when(
                   data: (data) {
                     final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                    final orders =
-                        data['totalOrders'] ?? data['orderCount'] ?? 0;
+                    final orders = data['totalOrders'] ?? data['orderCount'] ?? 0;
                     final avgOrder = orders > 0 ? revenue / orders : 0.0;
                     return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Row(
                           children: [
@@ -158,7 +190,7 @@ class DashboardScreen extends ConsumerWidget {
                                 'Doanh thu',
                                 _currFmt.format(revenue),
                                 HugeIcons.strokeRoundedChartIncrease,
-                                AppColors.primary,
+                                theme.colorScheme.primary,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -172,7 +204,7 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
@@ -183,16 +215,14 @@ class DashboardScreen extends ConsumerWidget {
                                 AppColors.info,
                               ),
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: lowStockAsync.when(
                                 data: (items) => _SummaryCard(
                                   AppStrings.dashboardLowStock,
                                   '${items.length}',
                                   HugeIcons.strokeRoundedAlert02,
-                                  items.isEmpty
-                                      ? AppColors.success
-                                      : AppColors.danger,
+                                  items.isEmpty ? AppColors.success : AppColors.danger,
                                 ),
                                 loading: () => _SummaryCard(
                                   AppStrings.dashboardLowStock,
@@ -223,93 +253,131 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-                // Revenue threshold warning
+                // Revenue threshold warning (Glow progress meter)
                 salesAsync.whenOrNull(
-                      data: (data) {
-                        final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                        if (revenue <= 0) return const SizedBox.shrink();
-                        final progress = RevenueThreshold.getProgress(
-                          revenue,
-                        ).clamp(0.0, 1.0);
-                        final color = RevenueThreshold.getColor(revenue);
-                        final nextThreshold = RevenueThreshold.getNextThreshold(
-                          revenue,
-                        );
-                        return GestureDetector(
-                          onTap: () => context.push('/tax-calculator'),
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: color.withValues(alpha: 0.3),
-                              ),
+                  data: (data) {
+                    final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                    if (revenue <= 0) return const SizedBox.shrink();
+                    final progress = RevenueThreshold.getProgress(revenue).clamp(0.0, 1.0);
+                    final color = RevenueThreshold.getColor(revenue);
+                    final nextThreshold = RevenueThreshold.getNextThreshold(revenue);
+                    return GestureDetector(
+                      onTap: () => context.push('/tax-calculator'),
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: color.withValues(alpha: 0.25),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.03),
+                              blurRadius: 16,
+                              offset: const Offset(0, 8),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Row(
-                                  children: [
-                                    HugeIcon(
-                                      icon: HugeIcons.strokeRoundedFlag01,
-                                      size: 16,
-                                      color: color,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Ngưỡng DT: ${RevenueThreshold.getTierLabel(revenue)}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: color,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    HugeIcon(
-                                      icon: HugeIcons.strokeRoundedArrowRight01,
-                                      size: 16,
-                                      color: c.textMuted,
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 6),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(3),
-                                  child: LinearProgressIndicator(
-                                    value: progress,
-                                    backgroundColor: c.surface,
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: HugeIcon(
+                                    icon: HugeIcons.strokeRoundedFlag01,
+                                    size: 16,
                                     color: color,
-                                    minHeight: 5,
                                   ),
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(width: 8),
                                 Text(
-                                  '${RevenueThreshold.getObligation(revenue)} • Ngưỡng tiếp: ${_currFmt.format(nextThreshold)}',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: c.textSecondary,
+                                  'Ngưỡng DT: ${RevenueThreshold.getTierLabel(revenue)}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: color,
                                   ),
+                                ),
+                                const Spacer(),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 12,
+                                  color: c.textMuted,
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      },
-                    ) ??
-                    const SizedBox.shrink(),
+                            const SizedBox(height: 14),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    height: 8,
+                                    color: c.surface,
+                                  ),
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 500),
+                                    height: 8,
+                                    width: MediaQuery.of(context).size.width * 0.8 * progress,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(6),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          color,
+                                          color.withValues(alpha: 0.7),
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: color.withValues(alpha: 0.35),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              '${RevenueThreshold.getObligation(revenue)} • Ngưỡng tiếp: ${_currFmt.format(nextThreshold)}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ) ?? const SizedBox.shrink(),
 
-                // ── Real Tax Obligation Reminder ──
+                // Real Tax Obligation Reminder
                 const _TaxObligationReminder(),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 Text(
                   AppStrings.dashboardQuickActions,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.outfit(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.bold,
+                    color: c.textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 GridView.extent(
                   maxCrossAxisExtent: 100,
                   mainAxisSpacing: 12,
@@ -372,7 +440,7 @@ class DashboardScreen extends ConsumerWidget {
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 // Low stock warnings
                 lowStockAsync.when(
                   data: (items) {
@@ -392,47 +460,63 @@ class DashboardScreen extends ConsumerWidget {
                                   color: AppColors.danger,
                                   size: 20,
                                 ),
-                                const SizedBox(width: 6),
-                                const Text(
+                                const SizedBox(width: 8),
+                                Text(
                                   'Dưới định mức tối thiểu',
-                                  style: TextStyle(
+                                  style: GoogleFonts.outfit(
                                     fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.bold,
                                     color: AppColors.danger,
                                   ),
                                 ),
                               ],
                             ),
-                            TextButton(
+                            TextButton.icon(
                               onPressed: () => context.push('/inventory'),
-                              child: Text('Xem tất cả'),
+                              icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                              label: const Text('Xem tất cả', style: TextStyle(fontSize: 12)),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 8),
                         ...display.map(
                           (item) => Container(
-                            margin: const EdgeInsets.only(bottom: 6),
-                            padding: EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
                               color: c.card,
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: c.divider.withValues(alpha: 0.4),
+                                width: 1,
+                              ),
                             ),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: Text(
-                                    item['product']?['name'] ??
-                                        item['productName'] ??
-                                        'SP',
-                                    style: const TextStyle(fontSize: 13),
+                                    item['product']?['name'] ?? item['productName'] ?? 'Sản phẩm',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: c.textPrimary,
+                                    ),
                                   ),
                                 ),
-                                Text(
-                                  'Tồn: ${item['currentQuantity'] ?? item['quantity'] ?? 0}',
-                                  style: const TextStyle(
-                                    color: AppColors.warning,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.warning.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Tồn: ${item['currentQuantity'] ?? item['quantity'] ?? 0}',
+                                    style: const TextStyle(
+                                      color: AppColors.warning,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -473,7 +557,7 @@ class _TaxObligationReminder extends ConsumerWidget {
         if (pending.isEmpty) return const SizedBox.shrink();
 
         return Padding(
-          padding: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.only(top: 14),
           child: Column(
             children: pending.map<Widget>((t) {
               final period = t['period'] ?? '';
@@ -502,65 +586,65 @@ class _TaxObligationReminder extends ConsumerWidget {
               IconData urgencyIcon;
               if (status == 'overdue' || (daysLeft != null && daysLeft < 0)) {
                 urgencyColor = AppColors.danger;
-                urgencyLabel =
-                    'Quá hạn${daysLeft != null ? " ${(-daysLeft)} ngày" : ""}';
-                urgencyIcon = Icons.error;
+                urgencyLabel = 'Quá hạn${daysLeft != null ? " ${(-daysLeft)} ngày" : ""}';
+                urgencyIcon = Icons.error_rounded;
               } else if (daysLeft != null && daysLeft <= 7) {
                 urgencyColor = AppColors.danger;
                 urgencyLabel = 'Còn $daysLeft ngày';
-                urgencyIcon = Icons.warning;
+                urgencyIcon = Icons.warning_rounded;
               } else if (daysLeft != null && daysLeft <= 30) {
                 urgencyColor = AppColors.warning;
                 urgencyLabel = 'Còn $daysLeft ngày';
-                urgencyIcon = Icons.schedule;
+                urgencyIcon = Icons.schedule_rounded;
               } else {
                 urgencyColor = AppColors.info;
-                urgencyLabel = daysLeft != null
-                    ? 'Còn $daysLeft ngày'
-                    : 'Chờ nộp';
-                urgencyIcon = Icons.info_outline;
+                urgencyLabel = daysLeft != null ? 'Còn $daysLeft ngày' : 'Chờ nộp';
+                urgencyIcon = Icons.info_outline_rounded;
               }
 
               return GestureDetector(
                 onTap: () => context.push('/tax-obligations'),
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: urgencyColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: urgencyColor.withValues(alpha: 0.25),
+                      width: 1.5,
                     ),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: urgencyColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(urgencyIcon, size: 20, color: urgencyColor),
+                        child: Icon(urgencyIcon, size: 22, color: urgencyColor),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'Thuế $period',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: c.textPrimary,
                               ),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 3),
                             Text(
                               'Còn phải nộp: ${_currFmt.format(totalOwed)}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: c.textSecondary,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             if (dueDateStr != null)
@@ -568,7 +652,7 @@ class _TaxObligationReminder extends ConsumerWidget {
                                 'Hạn: $dueDateStr',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: c.textSecondary,
+                                  color: c.textMuted,
                                 ),
                               ),
                           ],
@@ -576,17 +660,17 @@ class _TaxObligationReminder extends ConsumerWidget {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 10,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
                           color: urgencyColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(30),
                         ),
                         child: Text(
                           urgencyLabel,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: urgencyColor,
                           ),
@@ -614,38 +698,74 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     return Container(
-      padding: EdgeInsets.all(14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: color.withValues(alpha: 0.15),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF232C51).withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: color.withValues(alpha: 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: HugeIcon(icon: icon, size: 18, color: color),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: HugeIcon(icon: icon, size: 20, color: color),
+              ),
+              // Tiny graphic dot/glow matching the color
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.6),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 18),
           Text(
             value,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(
+              fontSize: 22, 
+              fontWeight: FontWeight.bold,
+              color: c.textPrimary,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
-          Text(title, style: TextStyle(fontSize: 11, color: c.textSecondary)),
+          const SizedBox(height: 4),
+          Text(
+            title, 
+            style: TextStyle(
+              fontSize: 12, 
+              color: c.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -661,17 +781,22 @@ class _QuickAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: c.card,
           borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: c.divider.withValues(alpha: 0.4),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF232C51).withValues(alpha: 0.04),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+              color: const Color(0xFF232C51).withValues(alpha: 0.03),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -681,17 +806,17 @@ class _QuickAction extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
+                color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: HugeIcon(icon: icon, color: AppColors.primary, size: 20),
+              child: HugeIcon(icon: icon, color: theme.colorScheme.primary, size: 22),
             ),
-            SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
                 color: c.textSecondary,
               ),
               textAlign: TextAlign.center,

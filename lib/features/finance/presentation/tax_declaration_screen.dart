@@ -254,7 +254,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                                     children: [
                                       Text(
                                         f['form'] as String,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.primary,
                                           fontSize: 13,
@@ -325,7 +325,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.primary,
-                                  side: const BorderSide(
+                                  side: BorderSide(
                                     color: AppColors.primary,
                                   ),
                                   padding: const EdgeInsets.symmetric(
@@ -440,7 +440,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.cloud_upload, size: 48, color: AppColors.primary),
+            Icon(Icons.cloud_upload, size: 48, color: AppColors.primary),
             const SizedBox(height: 16),
             Text(
               'Nộp $formName',

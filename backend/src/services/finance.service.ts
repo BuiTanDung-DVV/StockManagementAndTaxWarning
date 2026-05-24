@@ -319,8 +319,9 @@ export class FinanceService {
         if (!invoice) throw new Error('Invoice not found');
         return invoice;
     }
-    async createInvoice(shopId: number, dto: Partial<Invoice>) {
+    async createInvoice(shopId: number, dto: Partial<Invoice> & { type?: string }) {
         if (!dto.invoiceNumber) dto.invoiceNumber = 'HD' + Date.now().toString().slice(-8);
+        if (!dto.invoiceType && dto.type) dto.invoiceType = dto.type;
         return this.invoiceRepo.save(this.invoiceRepo.create({ ...dto, shopId }));
     }
 

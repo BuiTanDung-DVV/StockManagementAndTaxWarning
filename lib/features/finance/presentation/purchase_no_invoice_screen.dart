@@ -64,7 +64,7 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
                     decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
                     child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                       const Text('Tổng giá trị', style: TextStyle(fontWeight: FontWeight.w600)),
-                      Text(_fmt(totalAmount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary)),
+                      Text(_fmt(totalAmount), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary)),
                     ]),
                   );
                 }
@@ -122,7 +122,7 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                       Text(p['recordCode'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text(_fmt(asNum(p['totalAmount'])), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary)),
+                      Text(_fmt(asNum(p['totalAmount'])), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary)),
                     ]),
                     const SizedBox(height: 6),
                     _buildApprovalChip(approvalStatus),
@@ -465,7 +465,7 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerRight,
-            child: Text('Tổng: ${widget.formatCurrency(calcTotal())}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+            child: Text('Tổng: ${widget.formatCurrency(calcTotal())}', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
           ),
         ])),
       ),

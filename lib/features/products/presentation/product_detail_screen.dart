@@ -63,7 +63,7 @@ class ProductDetailScreen extends ConsumerWidget {
           final statusColor = stockStatus == 'Sắp hết' ? AppColors.danger : AppColors.success;
 
           return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 120, height: 120, decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.inventory_2, size: 50, color: AppColors.primary))),
+            Center(child: Container(width: 120, height: 120, decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)), child: Icon(Icons.inventory_2, size: 50, color: AppColors.primary))),
             const SizedBox(height: 16),
             Center(child: Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))),
             const SizedBox(height: 24),

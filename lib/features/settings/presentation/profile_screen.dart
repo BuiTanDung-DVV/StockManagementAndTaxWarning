@@ -94,7 +94,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     backgroundColor: AppColors.primary.withValues(alpha: 0.15),
                     child: Text(
                       (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?').toUpperCase(),
-                      style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                   ),
                   Positioned(
@@ -167,7 +167,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         filled: true,
         fillColor: c.card,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.primary)),
       ),
     );
   }

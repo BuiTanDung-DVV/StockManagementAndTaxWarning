@@ -194,7 +194,7 @@ class _PurchaseOrderFormScreenState
                 children: [
                   Row(
                     children: [
-                      const HugeIcon(
+                      HugeIcon(
                         icon: HugeIcons.strokeRoundedBuilding03,
                         size: 18,
                         color: AppColors.primary,
@@ -312,7 +312,7 @@ class _PurchaseOrderFormScreenState
                     children: [
                       Row(
                         children: [
-                          const HugeIcon(
+                          HugeIcon(
                             icon: HugeIcons.strokeRoundedPackage,
                             size: 18,
                             color: AppColors.primary,
@@ -449,7 +449,7 @@ class _PurchaseOrderFormScreenState
                               alignment: Alignment.centerRight,
                               child: Text(
                                 'Thành tiền: ${_currFmt.format(item.subtotal)}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.primary,
                                 ),
@@ -473,7 +473,7 @@ class _PurchaseOrderFormScreenState
                 ),
                 Text(
                   _currFmt.format(_totalAmount),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.primary,

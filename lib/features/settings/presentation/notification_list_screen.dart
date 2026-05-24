@@ -88,7 +88,7 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
             Row(children: [
               Expanded(child: Text(n['title'] ?? '', style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.w600, fontSize: 13))),
               if (!isRead)
-                Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                Container(width: 8, height: 8, decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
             ]),
             const SizedBox(height: 4),
             Text(n['message'] ?? '', style: TextStyle(fontSize: 12, color: c.textSecondary)),

@@ -17,8 +17,8 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
+    final primaryColor = Theme.of(context).colorScheme.primary;
     final shopAsync = ref.watch(shopProfileProvider);
-    final themeMode = ref.watch(themeProvider);
     final shopState = ref.watch(shopProvider);
     final auth = ref.watch(authProvider);
     final notifState = ref.watch(notificationProvider);
@@ -30,7 +30,10 @@ class SettingsScreen extends ConsumerWidget {
           featureGuideButton(context, 'settings'),
           // Notification bell
           Stack(children: [
-                IconButton(icon: HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: c.textSecondary, size: 22), onPressed: () => context.push('/notifications')),
+            IconButton(
+              icon: HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: c.textSecondary, size: 22),
+              onPressed: () => context.push('/notifications'),
+            ),
             if (notifState.unreadCount > 0)
               Positioned(right: 6, top: 6, child: Container(
                 padding: const EdgeInsets.all(4),
@@ -51,10 +54,10 @@ class SettingsScreen extends ConsumerWidget {
               child: Row(children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                  backgroundColor: primaryColor.withValues(alpha: 0.15),
                   child: Text(
                     ((auth.user?['fullName'] as String?)?.isNotEmpty == true ? (auth.user!['fullName'] as String)[0] : '?').toUpperCase(),
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -69,8 +72,8 @@ class SettingsScreen extends ConsumerWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                            child: Text('Mã CH: ${shopState.shopCode}', style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                            decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                            child: Text('Mã CH: ${shopState.shopCode}', style: TextStyle(fontSize: 11, color: primaryColor, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
@@ -86,10 +89,10 @@ class SettingsScreen extends ConsumerWidget {
               child: Row(children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                  backgroundColor: primaryColor.withValues(alpha: 0.15),
                   child: Text(
                     ((auth.user?['fullName'] as String?)?.isNotEmpty == true ? (auth.user!['fullName'] as String)[0] : '?').toUpperCase(),
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -114,15 +117,7 @@ class SettingsScreen extends ConsumerWidget {
 
         // ── Appearance / Theme toggle ──
         _SettingGroup('Giao diện', [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(children: [
-              const HugeIcon(icon: HugeIcons.strokeRoundedPaintBoard, size: 20, color: AppColors.primary),
-              const SizedBox(width: 14),
-              const Expanded(child: Text('Chế độ hiển thị', style: TextStyle(fontSize: 14))),
-              _ThemeSelector(current: themeMode, onChanged: (m) => ref.read(themeProvider.notifier).setTheme(m)),
-            ]),
-          ),
+          _BrandColorTile(c: c),
         ], c),
 
         // ── Staff management (only for shop owners) ──
@@ -177,7 +172,7 @@ class SettingsScreen extends ConsumerWidget {
             if (context.mounted) context.go('/login');
           },
           icon: HugeIcon(icon: HugeIcons.strokeRoundedLogout03, color: AppColors.danger, size: 20),
-          label: Text('Đăng xuất', style: TextStyle(color: AppColors.danger)),
+          label: const Text('Đăng xuất', style: TextStyle(color: AppColors.danger)),
           style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.danger), padding: const EdgeInsets.symmetric(vertical: 14)),
         )),
       ])),
@@ -190,6 +185,7 @@ class SettingsScreen extends ConsumerWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) {
         final c = AppThemeColors.of(ctx);
+        final primaryColor = Theme.of(context).colorScheme.primary;
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -198,16 +194,16 @@ class SettingsScreen extends ConsumerWidget {
             ...shopState.userShops.map((shop) {
               final isActive = shop['shopId'] == shopState.currentShopId;
               return ListTile(
-                leading: HugeIcon(icon: HugeIcons.strokeRoundedStore01, color: isActive ? AppColors.primary : c.textMuted, size: 24),
+                leading: HugeIcon(icon: HugeIcons.strokeRoundedStore01, color: isActive ? primaryColor : c.textMuted, size: 24),
                 title: Text(shop['shopName'] ?? 'Shop #${shop['shopId']}', style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
                 subtitle: Text(shop['memberType'] == 'OWNER' ? 'Chủ shop' : (shop['role']?['name'] ?? 'Nhân viên'), style: TextStyle(fontSize: 12, color: c.textSecondary)),
-                trailing: isActive ? HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: AppColors.primary, size: 22) : null,
+                trailing: isActive ? HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: primaryColor, size: 22) : null,
                 onTap: () {
                   ref.read(shopProvider.notifier).switchShop(shop['shopId'] as int);
                   Navigator.pop(ctx);
                 },
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                tileColor: isActive ? AppColors.primary.withValues(alpha: 0.08) : null,
+                tileColor: isActive ? primaryColor.withValues(alpha: 0.08) : null,
               );
             }),
             const SizedBox(height: 8),
@@ -218,46 +214,179 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-// ── Theme Selector Widget ──────────────────────────
+// ── Brand Color Tile Widget ────────────────────────
 
-class _ThemeSelector extends StatelessWidget {
-  final ThemeMode current;
-  final ValueChanged<ThemeMode> onChanged;
-  const _ThemeSelector({required this.current, required this.onChanged});
+class _BrandColorTile extends ConsumerWidget {
+  final AppThemeColors c;
+  const _BrandColorTile({required this.c});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: AppThemeColors.of(context).surface,
-        borderRadius: BorderRadius.circular(10),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final brandColor = ref.watch(brandColorProvider);
+    final isDark = brandColor.isDark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return InkWell(
+      onTap: () => _showBrandColorPicker(context, ref, brandColor, c, isDark),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        child: Row(children: [
+          HugeIcon(
+            icon: HugeIcons.strokeRoundedPaintBoard,
+            size: 20,
+            color: primaryColor,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Màu sắc chủ đạo', style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(
+                  brandColor.label,
+                  style: TextStyle(fontSize: 12, color: c.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: brandColor.color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: brandColor.color.withValues(alpha: 0.4),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          HugeIcon(
+            icon: HugeIcons.strokeRoundedArrowRight01,
+            size: 18,
+            color: c.textMuted,
+          ),
+        ]),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _chip(context, Icons.light_mode, 'Sáng', ThemeMode.light),
-        _chip(context, Icons.dark_mode, 'Tối', ThemeMode.dark),
-      ]),
     );
   }
 
-  Widget _chip(BuildContext ctx, IconData icon, String label, ThemeMode mode) {
-    final active = current == mode;
-    return GestureDetector(
-      onTap: () => onChanged(mode),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 14, color: active ? AppColors.primary : AppThemeColors.of(ctx).textMuted),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-            color: active ? AppColors.primary : AppThemeColors.of(ctx).textMuted)),
-        ]),
+  void _showBrandColorPicker(
+    BuildContext context,
+    WidgetRef ref,
+    AppBrandColor current,
+    AppThemeColors c,
+    bool isDark,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.textMuted.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Chọn màu sắc ứng dụng',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tùy chỉnh tông màu chủ đạo phù hợp với thương hiệu',
+                style: TextStyle(fontSize: 12, color: c.textSecondary),
+              ),
+              const SizedBox(height: 20),
+              // Horizontal list of colors
+              SizedBox(
+                height: 90,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  shrinkWrap: true,
+                  itemCount: AppBrandColor.values.length,
+                  itemBuilder: (context, i) {
+                    final item = AppBrandColor.values[i];
+                    final isSelected = item == current;
+                    return GestureDetector(
+                      onTap: () {
+                        ref.read(brandColorProvider.notifier).setBrandColor(item);
+                        Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Column(
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: item.color,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? (isDark ? Colors.white : AppColors.primary)
+                                      : Colors.transparent,
+                                  width: 3,
+                                ),
+                                boxShadow: [
+                                  if (isSelected)
+                                    BoxShadow(
+                                      color: item.color.withValues(alpha: 0.5),
+                                      blurRadius: 10,
+                                      spreadRadius: 1,
+                                    ),
+                                ],
+                              ),
+                              child: isSelected
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 24,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              item.label,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : c.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -268,7 +397,7 @@ class _SettingGroup extends StatelessWidget {
   final String title; final List<Widget> items; final AppThemeColors c;
   const _SettingGroup(this.title, this.items, this.c);
   @override Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Padding(padding: EdgeInsets.only(bottom: 8), child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppThemeColors.of(context).textSecondary))),
+    Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppThemeColors.of(context).textSecondary))),
     Container(decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)), child: Column(children: items)),
     const SizedBox(height: 16),
   ]);
@@ -278,8 +407,8 @@ class _SettingItem extends StatelessWidget {
   final dynamic icon; final String label; final VoidCallback onTap; final AppThemeColors c;
   const _SettingItem(this.icon, this.label, this.onTap, this.c);
   @override Widget build(BuildContext context) => InkWell(onTap: onTap,
-    child: Padding(padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      child: Row(children: [HugeIcon(icon: icon, size: 20, color: AppColors.primary), SizedBox(width: 14), Expanded(child: Text(label, style: TextStyle(fontSize: 14))), HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppThemeColors.of(context).textMuted)])));
+    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      child: Row(children: [HugeIcon(icon: icon, size: 20, color: Theme.of(context).colorScheme.primary), SizedBox(width: 14), Expanded(child: Text(label, style: TextStyle(fontSize: 14))), HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: AppThemeColors.of(context).textMuted)])));
 }
 
 // ── Costing Method Tile ────────────────────────────
@@ -303,6 +432,7 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
   Widget build(BuildContext context) {
     final costing = ref.watch(costingProvider);
     final c = widget.c;
+    final primaryColor = Theme.of(context).colorScheme.primary;
     final methodLabel = costing.method == 'FIFO' ? 'Nhập trước - Xuất trước (FIFO)' : 'Bình quân gia quyền (AVG)';
 
     return _SettingGroup('Giá vốn hàng bán', [
@@ -311,7 +441,7 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(children: [
-            const HugeIcon(icon: HugeIcons.strokeRoundedCalculator01, size: 20, color: AppColors.primary),
+            HugeIcon(icon: HugeIcons.strokeRoundedCalculator01, size: 20, color: primaryColor),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Phương pháp tính giá vốn', style: TextStyle(fontSize: 14)),
@@ -335,6 +465,7 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) {
         final c = AppThemeColors.of(ctx);
+        final primaryColor = Theme.of(context).colorScheme.primary;
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -344,11 +475,11 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
             const SizedBox(height: 16),
             _costingOption(ctx, c, 'AVG', 'Bình quân gia quyền (AVG)',
                 'Giá vốn = trung bình giá nhập tất cả các lô còn tồn. Đơn giản, phù hợp SME.',
-                Icons.balance, costing.method == 'AVG'),
+                Icons.balance, costing.method == 'AVG', primaryColor),
             const SizedBox(height: 8),
             _costingOption(ctx, c, 'FIFO', 'Nhập trước - Xuất trước (FIFO)',
                 'Hàng nhập trước sẽ xuất trước. Chính xác hơn khi giá nhập biến động nhiều.',
-                Icons.sort, costing.method == 'FIFO'),
+                Icons.sort, costing.method == 'FIFO', primaryColor),
             const SizedBox(height: 12),
           ]),
         );
@@ -356,7 +487,7 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
     );
   }
 
-  Widget _costingOption(BuildContext ctx, AppThemeColors c, String method, String title, String desc, IconData icon, bool isActive) {
+  Widget _costingOption(BuildContext ctx, AppThemeColors c, String method, String title, String desc, IconData icon, bool isActive, Color primaryColor) {
     return InkWell(
       onTap: () async {
         Navigator.pop(ctx);
@@ -366,19 +497,19 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary.withValues(alpha: 0.08) : c.surface,
+          color: isActive ? primaryColor.withValues(alpha: 0.08) : c.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isActive ? AppColors.primary : c.textMuted.withValues(alpha: 0.2), width: isActive ? 1.5 : 1),
+          border: Border.all(color: isActive ? primaryColor : c.textMuted.withValues(alpha: 0.2), width: isActive ? 1.5 : 1),
         ),
         child: Row(children: [
-          Icon(icon, size: 24, color: isActive ? AppColors.primary : c.textMuted),
+          Icon(icon, size: 24, color: isActive ? primaryColor : c.textMuted),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isActive ? AppColors.primary : null)),
+            Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isActive ? primaryColor : null)),
             const SizedBox(height: 2),
             Text(desc, style: TextStyle(fontSize: 11, color: c.textSecondary)),
           ])),
-          if (isActive) HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: AppColors.primary, size: 22),
+          if (isActive) HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: primaryColor, size: 22),
         ]),
       ),
     );
