@@ -1,10 +1,11 @@
-import '../../../core/guides/feature_guide_sheet.dart';
-import '../../../core/widgets/app_shimmer.dart';
-import '../../../core/widgets/app_animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../providers/customer_provider.dart';
@@ -13,62 +14,175 @@ final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDi
 
 class CustomerListScreen extends ConsumerWidget {
   const CustomerListScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tc = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     final listAsync = ref.watch(customerListProvider((page: 1, search: null)));
+
     return Scaffold(
+      backgroundColor: tc.bg,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => context.pop(),
         ),
-        title: Text('Khách hàng'),
+        title: Text(
+          'Danh sách khách hàng',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: tc.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
         actions: [
           featureGuideButton(context, 'customer_list'),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/customers/form'),
-        icon: const Icon(Icons.person_add),
-        label: const Text('Thêm'),
-        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.person_add_alt_1_rounded),
+        label: Text('Thêm khách hàng', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
       ),
       body: listAsync.when(
         data: (data) {
           final items = (data['items'] as List?) ?? [];
-          if (items.isEmpty) return AppEmpty(message: 'Chưa có khách hàng', subtitle: 'Hãy thêm khách hàng đầu tiên');
+          if (items.isEmpty) {
+            return const AppEmpty(
+              message: 'Chưa có khách hàng', 
+              subtitle: 'Hãy thêm khách hàng đầu tiên để bắt đầu lưu trữ giao dịch'
+            );
+          }
           return RefreshIndicator(
+            color: theme.colorScheme.primary,
             onRefresh: () async => ref.invalidate(customerListProvider),
             child: GridView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               itemCount: items.length,
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 450,
-                mainAxisExtent: 85,
+                mainAxisExtent: 95, // Expanded slightly to fit high-end paddings
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 0,
               ),
               itemBuilder: (_, i) {
                 final cust = items[i];
                 final debt = asDouble(cust['totalDebt'] ?? cust['balance']);
+                final initialChar = (cust['name'] ?? 'K')[0].toUpperCase();
+
                 return GestureDetector(
                   onTap: () => context.push('/customers/${cust['id']}'),
                   child: Container(
-                    margin: EdgeInsets.only(bottom: 8),
-                    padding: EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: tc.card, borderRadius: BorderRadius.circular(12)),
-                    child: Row(children: [
-                      CircleAvatar(radius: 22, backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                        child: Text((cust['name'] ?? 'K')[0].toUpperCase(), style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 12),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(cust['name'] ?? '', style: TextStyle(fontWeight: FontWeight.w600)),
-                        Text(cust['phone'] ?? '', style: TextStyle(fontSize: 12, color: tc.textSecondary)),
-                      ])),
-                      if (debt > 0) Text(_currFmt.format(debt), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: debt > 5000000 ? AppColors.danger : tc.textPrimary)),
-                    ]),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: tc.card, 
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: tc.divider.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.015),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        // Elegant Squircle Avatar with Dynamic Brand Pale blending
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                              width: 1.5,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            initialChar,
+                            style: GoogleFonts.outfit(
+                              color: theme.colorScheme.primary, 
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start, 
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                cust['name'] ?? '', 
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold, 
+                                  fontSize: 14,
+                                  color: tc.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(Icons.phone_iphone_rounded, size: 12, color: tc.textMuted),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    cust['phone'] ?? '(Chưa cập nhật)', 
+                                    style: TextStyle(
+                                      fontSize: 11, 
+                                      color: tc.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        
+                        if (debt > 0)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Công nợ',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: tc.textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _currFmt.format(debt), 
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.w800, 
+                                  fontSize: 13, 
+                                  color: debt > 5000000 ? AppColors.danger : theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -76,7 +190,10 @@ class CustomerListScreen extends ConsumerWidget {
           );
         },
         loading: () => const ShimmerList(),
-        error: (e, _) => AppError(message: 'Lỗi: $e', onRetry: () => ref.invalidate(customerListProvider)),
+        error: (e, _) => AppError(
+          message: 'Lỗi: $e', 
+          onRetry: () => ref.invalidate(customerListProvider)
+        ),
       ),
     );
   }
