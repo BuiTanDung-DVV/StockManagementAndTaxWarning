@@ -4,6 +4,7 @@ import { config } from '../config/env.config';
 
 import { AppDataSource } from '../config/db.config';
 import { ShopMember } from '../shop/entities';
+import { requestContext } from './context.middleware';
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -38,6 +39,15 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
           return res.status(403).json({ success: false, message: 'Forbidden: You do not have access to this shop' });
         }
         req.shopId = shopId;
+      }
+    }
+
+    // Update AsyncLocalStorage context
+    const ctx = requestContext.getStore();
+    if (ctx) {
+      ctx.userId = decoded.sub;
+      if (req.shopId) {
+        ctx.shopId = req.shopId;
       }
     }
 

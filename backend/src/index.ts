@@ -17,6 +17,9 @@ app.use(morgan('dev'));
 // Define the base API URL
 const apiRouter = express.Router();
 
+import { contextMiddleware } from './middleware/context.middleware';
+apiRouter.use(contextMiddleware);
+
 import authRoutes from './routes/auth.routes';
 import financeRoutes from './routes/finance.routes';
 import inventoryRoutes from './routes/inventory.routes';
@@ -30,6 +33,7 @@ import shopMemberRoutes from './routes/shop-member.routes';
 import notificationRoutes from './routes/notification.routes';
 import profileRoutes from './routes/profile.routes';
 import cogsRoutes from './routes/cogs.routes';
+import taxConfigRoutes from './routes/tax-config.routes';
 
 import { authenticateJwt, requireShopId } from './middleware/auth.middleware';
 
@@ -42,6 +46,7 @@ apiRouter.use(authenticateJwt);
 // User-scoped routes (no shopId required)
 apiRouter.use('/', notificationRoutes);
 apiRouter.use('/profile', profileRoutes);
+apiRouter.use('/', taxConfigRoutes);
 
 // my-shops needs to be accessible before we know the shopId
 import * as shopMemberCtrl from './controllers/shop-member.controller';

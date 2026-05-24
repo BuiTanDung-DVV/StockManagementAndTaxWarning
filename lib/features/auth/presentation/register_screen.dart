@@ -42,6 +42,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _phoneFocus.addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
     _passwordFocus.addListener(() => setState(() => _passwordHasFocus = _passwordFocus.hasFocus));
     _confirmPasswordFocus.addListener(() => setState(() => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus));
+    
+    void clearError() {
+      if (_error != null) setState(() => _error = null);
+    }
+    _fullNameCtrl.addListener(clearError);
+    _phoneCtrl.addListener(clearError);
+    _passwordCtrl.addListener(clearError);
+    _confirmPasswordCtrl.addListener(clearError);
   }
 
   @override

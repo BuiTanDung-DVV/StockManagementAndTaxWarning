@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/db.config';
 import { InventoryLot } from '../inventory/lot.entity';
 import { ShopProfile } from '../system/entities';
 import { Product } from '../product/entities';
+import { EntityManager } from 'typeorm';
 
 /**
  * COGS Service — Tính giá vốn hàng bán theo FIFO hoặc Bình quân gia quyền (AVG).
@@ -125,11 +126,12 @@ export class COGSService {
     }
 
     /** Xác nhận trừ tồn kho lô sau khi bán thành công */
-    async commitLotDeductions(deductions: { lotId: number; qty: number }[]) {
+    async commitLotDeductions(deductions: { lotId: number; qty: number }[], manager?: EntityManager) {
         for (const d of deductions) {
-            await this.lotRepo
-                .createQueryBuilder()
-                .update(InventoryLot)
+            const qb = manager
+                ? manager.createQueryBuilder().update(InventoryLot)
+                : this.lotRepo.createQueryBuilder().update(InventoryLot);
+            await qb
                 .set({ remainingQty: () => `remaining_qty - ${d.qty}` })
                 .where('id = :id AND remaining_qty >= :qty', { id: d.lotId, qty: d.qty })
                 .execute();
@@ -145,8 +147,9 @@ export class COGSService {
         batchId?: number;
         notes?: string;
         shopId?: number;
-    }) {
-        const lot = this.lotRepo.create({
+    }, manager?: EntityManager) {
+        const repo = manager ? manager.getRepository(InventoryLot) : this.lotRepo;
+        const lot = repo.create({
             productId: data.productId,
             initialQty: data.quantity,
             remainingQty: data.quantity,
@@ -157,26 +160,31 @@ export class COGSService {
             notes: data.notes,
             shopId: data.shopId,
         });
-        const saved = await this.lotRepo.save(lot);
+        const saved = await repo.save(lot);
 
         // Cập nhật giá bình quân trên products.cost_price
-        await this.updateAvgCostOnProduct(data.productId, data.shopId);
+        await this.updateAvgCostOnProduct(data.productId, data.shopId, manager);
 
         return saved;
     }
 
     /** Cập nhật giá bình quân gia quyền trên sản phẩm */
-    private async updateAvgCostOnProduct(productId: number, shopId?: number) {
-        const qb = this.lotRepo
-            .createQueryBuilder('l')
-            .select('SUM(l.remaining_qty * l.cost_price) / NULLIF(SUM(l.remaining_qty), 0)', 'avgCost')
+    private async updateAvgCostOnProduct(productId: number, shopId?: number, manager?: EntityManager) {
+        const qb = manager
+            ? manager.createQueryBuilder(InventoryLot, 'l')
+            : this.lotRepo.createQueryBuilder('l');
+        qb.select('SUM(l.remaining_qty * l.cost_price) / NULLIF(SUM(l.remaining_qty), 0)', 'avgCost')
             .where('l.product_id = :productId AND l.remaining_qty > 0', { productId });
         if (shopId) qb.andWhere('l.shop_id = :shopId', { shopId });
         const avgResult = await qb.getRawOne();
 
         const avgCost = Number(avgResult?.avgCost || 0);
         if (avgCost > 0) {
-            await this.productRepo.update(productId, { costPrice: avgCost });
+            if (manager) {
+                await manager.update(Product, productId, { costPrice: avgCost });
+            } else {
+                await this.productRepo.update(productId, { costPrice: avgCost });
+            }
         }
     }
 

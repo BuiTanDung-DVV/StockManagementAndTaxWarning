@@ -141,23 +141,43 @@ class ApiClient {
   }
 
   Future<dynamic> get(String path, {Map<String, dynamic>? params}) async {
-    final res = await _dio.get(path, queryParameters: params);
-    return _extract(res);
+    try {
+      final res = await _dio.get(path, queryParameters: params);
+      return _extract(res);
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error!;
+      throw ApiException(e.message ?? 'Lỗi không xác định');
+    }
   }
 
   Future<dynamic> post(String path, {dynamic data}) async {
-    final res = await _dio.post(path, data: data);
-    return _extract(res);
+    try {
+      final res = await _dio.post(path, data: data);
+      return _extract(res);
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error!;
+      throw ApiException(e.message ?? 'Lỗi không xác định');
+    }
   }
 
   Future<dynamic> put(String path, {dynamic data}) async {
-    final res = await _dio.put(path, data: data);
-    return _extract(res);
+    try {
+      final res = await _dio.put(path, data: data);
+      return _extract(res);
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error!;
+      throw ApiException(e.message ?? 'Lỗi không xác định');
+    }
   }
 
   Future<dynamic> delete(String path) async {
-    final res = await _dio.delete(path);
-    return _extract(res);
+    try {
+      final res = await _dio.delete(path);
+      return _extract(res);
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error!;
+      throw ApiException(e.message ?? 'Lỗi không xác định');
+    }
   }
 
   /// Load token from SharedPreferences on startup

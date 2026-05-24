@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn } from 'typeorm';
 
 import { Product } from '../product/entities';
+import { Supplier } from '../supplier/entities';
 
 @Entity('warehouses')
 export class Warehouse {
@@ -98,6 +99,10 @@ export class PurchaseOrder {
 
     @Column({ name: 'supplier_id' })
     supplierId: number;
+
+    @ManyToOne(() => Supplier)
+    @JoinColumn({ name: 'supplier_id' })
+    supplier: Supplier;
 
     @Column({ name: 'warehouse_id', nullable: true })
     warehouseId: number;
