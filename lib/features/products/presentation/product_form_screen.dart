@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/product_provider.dart';
@@ -55,12 +56,24 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       final sellingPrice = double.tryParse(_sellPriceCtrl.text.trim()) ?? 0;
 
       if (name.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập tên sản phẩm'), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vui lòng nhập tên sản phẩm'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+          ),
+        );
         setState(() => _saving = false);
         return;
       }
       if (sellingPrice <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Giá bán phải lớn hơn 0'), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Giá bán phải lớn hơn 0'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+          ),
+        );
         setState(() => _saving = false);
         return;
       }
@@ -83,129 +96,367 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         await repo.create(data);
       }
       if (!mounted) return;
-      // FutureProvider.family cần invalidate với args cụ thể
       ref.invalidate(productListProvider((page: 1, search: null)));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isEdit ? 'Cập nhật thành công!' : 'Thêm sản phẩm thành công!'), backgroundColor: AppColors.success),
+        SnackBar(
+          content: Text(_isEdit ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.success,
+        ),
       );
       context.pop(true);
       return;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text('Lỗi: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     }
     if (mounted) setState(() => _saving = false);
   }
 
-
   @override
   void dispose() {
-    _nameCtrl.dispose(); _skuCtrl.dispose(); _barcodeCtrl.dispose();
-    _unitCtrl.dispose(); _costPriceCtrl.dispose(); _sellPriceCtrl.dispose();
-    _wholesalePriceCtrl.dispose(); _currentStockCtrl.dispose(); _minStockCtrl.dispose(); _descCtrl.dispose();
+    _nameCtrl.dispose();
+    _skuCtrl.dispose();
+    _barcodeCtrl.dispose();
+    _unitCtrl.dispose();
+    _costPriceCtrl.dispose();
+    _sellPriceCtrl.dispose();
+    _wholesalePriceCtrl.dispose();
+    _currentStockCtrl.dispose();
+    _minStockCtrl.dispose();
+    _descCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
-        title: Text(_isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        title: Text(
+          _isEdit ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm Mới',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Form(
           key: _formKey,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _sectionHeader('Thông tin cơ bản'),
-            const SizedBox(height: 12),
-            _field('Tên sản phẩm *', _nameCtrl, HugeIcons.strokeRoundedPackage, c,
-                validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên' : null),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: _field('SKU', _skuCtrl, HugeIcons.strokeRoundedTag01, c)),
-              const SizedBox(width: 12),
-              Expanded(child: _field('Mã vạch', _barcodeCtrl, HugeIcons.strokeRoundedBarCode01, c)),
-            ]),
-            const SizedBox(height: 12),
-            _field('Đơn vị tính', _unitCtrl, HugeIcons.strokeRoundedRuler, c, hint: 'VD: Cái, Kg, Hộp'),
-
-            const SizedBox(height: 24),
-            _sectionHeader('Giá'),
-            const SizedBox(height: 12),
-            _field('Giá vốn', _costPriceCtrl, HugeIcons.strokeRoundedCoinsDollar, c, keyboardType: TextInputType.number),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: _field('Giá bán lẻ *', _sellPriceCtrl, HugeIcons.strokeRoundedMoney01, c,
-                  keyboardType: TextInputType.number,
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Bắt buộc' : null)),
-              const SizedBox(width: 12),
-              Expanded(child: _field('Giá sỉ', _wholesalePriceCtrl, HugeIcons.strokeRoundedMoney01, c, keyboardType: TextInputType.number)),
-            ]),
-
-            const SizedBox(height: 24),
-            _sectionHeader('Kho'),
-            const SizedBox(height: 12),
-            _field('Tồn hiện có', _currentStockCtrl, HugeIcons.strokeRoundedPackageSearch, c, keyboardType: TextInputType.number, hint: 'Số lượng tồn ban đầu'),
-            const SizedBox(height: 12),
-            _field('Tồn tối thiểu', _minStockCtrl, HugeIcons.strokeRoundedWarehouse, c, keyboardType: TextInputType.number, hint: 'Cảnh báo khi dưới mức này'),
-
-            const SizedBox(height: 24),
-            _sectionHeader('Mô tả'),
-            const SizedBox(height: 12),
-            _field('Mô tả sản phẩm', _descCtrl, HugeIcons.strokeRoundedTextAlignLeft, c, maxLines: 3),
-
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _saving ? null : _save,
-                icon: _saving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: Colors.white, size: 18),
-                label: Text(_saving ? 'Đang lưu...' : (_isEdit ? 'Cập nhật' : 'Thêm sản phẩm')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image upload frame with dotted/dashed visual
+              Center(
+                child: Container(
+                  width: double.infinity,
+                  height: 125,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      width: 1.5,
+                      style: BorderStyle.solid,
+                    ),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Tính năng tải ảnh sản phẩm sẽ khả dụng ở bản cập nhật tiếp theo!'),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_photo_alternate_rounded,
+                            size: 32,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tải ảnh sản phẩm lên (Dưới 5MB)',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Hỗ trợ định dạng JPG, PNG, WEBP',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: c.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-          ]),
+
+              _sectionHeader('Thông tin cơ bản', theme, c),
+              const SizedBox(height: 12),
+              _field(
+                'Tên sản phẩm *',
+                _nameCtrl,
+                HugeIcons.strokeRoundedPackage,
+                c,
+                theme,
+                validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên sản phẩm' : null,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _field(
+                      'Mã SKU',
+                      _skuCtrl,
+                      HugeIcons.strokeRoundedTag01,
+                      c,
+                      theme,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _field(
+                      'Mã vạch',
+                      _barcodeCtrl,
+                      HugeIcons.strokeRoundedBarCode01,
+                      c,
+                      theme,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _field(
+                'Đơn vị tính',
+                _unitCtrl,
+                HugeIcons.strokeRoundedRuler,
+                c,
+                theme,
+                hint: 'VD: Cái, Kg, Hộp, Lon',
+              ),
+
+              const SizedBox(height: 24),
+              _sectionHeader('Thiết lập giá bán', theme, c),
+              const SizedBox(height: 12),
+              _field(
+                'Giá vốn nhập hàng',
+                _costPriceCtrl,
+                HugeIcons.strokeRoundedCoinsDollar,
+                c,
+                theme,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _field(
+                      'Giá bán lẻ *',
+                      _sellPriceCtrl,
+                      HugeIcons.strokeRoundedMoney01,
+                      c,
+                      theme,
+                      keyboardType: TextInputType.number,
+                      validator: (v) => v == null || v.trim().isEmpty ? 'Bắt buộc' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _field(
+                      'Giá bán sỉ',
+                      _wholesalePriceCtrl,
+                      HugeIcons.strokeRoundedMoney01,
+                      c,
+                      theme,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+              _sectionHeader('Cấu hình kho hàng', theme, c),
+              const SizedBox(height: 12),
+              _field(
+                'Tồn kho hiện có',
+                _currentStockCtrl,
+                HugeIcons.strokeRoundedPackageSearch,
+                c,
+                theme,
+                keyboardType: TextInputType.number,
+                hint: 'Số lượng tồn kho ban đầu',
+              ),
+              const SizedBox(height: 12),
+              _field(
+                'Ngưỡng báo động tối thiểu',
+                _minStockCtrl,
+                HugeIcons.strokeRoundedWarehouse,
+                c,
+                theme,
+                keyboardType: TextInputType.number,
+                hint: 'Cảnh báo khi dưới mức này',
+              ),
+
+              const SizedBox(height: 24),
+              _sectionHeader('Mô tả bổ sung', theme, c),
+              const SizedBox(height: 12),
+              _field(
+                'Mô tả chi tiết sản phẩm',
+                _descCtrl,
+                HugeIcons.strokeRoundedTextAlignLeft,
+                c,
+                theme,
+                maxLines: 3,
+              ),
+
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const HugeIcon(
+                          icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                  label: Text(
+                    _saving 
+                        ? 'Đang lưu lại...' 
+                        : (_isEdit ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm Mới'),
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _sectionHeader(String title) => Row(children: [
-    HugeIcon(icon: HugeIcons.strokeRoundedFolder01, size: 18, color: AppColors.primary),
-    const SizedBox(width: 8),
-    Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-  ]);
+  Widget _sectionHeader(String title, ThemeData theme, AppThemeColors c) {
+    return Row(
+      children: [
+        HugeIcon(
+          icon: HugeIcons.strokeRoundedFolder01,
+          size: 18,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: c.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
 
-  Widget _field(String label, TextEditingController ctrl, dynamic icon, AppThemeColors c, {
-    TextInputType? keyboardType, int maxLines = 1, String? hint,
+  Widget _field(
+    String label,
+    TextEditingController ctrl,
+    dynamic icon,
+    AppThemeColors c,
+    ThemeData theme, {
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    String? hint,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
-      controller: ctrl, keyboardType: keyboardType, maxLines: maxLines, validator: validator,
+      controller: ctrl,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      validator: validator,
+      style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
       decoration: InputDecoration(
-        labelText: label, hintText: hint,
-        prefixIcon: Padding(padding: const EdgeInsets.all(12), child: HugeIcon(icon: icon, size: 20, color: AppColors.primary)),
-        filled: true, fillColor: c.card,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.danger)),
+        labelText: label,
+        labelStyle: TextStyle(color: c.textSecondary, fontSize: 13),
+        hintText: hint,
+        hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: HugeIcon(icon: icon, size: 18, color: theme.colorScheme.primary),
+        ),
+        filled: true,
+        fillColor: c.card,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: c.divider),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: c.divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.8),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.danger, width: 1.8),
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );

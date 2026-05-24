@@ -1,7 +1,8 @@
-import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -14,124 +15,296 @@ class TaxObligationScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     final taxAsync = ref.watch(taxObligationsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nghĩa vụ thuế'), actions: [featureGuideButton(context, 'tax_obligations')]),
+      backgroundColor: c.bg,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'Theo dõi Nghĩa vụ thuế',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        actions: [featureGuideButton(context, 'tax_obligations')],
+      ),
       body: taxAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
+        error: (e, _) => Center(child: Text('Lỗi: $e', style: TextStyle(color: AppColors.danger))),
         data: (data) {
           final items = (data['items'] as List?) ?? [];
           final totalOwed = asNum(data['totalOwed']);
 
           if (items.isEmpty) {
             return AppEmpty(
-              message: 'Chưa có dữ liệu nghĩa vụ thuế',
-              action: ElevatedButton.icon(icon: const Icon(Icons.account_balance), label: const Text('Thêm kỳ thuế'), onPressed: () => _showAddDialog(context, ref)),
+              message: 'Chưa phát sinh dữ liệu nghĩa vụ thuế',
+              action: ElevatedButton.icon(
+                icon: const Icon(Icons.account_balance_rounded), 
+                label: Text('Thêm kỳ thuế mới', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)), 
+                onPressed: () => _showAddDialog(context, ref)
+              ),
             );
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)]), borderRadius: BorderRadius.circular(14)),
-                child: Column(children: [
-                  const Text('Tổng còn phải nộp', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text(_fmt(totalOwed), style: TextStyle(color: totalOwed > 0 ? const Color(0xFFFF6B6B) : AppColors.success, fontSize: 24, fontWeight: FontWeight.bold)),
-                ]),
-              ),
-              const SizedBox(height: 16),
-              ...items.map<Widget>((t) {
-                final id = t['id'] as int?;
-                final status = t['status'] ?? 'pending';
-                final statusColor = status == 'done' ? AppColors.success : status == 'overdue' ? AppColors.danger : AppColors.warning;
-                final statusLabel = status == 'done' ? 'Hoàn thành' : status == 'overdue' ? 'Quá hạn' : status == 'partial' ? 'Một phần' : 'Chờ nộp';
-                final vatDeclared = asNum(t['vatDeclared']);
-                final pitDeclared = asNum(t['pitDeclared']);
-                final vatPaid = asNum(t['vatPaid']);
-                final pitPaid = asNum(t['pitPaid']);
-                final remaining = (vatDeclared + pitDeclared) - (vatPaid + pitPaid);
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Glowing Total Owed Header Card
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        totalOwed > 0 ? AppColors.danger : AppColors.success,
+                        (totalOwed > 0 ? AppColors.danger : AppColors.success).withValues(alpha: 0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (totalOwed > 0 ? AppColors.danger : AppColors.success).withValues(alpha: 0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'TỔNG THUẾ CÒN PHẢI NỘP',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8), 
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _fmt(totalOwed),
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                Text(
+                  'Chi tiết các kỳ thuế',
+                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary),
+                ),
+                const SizedBox(height: 12),
+                
+                ...items.map<Widget>((t) {
+                  final id = t['id'] as int?;
+                  final status = t['status'] ?? 'pending';
+                  final statusColor = status == 'done' 
+                      ? AppColors.success 
+                      : status == 'overdue' ? AppColors.danger : AppColors.warning;
+                  final statusLabel = status == 'done' 
+                      ? 'Hoàn thành' 
+                      : status == 'overdue' ? 'Quá hạn' : status == 'partial' ? 'Một phần' : 'Chờ nộp';
+                  final vatDeclared = asNum(t['vatDeclared']);
+                  final pitDeclared = asNum(t['pitDeclared']);
+                  final vatPaid = asNum(t['vatPaid']);
+                  final pitPaid = asNum(t['pitPaid']);
+                  final remaining = (vatDeclared + pitDeclared) - (vatPaid + pitPaid);
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: AppThemeColors.of(context).card, borderRadius: BorderRadius.circular(12)),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text(t['period'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                      Row(mainAxisSize: MainAxisSize.min, children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                          child: Text(statusLabel, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: c.divider.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.01),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                        const SizedBox(width: 2),
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 16),
-                          color: AppColors.primary,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                          tooltip: 'Sửa',
-                          onPressed: () => _showEditDialog(context, ref, t),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              t['period'] ?? 'Kỳ kê khai', 
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: c.textPrimary)
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.12), 
+                                    borderRadius: BorderRadius.circular(30)
+                                  ),
+                                  child: Text(
+                                    statusLabel, 
+                                    style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_note_rounded, size: 20),
+                                  color: theme.colorScheme.primary,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                  tooltip: 'Chỉnh sửa',
+                                  onPressed: () => _showEditDialog(context, ref, t),
+                                  splashRadius: 20,
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_sweep_rounded, size: 20),
+                                  color: AppColors.danger,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                  tooltip: 'Xóa kỳ thuế',
+                                  onPressed: id == null ? null : () => _confirmDelete(context, ref, id),
+                                  splashRadius: 20,
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, size: 16),
-                          color: AppColors.danger,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                          tooltip: 'Xóa',
-                          onPressed: id == null ? null : () => _confirmDelete(context, ref, id),
-                        ),
-                      ]),
-                    ]),
-                    const SizedBox(height: 8),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text('VAT: ${_fmt(vatDeclared)}', style: const TextStyle(fontSize: 12)),
-                      Text('Đã nộp: ${_fmt(vatPaid)}', style: TextStyle(fontSize: 12, color: vatPaid >= vatDeclared ? AppColors.success : AppColors.warning)),
-                    ]),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text('TNCN: ${_fmt(pitDeclared)}', style: const TextStyle(fontSize: 12)),
-                      Text('Đã nộp: ${_fmt(pitPaid)}', style: TextStyle(fontSize: 12, color: pitPaid >= pitDeclared ? AppColors.success : AppColors.warning)),
-                    ]),
-                    const SizedBox(height: 6),
-                    if (remaining > 0)
-                      Text('Còn lại: ${_fmt(remaining)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.danger, fontSize: 13)),
-                  ]),
-                );
-              }),
-            ]),
+                        const SizedBox(height: 12),
+                        
+                        _taxRowItem('Thuế GTGT (VAT)', _fmt(vatDeclared), _fmt(vatPaid), vatPaid >= vatDeclared, c),
+                        const SizedBox(height: 6),
+                        _taxRowItem('Thuế TNCN', _fmt(pitDeclared), _fmt(pitPaid), pitPaid >= pitDeclared, c),
+                        
+                        if (remaining > 0) ...[
+                          Divider(color: c.divider.withValues(alpha: 0.4), height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Còn phải nộp kỳ này:', 
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: c.textPrimary)
+                              ),
+                              Text(
+                                _fmt(remaining), 
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: AppColors.danger, fontSize: 14)
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
           );
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context, ref),
-        icon: const Icon(Icons.account_balance),
-        label: const Text('Thêm'),
-        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.account_balance_rounded),
+        label: Text('Khai thuế mới', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
       ),
     );
   }
 
+  Widget _taxRowItem(String label, String declared, String paid, bool isPaidComplete, AppThemeColors c) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label, 
+            style: TextStyle(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Khai: $declared', 
+          style: TextStyle(fontSize: 11, color: c.textMuted, fontWeight: FontWeight.w500)
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Đã nộp: $paid', 
+          style: TextStyle(
+            fontSize: 11, 
+            color: isPaidComplete ? AppColors.success : AppColors.warning,
+            fontWeight: FontWeight.bold,
+          )
+        ),
+      ],
+    );
+  }
+
   void _showAddDialog(BuildContext context, WidgetRef ref) {
+    final c = AppThemeColors.of(context);
     final periodC = TextEditingController(text: 'Q${((DateTime.now().month - 1) ~/ 3) + 1}/${DateTime.now().year}');
     final vatC = TextEditingController();
     final pitC = TextEditingController();
+    
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Thêm kỳ thuế'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: periodC, decoration: const InputDecoration(labelText: 'Kỳ (VD: Q1/2026)')),
-          TextField(controller: vatC, decoration: const InputDecoration(labelText: 'VAT phải nộp'), keyboardType: TextInputType.number),
-          TextField(controller: pitC, decoration: const InputDecoration(labelText: 'TNCN phải nộp'), keyboardType: TextInputType.number),
-        ]),
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Thêm kỳ nghĩa vụ thuế', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min, 
+          children: [
+            TextField(
+              controller: periodC, 
+              decoration: const InputDecoration(labelText: 'Kỳ kê khai (VD: Q1/2026)')
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: vatC, 
+              decoration: const InputDecoration(labelText: 'Thuế VAT phải nộp (VNĐ)'), 
+              keyboardType: TextInputType.number
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: pitC, 
+              decoration: const InputDecoration(labelText: 'Thuế TNCN phải nộp (VNĐ)'), 
+              keyboardType: TextInputType.number
+            ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx), 
+            child: Text('Hủy', style: TextStyle(color: c.textSecondary, fontWeight: FontWeight.bold))
+          ),
           ElevatedButton(
             onPressed: () async {
               await ref.read(financeRepoProvider).createTaxObligation({
@@ -142,7 +315,8 @@ class TaxObligationScreen extends ConsumerWidget {
               ref.invalidate(taxObligationsProvider);
               if (ctx.mounted) Navigator.pop(ctx);
             },
-            child: const Text('Lưu'),
+            style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+            child: const Text('Lưu lại'),
           ),
         ],
       ),
@@ -150,6 +324,7 @@ class TaxObligationScreen extends ConsumerWidget {
   }
 
   void _showEditDialog(BuildContext context, WidgetRef ref, Map<String, dynamic> t) {
+    final c = AppThemeColors.of(context);
     final id = t['id'] as int?;
     if (id == null) return;
     final periodC = TextEditingController(text: t['period']?.toString() ?? '');
@@ -166,27 +341,36 @@ class TaxObligationScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlg) => AlertDialog(
-          title: const Text('Sửa kỳ thuế'),
+          backgroundColor: c.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text('Cập nhật kỳ thuế', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: periodC, decoration: const InputDecoration(labelText: 'Kỳ (VD: Q1/2026)')),
-              const SizedBox(height: 8),
-              TextField(controller: vatC, decoration: const InputDecoration(labelText: 'VAT phải nộp'), keyboardType: TextInputType.number),
-              TextField(controller: pitC, decoration: const InputDecoration(labelText: 'TNCN phải nộp'), keyboardType: TextInputType.number),
-              const SizedBox(height: 8),
-              TextField(controller: vatPaidC, decoration: const InputDecoration(labelText: 'VAT đã nộp'), keyboardType: TextInputType.number),
-              TextField(controller: pitPaidC, decoration: const InputDecoration(labelText: 'TNCN đã nộp'), keyboardType: TextInputType.number),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: selectedStatus,
-                decoration: const InputDecoration(labelText: 'Trạng thái'),
-                items: statuses.map((s) => DropdownMenuItem(value: s, child: Text(statusLabels[s] ?? s))).toList(),
-                onChanged: (v) => setDlg(() => selectedStatus = v ?? selectedStatus),
-              ),
-            ]),
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min, 
+              children: [
+                TextField(controller: periodC, decoration: const InputDecoration(labelText: 'Kỳ kê khai (VD: Q1/2026)')),
+                const SizedBox(height: 8),
+                TextField(controller: vatC, decoration: const InputDecoration(labelText: 'VAT khai nộp'), keyboardType: TextInputType.number),
+                TextField(controller: pitC, decoration: const InputDecoration(labelText: 'TNCN khai nộp'), keyboardType: TextInputType.number),
+                const SizedBox(height: 8),
+                TextField(controller: vatPaidC, decoration: const InputDecoration(labelText: 'VAT thực tế đã nộp'), keyboardType: TextInputType.number),
+                TextField(controller: pitPaidC, decoration: const InputDecoration(labelText: 'TNCN thực tế đã nộp'), keyboardType: TextInputType.number),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedStatus,
+                  decoration: const InputDecoration(labelText: 'Trạng thái nghĩa vụ'),
+                  items: statuses.map((s) => DropdownMenuItem(value: s, child: Text(statusLabels[s] ?? s))).toList(),
+                  onChanged: (v) => setDlg(() => selectedStatus = v ?? selectedStatus),
+                ),
+              ],
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx), 
+              child: Text('Hủy', style: TextStyle(color: c.textSecondary, fontWeight: FontWeight.bold))
+            ),
             ElevatedButton(
               onPressed: () async {
                 await ref.read(financeRepoProvider).updateTaxObligation(id, {
@@ -200,6 +384,7 @@ class TaxObligationScreen extends ConsumerWidget {
                 ref.invalidate(taxObligationsProvider);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
+              style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
               child: const Text('Lưu'),
             ),
           ],
@@ -209,17 +394,28 @@ class TaxObligationScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, int id) async {
+    final c = AppThemeColors.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xóa kỳ thuế'),
-        content: const Text('Bạn có chắc chắn muốn xóa kỳ thuế này?'),
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Xóa kỳ nghĩa vụ thuế?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: const Text('Bạn có chắc chắn muốn xóa kỳ thuế này khỏi sổ cái? Dữ liệu không thể phục hồi.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
-          FilledButton(
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false), 
+            child: Text('Hủy', style: TextStyle(color: c.textSecondary, fontWeight: FontWeight.bold))
+          ),
+          ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text('Xóa'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger.withValues(alpha: 0.1),
+              foregroundColor: AppColors.danger,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Text('Xóa kỳ thuế'),
           ),
         ],
       ),

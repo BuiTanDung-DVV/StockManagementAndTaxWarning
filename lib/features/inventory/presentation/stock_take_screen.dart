@@ -1,10 +1,10 @@
-import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
-import '../providers/inventory_provider.dart';
 import '../../../core/widgets/app_animations.dart';
-
+import '../providers/inventory_provider.dart';
 import 'stock_take_form_screen.dart';
 
 class StockTakeScreen extends ConsumerWidget {
@@ -16,27 +16,78 @@ class StockTakeScreen extends ConsumerWidget {
     final stockAsync = ref.watch(stockProvider(null));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kiểm kê Kho'), actions: [
-        featureGuideButton(context, 'stock_take'),
-      ]),
+      backgroundColor: c.bg,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'Kiểm kê Kho',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          featureGuideButton(context, 'stock_take'),
+          const SizedBox(width: 8),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const StockTakeFormScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StockTakeFormScreen()),
+          );
         },
-        icon: const Icon(Icons.fact_check),
-        label: const Text('Kiểm kê'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 3,
+        icon: const Icon(Icons.fact_check_rounded, color: Colors.white, size: 20),
+        label: Text(
+          'Tạo Phiếu Kiểm',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
       ),
       body: stockAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
-          const SizedBox(height: 12),
-          Text('Không tải được dữ liệu\n$e', textAlign: TextAlign.center, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
-          const SizedBox(height: 12),
-          ElevatedButton(onPressed: () => ref.invalidate(stockProvider), child: const Text('Thử lại')),
-        ])),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
+                const SizedBox(height: 12),
+                Text(
+                  'Không tải được dữ liệu tồn kho\n$e',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: AppColors.danger,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => ref.invalidate(stockProvider),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Thử lại'),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         data: (items) {
           if (items.isEmpty) {
             return const AppEmpty(
@@ -44,17 +95,18 @@ class StockTakeScreen extends ConsumerWidget {
             );
           }
           return GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 450,
-              mainAxisExtent: 85,
+              mainAxisExtent: 90,
               crossAxisSpacing: 12,
               mainAxisSpacing: 0,
             ),
+            physics: const BouncingScrollPhysics(),
             itemCount: items.length,
             itemBuilder: (_, i) {
               final item = items[i] as Map;
-              final name = item['product']?['name'] ?? item['productName'] ?? 'SP';
+              final name = item['product']?['name'] ?? item['productName'] ?? 'Sản phẩm không tên';
               final sku = item['product']?['sku'] ?? item['sku'] ?? '';
               final qty = item['currentQuantity'] ?? item['quantity'] ?? 0;
               final minStock = item['product']?['minStock'] ?? item['minStock'] ?? 0;
@@ -62,21 +114,83 @@ class StockTakeScreen extends ConsumerWidget {
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: c.card, borderRadius: BorderRadius.circular(12)),
-                child: Row(children: [
-                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: (isLow ? AppColors.danger : AppColors.success).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                    child: Icon(Icons.inventory_2, color: isLow ? AppColors.danger : AppColors.success, size: 20)),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    if (sku.toString().isNotEmpty) Text('SKU: $sku', style: TextStyle(fontSize: 11, color: c.textSecondary)),
-                  ])),
-                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    Text('$qty', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isLow ? AppColors.danger : AppColors.success)),
-                    if (isLow) Text('Min: $minStock', style: const TextStyle(fontSize: 10, color: AppColors.danger)),
-                  ]),
-                ]),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: c.card,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: (isLow ? AppColors.danger : AppColors.success)
+                            .withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        Icons.inventory_2_rounded,
+                        color: isLow ? AppColors.danger : AppColors.success,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            name,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: c.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            sku.toString().isNotEmpty ? 'SKU: $sku' : 'Không có SKU',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: c.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$qty',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                            color: isLow ? AppColors.danger : AppColors.success,
+                          ),
+                        ),
+                        if (isLow)
+                          Text(
+                            'Min: $minStock',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: AppColors.danger,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               );
             },
           );
