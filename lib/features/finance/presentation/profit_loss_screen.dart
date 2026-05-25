@@ -7,6 +7,8 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/type_parser.dart';
 import '../providers/finance_provider.dart';
 
 class ProfitLossScreen extends ConsumerStatefulWidget {
@@ -75,11 +77,11 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e', style: TextStyle(color: AppColors.danger))),
         data: (data) {
-          final revenue = num.tryParse(data['revenue']?.toString() ?? '0') ?? 0;
-          final cogs = num.tryParse(data['cogs']?.toString() ?? '0') ?? 0;
-          final grossProfit = num.tryParse(data['grossProfit']?.toString() ?? '0') ?? 0;
-          final expenses = num.tryParse(data['expenses']?.toString() ?? '0') ?? 0;
-          final netProfit = num.tryParse(data['netProfit']?.toString() ?? '0') ?? 0;
+          final revenue = TypeParser.asDouble(data['revenue']);
+          final cogs = TypeParser.asDouble(data['cogs']);
+          final grossProfit = TypeParser.asDouble(data['grossProfit']);
+          final expenses = TypeParser.asDouble(data['expenses']);
+          final netProfit = TypeParser.asDouble(data['netProfit']);
           final grossPct = revenue > 0 ? (grossProfit / revenue * 100).toStringAsFixed(1) : '0.0';
           final netPct = revenue > 0 ? (netProfit / revenue * 100).toStringAsFixed(1) : '0.0';
           

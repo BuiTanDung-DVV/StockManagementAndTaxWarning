@@ -66,6 +66,9 @@ export class SalesOrder {
     @OneToMany(() => SalesOrderItem, (i) => i.order, { cascade: true })
     items: SalesOrderItem[];
 
+    @OneToMany(() => SalesOrderLotDeduction, (l) => l.order, { cascade: true })
+    lotDeductions: SalesOrderLotDeduction[];
+
     @OneToMany(() => SalesOrderPayment, (p) => p.order, { cascade: true })
     payments: SalesOrderPayment[];
 
@@ -75,6 +78,7 @@ export class SalesOrder {
     @UpdateDateColumn({ name: 'updated_at' })
     updatedAt: Date;
 }
+
 
 @Entity('sales_order_items')
 export class SalesOrderItem {
@@ -109,6 +113,9 @@ export class SalesOrderItem {
 
     @Column({ name: 'tax_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
     taxAmount: number;
+
+    @OneToMany(() => SalesOrderLotDeduction, (l) => l.orderItem, { cascade: true })
+    lotDeductions: SalesOrderLotDeduction[];
 }
 
 @Entity('sales_order_payments')
@@ -209,4 +216,36 @@ export class SalesReturnItem {
 
     @Column({ length: 200, nullable: true })
     reason: string;
+}
+
+import { InventoryLot } from '../inventory/lot.entity';
+
+@Entity('sales_order_lot_deductions')
+export class SalesOrderLotDeduction {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @ManyToOne(() => SalesOrder, (o) => o.lotDeductions)
+    @JoinColumn({ name: 'order_id' })
+    order: SalesOrder;
+
+    @Column({ name: 'order_id', nullable: true })
+    orderId: number;
+
+    @ManyToOne(() => SalesOrderItem, (i) => i.lotDeductions)
+    @JoinColumn({ name: 'order_item_id' })
+    orderItem: SalesOrderItem;
+
+    @Column({ name: 'order_item_id' })
+    orderItemId: number;
+
+    @ManyToOne(() => InventoryLot)
+    @JoinColumn({ name: 'lot_id' })
+    lot: InventoryLot;
+
+    @Column({ name: 'lot_id' })
+    lotId: number;
+
+    @Column()
+    quantity: number;
 }

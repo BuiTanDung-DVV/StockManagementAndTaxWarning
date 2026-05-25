@@ -2,8 +2,11 @@ import { AppDataSource } from '../config/db.config';
 import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, Invoice, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
 import { JournalEntry, JournalLine } from '../finance/ledger.entity';
 import { ActivityLog } from '../system/entities';
-import { PostingService } from './posting.service';
 import { EntityManager } from 'typeorm';
+import { InventoryService } from './inventory.service';
+import { COGSService } from './cogs.service';
+import { InventoryMovement, InventoryStock } from '../inventory/entities';
+import { PostingService } from './posting.service';
 
 export class FinanceService {
     private cashTxRepo = AppDataSource.getRepository(CashTransaction);
@@ -43,6 +46,8 @@ export class FinanceService {
         });
         await this.activityLogRepo.save(log);
     }
+
+
 
     // Cash Transactions
     async getCashTransactions(shopId: number, page = 1, limit = 20, type?: string, from?: string, to?: string) {
@@ -90,6 +95,8 @@ export class FinanceService {
                 }
             }
         }
+
+
 
         return saved;
     }
@@ -539,6 +546,65 @@ export class FinanceService {
         record.approvedAt = new Date();
 
         const updated = await this.purchaseNoInvRepo.save(record);
+
+        if (input.decision === 'APPROVED') {
+            const inventoryService = new InventoryService();
+            const cogsService = new COGSService();
+
+            // Lấy chi tiết items
+            const fullRecord = await this.purchaseNoInvRepo.findOne({ where: { id: updated.id }, relations: ['items'] });
+            if (fullRecord && fullRecord.items) {
+                for (const item of fullRecord.items) {
+                    if (item.productId && item.warehouseId) {
+                        // 1. Tạo chuyển động kho IN (bằng cách cập nhật stock và ghi movement)
+                        const movementRepo = AppDataSource.getRepository(InventoryMovement);
+                        await movementRepo.save(movementRepo.create({
+                            shopId,
+                            productId: item.productId,
+                            warehouseId: item.warehouseId,
+                            movementType: 'IN',
+                            quantity: item.quantity,
+                            referenceType: 'PURCHASE_WITHOUT_INVOICE',
+                            referenceId: updated.id,
+                            notes: `Bảng kê 01: ${updated.recordCode}`
+                        }));
+
+                        // Tăng quantity trong inventory_stocks (dùng TypeORM)
+                        const stockRepo = AppDataSource.getRepository(InventoryStock);
+                        let stock = await stockRepo.findOne({ where: { shopId, productId: item.productId, warehouseId: item.warehouseId } as any });
+                        if (!stock) {
+                            stock = stockRepo.create({ shopId, productId: item.productId, warehouseId: item.warehouseId, quantity: 0, updatedAt: new Date() });
+                        }
+                        stock.quantity = Number(stock.quantity) + Number(item.quantity);
+                        stock.updatedAt = new Date();
+                        await stockRepo.save(stock);
+
+                        // 2. Tạo lô hàng mới tính FIFO
+                        await cogsService.addInventoryLot({
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            costPrice: item.unitPrice,
+                            purchaseId: updated.id,
+                            notes: `Bảng kê 01: ${updated.recordCode}`,
+                            shopId
+                        });
+                    }
+                }
+            }
+
+            // 3. Ghi nhận chi tiền vào Sổ cái
+            await this.postingService.postJournal(
+                shopId,
+                'PURCHASE_WITHOUT_INVOICE',
+                updated.id,
+                `Chi mua hàng không hóa đơn: ${updated.recordCode}`,
+                [
+                    { accountCode: '156', amount: Number(updated.totalAmount), entryType: 'DEBIT' },
+                    { accountCode: '111', amount: Number(updated.totalAmount), entryType: 'CREDIT' },
+                ]
+            );
+        }
+
         await this.logActivity({
             userId: input.approverUserId,
             action: input.decision === 'APPROVED' ? 'APPROVE' : 'REJECT',
