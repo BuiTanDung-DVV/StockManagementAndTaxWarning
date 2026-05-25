@@ -12,20 +12,27 @@ export interface AuthRequest extends Request {
 }
 
 export const authenticateJwt = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  let token: string | undefined;
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  
+  if (authHeader) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    token = req.query.token as string;
+  }
+
+  if (!token) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
 
-  const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, config.jwtSecret) as any;
     req.user = decoded;
 
-    // Parse shop ID from header (validation deferred to requireShopId)
-    const shopIdHeader = req.headers['x-shop-id'];
-    if (shopIdHeader) {
-      const shopId = parseInt(shopIdHeader as string, 10);
+    // Parse shop ID from header or query param (validation deferred to requireShopId)
+    const shopIdValue = req.headers['x-shop-id'] || req.query.shopId;
+    if (shopIdValue) {
+      const shopId = parseInt(shopIdValue as string, 10);
       if (!isNaN(shopId)) {
         if (!AppDataSource.isInitialized) {
             await AppDataSource.initialize();

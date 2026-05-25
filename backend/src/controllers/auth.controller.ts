@@ -88,3 +88,12 @@ export const searchShops = async (req: Request, res: Response) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+export const sendOtp = async (req: Request, res: Response) => {
+    try {
+        const result = await authService.sendOtp(req.body);
+        res.json({ success: true, data: result, message: 'OTP sent successfully' });
+    } catch (error: any) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/tax_service.dart';
 import '../widgets/tax_warning_widget.dart';
@@ -38,9 +39,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ToastService.showError('Error: $e');
       }
     } finally {
       if (mounted) {
@@ -70,7 +69,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _selectedPeriod,
+                    initialValue: _selectedPeriod,
                     decoration: const InputDecoration(labelText: 'Kỳ (Tháng/Quý)'),
                     items: [
                       for (int i = 1; i <= 12; i++)
@@ -96,7 +95,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _selectedYear,
+                    initialValue: _selectedYear,
                     decoration: const InputDecoration(labelText: 'Năm'),
                     items: [
                       for (int i = DateTime.now().year - 2; i <= DateTime.now().year; i++)
@@ -148,3 +147,4 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
     );
   }
 }
+

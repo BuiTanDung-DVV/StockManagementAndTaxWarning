@@ -28,10 +28,10 @@ class TaxService {
     final urlString = '${ApiClient.baseUrl}/tax/export-htkk?period=$period&year=$year&token=$token&shopId=$shopId';
     final url = Uri.parse(urlString);
     
-    if (await canLaunchUrl(url)) {
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      throw Exception('Could not launch $urlString');
+    } catch (e) {
+      throw Exception('Could not launch $urlString: $e');
     }
   }
 }

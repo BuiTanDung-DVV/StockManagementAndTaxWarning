@@ -10,6 +10,7 @@ import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/type_parser.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../providers/product_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
@@ -84,28 +85,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       ),
       body: Column(
         children: [
-          // Styled Search Field
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12), 
-            child: TextField(
-              onChanged: _onSearchChanged,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: c.card,
-                hintText: 'Tìm sản phẩm theo tên, SKU...', 
-                prefixIcon: Icon(Icons.search_rounded, color: c.textMuted),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: c.divider.withValues(alpha: 0.6)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-                ),
-              ),
-            ),
+          FilterBar(
+            searchHint: 'Tìm sản phẩm theo tên, SKU...',
+            onSearchChanged: _onSearchChanged,
           ),
           
           Expanded(

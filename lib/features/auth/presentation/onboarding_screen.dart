@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -51,6 +54,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
 
+  List<Map<String, dynamic>> _addressSuggestions = [];
+  bool _isSearchingAddress = false;
+  double? _selectedLat;
+  double? _selectedLon;
+  Timer? _debounceTimer;
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +97,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _usernameCtrl.dispose();
     _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
@@ -108,6 +118,50 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
+  Future<void> _searchAddress(String query) async {
+    if (query.trim().length < 3) {
+      setState(() => _addressSuggestions = []);
+      return;
+    }
+    setState(() => _isSearchingAddress = true);
+    try {
+      final dio = Dio();
+      final res = await dio.get(
+        'https://nominatim.openstreetmap.org/search',
+        queryParameters: {
+          'q': query,
+          'format': 'json',
+          'limit': 5,
+          'countrycodes': 'vn',
+        },
+        options: Options(
+          headers: {
+            'User-Agent': 'SmartStockTaxApp/1.0',
+          }
+        )
+      );
+      if (res.data is List) {
+        final list = List<Map<String, dynamic>>.from(res.data);
+        if (mounted) {
+          setState(() {
+            _addressSuggestions = list;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Nominatim search error: $e');
+    } finally {
+      if (mounted) setState(() => _isSearchingAddress = false);
+    }
+  }
+
+  void _onAddressChanged(String val) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 600), () {
+      _searchAddress(val);
+    });
+  }
+
   Future<void> _submit() async {
     final username = _usernameCtrl.text.trim();
     final fullName = _fullNameCtrl.text.trim();
@@ -118,40 +172,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final shopCode = _shopCodeCtrl.text.trim();
 
     if (fullName.isEmpty || (_needsUsername && username.isEmpty) || (_needsPhone && phone.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng điền đầy đủ thông tin'), backgroundColor: AppColors.danger),
-      );
+      ToastService.showError('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
     if (_accountType == 'SHOP' && shopName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập Tên cửa hàng'), backgroundColor: AppColors.danger),
-      );
+      ToastService.showError('Vui lòng nhập Tên cửa hàng');
       return;
     }
 
     if (_accountType == 'PERSONAL' && _needsShop && shopCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập Mã cửa hàng muốn tham gia'), backgroundColor: AppColors.danger),
-      );
+      ToastService.showError('Vui lòng nhập Mã cửa hàng muốn tham gia');
       return;
     }
     
     if (_needsUsername) {
       if (username.contains(' ') || username.length < 4) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tên đăng nhập không được có khoảng trắng và phải dài từ 4 ký tự.'), backgroundColor: AppColors.danger),
-        );
+        ToastService.showError('Tên đăng nhập không được có khoảng trắng và phải dài từ 4 ký tự.');
         return;
       }
     }
 
     if (_needsPhone) {
       if (!RegExp(r'^(0|\+84)\d{8,9}$').hasMatch(phone)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Số điện thoại không hợp lệ.'), backgroundColor: AppColors.danger),
-        );
+        ToastService.showError('Số điện thoại không hợp lệ.');
         return;
       }
     }
@@ -297,11 +341,127 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       hasFocus: _addressHasFocus,
                       labelText: 'Địa chỉ kinh doanh',
                       icon: Icons.location_on_outlined,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _submit(),
                       c: c,
                       theme: theme,
+                      onChanged: _onAddressChanged,
+                      suffixIcon: _isSearchingAddress ? Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
+                        ),
+                      ) : null,
                     ),
+                    if (_addressSuggestions.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        decoration: BoxDecoration(
+                          color: c.card.withValues(alpha: 0.95),
+                          border: Border.all(color: c.divider),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: _addressSuggestions.length,
+                            separatorBuilder: (context, index) => Divider(height: 1, color: c.divider),
+                            itemBuilder: (context, index) {
+                              final suggestion = _addressSuggestions[index];
+                              return ListTile(
+                                leading: Icon(Icons.location_on_rounded, color: theme.colorScheme.primary, size: 20),
+                                title: Text(
+                                  suggestion['display_name'] ?? '',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+                                ),
+                                onTap: () {
+                                  setState(() {
+                                    _addressCtrl.text = suggestion['display_name'] ?? '';
+                                    _selectedLat = double.tryParse(suggestion['lat'].toString());
+                                    _selectedLon = double.tryParse(suggestion['lon'].toString());
+                                    _addressSuggestions = [];
+                                  });
+                                  FocusScope.of(context).unfocus();
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    if (_selectedLat != null && _selectedLon != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.04),
+                          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.map_rounded, color: theme.colorScheme.primary, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Bản đồ vị trí (OpenStreetMap)',
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: c.textPrimary),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                height: 120,
+                                width: double.infinity,
+                                color: c.card,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Positioned.fill(
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [c.card, theme.colorScheme.primary.withValues(alpha: 0.08)],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.location_pin, color: AppColors.danger, size: 36),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Tọa độ: ${_selectedLat!.toStringAsFixed(6)}, ${_selectedLon!.toStringAsFixed(6)}',
+                                          style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ] else if (_accountType == 'PERSONAL' && _needsShop) ...[
                     const SizedBox(height: 16),
                     if (_selectedShop == null) ...[

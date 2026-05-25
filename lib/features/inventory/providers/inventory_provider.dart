@@ -42,6 +42,9 @@ class InventoryRepository {
   Future<Map<String, dynamic>> createPurchaseOrder(Map<String, dynamic> dto) async =>
       await _api.post('/purchase-orders', data: dto);
 
+  Future<Map<String, dynamic>> updatePurchaseOrder(int id, Map<String, dynamic> dto) async =>
+      await _api.put('/purchase-orders/$id', data: dto);
+
   Future<Map<String, dynamic>> createStockTake(Map<String, dynamic> dto) async =>
       await _api.post('/stock-takes', data: dto);
 }

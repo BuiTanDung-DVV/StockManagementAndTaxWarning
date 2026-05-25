@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -314,12 +315,10 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
       }
       if (!mounted) return;
       ref.invalidate(purchasesNoInvoiceProvider(_page));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(approve ? 'Da duyet bang ke' : 'Da tu choi bang ke')),
-      );
+      ToastService.showSuccess(approve ? 'Da duyet bang ke' : 'Da tu choi bang ke');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Khong the cap nhat phe duyet: $e')));
+      ToastService.showSuccess('Khong the cap nhat phe duyet: $e');
     } finally {
       notesController.dispose();
     }
@@ -420,7 +419,7 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
                 final quantity = double.tryParse(qtyC.text) ?? 0;
                 final unitPrice = double.tryParse(unitPriceC.text) ?? 0;
                 if (productName.isEmpty || quantity <= 0 || unitPrice < 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kiểm tra lại tên hàng, số lượng và đơn giá')));
+                  ToastService.showSuccess('Kiểm tra lại tên hàng, số lượng và đơn giá');
                   return;
                 }
                 setState(() {
@@ -484,7 +483,7 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (lineItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng thêm ít nhất 1 mặt hàng')));
+      ToastService.showError('Vui lòng thêm ít nhất 1 mặt hàng');
       return;
     }
 
@@ -498,11 +497,11 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
         'purchaseDate': DateTime.now().toIso8601String().split('T').first,
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã lưu bảng kê thành công')));
+      ToastService.showSuccess('Đã lưu bảng kê thành công');
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lưu thất bại: $e')));
+      ToastService.showError('Lưu thất bại: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

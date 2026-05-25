@@ -37,14 +37,31 @@ export class TaxService {
 
         const totalRevenue = orders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
 
-        // Fetch tax rules (Assuming 'BAN_LE' for simplicity if not specified)
+        // Determine industry code from shop sector
+        let industryCode = 'BAN_LE';
+        if (shop?.businessSector === 'SERVICE') industryCode = 'DICH_VU';
+        if (shop?.businessSector === 'PRODUCTION') industryCode = 'SAN_XUAT';
+
+        // Fetch tax rules
         const ruleRepo = AppDataSource.getRepository(TaxRule);
         const activeRule = await ruleRepo.findOne({
-            where: { industryCode: 'BAN_LE' } // Hardcoded for retail/trading
+            where: { industryCode } 
         });
 
-        const vatRate = activeRule ? Number(activeRule.vatRate) : 1.0; // 1% default
-        const pitRate = activeRule ? Number(activeRule.pitRate) : 0.5; // 0.5% default
+        let vatRate = activeRule ? Number(activeRule.vatRate) : 1.0; // 1% default
+        let pitRate = activeRule ? Number(activeRule.pitRate) : 0.5; // 0.5% default
+
+        // Override with shop's custom rates if they exist
+        if (shop?.customVatRate != null) {
+            vatRate = Number(shop.customVatRate);
+        } else if (shop?.applyVatReduction) {
+            // Apply 20% reduction to the VAT rate based on current policy
+            vatRate = vatRate * 0.8;
+        }
+
+        if (shop?.customPitRate != null) {
+            pitRate = Number(shop.customPitRate);
+        }
 
         // Tính thuế (chỉ tính nếu tổng doanh thu năm > 100tr, hoặc cứ báo cáo tạm tính)
         // Hiện tại tính tạm tính cho kỳ

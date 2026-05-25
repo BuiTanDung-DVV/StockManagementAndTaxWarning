@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -404,12 +405,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
         Future.delayed(const Duration(seconds: 2), () {
           if (ctx.mounted) {
             Navigator.pop(ctx);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Đã kết xuất XML mẫu $formName thành công!'),
-                backgroundColor: AppColors.success,
-              ),
-            );
+            ToastService.showSuccess('Đã kết xuất XML mẫu $formName thành công!');
           }
         });
         return AlertDialog(

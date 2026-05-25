@@ -157,6 +157,26 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
              setVatReduction20(policies['vatReductionActive']);
            }
         }
+
+        if (data['shopConfig'] != null) {
+            final shopConf = data['shopConfig'];
+            if (shopConf['businessSector'] != null) {
+                final sectorStr = shopConf['businessSector'];
+                final type = BusinessType.values.firstWhere(
+                    (e) => e.name.toUpperCase() == sectorStr || e.name == sectorStr || 
+                        (e == BusinessType.distribution && sectorStr == 'TRADE') ||
+                        (e == BusinessType.manufacturing && sectorStr == 'PRODUCTION') ||
+                        (e == BusinessType.services && sectorStr == 'SERVICE') ||
+                        (e == BusinessType.other && sectorStr == 'OTHER'),
+                    orElse: () => BusinessType.distribution);
+                state = state.copyWith(businessType: type);
+            }
+            if (shopConf['applyVatReduction'] != null) {
+                state = state.copyWith(vatReduction20: shopConf['applyVatReduction']);
+            }
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_key, jsonEncode(state.toJson()));
+        }
       }
     } catch (e) {
       debugPrint('Failed to fetch tax config from backend: $e');
@@ -166,6 +186,23 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, jsonEncode(state.toJson()));
+    
+    // Sync to backend
+    try {
+        final api = ref.read(apiClientProvider);
+        
+        String sectorStr = 'TRADE';
+        if (state.businessType == BusinessType.manufacturing) sectorStr = 'PRODUCTION';
+        if (state.businessType == BusinessType.services) sectorStr = 'SERVICE';
+        if (state.businessType == BusinessType.other) sectorStr = 'OTHER';
+
+        await api.put('/tax/config', data: {
+            'businessSector': sectorStr,
+            'applyVatReduction': state.vatReduction20,
+        });
+    } catch(e) {
+        debugPrint('Failed to sync tax config to backend: $e');
+    }
   }
 
   void setBusinessType(BusinessType type) {

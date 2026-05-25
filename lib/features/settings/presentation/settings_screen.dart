@@ -6,6 +6,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/utils/toast_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/system_provider.dart';
 import '../providers/shop_provider.dart';
@@ -243,13 +245,7 @@ class SettingsScreen extends ConsumerWidget {
               'Hàng hóa & Kho vận',
               [
                 _SettingItem(HugeIcons.strokeRoundedDashboardSquare01, 'Quản lý danh mục sản phẩm', () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Tính năng quản lý danh mục sẽ sớm khả dụng ở bản cập nhật kế tiếp!'),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
+                  ToastService.showSuccess('Tính năng quản lý danh mục sẽ sớm khả dụng ở bản cập nhật kế tiếp!');
                 }, c),
                 if (shopState.isOwner || shopState.hasPermission('settings'))
                   _SettingItem(HugeIcons.strokeRoundedClock04, 'Nhật ký hoạt động hệ thống', () => context.push('/activity-logs'), c),
@@ -266,24 +262,12 @@ class SettingsScreen extends ConsumerWidget {
                 if (shopState.isOwner || shopState.hasPermission('settings'))
                   _SettingItem(HugeIcons.strokeRoundedStore01, 'Thông tin cấu hình cửa hàng', () => context.push('/shop-profile'), c),
                 _SettingItem(HugeIcons.strokeRoundedInvoice01, 'Tùy biến mẫu hóa đơn in ấn', () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Tính năng tùy biến mẫu hóa đơn sẽ sớm khả dụng ở bản cập nhật kế tiếp!'),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
+                  ToastService.showSuccess('Tính năng tùy biến mẫu hóa đơn sẽ sớm khả dụng ở bản cập nhật kế tiếp!');
                 }, c),
                 if (shopState.isOwner || shopState.hasPermission('settings'))
                   _SettingItem(HugeIcons.strokeRoundedCreditCard, 'Thiết lập VietQR & TK nhận tiền', () => context.push('/payment-config'), c),
                 _SettingItem(HugeIcons.strokeRoundedTruck, 'Đơn vị vận chuyển đối tác', () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Tính năng quản lý vận chuyển đối tác sẽ sớm khả dụng ở bản cập nhật kế tiếp!'),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
+                  ToastService.showSuccess('Tính năng quản lý vận chuyển đối tác sẽ sớm khả dụng ở bản cập nhật kế tiếp!');
                 }, c),
               ],
               c,
@@ -304,13 +288,7 @@ class SettingsScreen extends ConsumerWidget {
               [
                 _SettingItem(HugeIcons.strokeRoundedNotification03, 'Trung tâm quản lý thông báo', () => context.push('/notifications'), c),
                 _SettingItem(HugeIcons.strokeRoundedCloudSavingDone01, 'Sao lưu & khôi phục dữ liệu', () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Sao lưu và khôi phục dữ liệu sẽ sớm khả dụng ở bản cập nhật kế tiếp!'),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
+                  ToastService.showSuccess('Sao lưu và khôi phục dữ liệu sẽ sớm khả dụng ở bản cập nhật kế tiếp!');
                 }, c),
                 _SettingItem(HugeIcons.strokeRoundedHelpCircle, 'Thông tin phần mềm hỗ trợ', () async {
                   final pkg = await PackageInfo.fromPlatform();
@@ -339,8 +317,18 @@ class SettingsScreen extends ConsumerWidget {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () async {
-                  await ref.read(authProvider.notifier).logout();
-                  if (context.mounted) context.go('/login');
+                  final confirmed = await AppConfirmModal.show(
+                    context,
+                    title: 'Xác nhận Đăng xuất',
+                    message: 'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không? Các giao dịch chưa đồng bộ có thể bị mất.',
+                    confirmText: 'Đăng xuất',
+                    cancelText: 'Hủy bỏ',
+                    isDestructive: true,
+                  );
+                  if (confirmed == true) {
+                    await ref.read(authProvider.notifier).logout();
+                    if (context.mounted) context.go('/login');
+                  }
                 },
                 icon: HugeIcon(icon: HugeIcons.strokeRoundedLogout03, color: AppColors.danger, size: 20),
                 label: Text(

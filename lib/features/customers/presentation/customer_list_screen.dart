@@ -8,18 +8,26 @@ import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/widgets/filter_bar.dart';
 import '../providers/customer_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
-class CustomerListScreen extends ConsumerWidget {
+class CustomerListScreen extends ConsumerStatefulWidget {
   const CustomerListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CustomerListScreen> createState() => _CustomerListScreenState();
+}
+
+class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
     final tc = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final listAsync = ref.watch(customerListProvider((page: 1, search: null)));
+    final listAsync = ref.watch(customerListProvider((page: 1, search: _searchQuery.isEmpty ? null : _searchQuery)));
 
     return Scaffold(
       backgroundColor: tc.bg,
@@ -58,10 +66,17 @@ class CustomerListScreen extends ConsumerWidget {
               subtitle: 'Hãy thêm khách hàng đầu tiên để bắt đầu lưu trữ giao dịch'
             );
           }
-          return RefreshIndicator(
-            color: theme.colorScheme.primary,
-            onRefresh: () async => ref.invalidate(customerListProvider),
-            child: GridView.builder(
+          return Column(
+            children: [
+              FilterBar(
+                searchHint: 'Tìm theo tên, điện thoại...',
+                onSearchChanged: (v) => setState(() => _searchQuery = v),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  color: theme.colorScheme.primary,
+                  onRefresh: () async => ref.invalidate(customerListProvider),
+                  child: GridView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               itemCount: items.length,
@@ -186,8 +201,11 @@ class CustomerListScreen extends ConsumerWidget {
                   ),
                 );
               },
-            ),
-          );
+            ), // GridView
+                  ), // RefreshIndicator
+                ), // Expanded
+              ], // Children array
+          ); // Column
         },
         loading: () => const ShimmerList(),
         error: (e, _) => AppError(

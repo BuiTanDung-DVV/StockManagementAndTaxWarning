@@ -64,6 +64,19 @@ export class ShopProfile {
 
     @Column({ name: 'costing_method', length: 10, default: 'AVG' })
     costingMethod: string; // FIFO | AVG
+
+    // === Tax Configuration Fields ===
+    @Column({ name: 'business_sector', length: 50, default: 'TRADE' })
+    businessSector: string; // TRADE, SERVICE, PRODUCTION
+
+    @Column({ name: 'apply_vat_reduction', default: false })
+    applyVatReduction: boolean; // TRUE: giảm 20% mức tỷ lệ
+
+    @Column({ name: 'custom_vat_rate', type: 'decimal', precision: 5, scale: 2, nullable: true })
+    customVatRate: number; // nullable, use defaults if not set
+
+    @Column({ name: 'custom_pit_rate', type: 'decimal', precision: 5, scale: 2, nullable: true })
+    customPitRate: number; // nullable, use defaults if not set
 }
 
 @Entity('activity_logs')

@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/utils/toast_service.dart';
 import '../../settings/providers/shop_provider.dart';
 
 List<Map<String, dynamic>> _normalizeMapList(dynamic raw) {
@@ -163,85 +165,40 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
           'roleId': selectedRoleId,
         });
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã thêm nhân viên trực tiếp vào cửa hàng'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess('Đã thêm nhân viên trực tiếp vào cửa hàng');
         _load();
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
   }
 
   Future<void> _handlePendingDecision(Map<String, dynamic> member, {required bool approve}) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppThemeColors.of(context).card,
-        title: Text(approve ? 'Phê duyệt yêu cầu' : 'Từ chối yêu cầu', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text(
-          approve
-              ? 'Phê duyệt cho "${member['fullName'] ?? member['username']}" tham gia cửa hàng của bạn?'
-              : 'Từ chối yêu cầu tham gia của "${member['fullName'] ?? member['username']}"?',
-          style: GoogleFonts.inter(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Hủy', style: GoogleFonts.outfit(color: AppThemeColors.of(context).textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: approve ? AppColors.success : AppColors.danger,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(approve ? 'Duyệt' : 'Từ chối', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirmed = await AppConfirmModal.show(
+      context,
+      title: approve ? 'Phê duyệt yêu cầu' : 'Từ chối yêu cầu',
+      message: approve
+          ? 'Phê duyệt cho "${member['fullName'] ?? member['username']}" tham gia cửa hàng của bạn?'
+          : 'Từ chối yêu cầu tham gia của "${member['fullName'] ?? member['username']}"?',
+      confirmText: approve ? 'Duyệt' : 'Từ chối',
+      cancelText: 'Hủy',
+      isDestructive: !approve,
     );
-
-    if (confirm == true) {
+    if (confirmed == true) {
       setState(() => _loading = true);
       final api = ref.read(apiClientProvider);
       final path = '/shop-members/${member['id']}/${approve ? 'approve' : 'reject'}';
       try {
         await api.post(path);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(approve ? 'Đã duyệt yêu cầu thành công' : 'Đã từ chối yêu cầu tham gia'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: approve ? AppColors.success : AppColors.danger,
-          ),
-        );
+        ToastService.showSuccess(approve ? 'Đã duyệt yêu cầu thành công' : 'Đã từ chối yêu cầu tham gia');
         _load();
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
   }
@@ -317,82 +274,37 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
       try {
         await api.put('/shop-members/${member['id']}/role', data: {'roleId': result});
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã cập nhật vai trò nhân viên thành công'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess('Đã cập nhật vai trò nhân viên thành công');
         _load();
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
   }
 
   Future<void> _removeMember(Map<String, dynamic> member) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppThemeColors.of(context).card,
-        title: Text('Xóa nhân viên', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text(
-          'Bạn chắc chắn muốn xóa "${member['fullName'] ?? member['username']}" khỏi cửa hàng?',
-          style: GoogleFonts.inter(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Hủy', style: GoogleFonts.outfit(color: AppThemeColors.of(context).textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text('Xóa', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirmed = await AppConfirmModal.show(
+      context,
+      title: 'Xóa nhân viên',
+      message: 'Bạn chắc chắn muốn xóa "${member['fullName'] ?? member['username']}" khỏi cửa hàng?',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy',
+      isDestructive: true,
     );
-
-    if (confirm == true) {
+    if (confirmed == true) {
       setState(() => _loading = true);
       final api = ref.read(apiClientProvider);
       try {
         await api.delete('/shop-members/${member['id']}');
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã xóa nhân viên khỏi hệ thống'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess('Đã xóa nhân viên khỏi hệ thống');
         _load();
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
   }
@@ -823,78 +735,37 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
           await api.put('/shop-roles/${existing['id']}', data: {'name': nameCtrl.text.trim(), 'permissions': perms});
         }
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(existing == null ? 'Đã tạo vai trò thành công' : 'Đã cập nhật vai trò thành công'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess(existing == null ? 'Đã tạo vai trò thành công' : 'Đã cập nhật vai trò thành công');
         _load();
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
   }
 
   Future<void> _deleteRole(Map<String, dynamic> role) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppThemeColors.of(context).card,
-        title: Text('Xóa vai trò', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text('Bạn chắc chắn muốn xóa vai trò "${role['name']}"?', style: GoogleFonts.inter(fontSize: 14)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Hủy', style: GoogleFonts.outfit(color: AppThemeColors.of(context).textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text('Xóa', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    final confirmed = await AppConfirmModal.show(
+      context,
+      title: 'Xóa vai trò',
+      message: 'Bạn chắc chắn muốn xóa vai trò "${role['name']}"?',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy',
+      isDestructive: true,
     );
-    if (confirm == true) {
+    if (confirmed == true) {
       final api = ref.read(apiClientProvider);
       setState(() => _loading = true);
       try {
         await api.delete('/shop-roles/${role['id']}');
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã xóa vai trò thành công'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess('Đã xóa vai trò thành công');
         _load();
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
   }

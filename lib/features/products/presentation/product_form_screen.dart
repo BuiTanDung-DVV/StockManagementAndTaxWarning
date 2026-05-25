@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
@@ -56,24 +56,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       final sellingPrice = double.tryParse(_sellPriceCtrl.text.trim()) ?? 0;
 
       if (name.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vui lòng nhập tên sản phẩm'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showSuccess('Vui lòng nhập tên sản phẩm');
         setState(() => _saving = false);
         return;
       }
       if (sellingPrice <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Giá bán phải lớn hơn 0'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showSuccess('Giá bán phải lớn hơn 0');
         setState(() => _saving = false);
         return;
       }
@@ -95,26 +83,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       } else {
         await repo.create(data);
       }
-      if (!context.mounted) return;
+      if (!mounted) return;
       ref.invalidate(productListProvider((page: 1, search: null)));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isEdit ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.success,
-        ),
-      );
+      ToastService.showSuccess(_isEdit ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!');
       Navigator.of(context).pop(true);
       return;
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
       if (mounted) setState(() => _saving = false);
     }
@@ -184,13 +160,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Tính năng tải ảnh sản phẩm sẽ khả dụng ở bản cập nhật tiếp theo!'),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
+                        ToastService.showSuccess('Tính năng tải ảnh sản phẩm sẽ khả dụng ở bản cập nhật tiếp theo!');
                       },
                       borderRadius: BorderRadius.circular(20),
                       child: Column(
