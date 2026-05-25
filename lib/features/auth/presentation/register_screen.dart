@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,22 +18,28 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _fullNameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _otpCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
   
   final _fullNameFocus = FocusNode();
   final _phoneFocus = FocusNode();
+  final _otpFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
 
   bool _fullNameHasFocus = false;
   bool _phoneHasFocus = false;
+  bool _otpHasFocus = false;
   bool _passwordHasFocus = false;
   bool _confirmPasswordHasFocus = false;
 
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+  bool _isSendingOtp = false;
+  int _countdownSeconds = 0;
+  Timer? _timer;
   String? _error;
   String _accountType = 'SHOP';
 
@@ -40,6 +48,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.initState();
     _fullNameFocus.addListener(() => setState(() => _fullNameHasFocus = _fullNameFocus.hasFocus));
     _phoneFocus.addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
+    _otpFocus.addListener(() => setState(() => _otpHasFocus = _otpFocus.hasFocus));
     _passwordFocus.addListener(() => setState(() => _passwordHasFocus = _passwordFocus.hasFocus));
     _confirmPasswordFocus.addListener(() => setState(() => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus));
     
@@ -48,22 +57,79 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
     _fullNameCtrl.addListener(clearError);
     _phoneCtrl.addListener(clearError);
+    _otpCtrl.addListener(clearError);
     _passwordCtrl.addListener(clearError);
     _confirmPasswordCtrl.addListener(clearError);
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _fullNameCtrl.dispose();
     _phoneCtrl.dispose();
+    _otpCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
     
     _fullNameFocus.dispose();
     _phoneFocus.dispose();
+    _otpFocus.dispose();
     _passwordFocus.dispose();
     _confirmPasswordFocus.dispose();
     super.dispose();
+  }
+
+  void _startTimer() {
+    setState(() => _countdownSeconds = 60);
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdownSeconds == 0) {
+        timer.cancel();
+      } else {
+        setState(() => _countdownSeconds--);
+      }
+    });
+  }
+
+  Future<void> _sendOtp() async {
+    final phone = _phoneCtrl.text.trim();
+    if (phone.isEmpty) {
+      ToastService.showError('Vui lòng nhập số điện thoại để nhận mã OTP');
+      return;
+    }
+    
+    final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
+    if (!phoneRegex.hasMatch(phone)) {
+      ToastService.showError('Định dạng số điện thoại không hợp lệ (10-12 số)');
+      return;
+    }
+
+    setState(() {
+      _isSendingOtp = true;
+      _error = null;
+    });
+
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.post('/auth/send-otp', data: {'phone': phone});
+      
+      if (res.data != null && res.data['otp'] != null) {
+        final mockOtp = res.data['otp'];
+        ToastService.showSuccess('[SANDBOX] Mã OTP của bạn là: $mockOtp');
+      } else {
+        ToastService.showSuccess('Đã gửi mã OTP thành công về số điện thoại của bạn!');
+      }
+      
+      _startTimer();
+    } catch (e) {
+      String msg = 'Không thể gửi OTP. Vui lòng kiểm tra kết nối mạng';
+      if (e is DioException && e.response?.data != null) {
+        msg = e.response?.data['message'] ?? msg;
+      }
+      ToastService.showError(msg);
+    } finally {
+      setState(() => _isSendingOtp = false);
+    }
   }
 
   Future<void> _register() async {
@@ -74,12 +140,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     final fullName = _fullNameCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
+    final otpCode = _otpCtrl.text.trim();
     final pass = _passwordCtrl.text;
     final confirmPass = _confirmPasswordCtrl.text;
 
-    if (fullName.isEmpty || phone.isEmpty || pass.isEmpty) {
+    if (fullName.isEmpty || phone.isEmpty || pass.isEmpty || otpCode.isEmpty) {
       setState(() {
-        _error = 'Vui lòng điền đầy đủ thông tin';
+        _error = 'Vui lòng điền đầy đủ thông tin và mã OTP';
         _isLoading = false;
       });
       return;
@@ -102,24 +169,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           'passwordHash': pass,
           'fullName': fullName,
           'accountType': _accountType,
+          'otpCode': otpCode,
         },
       );
 
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đăng ký tài khoản thành công! Vui lòng đăng nhập.'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.success,
-        ),
-      );
+      ToastService.showSuccess('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
       context.pop();
     } catch (e) {
       if (!mounted) return;
       String errorMessage = 'Đăng ký không thành công. Vui lòng thử lại.';
       if (e is DioException && e.error is ApiException) {
         errorMessage = (e.error as ApiException).message;
+      }
+      final lowerMsg = errorMessage.toLowerCase();
+      if (lowerMsg.contains('already exists') || lowerMsg.contains('đã tồn tại')) {
+        errorMessage = 'Tên đăng nhập hoặc số điện thoại này đã được sử dụng. Vui lòng thử số khác.';
+      } else if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
+        errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
       }
       setState(() {
         _isLoading = false;
@@ -231,12 +299,54 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           const SizedBox(height: 12),
 
                           // Phone/Username Input
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildGlowingField(
+                                  controller: _phoneCtrl,
+                                  focusNode: _phoneFocus,
+                                  hasFocus: _phoneHasFocus,
+                                  hintText: 'Số điện thoại đăng ký',
+                                  icon: Icons.phone_android_rounded,
+                                  c: c,
+                                  theme: theme,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                height: 50,
+                                child: ElevatedButton(
+                                  onPressed: _countdownSeconds > 0 || _isSendingOtp ? null : _sendOtp,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.colorScheme.primary,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  ),
+                                  child: _isSendingOtp
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : Text(
+                                          _countdownSeconds > 0 ? '${_countdownSeconds}s' : 'Gửi mã',
+                                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // OTP Input
                           _buildGlowingField(
-                            controller: _phoneCtrl,
-                            focusNode: _phoneFocus,
-                            hasFocus: _phoneHasFocus,
-                            hintText: 'Số điện thoại hoặc Tên đăng nhập',
-                            icon: Icons.phone_android_rounded,
+                            controller: _otpCtrl,
+                            focusNode: _otpFocus,
+                            hasFocus: _otpHasFocus,
+                            hintText: 'Mã xác thực OTP (6 chữ số)',
+                            icon: Icons.security_rounded,
                             c: c,
                             theme: theme,
                           ),

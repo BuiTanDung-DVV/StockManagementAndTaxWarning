@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -82,56 +83,26 @@ class _PurchaseOrderFormScreenState
       final suppliersAsync = ref.read(supplierListProvider((page: 1, search: null)));
       final hasSuppliers = ((suppliersAsync.value?['items'] as List?)?.isNotEmpty ?? false);
       if (_supplierId == null && hasSuppliers) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vui lòng chọn Nhà cung cấp!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showSuccess('Vui lòng chọn Nhà cung cấp!');
         return;
       }
       if (!hasSuppliers) {
-         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Chưa có Nhà cung cấp nào. Vui lòng tạo Nhà cung cấp trước!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+         ToastService.showSuccess('Chưa có Nhà cung cấp nào. Vui lòng tạo Nhà cung cấp trước!');
         return;
       }
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
       if (_items.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vui lòng thêm ít nhất 1 sản phẩm để nhập hàng!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showSuccess('Vui lòng thêm ít nhất 1 sản phẩm để nhập hàng!');
         return;
       }
       for (var i in _items) {
         if (i.productId == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Vui lòng chọn sản phẩm cho tất cả các dòng!'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: AppColors.danger,
-            ),
-          );
+          ToastService.showSuccess('Vui lòng chọn sản phẩm cho tất cả các dòng!');
           return;
         }
         if (i.quantity <= 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Số lượng sản phẩm nhập phải lớn hơn 0!'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: AppColors.danger,
-            ),
-          );
+          ToastService.showSuccess('Số lượng sản phẩm nhập phải lớn hơn 0!');
           return;
         }
       }
@@ -171,24 +142,12 @@ class _PurchaseOrderFormScreenState
       ref.invalidate(lowStockProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tạo đơn nhập hàng thành công!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess('Tạo đơn nhập hàng thành công!');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     } finally {
       if (mounted) setState(() => _saving = false);

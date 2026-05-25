@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
@@ -65,13 +66,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       final warehousesAsync = ref.read(warehousesProvider);
       final hasWarehouses = (warehousesAsync.value?.isNotEmpty ?? false);
       if (_warehouseId == null && hasWarehouses) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vui lòng chọn kho kiểm kê trước khi tiếp tục!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showSuccess('Vui lòng chọn kho kiểm kê trước khi tiếp tục!');
         return;
       }
       if (!hasWarehouses) {
@@ -80,24 +75,12 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
       if (_items.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vui lòng thêm ít nhất 1 sản phẩm để kiểm kê!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showSuccess('Vui lòng thêm ít nhất 1 sản phẩm để kiểm kê!');
         return;
       }
       for (var i in _items) {
         if (i.productId == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Vui lòng chọn sản phẩm cho tất cả các dòng!'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: AppColors.danger,
-            ),
-          );
+          ToastService.showSuccess('Vui lòng chọn sản phẩm cho tất cả các dòng!');
           return;
         }
       }
@@ -134,24 +117,12 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       ref.invalidate(lowStockProvider); // Refresh low-stock warning
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lưu phiếu kiểm kê thành công!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess('Lưu phiếu kiểm kê thành công!');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'), 
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     } finally {
       if (mounted) setState(() => _saving = false);

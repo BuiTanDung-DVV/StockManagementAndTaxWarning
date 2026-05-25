@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -84,13 +85,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'), 
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     } finally {
       if (mounted) setState(() => _confirming = false);
@@ -138,13 +133,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       if (mounted) Navigator.of(context).pop(false);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'), 
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
   }
@@ -608,3 +597,4 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     );
   }
 }
+

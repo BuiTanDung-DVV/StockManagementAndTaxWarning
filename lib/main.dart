@@ -5,6 +5,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/network/api_client.dart';
+import 'core/utils/toast_service.dart';
 import 'features/auth/providers/auth_provider.dart';
 
 void main() async {
@@ -40,6 +41,7 @@ class MyApp extends ConsumerWidget {
     
     return MaterialApp.router(
       title: 'Quản lý Bán hàng & Kho hàng',
+      scaffoldMessengerKey: ToastService.scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(brandColor.color),
       darkTheme: AppTheme.darkTheme(brandColor.color),

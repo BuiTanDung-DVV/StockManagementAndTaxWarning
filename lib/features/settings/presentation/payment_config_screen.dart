@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
@@ -100,23 +101,11 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
       });
       ref.invalidate(shopProfileProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã lưu cấu hình thanh toán thành công'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess('Đã lưu cấu hình thanh toán thành công');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -420,3 +409,4 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
     );
   }
 }
+

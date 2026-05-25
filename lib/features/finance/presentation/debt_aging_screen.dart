@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -41,13 +42,7 @@ class DebtAgingScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.file_download_rounded), 
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Xuất báo cáo PDF/Excel sẽ sớm khả dụng trong bản cập nhật kế tiếp!'), 
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                )
-              );
+              ToastService.showSuccess('Xuất báo cáo PDF/Excel sẽ sớm khả dụng trong bản cập nhật kế tiếp!');
             }
           ),
         ],
@@ -331,14 +326,7 @@ class DebtAgingScreen extends ConsumerWidget {
     return InkWell(
       onTap: () { 
         Navigator.pop(context); 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đã mở ứng dụng $label để gửi tin nhắn nhắc nợ!'), 
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          )
-        ); 
+        ToastService.showSuccess('Đã mở ứng dụng $label để gửi tin nhắn nhắc nợ!');
       },
       borderRadius: BorderRadius.circular(12),
       child: Padding(

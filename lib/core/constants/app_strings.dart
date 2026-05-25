@@ -31,7 +31,7 @@ class AppStrings {
   static const String qaStockTake = 'Kiểm kê';
   static const String qaClosing = 'Chốt sổ';
   static const String qaProfitLoss = 'Lãi/Lỗ';
-  static const String qaInvoices = 'Hóa đơn';
+  static const String qaInvoices = 'Sổ Hóa đơn';
   static const String qaStaff = 'Nhân viên';
   static const String qaRoles = 'Vai trò';
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/sectioned_form_dialog.dart';
 import '../providers/customer_provider.dart';
 
 class CustomerFormScreen extends ConsumerStatefulWidget {
@@ -57,16 +59,12 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       }
       ref.invalidate(customerListProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_isEdit ? 'Cập nhật thành công!' : 'Thêm khách hàng thành công!'), backgroundColor: AppColors.success),
-        );
+        ToastService.showSuccess(_isEdit ? 'Cập nhật thành công!' : 'Thêm khách hàng thành công!');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
     if (mounted) setState(() => _saving = false);
@@ -83,49 +81,34 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(_isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _field('Tên khách hàng *', _nameCtrl, HugeIcons.strokeRoundedUser, c,
-                validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên' : null),
-            const SizedBox(height: 12),
-            _field('Số điện thoại', _phoneCtrl, HugeIcons.strokeRoundedCall02, c, keyboardType: TextInputType.phone),
-            const SizedBox(height: 12),
-            _field('Email', _emailCtrl, HugeIcons.strokeRoundedMail01, c, keyboardType: TextInputType.emailAddress),
-            const SizedBox(height: 12),
-            _field('Địa chỉ', _addressCtrl, HugeIcons.strokeRoundedLocation01, c, maxLines: 2),
-            const SizedBox(height: 12),
-            _field('Mã số thuế', _taxCodeCtrl, HugeIcons.strokeRoundedInvoice01, c),
-            const SizedBox(height: 12),
-            _field('Ghi chú', _noteCtrl, HugeIcons.strokeRoundedNote, c, maxLines: 3),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _saving ? null : _save,
-                icon: _saving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: Colors.white, size: 18),
-                label: Text(_saving ? 'Đang lưu...' : (_isEdit ? 'Cập nhật' : 'Thêm khách hàng')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
+      backgroundColor: Colors.black26,
+      body: Center(
+        child: SectionedFormDialog(
+          title: _isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng',
+          isSaving: _saving,
+          saveText: _isEdit ? 'Cập nhật' : 'Thêm khách hàng',
+          onSave: _save,
+          onCancel: () => Navigator.of(context).pop(),
+          content: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _field('Tên khách hàng *', _nameCtrl, HugeIcons.strokeRoundedUser, c,
+                    validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên' : null),
+                const SizedBox(height: 16),
+                _field('Số điện thoại', _phoneCtrl, HugeIcons.strokeRoundedCall02, c, keyboardType: TextInputType.phone),
+                const SizedBox(height: 16),
+                _field('Email', _emailCtrl, HugeIcons.strokeRoundedMail01, c, keyboardType: TextInputType.emailAddress),
+                const SizedBox(height: 16),
+                _field('Địa chỉ', _addressCtrl, HugeIcons.strokeRoundedLocation01, c, maxLines: 2),
+                const SizedBox(height: 16),
+                _field('Mã số thuế', _taxCodeCtrl, HugeIcons.strokeRoundedInvoice01, c),
+                const SizedBox(height: 16),
+                _field('Ghi chú', _noteCtrl, HugeIcons.strokeRoundedNote, c, maxLines: 3),
+              ],
             ),
-            const SizedBox(height: 20),
-          ]),
+          ),
         ),
       ),
     );

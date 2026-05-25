@@ -16,7 +16,7 @@ app.use(cors({
     if (!origin || config.allowedOrigins.indexOf(origin) !== -1 || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false);
     }
   },
   credentials: true,
@@ -57,7 +57,6 @@ apiRouter.use(authenticateJwt);
 // User-scoped routes (no shopId required)
 apiRouter.use('/', notificationRoutes);
 apiRouter.use('/profile', profileRoutes);
-apiRouter.use('/', taxConfigRoutes);
 
 // my-shops needs to be accessible before we know the shopId
 import * as shopMemberCtrl from './controllers/shop-member.controller';
@@ -75,6 +74,7 @@ apiRouter.use('/', systemRoutes);
 apiRouter.use('/', shopRoleRoutes);
 apiRouter.use('/', shopMemberRoutes);
 apiRouter.use('/cogs', cogsRoutes);
+apiRouter.use('/', taxConfigRoutes);
 apiRouter.use('/tax', taxRoutes);
 
 // Mount the API router
@@ -90,8 +90,29 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
   // Start Server locally
   AppDataSource.initialize()
-    .then(() => {
+    .then(async () => {
       console.log(`🚀 Database connected: ${config.dbHost}\\${config.dbDatabase}`);
+      try {
+          await AppDataSource.query(`
+              ALTER TABLE shop_profiles 
+              ADD COLUMN IF NOT EXISTS business_sector VARCHAR(50) DEFAULT 'TRADE',
+              ADD COLUMN IF NOT EXISTS apply_vat_reduction BOOLEAN DEFAULT false,
+              ADD COLUMN IF NOT EXISTS custom_vat_rate DECIMAL(5,2),
+              ADD COLUMN IF NOT EXISTS custom_pit_rate DECIMAL(5,2);
+          `);
+          await AppDataSource.query(`
+              CREATE TABLE IF NOT EXISTS otps (
+                  id SERIAL PRIMARY KEY,
+                  phone VARCHAR(20) NOT NULL,
+                  otp_code VARCHAR(10) NOT NULL,
+                  expires_at TIMESTAMP NOT NULL,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+          `);
+          console.log('✅ Dynamic schema sync complete for shop_profiles and otps');
+      } catch (e) {
+          console.log('⚠️ Dynamic schema sync error:', e);
+      }
       app.listen(config.port, () => {
         console.log(`🚀 Server running on http://localhost:${config.port}/api`);
       });
@@ -105,6 +126,27 @@ const vercelHandler = async (req: express.Request, res: express.Response) => {
     try {
       await AppDataSource.initialize();
       console.log('🚀 Database connected for Vercel Serverless');
+      try {
+          await AppDataSource.query(`
+              ALTER TABLE shop_profiles 
+              ADD COLUMN IF NOT EXISTS business_sector VARCHAR(50) DEFAULT 'TRADE',
+              ADD COLUMN IF NOT EXISTS apply_vat_reduction BOOLEAN DEFAULT false,
+              ADD COLUMN IF NOT EXISTS custom_vat_rate DECIMAL(5,2),
+              ADD COLUMN IF NOT EXISTS custom_pit_rate DECIMAL(5,2);
+          `);
+          await AppDataSource.query(`
+              CREATE TABLE IF NOT EXISTS otps (
+                  id SERIAL PRIMARY KEY,
+                  phone VARCHAR(20) NOT NULL,
+                  otp_code VARCHAR(10) NOT NULL,
+                  expires_at TIMESTAMP NOT NULL,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+          `);
+          console.log('✅ Dynamic schema sync complete for shop_profiles and otps');
+      } catch (e) {
+          console.log('⚠️ Dynamic schema sync error:', e);
+      }
     } catch (error) {
       console.log('❌ Database connection error: ', error);
       return res.status(500).json({ success: false, message: 'Database connection failed' });

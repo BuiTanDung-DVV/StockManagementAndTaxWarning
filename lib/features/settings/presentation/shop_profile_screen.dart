@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
@@ -71,16 +72,12 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
       });
       ref.invalidate(shopProfileProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cập nhật thông tin shop thành công!'), backgroundColor: AppColors.success),
-        );
+        ToastService.showSuccess('Cập nhật thông tin shop thành công!');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
     if (mounted) setState(() => _saving = false);
@@ -239,3 +236,4 @@ class _SectionHeader extends StatelessWidget {
     ]);
   }
 }
+

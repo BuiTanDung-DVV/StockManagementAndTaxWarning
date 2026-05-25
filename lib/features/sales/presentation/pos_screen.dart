@@ -683,9 +683,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           ),
         ),
       ),
-        ),
-        ),
-    ),
+      ),
+      ),
+      ),
     );
   }
 

@@ -78,10 +78,17 @@ class TaxConfigScreen extends ConsumerWidget {
 
           // VAT reduction toggle
           Container(
-            padding: EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: c.card,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(children: [
               Container(
@@ -137,17 +144,24 @@ class _BusinessTypeCard extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isSelected
             ? AppColors.primary.withValues(alpha: 0.1)
             : AppThemeColors.of(context).card,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isSelected ? AppColors.primary : Colors.transparent,
           width: isSelected ? 2 : 0,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(children: [
         Icon(
@@ -178,10 +192,17 @@ class _RateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: EdgeInsets.all(14),
+    padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: AppThemeColors.of(context).card,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Column(children: [
       Text(label, style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary)),
@@ -200,11 +221,18 @@ class _ThresholdRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 6),
-    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     decoration: BoxDecoration(
       color: AppThemeColors.of(context).card,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.03),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ],
     ),
     child: Row(children: [
       Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),

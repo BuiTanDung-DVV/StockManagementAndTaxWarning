@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/utils/toast_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/sales_provider.dart';
 
@@ -38,11 +39,9 @@ class OrderDetailScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.print_rounded, size: 20),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đang kết nối máy in... Tính năng in hóa đơn sẽ sớm ra mắt!')),
-              );
+              ToastService.showSuccess('Phiếu tính tiền bán lẻ - Không thay thế hóa đơn tài chính (GTGT) theo NĐ 123.');
             },
-            tooltip: 'In hóa đơn',
+            tooltip: 'In phiếu tính tiền',
           ),
           const SizedBox(width: 8),
         ],
@@ -116,7 +115,7 @@ class OrderDetailScreen extends ConsumerWidget {
                         ),
                         child: Column(
                           children: [
-                            _InfoRow('Mã hóa đơn', orderCode, c),
+                            _InfoRow('Mã đơn hàng', orderCode, c),
                             if (createdAt != null && createdAt.isNotEmpty)
                               _InfoRow('Thời gian tạo', _formatDate(createdAt), c),
                             _InfoRow('Khách hàng', customerName, c),
@@ -265,7 +264,7 @@ class OrderDetailScreen extends ConsumerWidget {
                         ),
                         child: Column(
                           children: [
-                            _InfoRow('Tổng tiền hóa đơn', _currFmt.format(totalAmount), c),
+                            _InfoRow('Tổng tiền thanh toán', _currFmt.format(totalAmount), c),
                             _InfoRow('Khách đã thanh toán', _currFmt.format(paidAmount), c),
                             Divider(height: 20, color: c.divider),
                             Row(
@@ -579,15 +578,11 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                     onPressed: () async {
                       final amount = double.tryParse(amountCtrl.text) ?? 0;
                       if (amount <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Số tiền thanh toán phải lớn hơn 0!'), backgroundColor: AppColors.danger),
-                        );
+                        ToastService.showError('Số tiền thanh toán phải lớn hơn 0!');
                         return;
                       }
                       if (amount > remaining) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Không thể thanh toán vượt quá ${_currFmt.format(remaining)}!'), backgroundColor: AppColors.danger),
-                        );
+                        ToastService.showError('Không thể thanh toán vượt quá ${_currFmt.format(remaining)}');
                         return;
                       }
                       Navigator.of(ctx).pop();
@@ -600,18 +595,11 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                         ref.invalidate(salesDetailProvider(orderId));
                         ref.invalidate(salesListProvider);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Đã thanh toán ${_currFmt.format(amount)} thành công!'),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
+                          ToastService.showSuccess('Đã thanh toán ${_currFmt.format(amount)}');
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger),
-                          );
+                          ToastService.showError('Lỗi: $e');
                         }
                       }
                     },
@@ -749,9 +737,7 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                     onPressed: () async {
                       final amount = double.tryParse(amountCtrl.text) ?? 0;
                       if (amount < 0 || amount > maxRefund) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Số tiền hoàn phải hợp lệ (0 - ${_currFmt.format(maxRefund)})!'), backgroundColor: AppColors.danger),
-                        );
+                        ToastService.showError('Số tiền hoàn phải hợp lệ (0 - ${_currFmt.format(maxRefund)})');
                         return;
                       }
                       Navigator.of(ctx).pop();
@@ -776,18 +762,11 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                         ref.invalidate(salesDetailProvider(orderId));
                         ref.invalidate(salesListProvider);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)} cho khách!'),
-                              backgroundColor: AppColors.success,
-                            ),
-                          );
+                          ToastService.showSuccess('Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)}');
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.danger),
-                          );
+                          ToastService.showError('Lỗi: $e');
                         }
                       }
                     },

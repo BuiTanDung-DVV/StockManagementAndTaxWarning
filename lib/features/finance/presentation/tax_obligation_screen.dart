@@ -6,6 +6,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
 import '../providers/finance_provider.dart';
 
 class TaxObligationScreen extends ConsumerWidget {
@@ -394,31 +395,13 @@ class TaxObligationScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, int id) async {
-    final c = AppThemeColors.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('Xóa kỳ nghĩa vụ thuế?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: const Text('Bạn có chắc chắn muốn xóa kỳ thuế này khỏi sổ cái? Dữ liệu không thể phục hồi.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false), 
-            child: Text('Hủy', style: TextStyle(color: c.textSecondary, fontWeight: FontWeight.bold))
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger.withValues(alpha: 0.1),
-              foregroundColor: AppColors.danger,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text('Xóa kỳ thuế'),
-          ),
-        ],
-      ),
+    final confirmed = await AppConfirmModal.show(
+      context,
+      title: 'Xóa kỳ nghĩa vụ thuế?',
+      message: 'Bạn có chắc chắn muốn xóa kỳ thuế này khỏi sổ cái? Dữ liệu không thể phục hồi.',
+      confirmText: 'Xóa kỳ thuế',
+      cancelText: 'Hủy',
+      isDestructive: true,
     );
     if (confirmed == true) {
       await ref.read(financeRepoProvider).deleteTaxObligation(id);

@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -96,13 +97,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
         ElevatedButton(onPressed: () async {
           final amount = double.tryParse(amountC.text) ?? 0;
           if (amount <= 0) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Vui lòng nhập số tiền hợp lệ (> 0)'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.red,
-              ),
-            );
+            ToastService.showError('Vui lòng nhập số tiền hợp lệ (> 0)');
             return;
           }
           await ref.read(financeRepoProvider).createTransaction({
