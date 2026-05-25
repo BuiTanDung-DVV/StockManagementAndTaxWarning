@@ -257,6 +257,7 @@ class FinanceScreen extends ConsumerWidget {
               _NavCard('Sổ chi phí SXKD', HugeIcons.strokeRoundedCoinsDollar, () => context.push('/expense-ledger')),
               _NavCard('Theo dõi nghĩa vụ thuế', HugeIcons.strokeRoundedFlag01, () => context.push('/tax-obligations')),
               _NavCard('Sổ lương nhân viên', HugeIcons.strokeRoundedUserMultiple, () => context.push('/salary-ledger')),
+              _NavCard('Ước Tính & Xuất Thuế HTKK', HugeIcons.strokeRoundedCalculator01, () => context.push('/tax-estimate')),
               _NavCard('Kê khai thuế', HugeIcons.strokeRoundedInvoice01, () => context.push('/tax-declaration')),
               
               const SizedBox(height: 24),

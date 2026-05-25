@@ -22,6 +22,30 @@ export class CashAccount {
     isActive: boolean;
 }
 
+@Entity('tax_rules')
+export class TaxRule {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ name: 'industry_code', length: 10 })
+    industryCode: string;
+
+    @Column({ length: 100 })
+    name: string;
+
+    @Column({ name: 'vat_rate', type: 'decimal', precision: 4, scale: 2 })
+    vatRate: number;
+
+    @Column({ name: 'pit_rate', type: 'decimal', precision: 4, scale: 2 })
+    pitRate: number;
+
+    @Column({ name: 'effective_from', type: 'timestamp' })
+    effectiveFrom: Date;
+
+    @Column({ name: 'effective_to', type: 'timestamp', nullable: true })
+    effectiveTo: Date;
+}
+
 @Entity('cash_transactions')
 export class CashTransaction {
     @PrimaryGeneratedColumn()
@@ -377,6 +401,9 @@ export class PurchaseWithoutInvoiceItem {
 
     @Column({ name: 'product_id', nullable: true })
     productId: number;
+
+    @Column({ name: 'warehouse_id', nullable: true })
+    warehouseId: number;
 
     @Column({ type: 'decimal', precision: 18, scale: 3, default: 0 })
     quantity: number;

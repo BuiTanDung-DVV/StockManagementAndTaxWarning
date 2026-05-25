@@ -1,5 +1,5 @@
 import { AppDataSource } from '../config/db.config';
-import { SalesOrder, SalesOrderItem, SalesReturn, SalesOrderPayment } from '../sales/entities';
+import { SalesOrder, SalesOrderItem, SalesReturn, SalesOrderPayment, SalesOrderLotDeduction } from '../sales/entities';
 import { Customer, Receivable } from '../customer/entities';
 import { Product } from '../product/entities';
 import { COGSService } from './cogs.service';
@@ -7,6 +7,7 @@ import { FinanceService } from './finance.service';
 import { PostingService } from './posting.service';
 import { JournalEntry } from '../finance/ledger.entity';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
+import { InventoryLot } from '../inventory/lot.entity';
 import { EntityManager } from 'typeorm';
 
 export class SalesService {
@@ -79,6 +80,7 @@ export class SalesService {
             let totalCogs = 0;
             const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
             const allLotDeductions: { lotId: number; qty: number }[] = [];
+            const itemLotDeductions: { itemIndex: number, lotId: number, qty: number }[] = [];
             const stockDeductions: { productId: number; quantity: number }[] = [];
 
             const items: SalesOrderItem[] = [];
@@ -105,6 +107,9 @@ export class SalesService {
                         costPrice = cogsResult.unitCost;
                         totalCogs += cogsResult.totalCost;
                         allLotDeductions.push(...cogsResult.lotDeductions);
+                        cogsResult.lotDeductions.forEach(d => {
+                            itemLotDeductions.push({ itemIndex: items.length, lotId: d.lotId, qty: d.qty });
+                        });
                     } catch {
                         costPrice = Number(product.costPrice || 0);
                         totalCogs += costPrice * quantity;
@@ -167,6 +172,16 @@ export class SalesService {
             });
 
             const savedOrder = await manager.save(SalesOrder, order);
+
+            if (itemLotDeductions.length > 0) {
+                const slDs = itemLotDeductions.map(d => manager.create(SalesOrderLotDeduction, {
+                    orderId: savedOrder.id,
+                    orderItemId: savedOrder.items[d.itemIndex].id,
+                    lotId: d.lotId,
+                    quantity: d.qty
+                }));
+                await manager.save(SalesOrderLotDeduction, slDs);
+            }
 
             if (paidAmount > 0) {
                 await manager.save(SalesOrderPayment, manager.create(SalesOrderPayment, {
@@ -286,6 +301,49 @@ export class SalesService {
                         customer.balance = Number(customer.balance || 0) - unpaidAmount;
                         await manager.save(Customer, customer);
                     }
+                }
+            }
+
+            // === Reverse FIFO: Hoàn trả số lượng vào lô hàng ===
+            const lotDeductionRepo = manager.getRepository(SalesOrderLotDeduction);
+            const lotRepo = manager.getRepository(InventoryLot);
+            const deductions = await lotDeductionRepo.find({ where: { orderId: id } });
+            
+            for (const d of deductions) {
+                const lot = await lotRepo.findOne({ where: { id: d.lotId } });
+                if (lot) {
+                    lot.remainingQty = Number(lot.remainingQty) + Number(d.quantity);
+                    await lotRepo.save(lot);
+                }
+            }
+            // Xóa các deductions
+            if (deductions.length > 0) {
+                await lotDeductionRepo.remove(deductions);
+            }
+
+            // === Hoàn trả Inventory Stocks ===
+            const movementRepo = manager.getRepository(InventoryMovement);
+            const stockRepo = manager.getRepository(InventoryStock);
+            const outMovements = await movementRepo.find({ where: { shopId, referenceType: 'SALES_ORDER', referenceId: id, movementType: 'OUT' } as any });
+            
+            for (const mov of outMovements) {
+                // Tạo movement IN
+                await movementRepo.save(movementRepo.create({
+                    shopId,
+                    productId: mov.productId,
+                    warehouseId: mov.warehouseId,
+                    movementType: 'IN',
+                    quantity: mov.quantity,
+                    referenceType: 'SALES_ORDER_CANCEL',
+                    referenceId: id,
+                    notes: `Hoàn trả từ đơn hàng ${order.orderCode} bị hủy`
+                }));
+                // Tăng stock
+                const stock = await stockRepo.findOne({ where: { shopId, productId: mov.productId, warehouseId: mov.warehouseId } as any });
+                if (stock) {
+                    stock.quantity = Number(stock.quantity) + Number(mov.quantity);
+                    stock.updatedAt = new Date();
+                    await stockRepo.save(stock);
                 }
             }
 
@@ -455,6 +513,68 @@ export class SalesService {
 
             order.returnStatus = 'RETURNED';
             await manager.save(SalesOrder, order);
+
+            // === Hoàn trả Inventory Stocks & Lots (Reverse FIFO) ===
+            const lotDeductionRepo = manager.getRepository(SalesOrderLotDeduction);
+            const lotRepo = manager.getRepository(InventoryLot);
+            const stockRepo = manager.getRepository(InventoryStock);
+            const movementRepo = manager.getRepository(InventoryMovement);
+
+            for (const item of savedReturn.items) {
+                let remainingToReturn = Number(item.quantity);
+                if (remainingToReturn <= 0 || !item.product) continue;
+
+                // 1. Tăng stock & ghi movement
+                // Tìm warehouse từ movement OUT lúc mua, hoặc default warehouse
+                const movOut = await movementRepo.findOne({
+                    where: { shopId, referenceType: 'SALES_ORDER', referenceId: orderId, productId: item.product.id, movementType: 'OUT' } as any
+                });
+                if (movOut) {
+                    await movementRepo.save(movementRepo.create({
+                        shopId,
+                        productId: item.product.id,
+                        warehouseId: movOut.warehouseId,
+                        movementType: 'IN',
+                        quantity: remainingToReturn,
+                        referenceType: 'SALES_RETURN',
+                        referenceId: savedReturn.id,
+                        notes: `Hoàn trả từ phiếu trả hàng ${savedReturn.returnCode}`
+                    }));
+                    const stock = await stockRepo.findOne({ where: { shopId, productId: item.product.id, warehouseId: movOut.warehouseId } as any });
+                    if (stock) {
+                        stock.quantity = Number(stock.quantity) + remainingToReturn;
+                        stock.updatedAt = new Date();
+                        await stockRepo.save(stock);
+                    }
+                }
+
+                // 2. Hoàn lô hàng
+                const deductions = await lotDeductionRepo.find({
+                    where: { orderId: orderId },
+                    relations: ['orderItem', 'orderItem.product']
+                });
+                const itemDeductions = deductions.filter(d => d.orderItem?.product?.id === item.product?.id);
+                // Ưu tiên hoàn vào lô trừ gần nhất (Reverse FIFO)
+                itemDeductions.sort((a, b) => b.id - a.id);
+
+                for (const d of itemDeductions) {
+                    if (remainingToReturn <= 0) break;
+                    const returnQty = Math.min(Number(d.quantity), remainingToReturn);
+                    
+                    const lot = await lotRepo.findOne({ where: { id: d.lotId } });
+                    if (lot) {
+                        lot.remainingQty = Number(lot.remainingQty) + returnQty;
+                        await lotRepo.save(lot);
+                    }
+                    d.quantity = Number(d.quantity) - returnQty;
+                    if (d.quantity <= 0) {
+                        await lotDeductionRepo.remove(d);
+                    } else {
+                        await lotDeductionRepo.save(d);
+                    }
+                    remainingToReturn -= returnQty;
+                }
+            }
 
             if (refundAmount > 0) {
                 await this.financeService.createCashTransaction(shopId, {

@@ -10,7 +10,17 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || config.allowedOrigins.indexOf(origin) !== -1 || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(helmet());
 app.use(morgan('dev'));
 
@@ -34,6 +44,7 @@ import notificationRoutes from './routes/notification.routes';
 import profileRoutes from './routes/profile.routes';
 import cogsRoutes from './routes/cogs.routes';
 import taxConfigRoutes from './routes/tax-config.routes';
+import taxRoutes from './routes/tax.routes';
 
 import { authenticateJwt, requireShopId } from './middleware/auth.middleware';
 
@@ -64,6 +75,7 @@ apiRouter.use('/', systemRoutes);
 apiRouter.use('/', shopRoleRoutes);
 apiRouter.use('/', shopMemberRoutes);
 apiRouter.use('/cogs', cogsRoutes);
+apiRouter.use('/tax', taxRoutes);
 
 // Mount the API router
 app.use('/api', apiRouter);

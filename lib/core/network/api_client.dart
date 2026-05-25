@@ -1,5 +1,5 @@
-import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,20 +17,20 @@ class ApiClient {
   static String get baseUrl {
     const envUrl = String.fromEnvironment('API_URL');
     if (envUrl.isNotEmpty) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        if (envUrl.contains('localhost')) {
+          return envUrl.replaceAll('localhost', '10.0.2.2');
+        }
+        if (envUrl.contains('127.0.0.1')) {
+          return envUrl.replaceAll('127.0.0.1', '10.0.2.2');
+        }
+      }
       return envUrl;
     }
 
-    const defaultUrl =
-        'https://stock-management-and-tax-warning.vercel.app/api';
-
-    if (const bool.fromEnvironment('dart.library.html')) return defaultUrl;
-    // Use an environment variable or compile-time constant for web, else check platform
-    try {
-      if (Platform.isAndroid) return defaultUrl;
-    } catch (e) {
-      // Platform.isAndroid throws on web
-    }
-    return defaultUrl;
+    // Yêu cầu bắt buộc phải truyền cấu hình môi trường lúc build
+    throw Exception(
+        'API_URL is not set. Please build the app with --dart-define-from-file=env/dev.json or env/prod.json');
   }
 
   late final Dio _dio;

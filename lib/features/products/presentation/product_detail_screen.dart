@@ -5,15 +5,12 @@ import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/product_provider.dart';
+import '../../../core/utils/type_parser.dart';
 import 'product_form_screen.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
-double _asDouble(dynamic value) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? 0;
-  return 0;
-}
+
 
 class ProductDetailScreen extends ConsumerWidget {
   final int id;
@@ -96,9 +93,9 @@ class ProductDetailScreen extends ConsumerWidget {
           final category = p['category']?['name'] ?? p['categoryName'] ?? '';
           final unit = p['unit'] ?? '';
           final barcode = p['barcode'] ?? '';
-          final costPrice = _asDouble(p['costPrice']);
-          final sellingPrice = _asDouble(p['sellingPrice'] ?? p['sellPrice']);
-          final wholesalePrice = _asDouble(p['wholesalePrice']);
+          final costPrice = TypeParser.asDouble(p['costPrice']);
+          final sellingPrice = TypeParser.asDouble(p['sellingPrice'] ?? p['sellPrice']);
+          final wholesalePrice = TypeParser.asDouble(p['wholesalePrice']);
           final taxRate = p['taxRate'] ?? p['tax'] ?? '';
           final currentStock = (p['currentStock'] ?? p['quantity'] ?? 0);
           final minStock = (p['minStock'] ?? p['minimumStock'] ?? 0);

@@ -42,6 +42,7 @@ import '../../features/settings/presentation/notification_list_screen.dart';
 import '../../features/settings/presentation/staff_management_screen.dart';
 import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/settings/presentation/shop_profile_screen.dart';
+import '../../features/tax/screens/tax_estimate_screen.dart';
 import '../../features/products/presentation/product_form_screen.dart';
 import '../../features/customers/presentation/customer_form_screen.dart';
 import '../../features/suppliers/presentation/supplier_form_screen.dart';
@@ -212,6 +213,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/salary-ledger', builder: (_, _) => const SalaryLedgerScreen()),
           GoRoute(path: '/tax-declaration', builder: (_, _) => const TaxDeclarationScreen()),
           GoRoute(path: '/transactions', builder: (_, _) => const TransactionHistoryScreen()),
+          GoRoute(path: '/tax-estimate', builder: (_, _) => const TaxEstimateScreen()),
           // Settings
           GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
           GoRoute(path: '/activity-logs', builder: (_, _) => const ActivityLogScreen()),
