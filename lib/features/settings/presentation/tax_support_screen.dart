@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import '../../../core/theme/app_theme.dart';
 
 class TaxSupportScreen extends StatelessWidget {
@@ -184,7 +185,7 @@ class TaxSupportScreen extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã sao chép liên kết')));
+                      ToastService.showSuccess('Đã sao chép liên kết');
                     },
                     icon: const Icon(Icons.copy, size: 16),
                     label: Text('Sao chép'),
@@ -271,3 +272,4 @@ class _DutyItem extends StatelessWidget {
     ]),
   );
 }
+

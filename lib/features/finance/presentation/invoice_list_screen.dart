@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,14 +22,37 @@ class InvoiceListScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(invoiceSummaryProvider((from: from, to: to)));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Hóa đơn'), actions: [featureGuideButton(context, 'invoices')]),
+      appBar: AppBar(title: const Text('Sổ Lưu Trữ Hóa Đơn'), actions: [featureGuideButton(context, 'invoices')]),
       body: invAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (data) {
           final items = (data['items'] as List?) ?? [];
+          final theme = Theme.of(context);
 
           return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Legal Disclaimer Banner
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: theme.colorScheme.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'LƯU Ý PHÁP LÝ: Tính năng này chỉ dùng để lưu trữ và số hóa các hóa đơn điện tử hợp pháp phục vụ tính thuế. Ứng dụng không tự phát hành hóa đơn tài chính (GTGT) theo NĐ 123/2020/NĐ-CP.',
+                      style: TextStyle(fontSize: 11, color: AppThemeColors.of(context).textSecondary, height: 1.45),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             // Summary card
             summaryAsync.when(
               loading: () => const LinearProgressIndicator(),
@@ -126,9 +150,7 @@ class InvoiceListScreen extends ConsumerWidget {
           final subtotal = double.tryParse(amountC.text) ?? 0;
           final taxAmount = double.tryParse(vatC.text) ?? 0;
           if (partnerName.isEmpty || subtotal <= 0 || taxAmount < 0) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Vui lòng nhập đối tác, số tiền > 0 và VAT hợp lệ'), backgroundColor: AppColors.danger),
-            );
+            ToastService.showError('Vui lòng nhập đối tác, số tiền > 0 và VAT hợp lệ');
             return;
           }
           await ref.read(financeRepoProvider).createInvoice({

@@ -1,5 +1,5 @@
 import { AppDataSource } from '../config/db.config';
-import { SalesOrder, SalesOrderItem, SalesReturn, SalesOrderPayment, SalesOrderLotDeduction } from '../sales/entities';
+import { SalesOrder, SalesOrderItem, SalesReturn, SalesReturnItem, SalesOrderPayment, SalesOrderLotDeduction } from '../sales/entities';
 import { Customer, Receivable } from '../customer/entities';
 import { Product } from '../product/entities';
 import { COGSService } from './cogs.service';
@@ -498,7 +498,7 @@ export class SalesService {
                         ? await manager.findOne(Product, { where: { id: Number(i.productId), shopId } })
                         : null;
 
-                    (entity as any).items.push({
+                    const returnItem = manager.create(SalesReturnItem, {
                         shopId,
                         ...(product ? { product } : {}),
                         quantity: Number(i.quantity || 0),
@@ -506,6 +506,7 @@ export class SalesService {
                         subtotal: Number(i.subtotal || (Number(i.quantity || 0) * Number(i.unitPrice || 0))),
                         reason: i.reason,
                     });
+                    (entity as any).items.push(returnItem);
                 }
             }
 

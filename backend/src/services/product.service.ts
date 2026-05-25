@@ -50,8 +50,12 @@ export class ProductService {
 
     async createProduct(shopId: number, dto: any) {
         const sku = String(dto.sku || '').trim() || `SKU${Date.now().toString().slice(-8)}`;
-        const exists = await this.productRepo.findOne({ where: { sku, shopId } });
-        if (exists) throw new Error('SKU already exists');
+        const existsSku = await this.productRepo.findOne({ where: { sku, shopId } });
+        if (existsSku) throw new Error('SKU already exists');
+        if (dto.barcode) {
+            const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId } });
+            if (existsBarcode) throw new Error('Barcode already exists');
+        }
         const openingQty = Number(dto.currentStock ?? dto.openingStock ?? 0);
         const providedWarehouseId = Number(dto.warehouseId || 0);
         const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
@@ -76,6 +80,15 @@ export class ProductService {
 
     async updateProduct(shopId: number, id: number, dto: any) {
         const product = await this.loadProductEntity(shopId, id);
+        if (dto.sku && dto.sku !== product.sku) {
+            const existsSku = await this.productRepo.findOne({ where: { sku: dto.sku, shopId } });
+            if (existsSku) throw new Error('SKU already exists');
+        }
+        if (dto.barcode && dto.barcode !== product.barcode) {
+            const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId } });
+            if (existsBarcode) throw new Error('Barcode already exists');
+        }
+
         const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
         Object.assign(product, productPayload);
         await this.productRepo.save(product);

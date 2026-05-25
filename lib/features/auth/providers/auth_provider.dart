@@ -56,14 +56,45 @@ class AuthState {
 // ─── Auth Notifier ───
 class AuthNotifier extends Notifier<AuthState> {
   @override
-  AuthState build() => const AuthState();
+  AuthState build() {
+    final api = ref.watch(apiClientProvider);
+    if (api.token != null && api.token!.isNotEmpty) {
+      Future.microtask(() => init());
+      return AuthState(isLoggedIn: true, token: api.token);
+    }
+    return const AuthState();
+  }
 
   ApiClient get _api => ref.read(apiClientProvider);
 
   Future<void> init() async {
     await _api.loadToken();
     if (_api.token != null) {
-      state = AuthState(isLoggedIn: true, token: _api.token);
+      // Prevent fetching if already populated (e.g. from login)
+      if (state.user != null) return;
+      
+      try {
+        final profile = await _api.get('/profile');
+        if (profile is Map) {
+          final user = Map<String, dynamic>.from(profile);
+          state = state.copyWith(
+            isLoggedIn: true,
+            token: _api.token,
+            user: user,
+            accountType: user['accountType'] as String? ?? 'PERSONAL',
+            isOnboarded: user['isOnboarded'] as bool? ?? true,
+          );
+        } else {
+          state = AuthState(isLoggedIn: true, token: _api.token);
+        }
+      } catch (e) {
+        // If profile fetch fails due to auth error, logout
+        if (e.toString().contains('hết hạn') || e.toString().contains('Không có quyền')) {
+          await logout();
+          return;
+        }
+        state = AuthState(isLoggedIn: true, token: _api.token);
+      }
       // Reload shops on app restart
       await ref.read(shopProvider.notifier).loadUserShops();
     }
@@ -103,6 +134,12 @@ class AuthNotifier extends Notifier<AuthState> {
       String msg = 'Không thể đăng nhập. Vui lòng thử lại';
       if (e is DioException && e.error is ApiException) {
         msg = (e.error as ApiException).message;
+      }
+      final lowerMsg = msg.toLowerCase();
+      if (lowerMsg.contains('sai') || lowerMsg.contains('không đúng') || lowerMsg.contains('invalid') || lowerMsg.contains('incorrect') || lowerMsg.contains('not found') || lowerMsg.contains('không tồn tại') || lowerMsg.contains('unauthorized')) {
+        msg = 'Sai số điện thoại/tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.';
+      } else if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
+        msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra đường truyền mạng.';
       }
       state = state.copyWith(isLoading: false, error: msg);
       return false;

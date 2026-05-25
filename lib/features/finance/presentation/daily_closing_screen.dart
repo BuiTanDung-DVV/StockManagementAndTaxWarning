@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -39,10 +40,10 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
 
     final cashDifference = _closingCash - expectedCash;
 
-    if (cashDifference.abs() > 50000 && _notesController.text.trim().isEmpty) {
+    if (cashDifference.abs() > 0 && _notesController.text.trim().isEmpty) {
       setState(() {
         _submitting = false;
-        _errorMessage = 'Chênh lệch két vượt quá 50,000đ. Vui lòng nhập lý do giải trình vào phần ghi chú.';
+        _errorMessage = 'Két tiền có chênh lệch. Vui lòng nhập lý do giải trình vào phần ghi chú.';
       });
       return;
     }
@@ -67,9 +68,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
       if (res['success'] == true || res['id'] != null) {
         ref.invalidate(dailyClosingProvider(today));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đã thực hiện chốt ca thành công và khóa sổ ngày hôm nay!')),
-          );
+          ToastService.showSuccess('Đã thực hiện chốt ca thành công và khóa sổ ngày hôm nay!');
         }
       } else {
         setState(() {
@@ -129,7 +128,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
           
           // Calculated local variables
           final localDifference = _closingCash - expectedCash;
-          final needsNotes = localDifference.abs() > 50000;
+          final needsNotes = localDifference.abs() > 0;
 
           if (closed) {
             final closedOpeningCash = asNum(data['openingCash']);
@@ -453,7 +452,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                     filled: true,
                     fillColor: c.card,
                     hintText: needsNotes 
-                        ? 'Giải trình chênh lệch két tiền mặt > 50,000đ tại đây...'
+                        ? 'Giải trình chênh lệch két tiền mặt tại đây...'
                         : 'Nhập ghi chú chốt ca (nếu có)...',
                     contentPadding: const EdgeInsets.all(16),
                     enabledBorder: OutlineInputBorder(

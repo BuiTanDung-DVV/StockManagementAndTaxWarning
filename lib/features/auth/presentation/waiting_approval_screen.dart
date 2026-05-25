@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -96,13 +97,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
                           if (shopState.isActive) {
                             context.go('/');
                           } else if (shopState.isRejected) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Yêu cầu của bạn đã bị từ chối.'),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: AppColors.danger,
-                              ),
-                            );
+                            ToastService.showSuccess('Yêu cầu của bạn đã bị từ chối.');
                           }
                         }
                       },

@@ -16,17 +16,21 @@ export const config = {
   },
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
   get allowedOrigins(): string[] {
-    const origins = process.env.ALLOWED_ORIGINS;
-    if (origins) {
-      return origins.split(',').map(o => o.trim());
-    }
-    // Allow standard local dev ports by default
-    return [
+    const defaultOrigins = [
       'http://localhost:3000',
       'http://localhost:5000',
       'http://localhost:8080',
       'http://localhost:5173', // Vite default port
+      'https://smartstock-tax.vercel.app', // Production deployed frontend
     ];
+    
+    const origins = process.env.ALLOWED_ORIGINS;
+    if (origins) {
+      const parsed = origins.split(',').map(o => o.trim());
+      // Always include production and standard local dev origins to prevent Vercel configuration errors
+      return Array.from(new Set([...parsed, ...defaultOrigins]));
+    }
+    return defaultOrigins;
   }
 };
 

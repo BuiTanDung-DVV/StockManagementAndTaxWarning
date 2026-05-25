@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/sectioned_form_dialog.dart';
 import '../providers/supplier_provider.dart';
 
 class SupplierFormScreen extends ConsumerStatefulWidget {
@@ -61,24 +63,12 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
       }
       ref.invalidate(supplierListProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isEdit ? 'Cập nhật nhà cung cấp thành công!' : 'Thêm nhà cung cấp thành công!'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.success,
-          ),
-        );
+        ToastService.showSuccess(_isEdit ? 'Cập nhật nhà cung cấp thành công!' : 'Thêm nhà cung cấp thành công!');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        ToastService.showError('Lỗi: $e');
       }
     }
     if (mounted) setState(() => _saving = false);
@@ -102,130 +92,81 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          _isEdit ? 'Cập Nhật Đối Tác' : 'Thêm Nhà Cung Cấp',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _field(
-                'Tên nhà cung cấp *',
-                _nameCtrl,
-                HugeIcons.strokeRoundedTruck,
-                c,
-                theme,
-                validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên nhà cung cấp' : null,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                'Người đại diện liên hệ',
-                _contactPersonCtrl,
-                HugeIcons.strokeRoundedUser,
-                c,
-                theme,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                'Số điện thoại liên lạc',
-                _phoneCtrl,
-                HugeIcons.strokeRoundedCall02,
-                c,
-                theme,
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                'Địa chỉ thư điện tử (Email)',
-                _emailCtrl,
-                HugeIcons.strokeRoundedMail01,
-                c,
-                theme,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                'Địa chỉ văn phòng giao dịch',
-                _addressCtrl,
-                HugeIcons.strokeRoundedLocation01,
-                c,
-                theme,
-                maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                'Mã số thuế doanh nghiệp (MST)',
-                _taxCodeCtrl,
-                HugeIcons.strokeRoundedInvoice01,
-                c,
-                theme,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                'Ghi chú bổ sung',
-                _noteCtrl,
-                HugeIcons.strokeRoundedNote,
-                c,
-                theme,
-                maxLines: 3,
-              ),
-              
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const HugeIcon(
-                          icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                  label: Text(
-                    _saving 
-                        ? 'Đang lưu lại...' 
-                        : (_isEdit ? 'Cập Nhật Đối Tác' : 'Thêm Nhà Cung Cấp'),
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
+      backgroundColor: Colors.black26,
+      body: Center(
+        child: SectionedFormDialog(
+          title: _isEdit ? 'Cập Nhật Đối Tác' : 'Thêm Nhà Cung Cấp',
+          isSaving: _saving,
+          saveText: _isEdit ? 'Cập Nhật Đối Tác' : 'Thêm Nhà Cung Cấp',
+          onSave: _save,
+          onCancel: () => Navigator.of(context).pop(),
+          content: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _field(
+                  'Tên nhà cung cấp *',
+                  _nameCtrl,
+                  HugeIcons.strokeRoundedTruck,
+                  c,
+                  theme,
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên nhà cung cấp' : null,
                 ),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 12),
+                _field(
+                  'Người đại diện liên hệ',
+                  _contactPersonCtrl,
+                  HugeIcons.strokeRoundedUser,
+                  c,
+                  theme,
+                ),
+                const SizedBox(height: 12),
+                _field(
+                  'Số điện thoại liên lạc',
+                  _phoneCtrl,
+                  HugeIcons.strokeRoundedCall02,
+                  c,
+                  theme,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 12),
+                _field(
+                  'Địa chỉ thư điện tử (Email)',
+                  _emailCtrl,
+                  HugeIcons.strokeRoundedMail01,
+                  c,
+                  theme,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 12),
+                _field(
+                  'Địa chỉ văn phòng giao dịch',
+                  _addressCtrl,
+                  HugeIcons.strokeRoundedLocation01,
+                  c,
+                  theme,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 12),
+                _field(
+                  'Mã số thuế doanh nghiệp (MST)',
+                  _taxCodeCtrl,
+                  HugeIcons.strokeRoundedInvoice01,
+                  c,
+                  theme,
+                ),
+                const SizedBox(height: 12),
+                _field(
+                  'Ghi chú bổ sung',
+                  _noteCtrl,
+                  HugeIcons.strokeRoundedNote,
+                  c,
+                  theme,
+                  maxLines: 3,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -285,3 +226,4 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
     );
   }
 }
+
