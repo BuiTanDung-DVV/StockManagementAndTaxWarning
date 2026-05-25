@@ -56,3 +56,10 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Local Developer Scripts & Scratchpads (Keep repository clean)
+env/
+backend/dev-scripts/
+scratch/
+android/.kotlin/
+

@@ -95,7 +95,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       } else {
         await repo.create(data);
       }
-      if (!mounted) return;
+      if (!context.mounted) return;
       ref.invalidate(productListProvider((page: 1, search: null)));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -104,10 +104,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           backgroundColor: AppColors.success,
         ),
       );
-      context.pop(true);
+      Navigator.of(context).pop(true);
       return;
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Lỗi: $e'),
@@ -116,8 +116,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           ),
         );
       }
+      if (mounted) setState(() => _saving = false);
     }
-    if (mounted) setState(() => _saving = false);
   }
 
   @override

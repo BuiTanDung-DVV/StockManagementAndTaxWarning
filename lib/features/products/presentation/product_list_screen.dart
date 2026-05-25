@@ -9,15 +9,12 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/type_parser.dart';
 import '../providers/product_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
-double _asDouble(dynamic value) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? 0;
-  return 0;
-}
+
 
 class _SearchQueryNotifier extends Notifier<String> {
   @override
@@ -136,7 +133,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                     ),
                     itemBuilder: (_, i) {
                       final p = items[i];
-                      final price = _asDouble(p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice']);
+                      final price = TypeParser.asDouble(p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice']);
                       final stock = p['currentStock'] ?? p['stock'] ?? 0;
                       final imageUrl = p['imageUrl']?.toString() ?? '';
                       final isOutOfStock = stock <= 0;

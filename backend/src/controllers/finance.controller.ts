@@ -4,6 +4,8 @@ import { AuthRequest } from '../middleware/auth.middleware';
 
 const financeService = new FinanceService();
 
+
+
 export const getCashTransactions = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.getCashTransactions((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.type as string, req.query.from as string, req.query.to as string) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }

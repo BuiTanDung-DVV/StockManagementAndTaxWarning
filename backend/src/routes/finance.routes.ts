@@ -7,6 +7,9 @@ const router = Router();
 import { lockTransactionMiddleware } from '../middleware/lock-transaction.middleware';
 router.use(lockTransactionMiddleware);
 
+// Financial Ledgers
+
+
 // Cash Transactions
 router.get('/cash-transactions', requirePermission('finance', 'view'), financeCtrl.getCashTransactions);
 router.post('/cash-transactions', requirePermission('finance', 'edit'), financeCtrl.createCashTransaction);

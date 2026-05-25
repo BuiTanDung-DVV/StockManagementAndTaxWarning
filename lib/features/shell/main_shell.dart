@@ -65,6 +65,7 @@ class MainShell extends ConsumerWidget {
             '/tax-declaration',
             '/transactions',
             '/purchases-no-invoice',
+            '/tax-estimate',
           ],
         ),
       _NavDef(

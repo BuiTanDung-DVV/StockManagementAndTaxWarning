@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../customers/providers/customer_provider.dart';
 import '../../products/providers/product_provider.dart';
@@ -23,11 +24,7 @@ final _currFmt = NumberFormat.currency(
 );
 final _tts = FlutterTts();
 
-double _asDouble(dynamic value) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? 0;
-  return 0;
-}
+
 
 /// Cart item model
 class CartItem {
@@ -229,7 +226,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     final p = products[i];
                     final id = p['id'] as int;
                     final name = p['name'] ?? 'SP';
-                    final price = _asDouble(
+                    final price = TypeParser.asDouble(
                       p['sellingPrice'] ?? p['selling_price'] ?? 0,
                     );
                     final stock =
