@@ -439,7 +439,7 @@ class OrderDetailScreen extends ConsumerWidget {
                 Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
                 const SizedBox(height: 12),
                 Text(
-                  'Không tải được chi tiết hóa đơn.\n$e',
+                  'Không tải được chi tiết phiếu tính tiền.\n$e',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     color: AppColors.danger,
@@ -471,6 +471,7 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
   final amountCtrl = TextEditingController(text: remaining.toStringAsFixed(0));
   String selectedMethod = 'CASH';
   final notesCtrl = TextEditingController();
+  String? errorMessage;
 
   showModalBottomSheet(
     context: context,
@@ -519,6 +520,11 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
               ),
             ),
             const SizedBox(height: 16),
+            if (errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(errorMessage!, style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.bold)),
+              ),
 
             // Payment method
             Text(
@@ -578,11 +584,11 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                     onPressed: () async {
                       final amount = double.tryParse(amountCtrl.text) ?? 0;
                       if (amount <= 0) {
-                        ToastService.showError('Số tiền thanh toán phải lớn hơn 0!');
+                        setState(() => errorMessage = 'Số tiền thanh toán phải lớn hơn 0!');
                         return;
                       }
                       if (amount > remaining) {
-                        ToastService.showError('Không thể thanh toán vượt quá ${_currFmt.format(remaining)}');
+                        setState(() => errorMessage = 'Không thể thanh toán vượt quá ${_currFmt.format(remaining)}');
                         return;
                       }
                       Navigator.of(ctx).pop();
@@ -630,6 +636,7 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
   final amountCtrl = TextEditingController(text: maxRefund.toStringAsFixed(0));
   String selectedMethod = 'CASH';
   final reasonCtrl = TextEditingController();
+  String? errorMessage;
 
   showModalBottomSheet(
     context: context,
@@ -678,6 +685,11 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
               ),
             ),
             const SizedBox(height: 16),
+            if (errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(errorMessage!, style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.bold)),
+              ),
 
             // Payment method
             Text(
@@ -737,21 +749,28 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                     onPressed: () async {
                       final amount = double.tryParse(amountCtrl.text) ?? 0;
                       if (amount < 0 || amount > maxRefund) {
-                        ToastService.showError('Số tiền hoàn phải hợp lệ (0 - ${_currFmt.format(maxRefund)})');
+                        setState(() => errorMessage = 'Số tiền hoàn phải hợp lệ (0 - ${_currFmt.format(maxRefund)})');
                         return;
                       }
+
+                      final returnItems = (items ?? []).map((i) {
+                        final it = i as Map;
+                        return {
+                          'productId': it['productId'] ?? it['product']?['id'],
+                          'quantity': it['quantity'],
+                          'unitPrice': it['unitPrice'],
+                          'subtotal': it['subtotal'],
+                          'reason': reasonCtrl.text.trim(),
+                        };
+                      }).where((item) => item['productId'] != null).toList();
+
+                      if (returnItems.isEmpty) {
+                        setState(() => errorMessage = 'Không có sản phẩm hợp lệ để trả lại');
+                        return;
+                      }
+
                       Navigator.of(ctx).pop();
                       try {
-                        final returnItems = (items ?? []).map((i) {
-                          final it = i as Map;
-                          return {
-                            'productId': it['productId'] ?? it['product']?['id'],
-                            'quantity': it['quantity'],
-                            'unitPrice': it['unitPrice'],
-                            'subtotal': it['subtotal'],
-                            'reason': reasonCtrl.text.trim(),
-                          };
-                        }).where((item) => item['productId'] != null).toList();
 
                         await ref.read(salesRepoProvider).createReturn(orderId, {
                           'refundAmount': amount,

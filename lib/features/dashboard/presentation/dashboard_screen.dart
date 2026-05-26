@@ -306,10 +306,13 @@ class DashboardScreen extends ConsumerWidget {
                       final progress = RevenueThreshold.getProgress(revenue).clamp(0.0, 1.0);
                       final color = RevenueThreshold.getColor(revenue);
                       final nextThreshold = RevenueThreshold.getNextThreshold(revenue);
-                      return GestureDetector(
-                        onTap: () => context.push('/tax-calculator'),
-                        child: Container(
-                          padding: const EdgeInsets.all(18),
+                      return Semantics(
+                        label: 'Ngưỡng doanh thu: ${RevenueThreshold.getTierLabel(revenue)}. ${RevenueThreshold.getObligation(revenue)}',
+                        button: true,
+                        child: GestureDetector(
+                          onTap: () => context.push('/tax-calculator'),
+                          child: Container(
+                            padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(24),
@@ -474,7 +477,7 @@ class DashboardScreen extends ConsumerWidget {
                     if (shopState.isOwner || shopState.hasPermission('finance'))
                       _QuickAction(
                         HugeIcons.strokeRoundedInvoice01,
-                        'Hóa đơn',
+                        'Chứng từ',
                         () => context.push('/invoices'),
                       ),
                     if (shopState.isOwner) ...[
@@ -655,11 +658,14 @@ class _TaxObligationReminder extends ConsumerWidget {
                 urgencyIcon = Icons.info_outline_rounded;
               }
 
-              return GestureDetector(
-                onTap: () => context.push('/tax-obligations'),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(16),
+              return Semantics(
+                label: 'Cảnh báo thuế $period, còn phải nộp ${_currFmt.format(totalOwed)}, $urgencyLabel',
+                button: true,
+                child: GestureDetector(
+                  onTap: () => context.push('/tax-obligations'),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: urgencyColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(24),

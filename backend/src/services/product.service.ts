@@ -61,7 +61,16 @@ export class ProductService {
         const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
 
         const product = this.productRepo.create({ ...productPayload, sku, shopId });
-        const saved = await this.productRepo.save(product as any) as Product;
+        let saved: Product;
+        try {
+            saved = await this.productRepo.save(product as any) as Product;
+        } catch (e: any) {
+            if (e.code === '23505' || (e.message && e.message.includes('unique constraint'))) {
+                if (e.message && e.message.includes('barcode')) throw new Error('Barcode already exists');
+                throw new Error('SKU already exists');
+            }
+            throw e;
+        }
 
         if (openingQty > 0) {
             const targetWarehouseId = providedWarehouseId > 0 ? providedWarehouseId : await this.ensureDefaultWarehouseId(shopId);
@@ -91,7 +100,15 @@ export class ProductService {
 
         const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
         Object.assign(product, productPayload);
-        await this.productRepo.save(product);
+        try {
+            await this.productRepo.save(product);
+        } catch (e: any) {
+            if (e.code === '23505' || (e.message && e.message.includes('unique constraint'))) {
+                if (e.message && e.message.includes('barcode')) throw new Error('Barcode already exists');
+                throw new Error('SKU already exists');
+            }
+            throw e;
+        }
 
         const nextStock = currentStock ?? openingStock;
         if (nextStock !== undefined && nextStock !== null && nextStock !== '') {

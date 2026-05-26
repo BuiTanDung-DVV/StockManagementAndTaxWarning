@@ -3,16 +3,47 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/tax_config_provider.dart';
 
-class TaxConfigScreen extends ConsumerWidget {
+import '../../../core/utils/toast_service.dart';
+
+class TaxConfigScreen extends ConsumerStatefulWidget {
   const TaxConfigScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TaxConfigScreen> createState() => _TaxConfigScreenState();
+}
+
+class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
+  bool _isSaving = false;
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(taxConfigProvider.notifier).saveConfig();
+      if (!mounted) return;
+      ToastService.showSuccess('Đã lưu cấu hình thuế thành công!');
+    } catch (e) {
+      if (!mounted) return;
+      ToastService.showError('Lưu thất bại: $e');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final config = ref.watch(taxConfigProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Cấu hình Thuế')),
+      appBar: AppBar(title: const Text('Cấu hình Thuế')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _isSaving ? null : _save,
+        icon: _isSaving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.save),
+        label: const Text('Lưu cấu hình', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

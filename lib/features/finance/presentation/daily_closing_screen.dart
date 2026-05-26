@@ -40,7 +40,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
 
     final cashDifference = _closingCash - expectedCash;
 
-    if (cashDifference.abs() > 0 && _notesController.text.trim().isEmpty) {
+    if (cashDifference.abs() > 0.01 && _notesController.text.trim().isEmpty) {
       setState(() {
         _submitting = false;
         _errorMessage = 'Két tiền có chênh lệch. Vui lòng nhập lý do giải trình vào phần ghi chú.';
@@ -128,7 +128,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
           
           // Calculated local variables
           final localDifference = _closingCash - expectedCash;
-          final needsNotes = localDifference.abs() > 0;
+          final needsNotes = localDifference.abs() > 0.01;
 
           if (closed) {
             final closedOpeningCash = asNum(data['openingCash']);

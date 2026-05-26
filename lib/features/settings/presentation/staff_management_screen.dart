@@ -69,6 +69,8 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
   Future<void> _inviteMember() async {
     final usernameCtrl = TextEditingController();
     int? selectedRoleId;
+    String? errorMessage;
+    bool isSubmitting = false;
     
     final result = await showDialog<bool>(
       context: context,
@@ -90,6 +92,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                   TextField(
                     controller: usernameCtrl,
                     style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+                    enabled: !isSubmitting,
                     decoration: InputDecoration(
                       labelText: 'Tên đăng nhập (đã có trên hệ thống) *',
                       hintText: 'VD: nhanvien01 (tài khoản đã đăng ký)',
@@ -128,18 +131,52 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                               child: Text(r['name'] as String, style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary)),
                             ))
                         .toList(),
-                    onChanged: (v) => setDlg(() => selectedRoleId = v),
+                    onChanged: isSubmitting ? null : (v) => setDlg(() => selectedRoleId = v),
                   ),
+                  if (errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Text(errorMessage!, style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
                 ],
               ),
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
+                onPressed: isSubmitting ? null : () => Navigator.pop(ctx, false),
                 child: Text('Hủy', style: GoogleFonts.outfit(color: c.textMuted, fontWeight: FontWeight.w600)),
               ),
               ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        if (usernameCtrl.text.trim().isEmpty) {
+                          setDlg(() => errorMessage = 'Vui lòng nhập tên đăng nhập');
+                          return;
+                        }
+
+                        setDlg(() {
+                          errorMessage = null;
+                          isSubmitting = true;
+                        });
+
+                        final api = ref.read(apiClientProvider);
+                        final shopId = ref.read(shopProvider).currentShopId ?? 1;
+
+                        try {
+                          await api.post('/shop-members/invite?shopId=$shopId', data: {
+                            'username': usernameCtrl.text.trim(),
+                            'roleId': selectedRoleId,
+                          });
+                          if (!ctx.mounted) return;
+                          Navigator.pop(ctx, true);
+                        } catch (e) {
+                          setDlg(() {
+                            errorMessage = 'Lỗi: $e';
+                            isSubmitting = false;
+                          });
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
                   backgroundColor: theme.colorScheme.primary,
@@ -147,7 +184,9 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('Thêm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                child: isSubmitting
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text('Thêm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -155,23 +194,10 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
       },
     );
 
-    if (result == true && usernameCtrl.text.trim().isNotEmpty) {
-      final api = ref.read(apiClientProvider);
-      final shopId = ref.read(shopProvider).currentShopId ?? 1;
-      setState(() => _loading = true);
-      try {
-        await api.post('/shop-members/invite?shopId=$shopId', data: {
-          'username': usernameCtrl.text.trim(),
-          'roleId': selectedRoleId,
-        });
-        if (!mounted) return;
-        ToastService.showSuccess('Đã thêm nhân viên trực tiếp vào cửa hàng');
-        _load();
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _loading = false);
-        ToastService.showError('Lỗi: $e');
-      }
+    if (result == true) {
+      if (!mounted) return;
+      ToastService.showSuccess('Đã thêm nhân viên trực tiếp vào cửa hàng');
+      _load();
     }
   }
 

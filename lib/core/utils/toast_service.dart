@@ -32,6 +32,8 @@ class ToastService {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 3),
+        showCloseIcon: true,
+        closeIconColor: Colors.white,
       ),
     );
   }

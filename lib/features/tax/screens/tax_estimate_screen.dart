@@ -39,7 +39,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Error: $e');
+        ToastService.showError('Lỗi: $e');
       }
     } finally {
       if (mounted) {
@@ -50,9 +50,18 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
     }
   }
 
-  void _exportHTKK() {
+  Future<void> _exportHTKK() async {
     final taxService = ref.read(taxServiceProvider);
-    taxService.exportHTKK(_selectedPeriod, _selectedYear);
+    try {
+      await taxService.exportHTKK(_selectedPeriod, _selectedYear);
+      if (mounted) {
+        ToastService.showSuccess('Đang mở liên kết tải xuống...');
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('Lỗi: $e');
+      }
+    }
   }
 
   @override

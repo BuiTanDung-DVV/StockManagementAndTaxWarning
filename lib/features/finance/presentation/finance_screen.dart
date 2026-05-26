@@ -249,7 +249,7 @@ class FinanceScreen extends ConsumerWidget {
               
               _NavCard('Báo cáo KQKD (Lãi/Lỗ)', HugeIcons.strokeRoundedAnalytics01, () => context.push('/profit-loss')),
               _NavCard('Phân tích Tuổi nợ', HugeIcons.strokeRoundedChartIncrease, () => context.push('/debt-aging')),
-              _NavCard('Quản lý Hóa đơn', HugeIcons.strokeRoundedInvoice01, () => context.push('/invoices')),
+              _NavCard('Quản lý Chứng từ', HugeIcons.strokeRoundedInvoice01, () => context.push('/invoices')),
               _NavCard('Bảng kê mua không HĐ', HugeIcons.strokeRoundedInvoice03, () => context.push('/purchases-no-invoice')),
               _NavCard('Dự báo dòng tiền', HugeIcons.strokeRoundedChartIncrease, () => context.push('/cashflow-forecast')),
               _NavCard('Chốt sổ cuối ngày', HugeIcons.strokeRoundedCheckmarkCircle02, () => context.push('/daily-closing')),

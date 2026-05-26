@@ -92,9 +92,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       return;
     }
     
-    final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
+    final phoneRegex = RegExp(r'^(0|\+84)\d{9}$');
     if (!phoneRegex.hasMatch(phone)) {
-      setState(() => _error = 'Định dạng số điện thoại không hợp lệ (10-12 số)');
+      setState(() => _error = 'Định dạng số điện thoại không hợp lệ (10 số)');
       return;
     }
 
@@ -106,14 +106,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     try {
       final api = ref.read(apiClientProvider);
       // Calls forgot-password API which dynamically sends OTP
-      final res = await api.post('/auth/forgot-password', data: {'identifier': phone});
+      await api.post('/auth/forgot-password', data: {'identifier': phone});
       
-      if (res.data != null && res.data['otp'] != null) {
-        final mockOtp = res.data['otp'];
-        ToastService.showSuccess('[SANDBOX] Mã OTP của bạn là: $mockOtp');
-      } else {
-        ToastService.showSuccess('Đã gửi mã xác thực OTP thành công!');
-      }
+      ToastService.showSuccess('Đã gửi mã xác thực OTP thành công!');
       
       setState(() {
         _otpSent = true;
