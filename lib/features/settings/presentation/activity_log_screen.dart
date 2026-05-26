@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -57,6 +58,23 @@ class ActivityLogScreen extends ConsumerWidget {
                 final message = (log['message'] ?? log['action'] ?? 'Hoạt động').toString();
                 final actor = (log['actor'] ?? log['user']?['username'] ?? 'Hệ thống').toString();
                 final rawDate = (log['createdAt'] ?? log['created_at'] ?? '').toString();
+                final rawMetadata = log['details'] ?? log['metadata'];
+                String formattedMetadata = '';
+                if (rawMetadata != null) {
+                  try {
+                    if (rawMetadata is Map || rawMetadata is List) {
+                      formattedMetadata = const JsonEncoder.withIndent('  ').convert(rawMetadata);
+                    } else if (rawMetadata is String && rawMetadata.isNotEmpty) {
+                      // Attempt to parse stringified JSON
+                      final parsed = jsonDecode(rawMetadata);
+                      formattedMetadata = const JsonEncoder.withIndent('  ').convert(parsed);
+                    } else {
+                      formattedMetadata = rawMetadata.toString();
+                    }
+                  } catch (_) {
+                    formattedMetadata = rawMetadata.toString();
+                  }
+                }
                 
                 String formattedDate = rawDate;
                 String timeOnly = '';
@@ -120,6 +138,27 @@ class ActivityLogScreen extends ConsumerWidget {
                                 Text(actor, style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500)),
                               ],
                             ),
+                            if (formattedMetadata.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: c.bg.withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: c.divider.withValues(alpha: 0.2)),
+                                ),
+                                child: Text(
+                                  formattedMetadata,
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 11,
+                                    color: AppColors.info,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

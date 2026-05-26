@@ -183,36 +183,30 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
     }
   }
 
-  Future<void> _save() async {
+  Future<void> saveConfig() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, jsonEncode(state.toJson()));
     
     // Sync to backend
-    try {
-        final api = ref.read(apiClientProvider);
-        
-        String sectorStr = 'TRADE';
-        if (state.businessType == BusinessType.manufacturing) sectorStr = 'PRODUCTION';
-        if (state.businessType == BusinessType.services) sectorStr = 'SERVICE';
-        if (state.businessType == BusinessType.other) sectorStr = 'OTHER';
+    final api = ref.read(apiClientProvider);
+    
+    String sectorStr = 'TRADE';
+    if (state.businessType == BusinessType.manufacturing) sectorStr = 'PRODUCTION';
+    if (state.businessType == BusinessType.services) sectorStr = 'SERVICE';
+    if (state.businessType == BusinessType.other) sectorStr = 'OTHER';
 
-        await api.put('/tax/config', data: {
-            'businessSector': sectorStr,
-            'applyVatReduction': state.vatReduction20,
-        });
-    } catch(e) {
-        debugPrint('Failed to sync tax config to backend: $e');
-    }
+    await api.put('/tax/config', data: {
+        'businessSector': sectorStr,
+        'applyVatReduction': state.vatReduction20,
+    });
   }
 
   void setBusinessType(BusinessType type) {
     state = state.copyWith(businessType: type);
-    _save();
   }
 
   void setVatReduction20(bool value) {
     state = state.copyWith(vatReduction20: value);
-    _save();
   }
 }
 

@@ -124,8 +124,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       return;
     }
     setState(() => _isSearchingAddress = true);
+    
+    const String googleMapsApiKey = String.fromEnvironment('MAPS_API_KEY');
+
     try {
       final dio = Dio();
+      
+      if (googleMapsApiKey.isNotEmpty) {
+        // Use Google Maps Places Autocomplete
+        final res = await dio.get(
+          'https://maps.googleapis.com/maps/api/place/autocomplete/json',
+          queryParameters: {
+            'input': query,
+            'key': googleMapsApiKey,
+            'language': 'vi',
+            'components': 'country:vn',
+          },
+        );
+        
+        if (res.data != null && res.data['status'] == 'OK') {
+          final predictions = res.data['predictions'] as List;
+          final list = predictions.map((p) => {
+            'display_name': p['description'],
+            'place_id': p['place_id'],
+            'lat': null,
+            'lon': null, 
+          }).toList();
+          
+          if (mounted) setState(() => _addressSuggestions = list);
+          return;
+        }
+      }
+
+      // Fallback to Nominatim OpenStreetMap
       final res = await dio.get(
         'https://nominatim.openstreetmap.org/search',
         queryParameters: {
@@ -149,7 +180,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Nominatim search error: $e');
+      debugPrint('Address search error: $e');
     } finally {
       if (mounted) setState(() => _isSearchingAddress = false);
     }
@@ -389,8 +420,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 onTap: () {
                                   setState(() {
                                     _addressCtrl.text = suggestion['display_name'] ?? '';
-                                    _selectedLat = double.tryParse(suggestion['lat'].toString());
-                                    _selectedLon = double.tryParse(suggestion['lon'].toString());
+                                    _selectedLat = suggestion['lat'] != null ? double.tryParse(suggestion['lat'].toString()) : 10.762622;
+                                    _selectedLon = suggestion['lon'] != null ? double.tryParse(suggestion['lon'].toString()) : 106.660172;
                                     _addressSuggestions = [];
                                   });
                                   FocusScope.of(context).unfocus();
@@ -417,7 +448,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 Icon(Icons.map_rounded, color: theme.colorScheme.primary, size: 20),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Bản đồ vị trí (OpenStreetMap)',
+                                  'Bản đồ vị trí',
                                   style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: c.textPrimary),
                                 ),
                               ],

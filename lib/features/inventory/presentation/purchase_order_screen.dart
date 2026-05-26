@@ -140,67 +140,93 @@ class PurchaseOrderScreen extends ConsumerWidget {
                   statusLabel = status.isNotEmpty ? status : 'N/A';
               }
 
-              return InkWell(
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) {
-                      final poItems = (po['items'] as List?) ?? [];
-                      return AlertDialog(
-                        backgroundColor: c.surface,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                        title: Text('Chi tiết ${code.toString()}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: c.textPrimary, fontSize: 18)),
-                        content: SizedBox(
-                          width: double.maxFinite,
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: poItems.length,
-                            itemBuilder: (context, index) {
-                              final item = poItems[index];
-                              return ListTile(
-                                title: Text(item['product']?['name'] ?? 'Sản phẩm ${item['productId'] ?? ''}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: c.textPrimary, fontSize: 14)),
-                                subtitle: Text('SL: ${item['quantity']} x ${_currFmt.format(asDouble(item['unitPrice']))}', style: GoogleFonts.inter(color: c.textSecondary, fontSize: 12)),
-                                trailing: Text(_currFmt.format(asDouble(item['subtotal'] ?? (asDouble(item['quantity']) * asDouble(item['unitPrice'])))), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 14)),
-                              );
-                            },
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: Text('Đóng', style: GoogleFonts.inter(color: c.textSecondary, fontWeight: FontWeight.w600)),
-                          ),
-                          if (status == 'PENDING')
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
-                              icon: const Icon(Icons.check_circle_rounded, size: 18),
-                              label: Text('Duyệt nhập kho', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                              onPressed: () async {
-                                Navigator.pop(ctx);
-                                try {
-                                  await ref.read(inventoryRepoProvider).updatePurchaseOrder(po['id'], {'status': 'COMPLETED'});
-                                  ToastService.showSuccess('Đã duyệt nhập kho thành công');
-                                  ref.invalidate(purchaseOrdersProvider);
-                                } catch (e) {
-                                  ToastService.showError('Lỗi khi duyệt nhập kho: $e');
-                                }
-                              },
-                            )
-                        ],
-                      );
-                    }
-                  );
-                },
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
+              return Card(
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: c.card,
+                color: c.card,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                  side: BorderSide(color: c.divider.withValues(alpha: 0.5)),
                 ),
-                child: Row(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) {
+                        final poItems = (po['items'] as List?) ?? [];
+                        return AlertDialog(
+                          backgroundColor: c.surface,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          title: Text('Chi tiết ${code.toString()}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: c.textPrimary, fontSize: 18)),
+                          content: SizedBox(
+                            width: double.maxFinite,
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: poItems.length,
+                              itemBuilder: (context, index) {
+                                final item = poItems[index];
+                                return ListTile(
+                                  title: Text(item['product']?['name'] ?? 'Sản phẩm ${item['productId'] ?? ''}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: c.textPrimary, fontSize: 14)),
+                                  subtitle: Text('SL: ${item['quantity']} x ${_currFmt.format(asDouble(item['unitPrice']))}', style: GoogleFonts.inter(color: c.textSecondary, fontSize: 12)),
+                                  trailing: Text(_currFmt.format(asDouble(item['subtotal'] ?? (asDouble(item['quantity']) * asDouble(item['unitPrice'])))), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 14)),
+                                );
+                              },
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: Text('Đóng', style: GoogleFonts.inter(color: c.textSecondary, fontWeight: FontWeight.w600)),
+                            ),
+                            if (status == 'PENDING')
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+                                icon: const Icon(Icons.check_circle_rounded, size: 18),
+                                label: Text('Duyệt nhập kho', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                onPressed: () async {
+                                  final bool? confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        title: Text('Xác nhận duyệt', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                                        content: Text('Bạn có chắc chắn muốn duyệt nhập kho đơn hàng này? Số lượng tồn kho sẽ được cộng thêm và không thể hoàn tác.', style: GoogleFonts.inter()),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(false),
+                                            child: Text('Hủy', style: GoogleFonts.inter(color: c.textSecondary)),
+                                          ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+                                            onPressed: () => Navigator.of(context).pop(true),
+                                            child: Text('Duyệt', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                          ),
+                                        ],
+                                      );
+                                    }
+                                  );
+
+                                  if (confirm == true) {
+                                    Navigator.pop(ctx);
+                                    try {
+                                      await ref.read(inventoryRepoProvider).updatePurchaseOrder(po['id'], {'status': 'COMPLETED'});
+                                      ToastService.showSuccess('Đã duyệt nhập kho thành công');
+                                      ref.invalidate(purchaseOrdersProvider);
+                                    } catch (e) {
+                                      ToastService.showError('Lỗi khi duyệt nhập kho: $e');
+                                    }
+                                  }
+                                },
+                              )
+                          ],
+                        );
+                      }
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
