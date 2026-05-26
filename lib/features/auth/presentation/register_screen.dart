@@ -98,9 +98,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
     
-    final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
+    final phoneRegex = RegExp(r'^(0|\+84)\d{9}$');
     if (!phoneRegex.hasMatch(phone)) {
-      ToastService.showError('Định dạng số điện thoại không hợp lệ (10-12 số)');
+      ToastService.showError('Định dạng số điện thoại không hợp lệ (10 số)');
       return;
     }
 
@@ -111,15 +111,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final res = await api.post('/auth/send-otp', data: {'phone': phone});
+      await api.post('/auth/send-otp', data: {'phone': phone});
       
-      if (res.data != null && res.data['otp'] != null) {
-        final mockOtp = res.data['otp'];
-        ToastService.showSuccess('[SANDBOX] Mã OTP của bạn là: $mockOtp');
-      } else {
-        ToastService.showSuccess('Đã gửi mã OTP thành công về số điện thoại của bạn!');
-      }
-      
+      ToastService.showSuccess('Đã gửi mã OTP thành công về số điện thoại của bạn!');
       _startTimer();
     } catch (e) {
       String msg = 'Không thể gửi OTP. Vui lòng kiểm tra kết nối mạng';

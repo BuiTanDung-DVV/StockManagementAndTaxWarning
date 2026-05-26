@@ -93,7 +93,9 @@ class ProductDetailScreen extends ConsumerWidget {
           final category = p['category']?['name'] ?? p['categoryName'] ?? '';
           final unit = p['unit'] ?? '';
           final barcode = p['barcode'] ?? '';
-          final description = p['description'] ?? '';
+          final rawDesc = p['description']?.toString().trim() ?? '';
+          final description = rawDesc.isEmpty ? 'Không có mô tả' : rawDesc;
+          final descIsMissing = rawDesc.isEmpty;
           final costPrice = TypeParser.asDouble(p['costPrice']);
           final sellingPrice = TypeParser.asDouble(p['sellingPrice'] ?? p['sellPrice']);
           final wholesalePrice = TypeParser.asDouble(p['wholesalePrice']);
@@ -149,25 +151,28 @@ class ProductDetailScreen extends ConsumerWidget {
                   if (category.isNotEmpty) _InfoTile('Danh mục phân loại', category),
                   if (unit.isNotEmpty) _InfoTile('Đơn vị tính', unit),
                   if (barcode.isNotEmpty) _InfoTile('Mã vạch barcode', barcode),
-                  if (description.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Divider(color: c.divider.withValues(alpha: 0.3)),
-                    ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Mô tả:', style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            description,
-                            style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary, height: 1.4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Divider(color: c.divider.withValues(alpha: 0.3)),
+                  ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Mô tả:', style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          description,
+                          style: GoogleFonts.inter(
+                            fontSize: 13, 
+                            color: descIsMissing ? c.textSecondary.withValues(alpha: 0.7) : c.textPrimary, 
+                            height: 1.4,
+                            fontStyle: descIsMissing ? FontStyle.italic : null,
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ]),
 
                 // Info Section 2: Pricing details

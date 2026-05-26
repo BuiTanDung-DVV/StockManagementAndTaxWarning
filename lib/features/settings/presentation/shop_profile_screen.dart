@@ -149,7 +149,7 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
 
                   const SizedBox(height: 24),
                   // ── Khác ──
-                  _SectionHeader(icon: HugeIcons.strokeRoundedInvoice03, title: 'Hóa đơn'),
+                  _SectionHeader(icon: HugeIcons.strokeRoundedInvoice03, title: 'Chứng từ'),
                   const SizedBox(height: 12),
                   _buildField('Chân hóa đơn', _receiptFooterCtrl, HugeIcons.strokeRoundedTextFootnote, c,
                       maxLines: 3, hint: 'VD: Cảm ơn quý khách! Hẹn gặp lại.'),

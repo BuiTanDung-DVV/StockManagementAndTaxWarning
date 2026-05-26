@@ -18,20 +18,23 @@ class TaxService {
       );
       return data as Map<String, dynamic>;
     } catch (e) {
-      throw Exception('Failed to get tax estimate: $e');
+      throw Exception('Không thể lấy lịch sử thuế: $e');
     }
   }
 
-  void exportHTKK(String period, String year) async {
+  Future<void> exportHTKK(String period, String year) async {
     final token = _apiClient.token;
     final shopId = _apiClient.shopId;
     final urlString = '${ApiClient.baseUrl}/tax/export-htkk?period=$period&year=$year&token=$token&shopId=$shopId';
     final url = Uri.parse(urlString);
     
     try {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
+      if (!launched) {
+         throw Exception('Trình duyệt đã chặn tải xuống');
+      }
     } catch (e) {
-      throw Exception('Could not launch $urlString: $e');
+      throw Exception('Không thể tải file: $e');
     }
   }
 }

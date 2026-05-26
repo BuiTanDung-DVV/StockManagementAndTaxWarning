@@ -154,7 +154,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return shopState.hasPermission('settings');
         }
         
-        if (path.startsWith('/staff') || path.startsWith('/roles')) {
+        if (path.startsWith('/staff') || path.startsWith('/roles') || path.startsWith('/employees')) {
           return false; // Owner only
         }
         
@@ -222,6 +222,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/payment-config', builder: (_, _) => const PaymentConfigScreen()),
           GoRoute(path: '/notifications', builder: (_, _) => const NotificationListScreen()),
           GoRoute(path: '/staff', builder: (_, _) => const StaffManagementScreen()),
+          GoRoute(path: '/employees', builder: (_, _) => const StaffManagementScreen()),
           GoRoute(path: '/roles', builder: (_, _) => const RoleConfigScreen()),
           GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
           GoRoute(path: '/shop-profile', builder: (_, _) => const ShopProfileScreen()),

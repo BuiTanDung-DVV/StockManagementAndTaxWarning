@@ -345,6 +345,7 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
   final lineItems = <Map<String, dynamic>>[];
   bool _isSubmitting = false;
   int? _selectedProductId;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -419,10 +420,11 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
                 final quantity = double.tryParse(qtyC.text) ?? 0;
                 final unitPrice = double.tryParse(unitPriceC.text) ?? 0;
                 if (productName.isEmpty || quantity <= 0 || unitPrice < 0) {
-                  ToastService.showSuccess('Kiểm tra lại tên hàng, số lượng và đơn giá');
+                  setState(() => _errorMessage = 'Kiểm tra lại tên hàng, số lượng và đơn giá');
                   return;
                 }
                 setState(() {
+                  _errorMessage = null;
                   lineItems.add({
                     'productName': productName,
                     'productId': _selectedProductId,
@@ -466,6 +468,11 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
             alignment: Alignment.centerRight,
             child: Text('Tổng: ${widget.formatCurrency(calcTotal())}', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
           ),
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(_errorMessage!, style: const TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.bold)),
+            ),
         ])),
       ),
       actions: [
@@ -483,11 +490,14 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (lineItems.isEmpty) {
-      ToastService.showError('Vui lòng thêm ít nhất 1 mặt hàng');
+      setState(() => _errorMessage = 'Vui lòng thêm ít nhất 1 mặt hàng');
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _errorMessage = null;
+      _isSubmitting = true;
+    });
     try {
       await ref.read(financeRepoProvider).createPurchaseNoInvoice({
         'sellerName': sellerC.text.trim(),
@@ -501,9 +511,10 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ToastService.showError('Lưu thất bại: $e');
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      setState(() {
+        _errorMessage = 'Lưu thất bại: $e';
+        _isSubmitting = false;
+      });
     }
   }
 

@@ -16,6 +16,7 @@ import '../../finance/providers/finance_provider.dart';
 import '../providers/sales_provider.dart';
 import 'qr_payment_screen.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -510,9 +511,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
-                          ref.read(_cartProvider.notifier).clear();
-                          Navigator.pop(ctx);
+                        onPressed: () async {
+                          final confirm = await AppConfirmModal.show(
+                            context,
+                            title: 'Xóa giỏ hàng',
+                            message: 'Bạn có chắc chắn muốn xóa toàn bộ sản phẩm trong giỏ?',
+                            confirmText: 'Xóa tất cả',
+                            cancelText: 'Hủy',
+                            isDestructive: true,
+                          );
+                          if (confirm == true) {
+                            ref.read(_cartProvider.notifier).clear();
+                            Navigator.pop(ctx);
+                          }
                         },
                         child: const Text(
                           'Xóa tất cả',
@@ -542,9 +553,21 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                             Icons.delete_outline,
                             color: AppColors.danger,
                           ),
-                          onPressed: () => ref
-                              .read(_cartProvider.notifier)
-                              .remove(item.productId),
+                          onPressed: () async {
+                            final confirm = await AppConfirmModal.show(
+                              context,
+                              title: 'Xóa sản phẩm',
+                              message: 'Xóa ${item.name} khỏi giỏ hàng?',
+                              confirmText: 'Xóa',
+                              cancelText: 'Hủy',
+                              isDestructive: true,
+                            );
+                            if (confirm == true) {
+                              ref
+                                  .read(_cartProvider.notifier)
+                                  .remove(item.productId);
+                            }
+                          },
                         ),
                       );
                     },
@@ -585,9 +608,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.9),
             child: SingleChildScrollView(
@@ -659,7 +683,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
-                onPressed: () => _showCustomerPicker(context),
+                onPressed: () => _showCustomerPicker(context, setModalState),
                 icon: const Icon(Icons.person_search),
                 label: Text(
                   _selectedCustomerName == null
@@ -671,10 +695,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () => setState(() {
-                      _selectedCustomerId = null;
-                      _selectedCustomerName = null;
-                    }),
+                    onPressed: () {
+                      setState(() {
+                        _selectedCustomerId = null;
+                        _selectedCustomerName = null;
+                      });
+                      setModalState(() {});
+                    },
                     child: const Text('Bỏ chọn khách'),
                   ),
                 ),
@@ -686,10 +713,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ),
       ),
       ),
+      ),
     );
   }
 
-  void _showCustomerPicker(BuildContext context) {
+  void _showCustomerPicker(BuildContext context, [StateSetter? setModalState]) {
     showModalBottomSheet(useSafeArea: true,
       context: context,
       showDragHandle: true,
@@ -725,7 +753,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () {
                             Navigator.pop(ctx);
-                            _showQuickAddCustomer(context);
+                            _showQuickAddCustomer(context, setModalState);
                           },
                           icon: const Icon(Icons.person_add_alt_1),
                           label: const Text('+ Thêm khách hàng mới'),
@@ -760,6 +788,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                   _selectedCustomerId = int.tryParse(c['id'].toString());
                                   _selectedCustomerName = c['name']?.toString();
                                 });
+                                setModalState?.call(() {});
                                 Navigator.pop(ctx);
                               },
                             );
@@ -776,7 +805,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
   }
 
-  void _showQuickAddCustomer(BuildContext context) {
+  void _showQuickAddCustomer(BuildContext context, [StateSetter? setModalState]) {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     showDialog(
@@ -824,6 +853,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     _selectedCustomerId = newId;
                     _selectedCustomerName = name;
                   });
+                  setModalState?.call(() {});
                   ref.invalidate(customerListProvider);
                   if (ctx.mounted) {
                     Navigator.pop(ctx);
@@ -879,6 +909,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   _selectedCustomerId = newId;
                   _selectedCustomerName = name;
                 });
+                setModalState?.call(() {});
                 ref.invalidate(customerListProvider);
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) {

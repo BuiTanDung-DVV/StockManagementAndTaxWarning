@@ -100,13 +100,23 @@ class ApiClient {
               errorMessage = data['message'].toString();
               // Common translations
               if (errorMessage.contains('Invalid credentials')) {
-                errorMessage = 'Sai tên đăng nhập hoặc mật khẩu gốc';
+                errorMessage = 'Sai tên đăng nhập hoặc mật khẩu';
               } else if (errorMessage.contains('Username already exists')) {
                 errorMessage = 'Tên đăng nhập / Số điện thoại này đã tồn tại';
               } else if (errorMessage.contains('jwt expired')) {
                 errorMessage = 'Phiên làm việc hết hạn';
               } else if (errorMessage.contains('Unauthorized')) {
                 errorMessage = 'Không có quyền truy cập';
+              } else if (errorMessage.contains('Not found')) {
+                errorMessage = 'Không tìm thấy dữ liệu';
+              } else if (errorMessage.contains('Internal server error')) {
+                errorMessage = 'Lỗi máy chủ nội bộ';
+              } else if (errorMessage.contains('Bad Request')) {
+                errorMessage = 'Yêu cầu không hợp lệ';
+              } else if (errorMessage.contains('already exists')) {
+                errorMessage = 'Dữ liệu đã tồn tại';
+              } else if (errorMessage.contains('Validation Error') || errorMessage.contains('Validation failed')) {
+                errorMessage = 'Dữ liệu không hợp lệ';
               }
             }
           } else if (e.type == DioExceptionType.connectionTimeout ||
@@ -128,7 +138,16 @@ class ApiClient {
 
   void setToken(String? token) => _token = token;
   String? get token => _token;
-  void setShopId(String? shopId) => _shopId = shopId;
+  void setShopId(String? shopId) {
+    _shopId = shopId;
+    SharedPreferences.getInstance().then((prefs) {
+      if (shopId != null) {
+        prefs.setString('shop_id', shopId);
+      } else {
+        prefs.remove('shop_id');
+      }
+    });
+  }
   String? get shopId => _shopId;
   Dio get dio => _dio;
 
@@ -185,6 +204,7 @@ class ApiClient {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('auth_token');
     _refreshToken = prefs.getString('refresh_token');
+    _shopId = prefs.getString('shop_id');
   }
 
   Future<void> saveToken(String token, [String? refreshToken]) async {
@@ -200,9 +220,11 @@ class ApiClient {
   Future<void> clearToken() async {
     _token = null;
     _refreshToken = null;
+    _shopId = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('refresh_token');
+    await prefs.remove('shop_id');
   }
 }
 
