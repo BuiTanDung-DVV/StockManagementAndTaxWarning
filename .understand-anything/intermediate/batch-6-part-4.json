@@ -1,0 +1,467 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/src/inventory/entities.ts",
+      "type": "file",
+      "name": "entities.ts",
+      "filePath": "backend/src/inventory/entities.ts",
+      "summary": "Định nghĩa các thực thể và mô hình dữ liệu cho quản lý kho hàng.",
+      "tags": [
+        "data-model",
+        "inventory",
+        "database"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "class:backend/src/inventory/entities.ts:Warehouse",
+      "type": "class",
+      "name": "Warehouse",
+      "summary": "Lớp Warehouse định nghĩa cấu trúc dữ liệu hoặc logic tại entities.ts.",
+      "tags": [
+        "class",
+        "data-model"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        7,
+        22
+      ]
+    },
+    {
+      "id": "class:backend/src/inventory/entities.ts:InventoryStock",
+      "type": "class",
+      "name": "InventoryStock",
+      "summary": "Lớp InventoryStock định nghĩa cấu trúc dữ liệu hoặc logic tại entities.ts.",
+      "tags": [
+        "class",
+        "data-model"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        25,
+        51
+      ]
+    },
+    {
+      "id": "class:backend/src/inventory/entities.ts:InventoryMovement",
+      "type": "class",
+      "name": "InventoryMovement",
+      "summary": "Lớp InventoryMovement định nghĩa cấu trúc dữ liệu hoặc logic tại entities.ts.",
+      "tags": [
+        "class",
+        "data-model"
+      ],
+      "complexity": "moderate",
+      "lineRange": [
+        54,
+        87
+      ]
+    },
+    {
+      "id": "class:backend/src/inventory/entities.ts:PurchaseOrder",
+      "type": "class",
+      "name": "PurchaseOrder",
+      "summary": "Lớp PurchaseOrder định nghĩa cấu trúc dữ liệu hoặc logic tại entities.ts.",
+      "tags": [
+        "class",
+        "data-model"
+      ],
+      "complexity": "moderate",
+      "lineRange": [
+        90,
+        148
+      ]
+    },
+    {
+      "id": "class:backend/src/inventory/entities.ts:PurchaseOrderItem",
+      "type": "class",
+      "name": "PurchaseOrderItem",
+      "summary": "Lớp PurchaseOrderItem định nghĩa cấu trúc dữ liệu hoặc logic tại entities.ts.",
+      "tags": [
+        "class",
+        "data-model"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        151,
+        171
+      ]
+    },
+    {
+      "id": "class:backend/src/inventory/entities.ts:StockTake",
+      "type": "class",
+      "name": "StockTake",
+      "summary": "Lớp StockTake định nghĩa cấu trúc dữ liệu hoặc logic tại entities.ts.",
+      "tags": [
+        "class",
+        "data-model"
+      ],
+      "complexity": "moderate",
+      "lineRange": [
+        174,
+        207
+      ]
+    },
+    {
+      "id": "class:backend/src/inventory/entities.ts:StockTakeItem",
+      "type": "class",
+      "name": "StockTakeItem",
+      "summary": "Lớp StockTakeItem định nghĩa cấu trúc dữ liệu hoặc logic tại entities.ts.",
+      "tags": [
+        "class",
+        "data-model"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        210,
+        233
+      ]
+    },
+    {
+      "id": "file:backend/src/inventory/lot.entity.ts",
+      "type": "file",
+      "name": "lot.entity.ts",
+      "filePath": "backend/src/inventory/lot.entity.ts",
+      "summary": "Thực thể quản lý lô hàng và thông tin hạn sử dụng trong kho.",
+      "tags": [
+        "data-model",
+        "inventory",
+        "batch"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "class:backend/src/inventory/lot.entity.ts:InventoryLot",
+      "type": "class",
+      "name": "InventoryLot",
+      "summary": "Lớp InventoryLot định nghĩa cấu trúc dữ liệu hoặc logic tại lot.entity.ts.",
+      "tags": [
+        "class",
+        "component"
+      ],
+      "complexity": "moderate",
+      "lineRange": [
+        5,
+        42
+      ]
+    },
+    {
+      "id": "file:backend/src/middleware/auth.middleware.ts",
+      "type": "file",
+      "name": "auth.middleware.ts",
+      "filePath": "backend/src/middleware/auth.middleware.ts",
+      "summary": "Middleware kiểm tra xác thực người dùng qua token JWT.",
+      "tags": [
+        "middleware",
+        "authentication",
+        "security"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/middleware/auth.middleware.ts:authenticateJwt",
+      "type": "function",
+      "name": "authenticateJwt",
+      "summary": "Hàm xử lý authenticateJwt trong auth.middleware.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "complex",
+      "lineRange": [
+        14,
+        65
+      ]
+    },
+    {
+      "id": "function:backend/src/middleware/auth.middleware.ts:requireShopId",
+      "type": "function",
+      "name": "requireShopId",
+      "summary": "Hàm xử lý requireShopId trong auth.middleware.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        72,
+        80
+      ]
+    },
+    {
+      "id": "file:backend/src/middleware/context.middleware.ts",
+      "type": "file",
+      "name": "context.middleware.ts",
+      "filePath": "backend/src/middleware/context.middleware.ts",
+      "summary": "Middleware thiết lập ngữ cảnh request, lưu trữ thông tin session hiện tại.",
+      "tags": [
+        "middleware",
+        "context",
+        "request"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/middleware/context.middleware.ts:contextMiddleware",
+      "type": "function",
+      "name": "contextMiddleware",
+      "summary": "Hàm xử lý contextMiddleware trong context.middleware.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        13,
+        22
+      ]
+    },
+    {
+      "id": "file:backend/src/middleware/lock-transaction.middleware.ts",
+      "type": "file",
+      "name": "lock-transaction.middleware.ts",
+      "filePath": "backend/src/middleware/lock-transaction.middleware.ts",
+      "summary": "Middleware xử lý cơ chế khóa giao dịch để ngăn chặn tình trạng race condition.",
+      "tags": [
+        "middleware",
+        "database",
+        "concurrency"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/middleware/lock-transaction.middleware.ts:lockTransactionMiddleware",
+      "type": "function",
+      "name": "lockTransactionMiddleware",
+      "summary": "Hàm xử lý lockTransactionMiddleware trong lock-transaction.middleware.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "complex",
+      "lineRange": [
+        14,
+        139
+      ]
+    },
+    {
+      "id": "file:backend/src/middleware/permission.middleware.ts",
+      "type": "file",
+      "name": "permission.middleware.ts",
+      "filePath": "backend/src/middleware/permission.middleware.ts",
+      "summary": "Middleware kiểm tra quyền truy cập của người dùng đối với từng tính năng.",
+      "tags": [
+        "middleware",
+        "authorization",
+        "security"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/middleware/permission.middleware.ts:requirePermission",
+      "type": "function",
+      "name": "requirePermission",
+      "summary": "Hàm xử lý requirePermission trong permission.middleware.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "complex",
+      "lineRange": [
+        14,
+        65
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:Warehouse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:Warehouse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:InventoryStock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:InventoryStock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:InventoryMovement",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:InventoryMovement",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:PurchaseOrder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:PurchaseOrder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:PurchaseOrderItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:PurchaseOrderItem",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:StockTake",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:StockTake",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:StockTakeItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/inventory/entities.ts",
+      "target": "class:backend/src/inventory/entities.ts:StockTakeItem",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/inventory/lot.entity.ts",
+      "target": "class:backend/src/inventory/lot.entity.ts:InventoryLot",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/inventory/lot.entity.ts",
+      "target": "class:backend/src/inventory/lot.entity.ts:InventoryLot",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/middleware/auth.middleware.ts",
+      "target": "function:backend/src/middleware/auth.middleware.ts:authenticateJwt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/middleware/auth.middleware.ts",
+      "target": "function:backend/src/middleware/auth.middleware.ts:authenticateJwt",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/middleware/auth.middleware.ts",
+      "target": "function:backend/src/middleware/auth.middleware.ts:requireShopId",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/middleware/auth.middleware.ts",
+      "target": "function:backend/src/middleware/auth.middleware.ts:requireShopId",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/middleware/context.middleware.ts",
+      "target": "function:backend/src/middleware/context.middleware.ts:contextMiddleware",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/middleware/context.middleware.ts",
+      "target": "function:backend/src/middleware/context.middleware.ts:contextMiddleware",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/middleware/lock-transaction.middleware.ts",
+      "target": "function:backend/src/middleware/lock-transaction.middleware.ts:lockTransactionMiddleware",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/middleware/lock-transaction.middleware.ts",
+      "target": "function:backend/src/middleware/lock-transaction.middleware.ts:lockTransactionMiddleware",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/middleware/permission.middleware.ts",
+      "target": "function:backend/src/middleware/permission.middleware.ts:requirePermission",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/middleware/permission.middleware.ts",
+      "target": "function:backend/src/middleware/permission.middleware.ts:requirePermission",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

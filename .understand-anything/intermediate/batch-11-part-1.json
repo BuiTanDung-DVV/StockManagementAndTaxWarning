@@ -1,0 +1,409 @@
+{
+  "nodes": [
+    {
+      "id": "file:lib/features/finance/presentation/invoice_list_screen.dart",
+      "type": "file",
+      "name": "invoice_list_screen.dart",
+      "filePath": "lib/features/finance/presentation/invoice_list_screen.dart",
+      "summary": "Màn hình hiển thị danh sách hóa đơn trong phân hệ tài chính.",
+      "tags": ["ui", "finance", "invoice", "screen", "list"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/invoice_list_screen.dart:InvoiceListScreen",
+      "type": "class",
+      "name": "InvoiceListScreen",
+      "summary": "Widget hiển thị giao diện danh sách hóa đơn.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:lib/features/finance/presentation/profit_loss_screen.dart",
+      "type": "file",
+      "name": "profit_loss_screen.dart",
+      "filePath": "lib/features/finance/presentation/profit_loss_screen.dart",
+      "summary": "Màn hình báo cáo kết quả hoạt động kinh doanh, lãi lỗ.",
+      "tags": ["ui", "finance", "report", "screen", "chart"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/profit_loss_screen.dart:ProfitLossScreen",
+      "type": "class",
+      "name": "ProfitLossScreen",
+      "summary": "Widget chính của màn hình báo cáo lãi lỗ.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/profit_loss_screen.dart:_ProfitLossScreenState",
+      "type": "class",
+      "name": "_ProfitLossScreenState",
+      "summary": "State quản lý trạng thái của màn hình báo cáo lãi lỗ.",
+      "tags": ["state", "widget", "ui"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:lib/features/finance/presentation/purchase_no_invoice_screen.dart",
+      "type": "file",
+      "name": "purchase_no_invoice_screen.dart",
+      "filePath": "lib/features/finance/presentation/purchase_no_invoice_screen.dart",
+      "summary": "Màn hình quản lý các khoản mua hàng không có hóa đơn.",
+      "tags": ["ui", "finance", "purchase", "screen", "expense"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/purchase_no_invoice_screen.dart:PurchaseNoInvoiceScreen",
+      "type": "class",
+      "name": "PurchaseNoInvoiceScreen",
+      "summary": "Widget chính của màn hình mua hàng không hóa đơn.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/purchase_no_invoice_screen.dart:_PurchaseNoInvoiceScreenState",
+      "type": "class",
+      "name": "_PurchaseNoInvoiceScreenState",
+      "summary": "State quản lý dữ liệu mua hàng không hóa đơn.",
+      "tags": ["state", "widget", "ui"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/purchase_no_invoice_screen.dart:_AddPurchaseNoInvoiceDialog",
+      "type": "class",
+      "name": "_AddPurchaseNoInvoiceDialog",
+      "summary": "Dialog thêm mới giao dịch mua hàng không hóa đơn.",
+      "tags": ["widget", "dialog", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:lib/features/finance/presentation/salary_ledger_screen.dart",
+      "type": "file",
+      "name": "salary_ledger_screen.dart",
+      "filePath": "lib/features/finance/presentation/salary_ledger_screen.dart",
+      "summary": "Màn hình quản lý sổ quỹ lương của nhân viên.",
+      "tags": ["ui", "finance", "salary", "screen", "ledger"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/salary_ledger_screen.dart:SalaryLedgerScreen",
+      "type": "class",
+      "name": "SalaryLedgerScreen",
+      "summary": "Widget hiển thị sổ lương.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:lib/features/finance/presentation/tax_calculator_screen.dart",
+      "type": "file",
+      "name": "tax_calculator_screen.dart",
+      "filePath": "lib/features/finance/presentation/tax_calculator_screen.dart",
+      "summary": "Màn hình máy tính thuế, hỗ trợ ước tính các loại thuế.",
+      "tags": ["ui", "finance", "tax", "calculator", "screen"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/tax_calculator_screen.dart:TaxCalculatorScreen",
+      "type": "class",
+      "name": "TaxCalculatorScreen",
+      "summary": "Widget chính của công cụ tính thuế.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/tax_calculator_screen.dart:_TaxCalculatorScreenState",
+      "type": "class",
+      "name": "_TaxCalculatorScreenState",
+      "summary": "State quản lý logic tính toán thuế.",
+      "tags": ["state", "widget", "ui"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:lib/features/finance/presentation/tax_declaration_screen.dart",
+      "type": "file",
+      "name": "tax_declaration_screen.dart",
+      "filePath": "lib/features/finance/presentation/tax_declaration_screen.dart",
+      "summary": "Màn hình tờ khai thuế và quản lý quy trình khai báo thuế.",
+      "tags": ["ui", "finance", "tax", "declaration", "screen"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/tax_declaration_screen.dart:TaxDeclarationScreen",
+      "type": "class",
+      "name": "TaxDeclarationScreen",
+      "summary": "Widget màn hình tờ khai thuế.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:lib/features/finance/presentation/tax_obligation_screen.dart",
+      "type": "file",
+      "name": "tax_obligation_screen.dart",
+      "filePath": "lib/features/finance/presentation/tax_obligation_screen.dart",
+      "summary": "Màn hình xem nghĩa vụ thuế phải nộp.",
+      "tags": ["ui", "finance", "tax", "screen"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/tax_obligation_screen.dart:TaxObligationScreen",
+      "type": "class",
+      "name": "TaxObligationScreen",
+      "summary": "Widget màn hình nghĩa vụ thuế.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:lib/features/finance/presentation/transaction_history_screen.dart",
+      "type": "file",
+      "name": "transaction_history_screen.dart",
+      "filePath": "lib/features/finance/presentation/transaction_history_screen.dart",
+      "summary": "Màn hình xem lịch sử giao dịch tài chính.",
+      "tags": ["ui", "finance", "transaction", "history", "screen"],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/features/finance/presentation/transaction_history_screen.dart:TransactionHistoryScreen",
+      "type": "class",
+      "name": "TransactionHistoryScreen",
+      "summary": "Widget hiển thị lịch sử các giao dịch.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/features/finance/providers/finance_provider.dart",
+      "type": "file",
+      "name": "finance_provider.dart",
+      "filePath": "lib/features/finance/providers/finance_provider.dart",
+      "summary": "Cung cấp các repository và provider (Riverpod) cho phân hệ tài chính.",
+      "tags": ["provider", "finance", "state-management", "repository"],
+      "complexity": "moderate",
+      "languageNotes": "Sử dụng Riverpod để cung cấp các dịch vụ liên quan đến tài chính."
+    },
+    {
+      "id": "class:lib/features/finance/providers/finance_provider.dart:FinanceRepository",
+      "type": "class",
+      "name": "FinanceRepository",
+      "summary": "Repository xử lý các thao tác truy xuất dữ liệu tài chính.",
+      "tags": ["repository", "data-access", "finance"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:lib/features/inventory/presentation/inventory_screen.dart",
+      "type": "file",
+      "name": "inventory_screen.dart",
+      "filePath": "lib/features/inventory/presentation/inventory_screen.dart",
+      "summary": "Màn hình tổng quan về kho hàng và thống kê.",
+      "tags": ["ui", "inventory", "screen", "dashboard"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/features/inventory/presentation/inventory_screen.dart:InventoryScreen",
+      "type": "class",
+      "name": "InventoryScreen",
+      "summary": "Widget chính của màn hình tổng quan kho.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:lib/features/inventory/presentation/purchase_order_form_screen.dart",
+      "type": "file",
+      "name": "purchase_order_form_screen.dart",
+      "filePath": "lib/features/inventory/presentation/purchase_order_form_screen.dart",
+      "summary": "Màn hình tạo hoặc chỉnh sửa đơn đặt hàng (PO).",
+      "tags": ["ui", "inventory", "purchase-order", "form", "screen"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/features/inventory/presentation/purchase_order_form_screen.dart:PurchaseOrderFormScreen",
+      "type": "class",
+      "name": "PurchaseOrderFormScreen",
+      "summary": "Widget chính màn hình biểu mẫu đơn đặt hàng.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/inventory/presentation/purchase_order_form_screen.dart:_PurchaseOrderFormScreenState",
+      "type": "class",
+      "name": "_PurchaseOrderFormScreenState",
+      "summary": "State quản lý trạng thái form đơn đặt hàng.",
+      "tags": ["state", "widget", "ui"],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:lib/features/inventory/presentation/purchase_order_screen.dart",
+      "type": "file",
+      "name": "purchase_order_screen.dart",
+      "filePath": "lib/features/inventory/presentation/purchase_order_screen.dart",
+      "summary": "Màn hình danh sách đơn đặt hàng nhập kho.",
+      "tags": ["ui", "inventory", "purchase-order", "screen", "list"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/inventory/presentation/purchase_order_screen.dart:PurchaseOrderScreen",
+      "type": "class",
+      "name": "PurchaseOrderScreen",
+      "summary": "Widget hiển thị danh sách đơn đặt hàng.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:lib/features/inventory/presentation/stock_take_form_screen.dart",
+      "type": "file",
+      "name": "stock_take_form_screen.dart",
+      "filePath": "lib/features/inventory/presentation/stock_take_form_screen.dart",
+      "summary": "Màn hình tạo mới phiếu kiểm kê kho hàng.",
+      "tags": ["ui", "inventory", "stock-take", "form", "screen"],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/features/inventory/presentation/stock_take_form_screen.dart:StockTakeFormScreen",
+      "type": "class",
+      "name": "StockTakeFormScreen",
+      "summary": "Widget chính biểu mẫu tạo phiếu kiểm kê.",
+      "tags": ["widget", "screen", "ui"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/features/inventory/presentation/stock_take_form_screen.dart:_StockTakeFormScreenState",
+      "type": "class",
+      "name": "_StockTakeFormScreenState",
+      "summary": "State quản lý logic phiếu kiểm kê.",
+      "tags": ["state", "widget", "ui"],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:lib/features/finance/presentation/invoice_list_screen.dart",
+      "target": "class:lib/features/finance/presentation/invoice_list_screen.dart:InvoiceListScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/profit_loss_screen.dart",
+      "target": "class:lib/features/finance/presentation/profit_loss_screen.dart:ProfitLossScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/profit_loss_screen.dart",
+      "target": "class:lib/features/finance/presentation/profit_loss_screen.dart:_ProfitLossScreenState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/purchase_no_invoice_screen.dart",
+      "target": "class:lib/features/finance/presentation/purchase_no_invoice_screen.dart:PurchaseNoInvoiceScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/purchase_no_invoice_screen.dart",
+      "target": "class:lib/features/finance/presentation/purchase_no_invoice_screen.dart:_PurchaseNoInvoiceScreenState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/purchase_no_invoice_screen.dart",
+      "target": "class:lib/features/finance/presentation/purchase_no_invoice_screen.dart:_AddPurchaseNoInvoiceDialog",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/salary_ledger_screen.dart",
+      "target": "class:lib/features/finance/presentation/salary_ledger_screen.dart:SalaryLedgerScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/tax_calculator_screen.dart",
+      "target": "class:lib/features/finance/presentation/tax_calculator_screen.dart:TaxCalculatorScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/tax_calculator_screen.dart",
+      "target": "class:lib/features/finance/presentation/tax_calculator_screen.dart:_TaxCalculatorScreenState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/tax_declaration_screen.dart",
+      "target": "class:lib/features/finance/presentation/tax_declaration_screen.dart:TaxDeclarationScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/tax_obligation_screen.dart",
+      "target": "class:lib/features/finance/presentation/tax_obligation_screen.dart:TaxObligationScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/presentation/transaction_history_screen.dart",
+      "target": "class:lib/features/finance/presentation/transaction_history_screen.dart:TransactionHistoryScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/finance/providers/finance_provider.dart",
+      "target": "class:lib/features/finance/providers/finance_provider.dart:FinanceRepository",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/inventory/presentation/inventory_screen.dart",
+      "target": "class:lib/features/inventory/presentation/inventory_screen.dart:InventoryScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/inventory/presentation/purchase_order_form_screen.dart",
+      "target": "class:lib/features/inventory/presentation/purchase_order_form_screen.dart:PurchaseOrderFormScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/inventory/presentation/purchase_order_form_screen.dart",
+      "target": "class:lib/features/inventory/presentation/purchase_order_form_screen.dart:_PurchaseOrderFormScreenState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/inventory/presentation/purchase_order_screen.dart",
+      "target": "class:lib/features/inventory/presentation/purchase_order_screen.dart:PurchaseOrderScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/inventory/presentation/stock_take_form_screen.dart",
+      "target": "class:lib/features/inventory/presentation/stock_take_form_screen.dart:StockTakeFormScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/features/inventory/presentation/stock_take_form_screen.dart",
+      "target": "class:lib/features/inventory/presentation/stock_take_form_screen.dart:_StockTakeFormScreenState",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    }
+  ]
+}

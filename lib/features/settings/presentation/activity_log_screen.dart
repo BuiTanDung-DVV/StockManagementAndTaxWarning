@@ -62,14 +62,23 @@ class ActivityLogScreen extends ConsumerWidget {
                 String formattedMetadata = '';
                 if (rawMetadata != null) {
                   try {
-                    if (rawMetadata is Map || rawMetadata is List) {
-                      formattedMetadata = const JsonEncoder.withIndent('  ').convert(rawMetadata);
-                    } else if (rawMetadata is String && rawMetadata.isNotEmpty) {
-                      // Attempt to parse stringified JSON
-                      final parsed = jsonDecode(rawMetadata);
-                      formattedMetadata = const JsonEncoder.withIndent('  ').convert(parsed);
+                    dynamic parsed = rawMetadata;
+                    if (rawMetadata is String && rawMetadata.isNotEmpty) {
+                      parsed = jsonDecode(rawMetadata);
+                    }
+                    if (parsed is Map) {
+                      final List<String> parts = [];
+                      parsed.forEach((key, value) {
+                        if (value != null && value.toString().isNotEmpty) {
+                          final translatedKey = _translateLogKey(key.toString());
+                          parts.add('• $translatedKey: $value');
+                        }
+                      });
+                      formattedMetadata = parts.join('\n');
+                    } else if (parsed is List) {
+                      formattedMetadata = 'Có ${parsed.length} mục thay đổi';
                     } else {
-                      formattedMetadata = rawMetadata.toString();
+                      formattedMetadata = parsed.toString();
                     }
                   } catch (_) {
                     formattedMetadata = rawMetadata.toString();
@@ -183,4 +192,27 @@ class ActivityLogScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _translateLogKey(String key) {
+  final Map<String, String> map = {
+    'name': 'Tên',
+    'quantity': 'Số lượng',
+    'price': 'Giá',
+    'sellingPrice': 'Giá bán',
+    'costPrice': 'Giá vốn',
+    'amount': 'Tổng tiền',
+    'status': 'Trạng thái',
+    'paymentMethod': 'Phương thức T/T',
+    'note': 'Ghi chú',
+    'customerName': 'Tên KH',
+    'phone': 'SĐT',
+    'address': 'Địa chỉ',
+    'discount': 'Giảm giá',
+    'taxAmount': 'Thuế',
+    'productName': 'Tên sản phẩm',
+    'sku': 'Mã SKU',
+    'stock': 'Tồn kho',
+  };
+  return map[key] ?? key;
 }

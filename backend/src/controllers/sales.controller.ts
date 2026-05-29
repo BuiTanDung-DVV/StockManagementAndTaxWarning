@@ -20,7 +20,10 @@ const sendServiceError = (res: Response, e: any) => {
 };
 
 export const findAll = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.findAll((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20)) }); }
+    try { 
+        const customerId = req.query.customerId ? +req.query.customerId : undefined;
+        res.json({ success: true, data: await salesService.findAll((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), customerId) }); 
+    }
     catch (e: any) { sendServiceError(res, e); }
 };
 

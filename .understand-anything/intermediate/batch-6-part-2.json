@@ -1,0 +1,1613 @@
+{
+  "nodes": [
+    {
+      "id": "file:backend/src/controllers/inventory.controller.ts",
+      "type": "file",
+      "name": "inventory.controller.ts",
+      "filePath": "backend/src/controllers/inventory.controller.ts",
+      "summary": "Controller quản lý kho hàng, nhập/xuất kho và kiểm kê.",
+      "tags": [
+        "api-handler",
+        "inventory",
+        "management"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getStock",
+      "type": "function",
+      "name": "getStock",
+      "summary": "Hàm xử lý getStock trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        6,
+        9
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getLowStock",
+      "type": "function",
+      "name": "getLowStock",
+      "summary": "Hàm xử lý getLowStock trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        10,
+        16
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getMovements",
+      "type": "function",
+      "name": "getMovements",
+      "summary": "Hàm xử lý getMovements trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        18,
+        21
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getWarehouses",
+      "type": "function",
+      "name": "getWarehouses",
+      "summary": "Hàm xử lý getWarehouses trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        23,
+        26
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:createWarehouse",
+      "type": "function",
+      "name": "createWarehouse",
+      "summary": "Hàm xử lý createWarehouse trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        27,
+        30
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getXntReport",
+      "type": "function",
+      "name": "getXntReport",
+      "summary": "Hàm xử lý getXntReport trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        32,
+        46
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getExpiringProducts",
+      "type": "function",
+      "name": "getExpiringProducts",
+      "summary": "Hàm xử lý getExpiringProducts trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        47,
+        53
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getSlowMoving",
+      "type": "function",
+      "name": "getSlowMoving",
+      "summary": "Hàm xử lý getSlowMoving trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        55,
+        61
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getPurchaseOrders",
+      "type": "function",
+      "name": "getPurchaseOrders",
+      "summary": "Hàm xử lý getPurchaseOrders trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        63,
+        66
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:createPurchaseOrder",
+      "type": "function",
+      "name": "createPurchaseOrder",
+      "summary": "Hàm xử lý createPurchaseOrder trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        67,
+        70
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:updatePurchaseOrder",
+      "type": "function",
+      "name": "updatePurchaseOrder",
+      "summary": "Hàm xử lý updatePurchaseOrder trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        72,
+        75
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:deletePurchaseOrder",
+      "type": "function",
+      "name": "deletePurchaseOrder",
+      "summary": "Hàm xử lý deletePurchaseOrder trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        77,
+        80
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:getStockTakes",
+      "type": "function",
+      "name": "getStockTakes",
+      "summary": "Hàm xử lý getStockTakes trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        82,
+        85
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:createStockTake",
+      "type": "function",
+      "name": "createStockTake",
+      "summary": "Hàm xử lý createStockTake trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        87,
+        97
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:updateStockTake",
+      "type": "function",
+      "name": "updateStockTake",
+      "summary": "Hàm xử lý updateStockTake trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        99,
+        102
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/inventory.controller.ts:deleteStockTake",
+      "type": "function",
+      "name": "deleteStockTake",
+      "summary": "Hàm xử lý deleteStockTake trong inventory.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        104,
+        107
+      ]
+    },
+    {
+      "id": "file:backend/src/controllers/notification.controller.ts",
+      "type": "file",
+      "name": "notification.controller.ts",
+      "filePath": "backend/src/controllers/notification.controller.ts",
+      "summary": "Controller xử lý hệ thống thông báo gửi đến người dùng.",
+      "tags": [
+        "api-handler",
+        "notification",
+        "messaging"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/controllers/notification.controller.ts:listNotifications",
+      "type": "function",
+      "name": "listNotifications",
+      "summary": "Hàm xử lý listNotifications trong notification.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        7,
+        15
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/notification.controller.ts:getUnreadCount",
+      "type": "function",
+      "name": "getUnreadCount",
+      "summary": "Hàm xử lý getUnreadCount trong notification.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        17,
+        23
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/notification.controller.ts:markRead",
+      "type": "function",
+      "name": "markRead",
+      "summary": "Hàm xử lý markRead trong notification.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        25,
+        31
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/notification.controller.ts:markAllRead",
+      "type": "function",
+      "name": "markAllRead",
+      "summary": "Hàm xử lý markAllRead trong notification.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        33,
+        39
+      ]
+    },
+    {
+      "id": "file:backend/src/controllers/product.controller.ts",
+      "type": "file",
+      "name": "product.controller.ts",
+      "filePath": "backend/src/controllers/product.controller.ts",
+      "summary": "Controller quản lý danh mục và thông tin chi tiết sản phẩm.",
+      "tags": [
+        "api-handler",
+        "product",
+        "management"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:findAllProducts",
+      "type": "function",
+      "name": "findAllProducts",
+      "summary": "Hàm xử lý findAllProducts trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        6,
+        9
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:findProductById",
+      "type": "function",
+      "name": "findProductById",
+      "summary": "Hàm xử lý findProductById trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        10,
+        13
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:createProduct",
+      "type": "function",
+      "name": "createProduct",
+      "summary": "Hàm xử lý createProduct trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        14,
+        17
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:updateProduct",
+      "type": "function",
+      "name": "updateProduct",
+      "summary": "Hàm xử lý updateProduct trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        18,
+        21
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:deleteProduct",
+      "type": "function",
+      "name": "deleteProduct",
+      "summary": "Hàm xử lý deleteProduct trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        22,
+        25
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:calculatePrice",
+      "type": "function",
+      "name": "calculatePrice",
+      "summary": "Hàm xử lý calculatePrice trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        27,
+        30
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:addCostItem",
+      "type": "function",
+      "name": "addCostItem",
+      "summary": "Hàm xử lý addCostItem trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        32,
+        35
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:removeCostItem",
+      "type": "function",
+      "name": "removeCostItem",
+      "summary": "Hàm xử lý removeCostItem trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        36,
+        39
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:getPriceHistory",
+      "type": "function",
+      "name": "getPriceHistory",
+      "summary": "Hàm xử lý getPriceHistory trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        41,
+        44
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:getBatches",
+      "type": "function",
+      "name": "getBatches",
+      "summary": "Hàm xử lý getBatches trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        45,
+        48
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:createBatch",
+      "type": "function",
+      "name": "createBatch",
+      "summary": "Hàm xử lý createBatch trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        49,
+        52
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:getConversions",
+      "type": "function",
+      "name": "getConversions",
+      "summary": "Hàm xử lý getConversions trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        53,
+        56
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:createConversion",
+      "type": "function",
+      "name": "createConversion",
+      "summary": "Hàm xử lý createConversion trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        57,
+        60
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:findAllCategories",
+      "type": "function",
+      "name": "findAllCategories",
+      "summary": "Hàm xử lý findAllCategories trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        62,
+        65
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:createCategory",
+      "type": "function",
+      "name": "createCategory",
+      "summary": "Hàm xử lý createCategory trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        66,
+        69
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:findAllCostTypes",
+      "type": "function",
+      "name": "findAllCostTypes",
+      "summary": "Hàm xử lý findAllCostTypes trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        71,
+        74
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/product.controller.ts:createCostType",
+      "type": "function",
+      "name": "createCostType",
+      "summary": "Hàm xử lý createCostType trong product.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        75,
+        78
+      ]
+    },
+    {
+      "id": "file:backend/src/controllers/sales.controller.ts",
+      "type": "file",
+      "name": "sales.controller.ts",
+      "filePath": "backend/src/controllers/sales.controller.ts",
+      "summary": "Controller xử lý quy trình bán hàng, tạo đơn hàng và thanh toán.",
+      "tags": [
+        "api-handler",
+        "sales",
+        "order-processing"
+      ],
+      "complexity": "moderate",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/controllers/sales.controller.ts:findAll",
+      "type": "function",
+      "name": "findAll",
+      "summary": "Hàm xử lý findAll trong sales.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        22,
+        28
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/sales.controller.ts:summary",
+      "type": "function",
+      "name": "summary",
+      "summary": "Hàm xử lý summary trong sales.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        30,
+        33
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/sales.controller.ts:findOne",
+      "type": "function",
+      "name": "findOne",
+      "summary": "Hàm xử lý findOne trong sales.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        35,
+        41
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/sales.controller.ts:create",
+      "type": "function",
+      "name": "create",
+      "summary": "Hàm xử lý create trong sales.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        43,
+        46
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/sales.controller.ts:cancel",
+      "type": "function",
+      "name": "cancel",
+      "summary": "Hàm xử lý cancel trong sales.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        48,
+        51
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/sales.controller.ts:updateOrder",
+      "type": "function",
+      "name": "updateOrder",
+      "summary": "Hàm xử lý updateOrder trong sales.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        53,
+        59
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/sales.controller.ts:addPayment",
+      "type": "function",
+      "name": "addPayment",
+      "summary": "Hàm xử lý addPayment trong sales.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        61,
+        64
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/sales.controller.ts:createReturn",
+      "type": "function",
+      "name": "createReturn",
+      "summary": "Hàm xử lý createReturn trong sales.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        66,
+        69
+      ]
+    },
+    {
+      "id": "file:backend/src/controllers/shop-member.controller.ts",
+      "type": "file",
+      "name": "shop-member.controller.ts",
+      "filePath": "backend/src/controllers/shop-member.controller.ts",
+      "summary": "Controller quản lý nhân viên và thành viên của cửa hàng.",
+      "tags": [
+        "api-handler",
+        "staff",
+        "management"
+      ],
+      "complexity": "simple",
+      "languageNotes": "Sử dụng TypeScript"
+    },
+    {
+      "id": "function:backend/src/controllers/shop-member.controller.ts:listMembers",
+      "type": "function",
+      "name": "listMembers",
+      "summary": "Hàm xử lý listMembers trong shop-member.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        9,
+        12
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/shop-member.controller.ts:listPending",
+      "type": "function",
+      "name": "listPending",
+      "summary": "Hàm xử lý listPending trong shop-member.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        14,
+        17
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/shop-member.controller.ts:approveMember",
+      "type": "function",
+      "name": "approveMember",
+      "summary": "Hàm xử lý approveMember trong shop-member.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        19,
+        22
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/shop-member.controller.ts:rejectMember",
+      "type": "function",
+      "name": "rejectMember",
+      "summary": "Hàm xử lý rejectMember trong shop-member.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        24,
+        27
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/shop-member.controller.ts:inviteMember",
+      "type": "function",
+      "name": "inviteMember",
+      "summary": "Hàm xử lý inviteMember trong shop-member.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        29,
+        35
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/shop-member.controller.ts:updateMemberRole",
+      "type": "function",
+      "name": "updateMemberRole",
+      "summary": "Hàm xử lý updateMemberRole trong shop-member.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        37,
+        40
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/shop-member.controller.ts:removeMember",
+      "type": "function",
+      "name": "removeMember",
+      "summary": "Hàm xử lý removeMember trong shop-member.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        42,
+        45
+      ]
+    },
+    {
+      "id": "function:backend/src/controllers/shop-member.controller.ts:getMyShops",
+      "type": "function",
+      "name": "getMyShops",
+      "summary": "Hàm xử lý getMyShops trong shop-member.controller.ts.",
+      "tags": [
+        "function",
+        "logic"
+      ],
+      "complexity": "simple",
+      "lineRange": [
+        48,
+        54
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getStock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getStock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getLowStock",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getLowStock",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getMovements",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getMovements",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getWarehouses",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getWarehouses",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:createWarehouse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:createWarehouse",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getXntReport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getXntReport",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getExpiringProducts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getExpiringProducts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getSlowMoving",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getSlowMoving",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getPurchaseOrders",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getPurchaseOrders",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:createPurchaseOrder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:createPurchaseOrder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:updatePurchaseOrder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:updatePurchaseOrder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:deletePurchaseOrder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:deletePurchaseOrder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getStockTakes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:getStockTakes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:createStockTake",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:createStockTake",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:updateStockTake",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:updateStockTake",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:deleteStockTake",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/inventory.controller.ts",
+      "target": "function:backend/src/controllers/inventory.controller.ts:deleteStockTake",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/notification.controller.ts",
+      "target": "function:backend/src/controllers/notification.controller.ts:listNotifications",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/notification.controller.ts",
+      "target": "function:backend/src/controllers/notification.controller.ts:listNotifications",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/notification.controller.ts",
+      "target": "function:backend/src/controllers/notification.controller.ts:getUnreadCount",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/notification.controller.ts",
+      "target": "function:backend/src/controllers/notification.controller.ts:getUnreadCount",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/notification.controller.ts",
+      "target": "function:backend/src/controllers/notification.controller.ts:markRead",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/notification.controller.ts",
+      "target": "function:backend/src/controllers/notification.controller.ts:markRead",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/notification.controller.ts",
+      "target": "function:backend/src/controllers/notification.controller.ts:markAllRead",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/notification.controller.ts",
+      "target": "function:backend/src/controllers/notification.controller.ts:markAllRead",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:findAllProducts",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:findAllProducts",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:findProductById",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:findProductById",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createProduct",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createProduct",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:updateProduct",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:updateProduct",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:deleteProduct",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:deleteProduct",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:calculatePrice",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:calculatePrice",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:addCostItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:addCostItem",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:removeCostItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:removeCostItem",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:getPriceHistory",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:getPriceHistory",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:getBatches",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:getBatches",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createBatch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createBatch",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:getConversions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:getConversions",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createConversion",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createConversion",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:findAllCategories",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:findAllCategories",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createCategory",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createCategory",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:findAllCostTypes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:findAllCostTypes",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createCostType",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/product.controller.ts",
+      "target": "function:backend/src/controllers/product.controller.ts:createCostType",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:findAll",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:findAll",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:summary",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:summary",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:findOne",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:findOne",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:create",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:create",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:cancel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:cancel",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:updateOrder",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:updateOrder",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:addPayment",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:addPayment",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:createReturn",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/sales.controller.ts",
+      "target": "function:backend/src/controllers/sales.controller.ts:createReturn",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:listMembers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:listMembers",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:listPending",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:listPending",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:approveMember",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:approveMember",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:rejectMember",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:rejectMember",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:inviteMember",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:inviteMember",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:updateMemberRole",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:updateMemberRole",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:removeMember",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:removeMember",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:getMyShops",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:backend/src/controllers/shop-member.controller.ts",
+      "target": "function:backend/src/controllers/shop-member.controller.ts:getMyShops",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ]
+}

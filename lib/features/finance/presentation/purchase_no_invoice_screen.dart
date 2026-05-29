@@ -254,29 +254,44 @@ class _PurchaseNoInvoiceScreenState extends ConsumerState<PurchaseNoInvoiceScree
     Color bg;
     Color fg;
     String label;
+    IconData icon;
     switch (status) {
       case 'APPROVED':
         bg = AppColors.success.withValues(alpha: 0.15);
         fg = AppColors.success;
-        label = 'Da duyet';
+        label = 'Đã duyệt';
+        icon = Icons.check_circle;
         break;
       case 'REJECTED':
         bg = AppColors.danger.withValues(alpha: 0.15);
         fg = AppColors.danger;
-        label = 'Tu choi';
+        label = 'Từ chối';
+        icon = Icons.cancel;
         break;
       default:
         bg = AppColors.warning.withValues(alpha: 0.2);
         fg = AppColors.warning;
-        label = 'Cho duyet';
+        label = 'Chờ duyệt';
+        icon = Icons.hourglass_bottom;
         break;
     }
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-        child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: fg.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: fg),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: fg)),
+          ],
+        ),
       ),
     );
   }
@@ -421,6 +436,7 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
                 final unitPrice = double.tryParse(unitPriceC.text) ?? 0;
                 if (productName.isEmpty || quantity <= 0 || unitPrice < 0) {
                   setState(() => _errorMessage = 'Kiểm tra lại tên hàng, số lượng và đơn giá');
+                  ToastService.showError('Kiểm tra lại tên hàng, số lượng và đơn giá');
                   return;
                 }
                 setState(() {
@@ -491,6 +507,7 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (lineItems.isEmpty) {
       setState(() => _errorMessage = 'Vui lòng thêm ít nhất 1 mặt hàng');
+      ToastService.showError('Vui lòng thêm ít nhất 1 mặt hàng');
       return;
     }
 

@@ -24,8 +24,18 @@ export class SalesService {
     private financeService = new FinanceService();
     private postingService = new PostingService();
 
-    async findAll(shopId: number, page = 1, limit = 20) {
-        const [items, total] = await this.orderRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { createdAt: 'DESC' } });
+    async findAll(shopId: number, page = 1, limit = 20, customerId?: number) {
+        const whereClause: any = { shopId };
+        if (customerId) {
+            whereClause.customer = { id: customerId };
+        }
+        const [items, total] = await this.orderRepo.findAndCount({ 
+            where: whereClause, 
+            relations: ['customer'],
+            skip: (page - 1) * limit, 
+            take: limit, 
+            order: { createdAt: 'DESC' } 
+        });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
     
@@ -521,7 +531,8 @@ export class SalesService {
             const stockRepo = manager.getRepository(InventoryStock);
             const movementRepo = manager.getRepository(InventoryMovement);
 
-            for (const item of savedReturn.items) {
+            const itemsToProcess = (entity as any).items || [];
+            for (const item of itemsToProcess) {
                 let remainingToReturn = Number(item.quantity);
                 if (remainingToReturn <= 0 || !item.product) continue;
 

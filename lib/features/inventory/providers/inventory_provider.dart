@@ -62,6 +62,10 @@ final lowStockProvider = FutureProvider<List<dynamic>>((ref) {
   return ref.read(inventoryRepoProvider).getLowStock();
 });
 
+final inventoryMovementsProvider = FutureProvider.family<Map<String, dynamic>, ({int? productId, int page})>((ref, args) {
+  return ref.read(inventoryRepoProvider).getMovements(productId: args.productId, page: args.page);
+});
+
 final warehousesProvider = FutureProvider<List<dynamic>>((ref) {
   return ref.read(inventoryRepoProvider).findWarehouses();
 });

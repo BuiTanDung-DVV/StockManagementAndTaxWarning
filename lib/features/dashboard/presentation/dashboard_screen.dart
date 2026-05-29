@@ -407,8 +407,9 @@ class DashboardScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                      );
-                    },
+                      ), // closes GestureDetector
+                    ); // closes Semantics
+                  },
                   ) ?? const SizedBox.shrink(),
 
                   // Real Tax Obligation Reminder
@@ -738,8 +739,9 @@ class _TaxObligationReminder extends ConsumerWidget {
                     ],
                   ),
                 ),
-              );
-            }).toList(),
+              ), // closes GestureDetector
+            ); // closes Semantics
+          }).toList(),
           ),
         );
       },

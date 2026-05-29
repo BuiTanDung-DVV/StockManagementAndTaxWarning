@@ -67,19 +67,25 @@ class OrderDetailScreen extends ConsumerWidget {
 
           Color statusColor;
           String statusLabel;
-          switch (status) {
-            case 'COMPLETED':
-            case 'DELIVERED':
-              statusColor = AppColors.success;
-              statusLabel = 'Hoàn thành';
-              break;
-            case 'CANCELLED':
-              statusColor = AppColors.danger;
-              statusLabel = 'Đã hủy';
-              break;
-            default:
-              statusColor = AppColors.warning;
-              statusLabel = 'Chờ xử lý';
+          
+          if (isReturned) {
+            statusColor = AppColors.danger;
+            statusLabel = 'Đã trả hàng';
+          } else {
+            switch (status) {
+              case 'COMPLETED':
+              case 'DELIVERED':
+                statusColor = AppColors.success;
+                statusLabel = 'Hoàn thành';
+                break;
+              case 'CANCELLED':
+                statusColor = AppColors.danger;
+                statusLabel = 'Đã hủy';
+                break;
+              default:
+                statusColor = AppColors.warning;
+                statusLabel = 'Chờ xử lý';
+            }
           }
 
           // Payment status label
@@ -252,6 +258,54 @@ class OrderDetailScreen extends ConsumerWidget {
                             ),
                           );
                         }),
+                      
+                      // Hiển thị phần trả hàng nếu có
+                      if (order['returns'] != null && (order['returns'] as List).isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.assignment_return_rounded, color: AppColors.danger, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Thông tin Trả Hàng',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.danger,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              ...((order['returns'] as List).map((ret) {
+                                final rMap = ret as Map;
+                                final refundAmt = double.tryParse(rMap['refundAmount']?.toString() ?? '0') ?? 0.0;
+                                final retCode = (rMap['returnCode'] ?? '').toString();
+                                final retReason = (rMap['reason'] ?? '').toString();
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _InfoRow('Mã phiếu trả', retCode, c),
+                                    _InfoRow('Tiền hoàn lại', _currFmt.format(refundAmt), c),
+                                    if (retReason.isNotEmpty)
+                                      _InfoRow('Lý do', retReason, c),
+                                  ],
+                                );
+                              })),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
 
                       // Cost Summary details ledger card
@@ -769,9 +823,7 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                         return;
                       }
 
-                      Navigator.of(ctx).pop();
                       try {
-
                         await ref.read(salesRepoProvider).createReturn(orderId, {
                           'refundAmount': amount,
                           'refundMethod': selectedMethod,
@@ -781,6 +833,7 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                         ref.invalidate(salesDetailProvider(orderId));
                         ref.invalidate(salesListProvider);
                         if (context.mounted) {
+                          Navigator.of(ctx).pop();
                           ToastService.showSuccess('Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)}');
                         }
                       } catch (e) {

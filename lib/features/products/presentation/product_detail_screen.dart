@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/product_provider.dart';
+import '../../inventory/providers/inventory_provider.dart';
 import '../../../core/utils/type_parser.dart';
 import 'product_form_screen.dart';
 
@@ -21,6 +22,7 @@ class ProductDetailScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final detailAsync = ref.watch(productDetailProvider(id));
+    final movementsAsync = ref.watch(inventoryMovementsProvider((productId: id, page: 1)));
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -214,6 +216,38 @@ class ProductDetailScreen extends ConsumerWidget {
                     ],
                   ),
                 ]),
+                // Info Section 4: Inventory Movements
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text('Lịch sử xuất nhập', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: c.textPrimary)),
+                ),
+                movementsAsync.when(
+                  loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
+                  error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('Lỗi tải lịch sử: $e')),
+                  data: (data) {
+                    final items = (data['data']?['items'] as List?) ?? [];
+                    if (items.isEmpty) return const Padding(padding: EdgeInsets.all(16), child: Text('Chưa có phát sinh tồn kho.', style: TextStyle(color: Colors.grey, fontSize: 13)));
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => Divider(color: c.divider.withValues(alpha: 0.3)),
+                      itemBuilder: (_, i) {
+                        final m = items[i];
+                        final isOut = m['movementType'] == 'OUT';
+                        final qty = NumberFormat('#,###').format(num.tryParse(m['quantity']?.toString() ?? '0') ?? 0);
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(m['notes'] ?? m['referenceType'] ?? 'Không rõ', style: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13, color: c.textPrimary)),
+                          subtitle: Text(m['createdAt']?.toString().substring(0, 16).replaceFirst('T', ' ') ?? '', style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary)),
+                          trailing: Text('${isOut ? '-' : '+'}$qty', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: isOut ? AppColors.danger : AppColors.success)),
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
               ],
             ),
           );

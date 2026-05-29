@@ -167,46 +167,8 @@ export class InventoryService {
                 return manager.create(PurchaseOrderItem, { ...i, subtotal: sub, shopId });
             });
 
-            const po = manager.create(PurchaseOrder, { ...dto, warehouseId: targetWarehouseId, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items, shopId });
+            const po = manager.create(PurchaseOrder, { ...dto, warehouseId: targetWarehouseId, orderCode: 'PO' + Date.now().toString().slice(-6), totalAmount, items, shopId, status: 'PENDING' });
             const savedPO = await manager.save(PurchaseOrder, po);
-
-            // Tạo inventory lots cho mỗi item (để COGS tính đúng)
-            for (const item of (dto.items || [])) {
-                if (item.productId && item.quantity > 0 && item.unitPrice > 0) {
-                    await this.cogsService.addInventoryLot({
-                        productId: Number(item.productId),
-                        quantity: Number(item.quantity),
-                        costPrice: Number(item.unitPrice),
-                        purchaseId: savedPO.id,
-                        notes: `PO ${savedPO.orderCode}`,
-                        shopId,
-                    }, manager);
-                    await this.increaseStock(
-                        shopId,
-                        Number(item.productId),
-                        targetWarehouseId,
-                        Number(item.quantity),
-                        savedPO.id,
-                        manager
-                    );
-                }
-            }
-            // === Journal Ledger: Ghi bút toán nhập kho (Nợ TK 156 / Có TK 331) ===
-            if (totalAmount > 0) {
-                await this.postingService.postJournal(
-                    shopId,
-                    'PURCHASE_ORDER',
-                    savedPO.id,
-                    `Nhập kho - Đơn ${savedPO.orderCode}`,
-                    [
-                        { accountCode: '156', amount: totalAmount, entryType: 'DEBIT' },
-                        { accountCode: '331', amount: totalAmount, entryType: 'CREDIT' },
-                    ],
-                    manager
-                );
-            }
-
-
 
             await queryRunner.commitTransaction();
             return savedPO;
@@ -219,15 +181,75 @@ export class InventoryService {
     }
 
     async updatePurchaseOrder(shopId: number, id: number, dto: any) {
-        const po = await this.poRepo.findOne({ where: { id, shopId } });
-        if (!po) throw new Error('PurchaseOrder not found');
-        if (dto.warehouseId) {
-            await this.assertWarehouseBelongsToShop(shopId, Number(dto.warehouseId));
-            po.warehouseId = Number(dto.warehouseId);
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const manager = queryRunner.manager;
+            const po = await manager.findOne(PurchaseOrder, { 
+                where: { id, shopId },
+                relations: ['items'] 
+            });
+            if (!po) throw new Error('PurchaseOrder not found');
+
+            if (dto.warehouseId) {
+                await this.assertWarehouseBelongsToShop(shopId, Number(dto.warehouseId), manager);
+                po.warehouseId = Number(dto.warehouseId);
+            }
+
+            // If changing status from PENDING to COMPLETED, increase stock and post journal
+            if (dto.status === 'COMPLETED' && po.status !== 'COMPLETED') {
+                for (const item of (po.items || [])) {
+                    if (item.productId && item.quantity > 0 && item.unitPrice > 0) {
+                        await this.cogsService.addInventoryLot({
+                            productId: Number(item.productId),
+                            quantity: Number(item.quantity),
+                            costPrice: Number(item.unitPrice),
+                            purchaseId: po.id,
+                            notes: `PO ${po.orderCode}`,
+                            shopId,
+                        }, manager);
+                        await this.increaseStock(
+                            shopId,
+                            Number(item.productId),
+                            po.warehouseId,
+                            Number(item.quantity),
+                            po.id,
+                            manager
+                        );
+                    }
+                }
+                
+                if (po.totalAmount > 0) {
+                    await this.postingService.postJournal(
+                        shopId,
+                        'PURCHASE_ORDER',
+                        po.id,
+                        `Nhập kho - Đơn ${po.orderCode}`,
+                        [
+                            { accountCode: '156', amount: po.totalAmount, entryType: 'DEBIT' },
+                            { accountCode: '331', amount: po.totalAmount, entryType: 'CREDIT' },
+                        ],
+                        manager
+                    );
+                }
+            }
+
+            po.status = dto.status || po.status;
+            const saved = await manager.save(PurchaseOrder, po);
+
+            await queryRunner.commitTransaction();
+            return saved;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
         }
-        po.status = dto.status || po.status;
-        return this.poRepo.save(po);
     }
+
+    // updatePurchaseOrder is replaced above
 
     async deletePurchaseOrder(shopId: number, id: number) {
         const po = await this.poRepo.findOne({ where: { id, shopId } });
@@ -253,11 +275,56 @@ export class InventoryService {
     }
 
     async updateStockTake(shopId: number, id: number, dto: any) {
-        const stockTake = await this.stockTakeRepo.findOne({ where: { id, shopId }, relations: ['items'] });
-        if (!stockTake) throw new Error('StockTake not found');
-        stockTake.status = dto.status || stockTake.status;
-        stockTake.notes = dto.notes !== undefined ? dto.notes : stockTake.notes;
-        return this.stockTakeRepo.save(stockTake);
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const manager = queryRunner.manager;
+            const stockTake = await manager.findOne(StockTake, { where: { id, shopId }, relations: ['items', 'items.product'] });
+            if (!stockTake) throw new Error('StockTake not found');
+            
+            if (dto.status === 'COMPLETED' && stockTake.status !== 'COMPLETED') {
+                for (const item of (stockTake.items || [])) {
+                    if (item.difference !== 0) {
+                        const warehouseId = stockTake.warehouseId || await this.ensureDefaultWarehouseId(shopId, manager);
+                        const productId = item.product?.id || (item as any).productId;
+                        
+                        let stock = await manager.findOne(InventoryStock, { where: { shopId, productId, warehouseId } as any });
+                        if (!stock) {
+                            stock = manager.create(InventoryStock, { shopId, productId, warehouseId, quantity: 0, updatedAt: new Date() });
+                        }
+                        
+                        stock.quantity = Number(stock.quantity || 0) + Number(item.difference);
+                        stock.updatedAt = new Date();
+                        await manager.save(InventoryStock, stock);
+
+                        await manager.save(InventoryMovement, manager.create(InventoryMovement, {
+                            shopId,
+                            productId,
+                            warehouseId,
+                            movementType: Number(item.difference) > 0 ? 'IN' : 'OUT',
+                            quantity: Math.abs(Number(item.difference)),
+                            referenceType: 'STOCK_TAKE',
+                            referenceId: stockTake.id,
+                            notes: `Kiểm kho phiếu #${stockTake.id}`,
+                        }));
+                    }
+                }
+            }
+
+            stockTake.status = dto.status || stockTake.status;
+            stockTake.notes = dto.notes !== undefined ? dto.notes : stockTake.notes;
+            const saved = await manager.save(StockTake, stockTake);
+            
+            await queryRunner.commitTransaction();
+            return saved;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
     async deleteStockTake(shopId: number, id: number) {

@@ -69,7 +69,6 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
   Future<void> _inviteMember() async {
     final usernameCtrl = TextEditingController();
     int? selectedRoleId;
-    String? errorMessage;
     bool isSubmitting = false;
     
     final result = await showDialog<bool>(
@@ -133,11 +132,6 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                         .toList(),
                     onChanged: isSubmitting ? null : (v) => setDlg(() => selectedRoleId = v),
                   ),
-                  if (errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: Text(errorMessage!, style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
                 ],
               ),
             ),
@@ -151,12 +145,11 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                     ? null
                     : () async {
                         if (usernameCtrl.text.trim().isEmpty) {
-                          setDlg(() => errorMessage = 'Vui lòng nhập tên đăng nhập');
+                          ToastService.showError('Vui lòng nhập tên đăng nhập');
                           return;
                         }
 
                         setDlg(() {
-                          errorMessage = null;
                           isSubmitting = true;
                         });
 
@@ -171,10 +164,11 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                           if (!ctx.mounted) return;
                           Navigator.pop(ctx, true);
                         } catch (e) {
+                          if (!ctx.mounted) return;
                           setDlg(() {
-                            errorMessage = 'Lỗi: $e';
                             isSubmitting = false;
                           });
+                          ToastService.showError(e is ApiException ? e.message : 'Lỗi: $e');
                         }
                       },
                 style: ElevatedButton.styleFrom(

@@ -8,8 +8,10 @@ export const register = async (req: Request, res: Response) => {
         const user = await authService.register(req.body);
         res.json({ success: true, data: user, message: 'Registration successful' });
     } catch (error: any) {
-        if (error.message === 'Username already exists') {
+        if (error.message.includes('tồn tại') || error.message.includes('exists')) {
             res.status(409).json({ success: false, message: error.message });
+        } else if (error.message.includes('OTP') || error.message.includes('bắt buộc')) {
+            res.status(400).json({ success: false, message: error.message });
         } else {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -45,7 +47,13 @@ export const forgotPassword = async (req: Request, res: Response) => {
         const data = await authService.forgotPassword(req.body);
         res.json({ success: true, data, message: 'Forgot password request accepted' });
     } catch (error: any) {
-        res.status(500).json({ success: false, message: error.message });
+        if (error.message.includes('chưa được đăng ký')) {
+            res.status(404).json({ success: false, message: error.message });
+        } else if (error.message.includes('Vui lòng nhập')) {
+            res.status(400).json({ success: false, message: error.message });
+        } else {
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 };
 
@@ -54,8 +62,10 @@ export const resetPassword = async (req: Request, res: Response) => {
         const data = await authService.resetPassword(req.body);
         res.json({ success: true, data, message: 'Password updated' });
     } catch (error: any) {
-        if (error.message === 'User not found') {
+        if (error.message.includes('Không tìm thấy')) {
             res.status(404).json({ success: false, message: error.message });
+        } else if (error.message.includes('OTP') || error.message.includes('Vui lòng')) {
+            res.status(400).json({ success: false, message: error.message });
         } else {
             res.status(500).json({ success: false, message: error.message });
         }

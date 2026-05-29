@@ -1,8 +1,59 @@
 import { Request, Response } from 'express';
 import { TaxService } from '../services/tax.service';
 import { Builder } from 'xml2js';
+import { AppDataSource } from '../config/db.config';
+import { ShopProfile } from '../system/entities';
 
 const taxService = new TaxService();
+
+export const getConfig = async (req: Request, res: Response) => {
+    try {
+        const shopId = (req as any).shopId;
+        const shopRepo = AppDataSource.getRepository(ShopProfile);
+        const shop = await shopRepo.findOne({ where: { shopId } });
+        
+        res.json({
+            success: true,
+            data: {
+                thresholds: {
+                    tier1: 100000000,
+                    tier2: 300000000,
+                    tier3: 500000000,
+                    tier4: 1000000000,
+                },
+                currentPolicies: {
+                    vatReductionActive: shop?.applyVatReduction || false
+                },
+                shopConfig: {
+                    businessSector: shop?.businessSector || 'TRADE',
+                    applyVatReduction: shop?.applyVatReduction || false
+                }
+            }
+        });
+    } catch (e: any) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+export const updateConfig = async (req: Request, res: Response) => {
+    try {
+        const shopId = (req as any).shopId;
+        const { businessSector, applyVatReduction } = req.body;
+        
+        const shopRepo = AppDataSource.getRepository(ShopProfile);
+        let shop = await shopRepo.findOne({ where: { shopId } });
+        
+        if (shop) {
+            if (businessSector !== undefined) shop.businessSector = businessSector;
+            if (applyVatReduction !== undefined) shop.applyVatReduction = applyVatReduction;
+            await shopRepo.save(shop);
+        }
+        
+        res.json({ success: true, message: 'Cập nhật cấu hình thuế thành công' });
+    } catch (e: any) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
 
 export const exportToHTKK = async (req: Request, res: Response) => {
     try {

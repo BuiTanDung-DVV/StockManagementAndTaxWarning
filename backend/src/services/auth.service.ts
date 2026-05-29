@@ -7,32 +7,38 @@ import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import { config } from '../config/env.config';
 import { SmsService } from './sms.service';
+import { EmailService } from './email.service';
 
 export class AuthService {
     private userRepo = AppDataSource.getRepository(User);
     private memberRepo = AppDataSource.getRepository(ShopMember);
     private shopRepo = AppDataSource.getRepository(ShopProfile);
     private smsService = new SmsService();
+    private emailService = new EmailService();
 
     async register(dto: Partial<User> & { otpCode?: string }) {
         const identifier = (dto.username || '').toString().trim();
         const isPhone = /^(0|\+84)\d{8,9}$/.test(identifier);
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
 
         if (isPhone) {
             dto.phone = identifier;
+        } else if (isEmail) {
+            dto.email = identifier;
         }
         (dto as any).isOnboarded = false;
 
         const existing = await this.userRepo.findOne({
             where: [
                 { username: identifier },
-                ...(isPhone ? [{ phone: identifier }] : [])
+                ...(isPhone ? [{ phone: identifier }] : []),
+                ...(isEmail ? [{ email: identifier }] : [])
             ]
         });
-        if (existing) throw new Error('Username or phone already exists');
+        if (existing) throw new Error('Tài khoản, SĐT hoặc Email đã tồn tại');
 
-        // Verify OTP if registering with phone number
-        if (isPhone) {
+        // Verify OTP if registering with phone number or email
+        if (isPhone || isEmail) {
             const otpCode = (dto.otpCode || '').toString().trim();
             if (!otpCode) throw new Error('Mã OTP là bắt buộc khi đăng ký');
 
@@ -67,7 +73,8 @@ export class AuthService {
         const user = await this.userRepo.findOne({
             where: [
                 { username: identifier },
-                { phone: identifier }
+                { phone: identifier },
+                { email: identifier }
             ]
         });
         const password = (dto?.password || '').toString();
@@ -164,21 +171,24 @@ export class AuthService {
         return { access_token: newAccessToken, refresh_token: newRefreshToken };
     }
 
-    async sendOtp(dto: { phone: string; checkExists?: boolean }) {
-        const phone = (dto?.phone || '').toString().trim();
-        if (!phone) throw new Error('Missing phone number');
+    async sendOtp(dto: { phone?: string; identifier?: string; checkExists?: boolean }) {
+        const identifier = (dto?.identifier || dto?.phone || '').toString().trim();
+        if (!identifier) throw new Error('Thiếu số điện thoại hoặc email');
 
-        const isPhone = /^(0|\+84)\d{8,11}$/.test(phone);
-        if (!isPhone) throw new Error('Invalid phone format');
+        const isPhone = /^(0|\+84)\d{8,11}$/.test(identifier);
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+        
+        if (!isPhone && !isEmail) throw new Error('Định dạng Số điện thoại hoặc Email không hợp lệ');
 
         if (dto.checkExists) {
             const user = await this.userRepo.findOne({
                 where: [
-                    { username: phone },
-                    { phone: phone }
+                    { username: identifier },
+                    { phone: identifier },
+                    { email: identifier }
                 ]
             });
-            if (!user) throw new Error('Số điện thoại này chưa được đăng ký trong hệ thống');
+            if (!user) throw new Error('Số điện thoại hoặc Email này chưa được đăng ký trong hệ thống');
         }
 
         // Generate 6 digit OTP
@@ -188,65 +198,77 @@ export class AuthService {
         await AppDataSource.query(`
             INSERT INTO otps (phone, otp_code, expires_at)
             VALUES ($1, $2, NOW() + INTERVAL '2 minutes')
-        `, [phone, otpCode]);
+        `, [identifier, otpCode]);
 
-        // Send actual SMS
-        const sent = await this.smsService.sendOtp(phone, otpCode);
+        // Send actual SMS or Email
+        let sent = false;
+        if (isEmail) {
+            sent = await this.emailService.sendOtp(identifier, otpCode);
+        } else {
+            sent = await this.smsService.sendOtp(identifier, otpCode);
+        }
         
         // In sandbox mode, return otp for testing, else don't return it
-        const isSandbox = !process.env.SMS_PROVIDER || process.env.SMS_PROVIDER.toLowerCase() === 'sandbox';
+        const isSandbox = !process.env.SMTP_USER || process.env.SMTP_USER === 'your-email@gmail.com';
+        
+        if (!sent) {
+            throw new Error('Không thể gửi OTP do lỗi hệ thống hoặc cấu hình chưa đúng.');
+        }
+
         return { 
-            success: sent, 
-            message: sent ? 'OTP sent successfully' : 'Failed to send OTP', 
+            success: true, 
+            message: 'Đã gửi OTP thành công', 
             otp: isSandbox ? otpCode : undefined 
         };
     }
 
     async forgotPassword(dto: any) {
         const identifier = (dto?.identifier || '').toString().trim();
-        if (!identifier) throw new Error('Missing identifier');
+        if (!identifier) throw new Error('Vui lòng nhập số điện thoại hoặc email');
 
         const user = await this.userRepo.findOne({
             where: [
                 { username: identifier },
-                { phone: identifier }
+                { phone: identifier },
+                { email: identifier }
             ]
         });
         if (!user) {
-            throw new Error('Số điện thoại này chưa được đăng ký trong hệ thống');
+            throw new Error('Số điện thoại hoặc email này chưa được đăng ký trong hệ thống');
         }
 
         // Generate OTP and send
-        return this.sendOtp({ phone: user.phone || identifier, checkExists: false });
+        return this.sendOtp({ identifier: user.email || user.phone || identifier, checkExists: false });
     }
 
     async resetPassword(dto: any) {
         const identifier = (dto?.identifier || '').toString().trim();
         const newPassword = (dto?.newPassword || '').toString();
         const otpCode = (dto?.otpCode || '').toString().trim();
-        if (!identifier || !newPassword || !otpCode) throw new Error('Missing identifier, newPassword or otpCode');
+        if (!identifier || !newPassword || !otpCode) throw new Error('Vui lòng nhập đầy đủ thông tin (tài khoản, mật khẩu mới, mã OTP)');
 
         const user = await this.userRepo.findOne({
             where: [
                 { username: identifier },
-                { phone: identifier }
+                { phone: identifier },
+                { email: identifier }
             ]
         });
-        if (!user) throw new Error('User not found');
+        if (!user) throw new Error('Không tìm thấy tài khoản');
 
         // Verify OTP
         const validOtp = await AppDataSource.query(`
             SELECT * FROM otps 
             WHERE phone = $1 AND otp_code = $2 AND expires_at > NOW() 
             ORDER BY created_at DESC LIMIT 1
-        `, [user.phone || identifier, otpCode]);
+        `, [user.email || user.phone || identifier, otpCode]);
 
         if (!validOtp || validOtp.length === 0) {
             throw new Error('Mã xác thực OTP không đúng hoặc đã hết hạn');
         }
 
         // Cleanup OTP
-        await AppDataSource.query(`DELETE FROM otps WHERE phone = $1`, [user.phone || identifier]);
+        await AppDataSource.query(`DELETE FROM otps WHERE phone = $1`, [user.email || user.phone || identifier]);
 
         user.passwordHash = await bcrypt.hash(newPassword, 10);
         await this.userRepo.save(user);
