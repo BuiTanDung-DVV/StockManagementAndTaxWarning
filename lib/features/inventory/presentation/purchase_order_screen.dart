@@ -159,19 +159,24 @@ class PurchaseOrderScreen extends ConsumerWidget {
                           backgroundColor: c.surface,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                           title: Text('Chi tiết ${code.toString()}', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: c.textPrimary, fontSize: 18)),
-                          content: SizedBox(
-                            width: double.maxFinite,
-                            child: ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: poItems.length,
-                              itemBuilder: (context, index) {
-                                final item = poItems[index];
-                                return ListTile(
-                                  title: Text(item['product']?['name'] ?? 'Sản phẩm ${item['productId'] ?? ''}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: c.textPrimary, fontSize: 14)),
-                                  subtitle: Text('SL: ${item['quantity']} x ${_currFmt.format(asDouble(item['unitPrice']))}', style: GoogleFonts.inter(color: c.textSecondary, fontSize: 12)),
-                                  trailing: Text(_currFmt.format(asDouble(item['subtotal'] ?? (asDouble(item['quantity']) * asDouble(item['unitPrice'])))), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 14)),
-                                );
-                              },
+                          content: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.of(context).size.height * 0.6,
+                            ),
+                            child: SizedBox(
+                              width: double.maxFinite,
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: poItems.length,
+                                itemBuilder: (context, index) {
+                                  final item = poItems[index];
+                                  return ListTile(
+                                    title: Text(item['product']?['name'] ?? 'Sản phẩm ${item['productId'] ?? ''}', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: c.textPrimary, fontSize: 14)),
+                                    subtitle: Text('SL: ${item['quantity']} x ${_currFmt.format(asDouble(item['unitPrice']))}', style: GoogleFonts.inter(color: c.textSecondary, fontSize: 12)),
+                                    trailing: Text(_currFmt.format(asDouble(item['subtotal'] ?? (asDouble(item['quantity']) * asDouble(item['unitPrice'])))), style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 14)),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                           actions: [
@@ -208,6 +213,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
                                   );
 
                                   if (confirm == true) {
+                                    if (!ctx.mounted) return;
                                     Navigator.pop(ctx);
                                     try {
                                       await ref.read(inventoryRepoProvider).updatePurchaseOrder(po['id'], {'status': 'COMPLETED'});
@@ -310,8 +316,10 @@ class PurchaseOrderScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-              ));
-            },
+              ),
+            ),
+          );
+        },
           );
         },
       ),

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/product_provider.dart';
+import '../../../core/network/api_client.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? product; // null = create, non-null = edit
@@ -90,7 +91,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       return;
     } catch (e) {
       if (context.mounted) {
-        ToastService.showError('Lỗi: $e');
+        if (e is ApiException) {
+          ToastService.showError(e.message);
+        } else {
+          ToastService.showError('Lỗi: $e');
+        }
       }
       if (mounted) setState(() => _saving = false);
     }

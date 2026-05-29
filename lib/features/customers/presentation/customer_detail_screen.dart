@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/customer_provider.dart';
+import '../../sales/providers/sales_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
@@ -14,6 +15,7 @@ class CustomerDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final customerAsync = ref.watch(customerDetailProvider(id));
+    final ordersAsync = ref.watch(salesListProvider((page: 1, status: null, customerId: id)));
 
     return Scaffold(
       appBar: AppBar(
@@ -61,6 +63,34 @@ class CustomerDetailScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               if (phone.isEmpty && email.isEmpty && address.isEmpty)
                 const Padding(padding: EdgeInsets.all(16), child: Text('Thông tin liên hệ chưa được cập nhật', style: TextStyle(color: Colors.grey, fontSize: 13))),
+
+              const SizedBox(height: 16),
+              const Align(alignment: Alignment.centerLeft, child: Text('Lịch sử đơn hàng gần đây', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+              const SizedBox(height: 8),
+              ordersAsync.when(
+                loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
+                error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('Lỗi: $e')),
+                data: (d) {
+                  final items = (d['data']?['items'] as List?) ?? [];
+                  if (items.isEmpty) return const Padding(padding: EdgeInsets.all(16), child: Text('Chưa có đơn hàng', style: TextStyle(color: Colors.grey, fontSize: 13)));
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: items.length,
+                    itemBuilder: (_, i) {
+                      final order = items[i];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(order['orderCode'] ?? ''),
+                          subtitle: Text(order['orderDate']?.toString().substring(0, 10) ?? ''),
+                          trailing: Text(_currFmt.format(num.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ]),
           );
         },

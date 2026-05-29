@@ -87,7 +87,8 @@ class ShopNotifier extends Notifier<ShopState> {
         return;
       }
       // Keep current shop if still valid, else default to first
-      final currentId = state.currentShopId;
+      final savedShopId = _api.shopId != null ? int.tryParse(_api.shopId!) : null;
+      final currentId = state.currentShopId ?? savedShopId;
       final current = shops.firstWhere(
         (s) => s['shopId'] == currentId,
         orElse: () => shops.first,

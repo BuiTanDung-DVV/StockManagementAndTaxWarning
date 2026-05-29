@@ -99,24 +99,49 @@ class ApiClient {
             if (data is Map && data['message'] != null) {
               errorMessage = data['message'].toString();
               // Common translations
-              if (errorMessage.contains('Invalid credentials')) {
+              final lowerMsg = errorMessage.toLowerCase();
+              if (lowerMsg.contains('invalid credentials')) {
                 errorMessage = 'Sai tên đăng nhập hoặc mật khẩu';
-              } else if (errorMessage.contains('Username already exists')) {
+              } else if (lowerMsg.contains('username already exists') || lowerMsg.contains('phone already exists')) {
                 errorMessage = 'Tên đăng nhập / Số điện thoại này đã tồn tại';
-              } else if (errorMessage.contains('jwt expired')) {
+              } else if (lowerMsg.contains('email already exists')) {
+                errorMessage = 'Email này đã tồn tại trong hệ thống';
+              } else if (lowerMsg.contains('jwt expired')) {
                 errorMessage = 'Phiên làm việc hết hạn';
-              } else if (errorMessage.contains('Unauthorized')) {
+              } else if (lowerMsg.contains('unauthorized')) {
                 errorMessage = 'Không có quyền truy cập';
-              } else if (errorMessage.contains('Not found')) {
-                errorMessage = 'Không tìm thấy dữ liệu';
-              } else if (errorMessage.contains('Internal server error')) {
+              } else if (lowerMsg.contains('user not found') || lowerMsg.contains('invalid user')) {
+                errorMessage = 'Không tìm thấy tài khoản';
+              } else if (lowerMsg.contains('account is inactive')) {
+                errorMessage = 'Tài khoản đã bị khóa hoặc chưa kích hoạt';
+              } else if (lowerMsg.contains('not found')) {
+                if (lowerMsg.contains('customer')) {
+                  errorMessage = 'Không tìm thấy thông tin khách hàng';
+                } else if (lowerMsg.contains('invoice')) {
+                  errorMessage = 'Không tìm thấy hóa đơn';
+                } else if (lowerMsg.contains('purchaseorder')) {
+                  errorMessage = 'Không tìm thấy đơn nhập hàng';
+                } else if (lowerMsg.contains('warehouse')) {
+                  errorMessage = 'Không tìm thấy kho hàng';
+                } else {
+                  errorMessage = 'Không tìm thấy dữ liệu';
+                }
+              } else if (lowerMsg.contains('internal server error')) {
                 errorMessage = 'Lỗi máy chủ nội bộ';
-              } else if (errorMessage.contains('Bad Request')) {
+              } else if (lowerMsg.contains('bad request')) {
                 errorMessage = 'Yêu cầu không hợp lệ';
-              } else if (errorMessage.contains('already exists')) {
-                errorMessage = 'Dữ liệu đã tồn tại';
-              } else if (errorMessage.contains('Validation Error') || errorMessage.contains('Validation failed')) {
-                errorMessage = 'Dữ liệu không hợp lệ';
+              } else if (lowerMsg.contains('already exists')) {
+                if (lowerMsg.contains('sku')) {
+                  errorMessage = 'Mã SKU đã tồn tại trong hệ thống';
+                } else if (lowerMsg.contains('barcode')) {
+                  errorMessage = 'Mã vạch đã tồn tại trong hệ thống';
+                } else {
+                  errorMessage = 'Dữ liệu đã tồn tại';
+                }
+              } else if (lowerMsg.contains('validation') || lowerMsg.contains('missing')) {
+                errorMessage = 'Dữ liệu cung cấp không hợp lệ hoặc bị thiếu';
+              } else if (lowerMsg.contains('double-entry validation failed')) {
+                errorMessage = 'Lỗi hạch toán kép: Tổng phát sinh Nợ và Có không cân bằng';
               }
             }
           } else if (e.type == DioExceptionType.connectionTimeout ||
@@ -155,7 +180,14 @@ class ApiClient {
   /// This extracts the `data` field.
   dynamic _extract(Response res) {
     final body = res.data;
-    if (body is Map && body.containsKey('data')) return body['data'];
+    if (body is Map) {
+      if (body.containsKey('success') && body['success'] == false) {
+        throw ApiException(body['message'] ?? 'Lỗi không xác định', res.statusCode);
+      }
+      if (body.containsKey('data')) {
+        return body['data'];
+      }
+    }
     return body;
   }
 

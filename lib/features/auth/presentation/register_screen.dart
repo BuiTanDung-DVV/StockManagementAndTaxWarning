@@ -92,15 +92,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _sendOtp() async {
-    final phone = _phoneCtrl.text.trim();
-    if (phone.isEmpty) {
-      ToastService.showError('Vui lòng nhập số điện thoại để nhận mã OTP');
+    final identifier = _phoneCtrl.text.trim();
+    if (identifier.isEmpty) {
+      ToastService.showError('Vui lòng nhập Số điện thoại hoặc Email để nhận mã OTP');
       return;
     }
     
-    final phoneRegex = RegExp(r'^(0|\+84)\d{9}$');
-    if (!phoneRegex.hasMatch(phone)) {
-      ToastService.showError('Định dạng số điện thoại không hợp lệ (10 số)');
+    final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
+    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    if (!phoneRegex.hasMatch(identifier) && !emailRegex.hasMatch(identifier)) {
+      ToastService.showError('Định dạng Số điện thoại hoặc Email không hợp lệ');
       return;
     }
 
@@ -111,13 +112,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final api = ref.read(apiClientProvider);
-      await api.post('/auth/send-otp', data: {'phone': phone});
+      await api.post('/auth/send-otp', data: {'identifier': identifier});
       
       ToastService.showSuccess('Đã gửi mã OTP thành công về số điện thoại của bạn!');
       _startTimer();
     } catch (e) {
       String msg = 'Không thể gửi OTP. Vui lòng kiểm tra kết nối mạng';
-      if (e is DioException && e.response?.data != null) {
+      if (e is ApiException) {
+        msg = e.message;
+      } else if (e is DioException && e.response?.data != null) {
         msg = e.response?.data['message'] ?? msg;
       }
       ToastService.showError(msg);
@@ -133,12 +136,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
 
     final fullName = _fullNameCtrl.text.trim();
-    final phone = _phoneCtrl.text.trim();
+    final identifier = _phoneCtrl.text.trim();
     final otpCode = _otpCtrl.text.trim();
     final pass = _passwordCtrl.text;
     final confirmPass = _confirmPasswordCtrl.text;
 
-    if (fullName.isEmpty || phone.isEmpty || pass.isEmpty || otpCode.isEmpty) {
+    if (fullName.isEmpty || identifier.isEmpty || pass.isEmpty || otpCode.isEmpty) {
       setState(() {
         _error = 'Vui lòng điền đầy đủ thông tin và mã OTP';
         _isLoading = false;
@@ -159,7 +162,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       await api.post(
         '/auth/register',
         data: {
-          'username': phone,
+          'username': identifier,
           'passwordHash': pass,
           'fullName': fullName,
           'accountType': _accountType,
@@ -174,12 +177,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       String errorMessage = 'Đăng ký không thành công. Vui lòng thử lại.';
-      if (e is DioException && e.error is ApiException) {
+      if (e is ApiException) {
+        errorMessage = e.message;
+      } else if (e is DioException && e.error is ApiException) {
         errorMessage = (e.error as ApiException).message;
       }
       final lowerMsg = errorMessage.toLowerCase();
       if (lowerMsg.contains('already exists') || lowerMsg.contains('đã tồn tại')) {
-        errorMessage = 'Tên đăng nhập hoặc số điện thoại này đã được sử dụng. Vui lòng thử số khác.';
+        errorMessage = 'Tên đăng nhập, số điện thoại hoặc email này đã được sử dụng. Vui lòng thử lại.';
       } else if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
         errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
       }
@@ -300,8 +305,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   controller: _phoneCtrl,
                                   focusNode: _phoneFocus,
                                   hasFocus: _phoneHasFocus,
-                                  hintText: 'Số điện thoại đăng ký',
-                                  icon: Icons.phone_android_rounded,
+                                  hintText: 'Số điện thoại hoặc Email đăng ký',
+                                  icon: Icons.contact_mail_rounded,
                                   c: c,
                                   theme: theme,
                                 ),

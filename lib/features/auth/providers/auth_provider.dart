@@ -88,11 +88,26 @@ class AuthNotifier extends Notifier<AuthState> {
           state = AuthState(isLoggedIn: true, token: _api.token);
         }
       } catch (e) {
-        // If profile fetch fails due to auth error, logout
-        if (e.toString().contains('hết hạn') || e.toString().contains('Không có quyền')) {
+        // If profile fetch fails due to explicit auth error (401/403), logout
+        bool isUnauthorized = false;
+        if (e is DioException) {
+          isUnauthorized = e.response?.statusCode == 401 || e.response?.statusCode == 403;
+        } else if (e is ApiException) {
+          isUnauthorized = e.statusCode == 401 || e.statusCode == 403;
+        } else {
+          final eStr = e.toString().toLowerCase();
+          if (eStr.contains('hết hạn') || eStr.contains('không có quyền') || eStr.contains('401') || eStr.contains('403')) {
+            isUnauthorized = true;
+          }
+        }
+
+        if (isUnauthorized) {
           await logout();
           return;
         }
+        
+        // For network errors or 500s, keep them logged in but without profile data
+        // They can still navigate, and API calls might recover if backend wakes up
         state = AuthState(isLoggedIn: true, token: _api.token);
       }
       // Reload shops on app restart
@@ -136,7 +151,9 @@ class AuthNotifier extends Notifier<AuthState> {
         msg = (e.error as ApiException).message;
       }
       final lowerMsg = msg.toLowerCase();
-      if (lowerMsg.contains('sai') || lowerMsg.contains('không đúng') || lowerMsg.contains('invalid') || lowerMsg.contains('incorrect') || lowerMsg.contains('not found') || lowerMsg.contains('không tồn tại') || lowerMsg.contains('unauthorized')) {
+      if (lowerMsg.contains('inactive') || lowerMsg.contains('vô hiệu hóa') || lowerMsg.contains('bị khóa')) {
+        msg = 'Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa. Vui lòng liên hệ quản trị viên.';
+      } else if (lowerMsg.contains('sai') || lowerMsg.contains('không đúng') || lowerMsg.contains('invalid') || lowerMsg.contains('incorrect') || lowerMsg.contains('not found') || lowerMsg.contains('không tồn tại') || lowerMsg.contains('unauthorized')) {
         msg = 'Sai số điện thoại/tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.';
       } else if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
         msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra đường truyền mạng.';

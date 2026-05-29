@@ -1,0 +1,68 @@
+{
+  "nodes": [
+    {
+      "id": "document:QA_TEST_PLAN.md",
+      "type": "document",
+      "name": "QA_TEST_PLAN.md",
+      "filePath": "QA_TEST_PLAN.md",
+      "summary": "Tài liệu kế hoạch kiểm thử (QA_TEST_PLAN) ghi chép chi tiết các kịch bản kiểm thử, danh sách lỗi và các vấn đề cần khắc phục của hệ thống.",
+      "tags": ["documentation", "testing", "bug-tracking", "qa"],
+      "complexity": "complex"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "README.md",
+      "summary": "Tài liệu hướng dẫn sử dụng và phát triển (README) bao gồm giới thiệu dự án, cấu trúc monorepo, cách cài đặt và cấu hình hệ thống.",
+      "tags": ["documentation", "entry-point", "getting-started", "deployment"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:analysis_options.yaml",
+      "type": "config",
+      "name": "analysis_options.yaml",
+      "filePath": "analysis_options.yaml",
+      "summary": "Tệp cấu hình analysis_options.yaml dùng để thiết lập các quy tắc phân tích và kiểm tra mã nguồn (linting) cho dự án.",
+      "tags": ["configuration", "linting", "code-quality"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "package.json",
+      "summary": "Tệp cấu hình package.json chứa thông tin metadata, các kịch bản thực thi và danh sách các gói phụ thuộc (dependencies) cho môi trường Node.js.",
+      "tags": ["configuration", "dependency-management", "build-system"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:pubspec.yaml",
+      "type": "config",
+      "name": "pubspec.yaml",
+      "filePath": "pubspec.yaml",
+      "summary": "Tệp cấu hình pubspec.yaml dành cho ứng dụng Flutter, khai báo các thư viện phụ thuộc, phiên bản SDK và tài nguyên tĩnh (assets/icons).",
+      "tags": ["configuration", "flutter", "dependency-management"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:recent_logs.txt",
+      "type": "document",
+      "name": "recent_logs.txt",
+      "filePath": "recent_logs.txt",
+      "summary": "Tệp văn bản ghi lại các nhật ký hoạt động (logs) và lỗi gần đây của hệ thống, hỗ trợ trong việc theo dõi và gỡ lỗi.",
+      "tags": ["documentation", "logs", "debugging", "monitoring"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "document:tmp2.txt",
+      "type": "document",
+      "name": "tmp2.txt",
+      "filePath": "tmp2.txt",
+      "summary": "Tệp văn bản tạm thời lưu trữ các ghi chú hoặc dữ liệu nháp trong quá trình phát triển dự án.",
+      "tags": ["documentation", "temporary", "notes"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/utils/toast_service.dart';
 import '../providers/finance_provider.dart';
 
 class TaxObligationScreen extends ConsumerWidget {
@@ -404,8 +405,13 @@ class TaxObligationScreen extends ConsumerWidget {
       isDestructive: true,
     );
     if (confirmed == true) {
-      await ref.read(financeRepoProvider).deleteTaxObligation(id);
-      ref.invalidate(taxObligationsProvider);
+      try {
+        await ref.read(financeRepoProvider).deleteTaxObligation(id);
+        ToastService.showSuccess('Đã xóa kỳ thuế thành công');
+        ref.invalidate(taxObligationsProvider);
+      } catch (e) {
+        ToastService.showError('Lỗi: $e');
+      }
     }
   }
 }

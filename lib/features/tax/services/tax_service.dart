@@ -29,7 +29,7 @@ class TaxService {
     final url = Uri.parse(urlString);
     
     try {
-      final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
+      final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
       if (!launched) {
          throw Exception('Trình duyệt đã chặn tải xuống');
       }

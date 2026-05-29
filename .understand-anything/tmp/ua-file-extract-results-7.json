@@ -1,0 +1,2354 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 5,
+  "filesSkipped": [
+    "backend/src/routes.ts"
+  ],
+  "results": [
+    {
+      "path": "backend/src/services/auth.service.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 380,
+      "nonEmptyLines": 328,
+      "classes": [
+        {
+          "name": "AuthService",
+          "startLine": 12,
+          "endLine": 380,
+          "methods": [
+            "register",
+            "login",
+            "refreshToken",
+            "sendOtp",
+            "forgotPassword",
+            "resetPassword",
+            "searchShops",
+            "completeOnboarding"
+          ],
+          "properties": [
+            "userRepo",
+            "memberRepo",
+            "shopRepo",
+            "smsService",
+            "emailService"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "AuthService",
+          "line": 12,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "register",
+          "callee": "(dto.username || '').toString().trim",
+          "lineNumber": 20
+        },
+        {
+          "caller": "register",
+          "callee": "(dto.username || '').toString",
+          "lineNumber": 20
+        },
+        {
+          "caller": "register",
+          "callee": "/^(0|\\+84)\\d{8,9}$/.test",
+          "lineNumber": 21
+        },
+        {
+          "caller": "register",
+          "callee": "/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test",
+          "lineNumber": 22
+        },
+        {
+          "caller": "register",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 31
+        },
+        {
+          "caller": "register",
+          "callee": "(dto.otpCode || '').toString().trim",
+          "lineNumber": 42
+        },
+        {
+          "caller": "register",
+          "callee": "(dto.otpCode || '').toString",
+          "lineNumber": 42
+        },
+        {
+          "caller": "register",
+          "callee": "AppDataSource.query",
+          "lineNumber": 45
+        },
+        {
+          "caller": "register",
+          "callee": "AppDataSource.query",
+          "lineNumber": 56
+        },
+        {
+          "caller": "register",
+          "callee": "this.userRepo.create",
+          "lineNumber": 62
+        },
+        {
+          "caller": "register",
+          "callee": "bcrypt.hash",
+          "lineNumber": 66
+        },
+        {
+          "caller": "register",
+          "callee": "this.userRepo.save",
+          "lineNumber": 68
+        },
+        {
+          "caller": "login",
+          "callee": "(dto.username || '').toString().trim",
+          "lineNumber": 72
+        },
+        {
+          "caller": "login",
+          "callee": "(dto.username || '').toString",
+          "lineNumber": 72
+        },
+        {
+          "caller": "login",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 73
+        },
+        {
+          "caller": "login",
+          "callee": "(dto?.password || '').toString",
+          "lineNumber": 80
+        },
+        {
+          "caller": "login",
+          "callee": "bcrypt.compare",
+          "lineNumber": 81
+        },
+        {
+          "caller": "login",
+          "callee": "jwt.sign",
+          "lineNumber": 89
+        },
+        {
+          "caller": "login",
+          "callee": "String",
+          "lineNumber": 92
+        },
+        {
+          "caller": "login",
+          "callee": "jwt.sign",
+          "lineNumber": 94
+        },
+        {
+          "caller": "login",
+          "callee": "this.memberRepo.find",
+          "lineNumber": 102
+        },
+        {
+          "caller": "login",
+          "callee": "memberships.map",
+          "lineNumber": 106
+        },
+        {
+          "caller": "login",
+          "callee": "JSON.parse",
+          "lineNumber": 112
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "jwt.verify",
+          "lineNumber": 151
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 156
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "jwt.sign",
+          "lineNumber": 160
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "String",
+          "lineNumber": 163
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "jwt.sign",
+          "lineNumber": 165
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "(dto?.identifier || dto?.phone || '').toString().trim",
+          "lineNumber": 175
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "(dto?.identifier || dto?.phone || '').toString",
+          "lineNumber": 175
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "/^(0|\\+84)\\d{8,11}$/.test",
+          "lineNumber": 178
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test",
+          "lineNumber": 179
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 184
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "Math.floor(100000 + Math.random() * 900000).toString",
+          "lineNumber": 195
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "Math.floor",
+          "lineNumber": 195
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "Math.random",
+          "lineNumber": 195
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "AppDataSource.query",
+          "lineNumber": 198
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "this.emailService.sendOtp",
+          "lineNumber": 206
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "this.smsService.sendOtp",
+          "lineNumber": 208
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "(dto?.identifier || '').toString().trim",
+          "lineNumber": 226
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "(dto?.identifier || '').toString",
+          "lineNumber": 226
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 229
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "this.sendOtp",
+          "lineNumber": 241
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "(dto?.identifier || '').toString().trim",
+          "lineNumber": 245
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "(dto?.identifier || '').toString",
+          "lineNumber": 245
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "(dto?.newPassword || '').toString",
+          "lineNumber": 246
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "(dto?.otpCode || '').toString().trim",
+          "lineNumber": 247
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "(dto?.otpCode || '').toString",
+          "lineNumber": 247
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 250
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "AppDataSource.query",
+          "lineNumber": 260
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "AppDataSource.query",
+          "lineNumber": 271
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "bcrypt.hash",
+          "lineNumber": 273
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "this.userRepo.save",
+          "lineNumber": 274
+        },
+        {
+          "caller": "searchShops",
+          "callee": "q.trim",
+          "lineNumber": 279
+        },
+        {
+          "caller": "searchShops",
+          "callee": "this.shopRepo.find",
+          "lineNumber": 280
+        },
+        {
+          "caller": "searchShops",
+          "callee": "ILike",
+          "lineNumber": 281
+        },
+        {
+          "caller": "searchShops",
+          "callee": "q.trim",
+          "lineNumber": 281
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 289
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.username.toString().trim",
+          "lineNumber": 293
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.username.toString",
+          "lineNumber": 293
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 294
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.phone.toString().trim",
+          "lineNumber": 300
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.phone.toString",
+          "lineNumber": 300
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "this.userRepo.findOne",
+          "lineNumber": 301
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.fullName.toString().trim",
+          "lineNumber": 306
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.fullName.toString",
+          "lineNumber": 306
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "AppDataSource.transaction",
+          "lineNumber": 311
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.save",
+          "lineNumber": 312
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "charSet.charAt",
+          "lineNumber": 319
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "Math.floor",
+          "lineNumber": 319
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "Math.random",
+          "lineNumber": 319
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.shopName?.toString().trim",
+          "lineNumber": 322
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.shopName?.toString",
+          "lineNumber": 322
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.ownerName?.toString().trim",
+          "lineNumber": 323
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.ownerName?.toString",
+          "lineNumber": 323
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.create",
+          "lineNumber": 325
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.address?.toString().trim",
+          "lineNumber": 328
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.address?.toString",
+          "lineNumber": 328
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.save",
+          "lineNumber": 331
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.create",
+          "lineNumber": 333
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.save",
+          "lineNumber": 340
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.findOne",
+          "lineNumber": 343
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.shopCode?.toString().trim",
+          "lineNumber": 348
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "dto.shopCode?.toString",
+          "lineNumber": 348
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "parseInt",
+          "lineNumber": 349
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.findOne",
+          "lineNumber": 356
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.create",
+          "lineNumber": 359
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "manager.save",
+          "lineNumber": 366
+        }
+      ],
+      "metrics": {
+        "importCount": 7,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/src/services/customer.service.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 193,
+      "nonEmptyLines": 171,
+      "classes": [
+        {
+          "name": "CustomerService",
+          "startLine": 5,
+          "endLine": 193,
+          "methods": [
+            "findAll",
+            "findById",
+            "create",
+            "update",
+            "remove",
+            "getReceivables",
+            "getDebtEvidence",
+            "addPayment",
+            "getDebtAging",
+            "getOverdueDebts",
+            "normalizeCustomerDto"
+          ],
+          "properties": [
+            "customerRepo",
+            "receivableRepo",
+            "evidenceRepo",
+            "paymentRepo"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "CustomerService",
+          "line": 5,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "findAll",
+          "callee": "this.customerRepo.createQueryBuilder('c')\n            .where",
+          "lineNumber": 12
+        },
+        {
+          "caller": "findAll",
+          "callee": "this.customerRepo.createQueryBuilder",
+          "lineNumber": 12
+        },
+        {
+          "caller": "findAll",
+          "callee": "qb.andWhere",
+          "lineNumber": 15
+        },
+        {
+          "caller": "findAll",
+          "callee": "qb.skip((page - 1) * limit).take(limit).orderBy('c.createdAt', 'DESC').getManyAndCount",
+          "lineNumber": 17
+        },
+        {
+          "caller": "findAll",
+          "callee": "qb.skip((page - 1) * limit).take(limit).orderBy",
+          "lineNumber": 17
+        },
+        {
+          "caller": "findAll",
+          "callee": "qb.skip((page - 1) * limit).take",
+          "lineNumber": 17
+        },
+        {
+          "caller": "findAll",
+          "callee": "qb.skip",
+          "lineNumber": 17
+        },
+        {
+          "caller": "findAll",
+          "callee": "Math.ceil",
+          "lineNumber": 18
+        },
+        {
+          "caller": "findById",
+          "callee": "this.customerRepo.findOne",
+          "lineNumber": 22
+        },
+        {
+          "caller": "create",
+          "callee": "this.customerRepo.save",
+          "lineNumber": 28
+        },
+        {
+          "caller": "create",
+          "callee": "this.customerRepo.create",
+          "lineNumber": 28
+        },
+        {
+          "caller": "create",
+          "callee": "this.normalizeCustomerDto",
+          "lineNumber": 28
+        },
+        {
+          "caller": "create",
+          "callee": "Date.now().toString().slice",
+          "lineNumber": 28
+        },
+        {
+          "caller": "create",
+          "callee": "Date.now().toString",
+          "lineNumber": 28
+        },
+        {
+          "caller": "create",
+          "callee": "Date.now",
+          "lineNumber": 28
+        },
+        {
+          "caller": "update",
+          "callee": "this.findById",
+          "lineNumber": 32
+        },
+        {
+          "caller": "update",
+          "callee": "Object.assign",
+          "lineNumber": 33
+        },
+        {
+          "caller": "update",
+          "callee": "this.normalizeCustomerDto",
+          "lineNumber": 33
+        },
+        {
+          "caller": "update",
+          "callee": "this.customerRepo.save",
+          "lineNumber": 34
+        },
+        {
+          "caller": "remove",
+          "callee": "this.findById",
+          "lineNumber": 38
+        },
+        {
+          "caller": "remove",
+          "callee": "this.customerRepo.save",
+          "lineNumber": 40
+        },
+        {
+          "caller": "getReceivables",
+          "callee": "this.receivableRepo.find",
+          "lineNumber": 44
+        },
+        {
+          "caller": "getDebtEvidence",
+          "callee": "this.evidenceRepo.find",
+          "lineNumber": 48
+        },
+        {
+          "caller": "addPayment",
+          "callee": "this.receivableRepo.findOne",
+          "lineNumber": 52
+        },
+        {
+          "caller": "addPayment",
+          "callee": "this.paymentRepo.save",
+          "lineNumber": 54
+        },
+        {
+          "caller": "addPayment",
+          "callee": "this.paymentRepo.create",
+          "lineNumber": 54
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "this.receivableRepo.find",
+          "lineNumber": 58
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Not",
+          "lineNumber": 59
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "In",
+          "lineNumber": 59
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "now.setHours",
+          "lineNumber": 64
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Number",
+          "lineNumber": 81
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Number",
+          "lineNumber": 81
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Number",
+          "lineNumber": 85
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "byCustomer.has",
+          "lineNumber": 87
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "byCustomer.set",
+          "lineNumber": 88
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "byCustomer.get",
+          "lineNumber": 100
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Math.floor",
+          "lineNumber": 103
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "now.getTime",
+          "lineNumber": 103
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "new Date(r.dueDate).getTime",
+          "lineNumber": 103
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Math.max",
+          "lineNumber": 110
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Math.max",
+          "lineNumber": 114
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Math.max",
+          "lineNumber": 118
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Array.isArray",
+          "lineNumber": 121
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "r.paymentHistory\n                    .map((p) => new Date(p.paymentDate))\n                    .sort",
+          "lineNumber": 122
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "r.paymentHistory\n                    .map",
+          "lineNumber": 122
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "b.getTime",
+          "lineNumber": 124
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "a.getTime",
+          "lineNumber": 124
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Array.from(byCustomer.values())\n            .sort((a, b) => b.total - a.total)\n            .map",
+          "lineNumber": 131
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Array.from(byCustomer.values())\n            .sort",
+          "lineNumber": 131
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Array.from",
+          "lineNumber": 131
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "byCustomer.values",
+          "lineNumber": 131
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "c.lastPaymentDate.toISOString",
+          "lineNumber": 135
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Number",
+          "lineNumber": 154
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "(buckets.current / totalDebt).toFixed",
+          "lineNumber": 154
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "Number",
+          "lineNumber": 155
+        },
+        {
+          "caller": "getDebtAging",
+          "callee": "(overdueDebt / totalDebt).toFixed",
+          "lineNumber": 155
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "this.receivableRepo.find",
+          "lineNumber": 161
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "Not",
+          "lineNumber": 162
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "In",
+          "lineNumber": 162
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "receivables\n            .filter(r => new Date(r.dueDate) < now && (Number(r.amount) - Number(r.paidAmount)) > 0)\n            .map(r => ({\n                customerId: r.customer?.id,\n                customerName: r.customer?.name || 'N/A',\n                phone: r.customer?.phone || '',\n                amount: Number(r.amount),\n                paidAmount: Number(r.paidAmount),\n                remaining: Number(r.amount) - Number(r.paidAmount),\n                dueDate: r.dueDate,\n                daysOverdue: Math.floor((now.getTime() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24)),\n            }))\n            .sort",
+          "lineNumber": 168
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "receivables\n            .filter(r => new Date(r.dueDate) < now && (Number(r.amount) - Number(r.paidAmount)) > 0)\n            .map",
+          "lineNumber": 168
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "receivables\n            .filter",
+          "lineNumber": 168
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "Number",
+          "lineNumber": 169
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "Number",
+          "lineNumber": 169
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "Number",
+          "lineNumber": 174
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "Number",
+          "lineNumber": 175
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "Number",
+          "lineNumber": 176
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "Number",
+          "lineNumber": 176
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "Math.floor",
+          "lineNumber": 178
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "now.getTime",
+          "lineNumber": 178
+        },
+        {
+          "caller": "getOverdueDebts",
+          "callee": "new Date(r.dueDate).getTime",
+          "lineNumber": 178
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/src/services/einvoice.service.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 56,
+      "nonEmptyLines": 47,
+      "classes": [
+        {
+          "name": "MockEInvoiceProvider",
+          "startLine": 9,
+          "endLine": 29,
+          "methods": [
+            "issueInvoice",
+            "cancelInvoice"
+          ],
+          "properties": []
+        },
+        {
+          "name": "EInvoiceService",
+          "startLine": 31,
+          "endLine": 56,
+          "methods": [
+            "constructor",
+            "issueInvoice"
+          ],
+          "properties": [
+            "provider",
+            "invoiceRepo"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "MockEInvoiceProvider",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "EInvoiceService",
+          "line": 31,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "issueInvoice",
+          "callee": "setTimeout",
+          "lineNumber": 12
+        },
+        {
+          "caller": "issueInvoice",
+          "callee": "Math.floor(Math.random() * 10000).toString().padStart",
+          "lineNumber": 17
+        },
+        {
+          "caller": "issueInvoice",
+          "callee": "Math.floor(Math.random() * 10000).toString",
+          "lineNumber": 17
+        },
+        {
+          "caller": "issueInvoice",
+          "callee": "Math.floor",
+          "lineNumber": 17
+        },
+        {
+          "caller": "issueInvoice",
+          "callee": "Math.random",
+          "lineNumber": 17
+        },
+        {
+          "caller": "cancelInvoice",
+          "callee": "setTimeout",
+          "lineNumber": 23
+        },
+        {
+          "caller": "issueInvoice",
+          "callee": "this.invoiceRepo.findOne",
+          "lineNumber": 41
+        },
+        {
+          "caller": "issueInvoice",
+          "callee": "invoice.invoiceNumber.startsWith",
+          "lineNumber": 43
+        },
+        {
+          "caller": "issueInvoice",
+          "callee": "this.provider.issueInvoice",
+          "lineNumber": 47
+        },
+        {
+          "caller": "issueInvoice",
+          "callee": "this.invoiceRepo.save",
+          "lineNumber": 51
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/src/services/email.service.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 58,
+      "nonEmptyLines": 51,
+      "classes": [
+        {
+          "name": "EmailService",
+          "startLine": 4,
+          "endLine": 58,
+          "methods": [
+            "constructor",
+            "sendOtp"
+          ],
+          "properties": [
+            "transporter"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "EmailService",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "constructor",
+          "callee": "nodemailer.createTransport",
+          "lineNumber": 8
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "console.log",
+          "lineNumber": 19
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "console.log",
+          "lineNumber": 24
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "console.log",
+          "lineNumber": 25
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "console.log",
+          "lineNumber": 26
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "console.log",
+          "lineNumber": 27
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "this.transporter.sendMail",
+          "lineNumber": 50
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "console.log",
+          "lineNumber": 51
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "console.error",
+          "lineNumber": 54
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/src/services/finance.service.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 642,
+      "nonEmptyLines": 574,
+      "classes": [
+        {
+          "name": "FinanceService",
+          "startLine": 11,
+          "endLine": 642,
+          "methods": [
+            "logActivity",
+            "getCashTransactions",
+            "createCashTransaction",
+            "updateCashTransaction",
+            "deleteCashTransaction",
+            "updateInvoice",
+            "deleteInvoice",
+            "getCashFlowSummary",
+            "getProfitLoss",
+            "getInvoiceReconciliation",
+            "getExpensesByCategory",
+            "getDailyClosings",
+            "getDailyClosingByDate",
+            "createDailyClosing",
+            "getCashAccounts",
+            "getForecasts",
+            "createForecast",
+            "updateForecast",
+            "deleteForecast",
+            "getBudgetPlans",
+            "createBudgetPlan",
+            "updateBudgetPlan",
+            "deleteBudgetPlan",
+            "getInvoices",
+            "getInvoiceSummary",
+            "getInvoiceById",
+            "createInvoice",
+            "getTaxObligations",
+            "createTaxObligation",
+            "updateTaxObligation",
+            "deleteTaxObligation",
+            "getPurchasesWithoutInvoice",
+            "createPurchaseWithoutInvoice",
+            "updatePurchaseWithoutInvoiceApproval",
+            "normalizeTaxObligationDto"
+          ],
+          "properties": [
+            "cashTxRepo",
+            "closingRepo",
+            "accountRepo",
+            "forecastRepo",
+            "budgetRepo",
+            "invoiceRepo",
+            "taxObRepo",
+            "purchaseNoInvRepo",
+            "activityLogRepo",
+            "postingService"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "FinanceService",
+          "line": 11,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "logActivity",
+          "callee": "this.activityLogRepo.create",
+          "lineNumber": 36
+        },
+        {
+          "caller": "logActivity",
+          "callee": "this.activityLogRepo.save",
+          "lineNumber": 47
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .where",
+          "lineNumber": 54
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "this.cashTxRepo.createQueryBuilder",
+          "lineNumber": 54
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "qb.andWhere",
+          "lineNumber": 56
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "qb.andWhere",
+          "lineNumber": 57
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "qb.andWhere",
+          "lineNumber": 58
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "qb.orderBy('t.transaction_date', 'DESC')\n            .skip((page - 1) * limit).take(limit).getManyAndCount",
+          "lineNumber": 59
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "qb.orderBy('t.transaction_date', 'DESC')\n            .skip((page - 1) * limit).take",
+          "lineNumber": 59
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "qb.orderBy('t.transaction_date', 'DESC')\n            .skip",
+          "lineNumber": 59
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "qb.orderBy",
+          "lineNumber": 59
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "Math.ceil",
+          "lineNumber": 61
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "manager.getRepository",
+          "lineNumber": 64
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "Date.now().toString().slice",
+          "lineNumber": 65
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "Date.now().toString",
+          "lineNumber": 65
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "Date.now",
+          "lineNumber": 65
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "repo.save",
+          "lineNumber": 67
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "repo.create",
+          "lineNumber": 67
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "linkedRefTypes.includes",
+          "lineNumber": 72
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "Number",
+          "lineNumber": 74
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "lines.push",
+          "lineNumber": 79
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "lines.push",
+          "lineNumber": 80
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "lines.push",
+          "lineNumber": 83
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "lines.push",
+          "lineNumber": 84
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "this.postingService.postJournal",
+          "lineNumber": 87
+        },
+        {
+          "caller": "updateCashTransaction",
+          "callee": "this.cashTxRepo.findOne",
+          "lineNumber": 105
+        },
+        {
+          "caller": "updateCashTransaction",
+          "callee": "Object.assign",
+          "lineNumber": 107
+        },
+        {
+          "caller": "updateCashTransaction",
+          "callee": "this.cashTxRepo.save",
+          "lineNumber": 108
+        },
+        {
+          "caller": "deleteCashTransaction",
+          "callee": "this.cashTxRepo.findOne",
+          "lineNumber": 112
+        },
+        {
+          "caller": "deleteCashTransaction",
+          "callee": "this.cashTxRepo.remove",
+          "lineNumber": 113
+        },
+        {
+          "caller": "updateInvoice",
+          "callee": "this.invoiceRepo.findOne",
+          "lineNumber": 118
+        },
+        {
+          "caller": "updateInvoice",
+          "callee": "Object.assign",
+          "lineNumber": 120
+        },
+        {
+          "caller": "updateInvoice",
+          "callee": "this.invoiceRepo.save",
+          "lineNumber": 121
+        },
+        {
+          "caller": "deleteInvoice",
+          "callee": "this.invoiceRepo.findOne",
+          "lineNumber": 125
+        },
+        {
+          "caller": "deleteInvoice",
+          "callee": "this.invoiceRepo.remove",
+          "lineNumber": 126
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "now.getFullYear",
+          "lineNumber": 134
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "now.getMonth",
+          "lineNumber": 134
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "now.getDate",
+          "lineNumber": 134
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "now.getTime",
+          "lineNumber": 135
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "now.getFullYear",
+          "lineNumber": 136
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "now.getFullYear",
+          "lineNumber": 137
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "now.getMonth",
+          "lineNumber": 137
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)\", 'income')\n            .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)\", 'expense')\n            .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate', { shopId, fromDate })\n            .getRawOne",
+          "lineNumber": 140
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)\", 'income')\n            .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)\", 'expense')\n            .where",
+          "lineNumber": 140
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)\", 'income')\n            .addSelect",
+          "lineNumber": 140
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select",
+          "lineNumber": 140
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "this.cashTxRepo.createQueryBuilder",
+          "lineNumber": 140
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "Number",
+          "lineNumber": 146
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "Number",
+          "lineNumber": 147
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "new Date().getFullYear",
+          "lineNumber": 152
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "new Date().getMonth",
+          "lineNumber": 152
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "toDate.setHours",
+          "lineNumber": 154
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 156
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select(\"COALESCE(SUM(l.amount), 0)\", 'revenue')\n            .where(\"e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '511' AND l.entry_type = 'CREDIT'\", { shopId, fromDate, toDate })\n            .getRawOne",
+          "lineNumber": 159
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select(\"COALESCE(SUM(l.amount), 0)\", 'revenue')\n            .where",
+          "lineNumber": 159
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select",
+          "lineNumber": 159
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin",
+          "lineNumber": 159
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder",
+          "lineNumber": 159
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select(\"COALESCE(SUM(l.amount), 0)\", 'cogs')\n            .where(\"e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '632' AND l.entry_type = 'DEBIT'\", { shopId, fromDate, toDate })\n            .getRawOne",
+          "lineNumber": 166
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select(\"COALESCE(SUM(l.amount), 0)\", 'cogs')\n            .where",
+          "lineNumber": 166
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select",
+          "lineNumber": 166
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin",
+          "lineNumber": 166
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder",
+          "lineNumber": 166
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select(\"COALESCE(SUM(l.amount), 0)\", 'expenses')\n            .where(\"e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '642' AND l.entry_type = 'DEBIT'\", { shopId, fromDate, toDate })\n            .getRawOne",
+          "lineNumber": 173
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select(\"COALESCE(SUM(l.amount), 0)\", 'expenses')\n            .where",
+          "lineNumber": 173
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin('l.journalEntry', 'e')\n            .select",
+          "lineNumber": 173
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder('l')\n            .innerJoin",
+          "lineNumber": 173
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "journalLineRepo.createQueryBuilder",
+          "lineNumber": 173
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "Number",
+          "lineNumber": 179
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "Number",
+          "lineNumber": 180
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "Number",
+          "lineNumber": 181
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "Number",
+          "lineNumber": 184
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "((grossProfit / revenue) * 100).toFixed",
+          "lineNumber": 184
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "Number",
+          "lineNumber": 185
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "((netProfit / revenue) * 100).toFixed",
+          "lineNumber": 185
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "new Date().getFullYear",
+          "lineNumber": 201
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "new Date().getMonth",
+          "lineNumber": 201
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "toDate.setHours",
+          "lineNumber": 203
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select('i.invoice_type', 'invoiceType')\n            .addSelect('COUNT(*)', 'count')\n            .addSelect('COALESCE(SUM(i.total_amount), 0)', 'totalValue')\n            .where('i.shop_id = :shopId AND i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { shopId, fromDate, toDate })\n            .groupBy('i.invoice_type')\n            .getRawMany",
+          "lineNumber": 205
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select('i.invoice_type', 'invoiceType')\n            .addSelect('COUNT(*)', 'count')\n            .addSelect('COALESCE(SUM(i.total_amount), 0)', 'totalValue')\n            .where('i.shop_id = :shopId AND i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { shopId, fromDate, toDate })\n            .groupBy",
+          "lineNumber": 205
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select('i.invoice_type', 'invoiceType')\n            .addSelect('COUNT(*)', 'count')\n            .addSelect('COALESCE(SUM(i.total_amount), 0)', 'totalValue')\n            .where",
+          "lineNumber": 205
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select('i.invoice_type', 'invoiceType')\n            .addSelect('COUNT(*)', 'count')\n            .addSelect",
+          "lineNumber": 205
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select('i.invoice_type', 'invoiceType')\n            .addSelect",
+          "lineNumber": 205
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select",
+          "lineNumber": 205
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "this.invoiceRepo.createQueryBuilder",
+          "lineNumber": 205
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "rows.find",
+          "lineNumber": 213
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "rows.find",
+          "lineNumber": 214
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "Number",
+          "lineNumber": 216
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "Number",
+          "lineNumber": 217
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "Number",
+          "lineNumber": 220
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "Number",
+          "lineNumber": 221
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "new Date().getFullYear",
+          "lineNumber": 249
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "new Date().getMonth",
+          "lineNumber": 249
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "toDate.setHours",
+          "lineNumber": 251
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select('t.category', 'category')\n            .addSelect('SUM(t.amount)', 'amount')\n            .addSelect('COUNT(*)', 'count')\n            .where(\"t.shop_id = :shopId AND t.type = 'EXPENSE' AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate\", { shopId, fromDate, toDate })\n            .groupBy('t.category')\n            .orderBy('SUM(t.amount)', 'DESC')\n            .getRawMany",
+          "lineNumber": 253
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select('t.category', 'category')\n            .addSelect('SUM(t.amount)', 'amount')\n            .addSelect('COUNT(*)', 'count')\n            .where(\"t.shop_id = :shopId AND t.type = 'EXPENSE' AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate\", { shopId, fromDate, toDate })\n            .groupBy('t.category')\n            .orderBy",
+          "lineNumber": 253
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select('t.category', 'category')\n            .addSelect('SUM(t.amount)', 'amount')\n            .addSelect('COUNT(*)', 'count')\n            .where(\"t.shop_id = :shopId AND t.type = 'EXPENSE' AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate\", { shopId, fromDate, toDate })\n            .groupBy",
+          "lineNumber": 253
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select('t.category', 'category')\n            .addSelect('SUM(t.amount)', 'amount')\n            .addSelect('COUNT(*)', 'count')\n            .where",
+          "lineNumber": 253
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select('t.category', 'category')\n            .addSelect('SUM(t.amount)', 'amount')\n            .addSelect",
+          "lineNumber": 253
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select('t.category', 'category')\n            .addSelect",
+          "lineNumber": 253
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n            .select",
+          "lineNumber": 253
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.createQueryBuilder",
+          "lineNumber": 253
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "rows.map",
+          "lineNumber": 262
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "Number",
+          "lineNumber": 262
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "Number",
+          "lineNumber": 262
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "categories.reduce",
+          "lineNumber": 263
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "this.cashTxRepo.findAndCount",
+          "lineNumber": 266
+        },
+        {
+          "caller": "getDailyClosings",
+          "callee": "this.closingRepo.findAndCount",
+          "lineNumber": 277
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.closingRepo.findOne",
+          "lineNumber": 281
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n                .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashIncome')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashExpense')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)\", 'bankIncome')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)\", 'bankExpense')\n                .addSelect(\"COUNT(*)\", 'orderCount')\n                .where('t.shop_id = :shopId AND CAST(t.transaction_date AS DATE) = :d', { shopId, d: date })\n                .getRawOne",
+          "lineNumber": 285
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n                .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashIncome')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashExpense')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)\", 'bankIncome')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)\", 'bankExpense')\n                .addSelect(\"COUNT(*)\", 'orderCount')\n                .where",
+          "lineNumber": 285
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n                .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashIncome')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashExpense')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)\", 'bankIncome')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)\", 'bankExpense')\n                .addSelect",
+          "lineNumber": 285
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n                .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashIncome')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashExpense')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)\", 'bankIncome')\n                .addSelect",
+          "lineNumber": 285
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n                .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashIncome')\n                .addSelect(\"COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashExpense')\n                .addSelect",
+          "lineNumber": 285
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n                .select(\"COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)\", 'cashIncome')\n                .addSelect",
+          "lineNumber": 285
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.createQueryBuilder('t')\n                .select",
+          "lineNumber": 285
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.createQueryBuilder",
+          "lineNumber": 285
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "Number",
+          "lineNumber": 294
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "Number",
+          "lineNumber": 295
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "Number",
+          "lineNumber": 296
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "Number",
+          "lineNumber": 297
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.closingRepo.createQueryBuilder('c')\n                .where('c.shop_id = :shopId AND c.closing_date < :d', { shopId, d: date })\n                .orderBy('c.closing_date', 'DESC')\n                .getOne",
+          "lineNumber": 302
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.closingRepo.createQueryBuilder('c')\n                .where('c.shop_id = :shopId AND c.closing_date < :d', { shopId, d: date })\n                .orderBy",
+          "lineNumber": 302
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.closingRepo.createQueryBuilder('c')\n                .where",
+          "lineNumber": 302
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.closingRepo.createQueryBuilder",
+          "lineNumber": 302
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "Number",
+          "lineNumber": 307
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "this.cashTxRepo.find",
+          "lineNumber": 311
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "Number",
+          "lineNumber": 328
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "Number",
+          "lineNumber": 336
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "Math.abs",
+          "lineNumber": 337
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "dto.notes.trim",
+          "lineNumber": 337
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "this.closingRepo.save",
+          "lineNumber": 340
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "this.closingRepo.create",
+          "lineNumber": 340
+        },
+        {
+          "caller": "getCashAccounts",
+          "callee": "this.accountRepo.find",
+          "lineNumber": 345
+        },
+        {
+          "caller": "getForecasts",
+          "callee": "this.forecastRepo.find",
+          "lineNumber": 350
+        },
+        {
+          "caller": "getForecasts",
+          "callee": "Array.isArray",
+          "lineNumber": 351
+        },
+        {
+          "caller": "createForecast",
+          "callee": "this.forecastRepo.save",
+          "lineNumber": 353
+        },
+        {
+          "caller": "createForecast",
+          "callee": "this.forecastRepo.create",
+          "lineNumber": 353
+        },
+        {
+          "caller": "updateForecast",
+          "callee": "this.forecastRepo.findOne",
+          "lineNumber": 355
+        },
+        {
+          "caller": "updateForecast",
+          "callee": "Object.assign",
+          "lineNumber": 357
+        },
+        {
+          "caller": "updateForecast",
+          "callee": "this.forecastRepo.save",
+          "lineNumber": 358
+        },
+        {
+          "caller": "deleteForecast",
+          "callee": "this.forecastRepo.findOne",
+          "lineNumber": 361
+        },
+        {
+          "caller": "deleteForecast",
+          "callee": "this.forecastRepo.remove",
+          "lineNumber": 362
+        },
+        {
+          "caller": "getBudgetPlans",
+          "callee": "this.budgetRepo.find",
+          "lineNumber": 366
+        },
+        {
+          "caller": "createBudgetPlan",
+          "callee": "this.budgetRepo.save",
+          "lineNumber": 367
+        },
+        {
+          "caller": "createBudgetPlan",
+          "callee": "this.budgetRepo.create",
+          "lineNumber": 367
+        },
+        {
+          "caller": "updateBudgetPlan",
+          "callee": "this.budgetRepo.findOne",
+          "lineNumber": 369
+        },
+        {
+          "caller": "updateBudgetPlan",
+          "callee": "Object.assign",
+          "lineNumber": 371
+        },
+        {
+          "caller": "updateBudgetPlan",
+          "callee": "this.budgetRepo.save",
+          "lineNumber": 372
+        },
+        {
+          "caller": "deleteBudgetPlan",
+          "callee": "this.budgetRepo.findOne",
+          "lineNumber": 375
+        },
+        {
+          "caller": "deleteBudgetPlan",
+          "callee": "this.budgetRepo.remove",
+          "lineNumber": 376
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .where",
+          "lineNumber": 381
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "this.invoiceRepo.createQueryBuilder",
+          "lineNumber": 381
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "qb.andWhere",
+          "lineNumber": 383
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "qb.orderBy('i.invoice_date', 'DESC')\n            .skip((page - 1) * limit).take(limit).getManyAndCount",
+          "lineNumber": 384
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "qb.orderBy('i.invoice_date', 'DESC')\n            .skip((page - 1) * limit).take",
+          "lineNumber": 384
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "qb.orderBy('i.invoice_date', 'DESC')\n            .skip",
+          "lineNumber": 384
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "qb.orderBy",
+          "lineNumber": 384
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "Math.ceil",
+          "lineNumber": 386
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "new Date().getFullYear",
+          "lineNumber": 389
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "new Date().getMonth",
+          "lineNumber": 389
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "toDate.setHours",
+          "lineNumber": 391
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select(\"COALESCE(SUM(CASE WHEN i.invoice_type = 'IN' THEN i.tax_amount ELSE 0 END), 0)\", 'vatIn')\n            .addSelect(\"COALESCE(SUM(CASE WHEN i.invoice_type = 'OUT' THEN i.tax_amount ELSE 0 END), 0)\", 'vatOut')\n            .where('i.shop_id = :shopId AND i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { shopId, fromDate, toDate })\n            .getRawOne",
+          "lineNumber": 393
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select(\"COALESCE(SUM(CASE WHEN i.invoice_type = 'IN' THEN i.tax_amount ELSE 0 END), 0)\", 'vatIn')\n            .addSelect(\"COALESCE(SUM(CASE WHEN i.invoice_type = 'OUT' THEN i.tax_amount ELSE 0 END), 0)\", 'vatOut')\n            .where",
+          "lineNumber": 393
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select(\"COALESCE(SUM(CASE WHEN i.invoice_type = 'IN' THEN i.tax_amount ELSE 0 END), 0)\", 'vatIn')\n            .addSelect",
+          "lineNumber": 393
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "this.invoiceRepo.createQueryBuilder('i')\n            .select",
+          "lineNumber": 393
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "this.invoiceRepo.createQueryBuilder",
+          "lineNumber": 393
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "Number",
+          "lineNumber": 399
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "Number",
+          "lineNumber": 400
+        },
+        {
+          "caller": "getInvoiceById",
+          "callee": "this.invoiceRepo.findOne",
+          "lineNumber": 404
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "Date.now().toString().slice",
+          "lineNumber": 409
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "Date.now().toString",
+          "lineNumber": 409
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "Date.now",
+          "lineNumber": 409
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "this.invoiceRepo.save",
+          "lineNumber": 411
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "this.invoiceRepo.create",
+          "lineNumber": 411
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "this.taxObRepo.find",
+          "lineNumber": 417
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "items.reduce",
+          "lineNumber": 418
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "Number",
+          "lineNumber": 418
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "items.reduce",
+          "lineNumber": 419
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "Number",
+          "lineNumber": 419
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "items.reduce",
+          "lineNumber": 420
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "Number",
+          "lineNumber": 420
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "items.reduce",
+          "lineNumber": 421
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "Number",
+          "lineNumber": 421
+        },
+        {
+          "caller": "createTaxObligation",
+          "callee": "this.taxObRepo.save",
+          "lineNumber": 425
+        },
+        {
+          "caller": "createTaxObligation",
+          "callee": "this.taxObRepo.create",
+          "lineNumber": 425
+        },
+        {
+          "caller": "createTaxObligation",
+          "callee": "this.normalizeTaxObligationDto",
+          "lineNumber": 425
+        },
+        {
+          "caller": "updateTaxObligation",
+          "callee": "this.taxObRepo.findOne",
+          "lineNumber": 428
+        },
+        {
+          "caller": "updateTaxObligation",
+          "callee": "Object.assign",
+          "lineNumber": 430
+        },
+        {
+          "caller": "updateTaxObligation",
+          "callee": "this.normalizeTaxObligationDto",
+          "lineNumber": 430
+        },
+        {
+          "caller": "updateTaxObligation",
+          "callee": "this.taxObRepo.save",
+          "lineNumber": 431
+        },
+        {
+          "caller": "deleteTaxObligation",
+          "callee": "this.taxObRepo.findOne",
+          "lineNumber": 434
+        },
+        {
+          "caller": "deleteTaxObligation",
+          "callee": "this.taxObRepo.remove",
+          "lineNumber": 435
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "this.purchaseNoInvRepo.findAndCount",
+          "lineNumber": 441
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "items.reduce",
+          "lineNumber": 448
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "Number",
+          "lineNumber": 448
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "Math.ceil",
+          "lineNumber": 449
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Date.now().toString().slice",
+          "lineNumber": 459
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Date.now().toString",
+          "lineNumber": 459
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Date.now",
+          "lineNumber": 459
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String(dto.sellerName || '').trim",
+          "lineNumber": 461
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 461
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String(dto.sellerIdentityNumber || '').trim",
+          "lineNumber": 462
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 462
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Array.isArray",
+          "lineNumber": 466
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "rawItems\n            .map((i) => {\n                const productName = String(i.productName || '').trim();\n                const productId = i.productId ? Number(i.productId) : undefined;\n                const quantity = Number(i.quantity || 0);\n                const unitPrice = Number(i.unitPrice || 0);\n                const subtotal = Number(i.subtotal || (quantity * unitPrice));\n                if (!productName || quantity <= 0 || unitPrice < 0 || subtotal < 0) return null;\n                return { productName, productId, quantity, unitPrice, subtotal, shopId } as PurchaseWithoutInvoiceItem;\n            })\n            .filter",
+          "lineNumber": 467
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "rawItems\n            .map",
+          "lineNumber": 467
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String(i.productName || '').trim",
+          "lineNumber": 469
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 469
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Number",
+          "lineNumber": 470
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Number",
+          "lineNumber": 471
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Number",
+          "lineNumber": 472
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Number",
+          "lineNumber": 473
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "items.reduce",
+          "lineNumber": 483
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Number",
+          "lineNumber": 483
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "Number",
+          "lineNumber": 484
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "this.purchaseNoInvRepo.create",
+          "lineNumber": 494
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "this.purchaseNoInvRepo.save",
+          "lineNumber": 506
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "this.logActivity",
+          "lineNumber": 508
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "JSON.stringify",
+          "lineNumber": 514
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "this.purchaseNoInvRepo.findOne",
+          "lineNumber": 535
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "JSON.stringify",
+          "lineNumber": 542
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "this.purchaseNoInvRepo.save",
+          "lineNumber": 548
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "this.purchaseNoInvRepo.findOne",
+          "lineNumber": 555
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 560
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "movementRepo.save",
+          "lineNumber": 561
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "movementRepo.create",
+          "lineNumber": 561
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 573
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "stockRepo.findOne",
+          "lineNumber": 574
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "stockRepo.create",
+          "lineNumber": 576
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "Number",
+          "lineNumber": 578
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "Number",
+          "lineNumber": 578
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "stockRepo.save",
+          "lineNumber": 580
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "cogsService.addInventoryLot",
+          "lineNumber": 583
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "this.postingService.postJournal",
+          "lineNumber": 596
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "Number",
+          "lineNumber": 602
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "Number",
+          "lineNumber": 603
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "this.logActivity",
+          "lineNumber": 608
+        },
+        {
+          "caller": "updatePurchaseWithoutInvoiceApproval",
+          "callee": "JSON.stringify",
+          "lineNumber": 615
+        }
+      ],
+      "metrics": {
+        "importCount": 8,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    }
+  ]
+}

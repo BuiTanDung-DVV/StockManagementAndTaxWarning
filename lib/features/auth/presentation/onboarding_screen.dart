@@ -5,6 +5,8 @@ import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
@@ -474,14 +476,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                         ),
                                       ),
                                     ),
-                                    Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                    FlutterMap(
+                                      options: MapOptions(
+                                        initialCenter: latlong.LatLng(_selectedLat!, _selectedLon!),
+                                        initialZoom: 15.0,
+                                        interactionOptions: const InteractionOptions(
+                                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                                        ),
+                                      ),
                                       children: [
-                                        const Icon(Icons.location_pin, color: AppColors.danger, size: 36),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Tọa độ: ${_selectedLat!.toStringAsFixed(6)}, ${_selectedLon!.toStringAsFixed(6)}',
-                                          style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500),
+                                        TileLayer(
+                                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                          userAgentPackageName: 'com.sales_stock_management.app',
+                                        ),
+                                        MarkerLayer(
+                                          markers: [
+                                            Marker(
+                                              point: latlong.LatLng(_selectedLat!, _selectedLon!),
+                                              width: 40,
+                                              height: 40,
+                                              child: const Icon(
+                                                Icons.location_pin,
+                                                color: AppColors.danger,
+                                                size: 36,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
