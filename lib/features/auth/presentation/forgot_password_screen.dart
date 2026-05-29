@@ -88,13 +88,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Future<void> _sendOtp() async {
     final phone = _phoneCtrl.text.trim();
     if (phone.isEmpty) {
-      setState(() => _error = 'Vui lòng nhập số điện thoại');
+      setState(() => _error = 'Vui lòng nhập số điện thoại hoặc email');
       return;
     }
     
-    final phoneRegex = RegExp(r'^(0|\+84)\d{9}$');
-    if (!phoneRegex.hasMatch(phone)) {
-      setState(() => _error = 'Định dạng số điện thoại không hợp lệ (10 số)');
+    final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    
+    if (!phoneRegex.hasMatch(phone) && !emailRegex.hasMatch(phone)) {
+      setState(() => _error = 'Định dạng số điện thoại hoặc email không hợp lệ');
       return;
     }
 
@@ -116,8 +118,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       _startTimer();
     } catch (e) {
       String msg = 'Không thể gửi mã khôi phục. Vui lòng kiểm tra lại SĐT hoặc kết nối mạng';
-      if (e is DioException && e.response?.data != null) {
+      if (e is ApiException) {
+        msg = e.message;
+      } else if (e is DioException && e.response?.data != null) {
         msg = e.response?.data['message'] ?? msg;
+      }
+      final lowerMsg = msg.toLowerCase();
+      if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
+        msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
       }
       setState(() => _error = msg);
     } finally {
@@ -169,8 +177,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       ToastService.showSuccess('Đã đặt lại mật khẩu thành công!');
     } catch (e) {
       String msg = 'Mã xác thực OTP không đúng hoặc đã hết hạn';
-      if (e is DioException && e.response?.data != null) {
+      if (e is ApiException) {
+        msg = e.message;
+      } else if (e is DioException && e.response?.data != null) {
         msg = e.response?.data['message'] ?? msg;
+      }
+      final lowerMsg = msg.toLowerCase();
+      if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
+        msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
       }
       setState(() {
         _isLoading = false;
@@ -244,8 +258,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     _success 
                       ? 'Mật khẩu của bạn đã được thay đổi. Hãy đăng nhập lại bằng mật khẩu mới.'
                       : _otpSent 
-                        ? 'Vui lòng nhập mã OTP đã gửi đến số ${_phoneCtrl.text} cùng mật khẩu mới của bạn.'
-                        : 'Nhập số điện thoại đã đăng ký. Chúng tôi sẽ gửi mã xác thực OTP thật qua SMS.',
+                        ? 'Vui lòng nhập mã OTP đã gửi đến ${_phoneCtrl.text} cùng mật khẩu mới của bạn.'
+                        : 'Nhập số điện thoại hoặc email đã đăng ký. Chúng tôi sẽ gửi mã xác thực để khôi phục.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 13,
@@ -278,8 +292,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         controller: _phoneCtrl,
                         focusNode: _phoneFocus,
                         hasFocus: _phoneHasFocus,
-                        hintText: 'Nhập số điện thoại đăng ký',
-                        icon: Icons.phone_android_rounded,
+                        hintText: 'Nhập số điện thoại hoặc email đăng ký',
+                        icon: Icons.contact_mail_rounded,
                         c: c,
                         theme: theme,
                       ),

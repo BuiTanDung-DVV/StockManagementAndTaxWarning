@@ -1,0 +1,15 @@
+{
+  "projectRoot": "d:\\SalesAndStockManagement",
+  "batchFiles": [
+    {"path": "test/unit/api_client_test.dart", "language": "dart", "sizeLines": 37, "fileCategory": "code"},
+    {"path": "test/widget/dashboard_widget_test.dart", "language": "dart", "sizeLines": 30, "fileCategory": "code"},
+    {"path": "web/index.html", "language": "html", "sizeLines": 115, "fileCategory": "markup"},
+    {"path": "web/manifest.json", "language": "json", "sizeLines": 35, "fileCategory": "config"}
+  ],
+  "batchImportData": {
+    "test/unit/api_client_test.dart": [],
+    "test/widget/dashboard_widget_test.dart": [],
+    "web/index.html": [],
+    "web/manifest.json": []
+  }
+}

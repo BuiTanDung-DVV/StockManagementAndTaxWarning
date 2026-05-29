@@ -1,0 +1,207 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 25,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "lib/features/finance/presentation/invoice_list_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 169,
+      "nonEmptyLines": 163,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/finance/presentation/profit_loss_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 478,
+      "nonEmptyLines": 454,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/finance/presentation/purchase_no_invoice_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 580,
+      "nonEmptyLines": 547,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/finance/presentation/salary_ledger_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 116,
+      "nonEmptyLines": 108,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/finance/presentation/tax_calculator_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 593,
+      "nonEmptyLines": 573,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/finance/presentation/tax_declaration_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 480,
+      "nonEmptyLines": 471,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/finance/presentation/tax_obligation_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 417,
+      "nonEmptyLines": 399,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/finance/presentation/transaction_history_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 72,
+      "nonEmptyLines": 68,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/finance/providers/finance_provider.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 163,
+      "nonEmptyLines": 124,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/inventory/presentation/inventory_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 458,
+      "nonEmptyLines": 448,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/inventory/presentation/purchase_order_form_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 976,
+      "nonEmptyLines": 935,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/inventory/presentation/purchase_order_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 328,
+      "nonEmptyLines": 321,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/inventory/presentation/stock_take_form_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 858,
+      "nonEmptyLines": 815,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/inventory/presentation/stock_take_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 201,
+      "nonEmptyLines": 197,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/inventory/presentation/xnt_report_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 371,
+      "nonEmptyLines": 359,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/inventory/providers/inventory_provider.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 87,
+      "nonEmptyLines": 66,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/products/presentation/product_detail_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 337,
+      "nonEmptyLines": 323,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/products/presentation/product_form_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 439,
+      "nonEmptyLines": 422,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/products/presentation/product_list_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 326,
+      "nonEmptyLines": 308,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/products/providers/product_provider.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 33,
+      "nonEmptyLines": 26,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/sales/presentation/order_detail_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 964,
+      "nonEmptyLines": 924,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/sales/presentation/pos_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 1178,
+      "nonEmptyLines": 1136,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/sales/presentation/qr_payment_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 600,
+      "nonEmptyLines": 577,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/sales/presentation/sales_list_screen.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 302,
+      "nonEmptyLines": 291,
+      "metrics": {}
+    },
+    {
+      "path": "lib/features/sales/providers/sales_provider.dart",
+      "language": "dart",
+      "fileCategory": "code",
+      "totalLines": 37,
+      "nonEmptyLines": 29,
+      "metrics": {}
+    }
+  ]
+}

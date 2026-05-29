@@ -1,0 +1,95 @@
+{
+  "nodes": [
+    {
+      "id": "file:test/unit/api_client_test.dart",
+      "type": "file",
+      "name": "api_client_test.dart",
+      "filePath": "test/unit/api_client_test.dart",
+      "summary": "Tệp unit test cho ApiClient, đảm bảo cấu hình URL cơ sở chính xác và xử lý an toàn việc lưu trữ/xóa token.",
+      "tags": ["test", "api-client", "unit-test", "auth-token"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test/unit/api_client_test.dart:main",
+      "type": "function",
+      "name": "main",
+      "summary": "Hàm entry point chạy bộ kiểm thử unit cho lớp ApiClient.",
+      "tags": ["entry-point", "test", "setup"],
+      "complexity": "simple",
+      "lineRange": [5, 37]
+    },
+    {
+      "id": "file:test/widget/dashboard_widget_test.dart",
+      "type": "file",
+      "name": "dashboard_widget_test.dart",
+      "filePath": "test/widget/dashboard_widget_test.dart",
+      "summary": "Tệp widget test cho DashboardScreen để kiểm tra khả năng render giao diện trạng thái ban đầu mà không gây lỗi.",
+      "tags": ["test", "widget-test", "ui-component", "dashboard"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:test/widget/dashboard_widget_test.dart:main",
+      "type": "function",
+      "name": "main",
+      "summary": "Hàm entry point khởi chạy và kiểm thử widget DashboardScreen với ProviderScope.",
+      "tags": ["entry-point", "test", "widget-test"],
+      "complexity": "simple",
+      "lineRange": [7, 30]
+    },
+    {
+      "id": "file:web/index.html",
+      "type": "file",
+      "name": "index.html",
+      "filePath": "web/index.html",
+      "summary": "Tệp HTML gốc đóng vai trò là entry point cho ứng dụng Flutter Web, cấu hình thẻ meta và giao diện màn hình chờ.",
+      "tags": ["entry-point", "markup", "flutter-web", "splash-screen"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "config:web/manifest.json",
+      "type": "config",
+      "name": "manifest.json",
+      "filePath": "web/manifest.json",
+      "summary": "Tệp cấu hình PWA manifest định nghĩa các thuộc tính cơ bản như tên ứng dụng, màu sắc và biểu tượng cho phiên bản web.",
+      "tags": ["configuration", "pwa", "manifest", "metadata"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:test/unit/api_client_test.dart",
+      "target": "function:test/unit/api_client_test.dart:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:test/widget/dashboard_widget_test.dart",
+      "target": "function:test/widget/dashboard_widget_test.dart:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/network/api_client.dart",
+      "target": "file:test/unit/api_client_test.dart",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:lib/features/dashboard/presentation/dashboard_screen.dart",
+      "target": "file:test/widget/dashboard_widget_test.dart",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "config:web/manifest.json",
+      "target": "file:web/index.html",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    }
+  ]
+}

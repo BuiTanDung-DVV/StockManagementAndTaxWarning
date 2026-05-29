@@ -40,10 +40,10 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
 
     final cashDifference = _closingCash - expectedCash;
 
-    if (cashDifference.abs() > 0.01 && _notesController.text.trim().isEmpty) {
+    if (cashDifference.abs() > 50000 && _notesController.text.trim().isEmpty) {
       setState(() {
         _submitting = false;
-        _errorMessage = 'Két tiền có chênh lệch. Vui lòng nhập lý do giải trình vào phần ghi chú.';
+        _errorMessage = 'Chênh lệch két lớn hơn 50.000đ. Vui lòng nhập lý do giải trình vào phần ghi chú.';
       });
       return;
     }
@@ -67,8 +67,14 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
       final res = await repo.createDailyClosing(dto);
       if (res['success'] == true || res['id'] != null) {
         ref.invalidate(dailyClosingProvider(today));
+        ref.invalidate(dailyClosingsListProvider(1)); // Refresh the list
         if (mounted) {
-          ToastService.showSuccess('Đã thực hiện chốt ca thành công và khóa sổ ngày hôm nay!');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đã thực hiện chốt ca thành công và khóa sổ ngày hôm nay!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
         }
       } else {
         setState(() {
@@ -128,7 +134,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
           
           // Calculated local variables
           final localDifference = _closingCash - expectedCash;
-          final needsNotes = localDifference.abs() > 0.01;
+          final needsNotes = localDifference.abs() > 50000;
 
           if (closed) {
             final closedOpeningCash = asNum(data['openingCash']);

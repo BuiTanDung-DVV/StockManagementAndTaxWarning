@@ -1,0 +1,15 @@
+{
+  "projectRoot": "d:\\SalesAndStockManagement",
+  "batchFiles": [
+    {"path": "assets/lottie/empty.json", "language": "json", "sizeLines": 1, "fileCategory": "config"},
+    {"path": "assets/lottie/error.json", "language": "json", "sizeLines": 1, "fileCategory": "config"},
+    {"path": "assets/lottie/loading.json", "language": "json", "sizeLines": 1, "fileCategory": "config"},
+    {"path": "assets/lottie/success.json", "language": "json", "sizeLines": 1, "fileCategory": "config"}
+  ],
+  "batchImportData": {
+    "assets/lottie/empty.json": [],
+    "assets/lottie/error.json": [],
+    "assets/lottie/loading.json": [],
+    "assets/lottie/success.json": []
+  }
+}

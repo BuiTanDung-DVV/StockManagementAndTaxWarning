@@ -51,10 +51,10 @@ export class ProductService {
     async createProduct(shopId: number, dto: any) {
         const sku = String(dto.sku || '').trim() || `SKU${Date.now().toString().slice(-8)}`;
         const existsSku = await this.productRepo.findOne({ where: { sku, shopId } });
-        if (existsSku) throw new Error('SKU already exists');
+        if (existsSku) throw new Error('Mã SKU này đã tồn tại trong hệ thống');
         if (dto.barcode) {
             const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId } });
-            if (existsBarcode) throw new Error('Barcode already exists');
+            if (existsBarcode) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
         }
         const openingQty = Number(dto.currentStock ?? dto.openingStock ?? 0);
         const providedWarehouseId = Number(dto.warehouseId || 0);
@@ -66,8 +66,8 @@ export class ProductService {
             saved = await this.productRepo.save(product as any) as Product;
         } catch (e: any) {
             if (e.code === '23505' || (e.message && e.message.includes('unique constraint'))) {
-                if (e.message && e.message.includes('barcode')) throw new Error('Barcode already exists');
-                throw new Error('SKU already exists');
+                if (e.message && e.message.includes('barcode')) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
+                throw new Error('Mã SKU này đã tồn tại trong hệ thống');
             }
             throw e;
         }
@@ -91,11 +91,11 @@ export class ProductService {
         const product = await this.loadProductEntity(shopId, id);
         if (dto.sku && dto.sku !== product.sku) {
             const existsSku = await this.productRepo.findOne({ where: { sku: dto.sku, shopId } });
-            if (existsSku) throw new Error('SKU already exists');
+            if (existsSku) throw new Error('Mã SKU này đã tồn tại trong hệ thống');
         }
         if (dto.barcode && dto.barcode !== product.barcode) {
             const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId } });
-            if (existsBarcode) throw new Error('Barcode already exists');
+            if (existsBarcode) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
         }
 
         const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
@@ -104,8 +104,8 @@ export class ProductService {
             await this.productRepo.save(product);
         } catch (e: any) {
             if (e.code === '23505' || (e.message && e.message.includes('unique constraint'))) {
-                if (e.message && e.message.includes('barcode')) throw new Error('Barcode already exists');
-                throw new Error('SKU already exists');
+                if (e.message && e.message.includes('barcode')) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
+                throw new Error('Mã SKU này đã tồn tại trong hệ thống');
             }
             throw e;
         }

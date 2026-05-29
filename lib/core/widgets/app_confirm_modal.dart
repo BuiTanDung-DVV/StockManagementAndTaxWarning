@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../utils/toast_service.dart';
 
 class AppConfirmModal extends StatelessWidget {
   final String title;
@@ -27,8 +28,8 @@ class AppConfirmModal extends StatelessWidget {
     String confirmText = 'Xác nhận',
     String cancelText = 'Hủy',
     bool isDestructive = false,
-  }) {
-    return showDialog<bool>(
+  }) async {
+    final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AppConfirmModal(
         title: title,
@@ -39,6 +40,10 @@ class AppConfirmModal extends StatelessWidget {
         onConfirm: () => Navigator.of(ctx).pop(true),
       ),
     );
+    if (result != true) {
+      ToastService.showInfo('Đã hủy thao tác');
+    }
+    return result;
   }
 
   @override

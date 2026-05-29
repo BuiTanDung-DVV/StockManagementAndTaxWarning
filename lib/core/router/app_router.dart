@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/settings/providers/shop_provider.dart';
+import 'package:bot_toast/bot_toast.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
@@ -71,6 +72,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
     refreshListenable: notifier,
+    observers: [BotToastNavigatorObserver()],
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final shopState = ref.read(shopProvider);
@@ -88,7 +90,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // If logged in:
-      if (!isOnboarded) {
+      if (!isOnboarded || shopState.shops.isEmpty) {
         if (state.matchedLocation != '/onboarding') return '/onboarding';
         return null;
       }
@@ -106,6 +108,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Check route-level permission guards
       bool checkRoutePermission(String path) {
+        // Allow if shop data hasn't loaded yet to prevent kicking user to Dashboard on F5
+        if (shopState.userShops.isEmpty) return true; 
+
         if (shopState.isOwner) return true;
         
         // Define route mappings

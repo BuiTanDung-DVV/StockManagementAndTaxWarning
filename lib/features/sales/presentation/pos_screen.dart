@@ -17,6 +17,7 @@ import '../providers/sales_provider.dart';
 import 'qr_payment_screen.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/utils/toast_service.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -51,9 +52,30 @@ class CartItem {
 /// Cart state
 class CartState {
   final List<CartItem> items;
-  const CartState([this.items = const []]);
+  final int? customerId;
+  final String? customerName;
+
+  const CartState({
+    this.items = const [],
+    this.customerId,
+    this.customerName,
+  });
+
   double get total => items.fold(0.0, (sum, i) => sum + i.subtotal);
   int get itemCount => items.fold(0, (sum, i) => sum + i.quantity);
+
+  CartState copyWith({
+    List<CartItem>? items,
+    int? customerId,
+    String? customerName,
+    bool clearCustomer = false,
+  }) {
+    return CartState(
+      items: items ?? this.items,
+      customerId: clearCustomer ? null : (customerId ?? this.customerId),
+      customerName: clearCustomer ? null : (customerName ?? this.customerName),
+    );
+  }
 }
 
 /// Cart notifier (Riverpod v3 Notifier pattern)
@@ -66,8 +88,8 @@ class CartNotifier extends Notifier<CartState> {
         .where((i) => i.productId == productId)
         .firstOrNull;
     if (existing != null) {
-      state = CartState(
-        state.items
+      state = state.copyWith(
+        items: state.items
             .map(
               (i) => i.productId == productId
                   ? i.copyWith(quantity: i.quantity + 1)
@@ -76,16 +98,18 @@ class CartNotifier extends Notifier<CartState> {
             .toList(),
       );
     } else {
-      state = CartState([
-        ...state.items,
-        CartItem(productId: productId, name: name, price: price),
-      ]);
+      state = state.copyWith(
+        items: [
+          ...state.items,
+          CartItem(productId: productId, name: name, price: price),
+        ]
+      );
     }
   }
 
   void increment(int productId) {
-    state = CartState(
-      state.items
+    state = state.copyWith(
+      items: state.items
           .map(
             (i) => i.productId == productId
                 ? i.copyWith(quantity: i.quantity + 1)
@@ -98,8 +122,8 @@ class CartNotifier extends Notifier<CartState> {
   void decrement(int productId) {
     final item = state.items.firstWhere((i) => i.productId == productId);
     if (item.quantity > 1) {
-      state = CartState(
-        state.items
+      state = state.copyWith(
+        items: state.items
             .map(
               (i) => i.productId == productId
                   ? i.copyWith(quantity: i.quantity - 1)
@@ -108,19 +132,27 @@ class CartNotifier extends Notifier<CartState> {
             .toList(),
       );
     } else {
-      state = CartState(
-        state.items.where((i) => i.productId != productId).toList(),
+      state = state.copyWith(
+        items: state.items.where((i) => i.productId != productId).toList(),
       );
     }
   }
 
   void remove(int productId) {
-    state = CartState(
-      state.items.where((i) => i.productId != productId).toList(),
+    state = state.copyWith(
+      items: state.items.where((i) => i.productId != productId).toList(),
     );
   }
 
   void clear() => state = const CartState();
+
+  void setCustomer(int? id, String? name) {
+    state = state.copyWith(
+      customerId: id,
+      customerName: name,
+      clearCustomer: id == null,
+    );
+  }
 }
 
 final _cartProvider = NotifierProvider<CartNotifier, CartState>(
@@ -137,8 +169,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   final _searchCtrl = TextEditingController();
   String _search = '';
   bool _creating = false;
-  int? _selectedCustomerId;
-  String? _selectedCustomerName;
 
   @override
   void dispose() {
@@ -522,7 +552,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           );
                           if (confirm == true) {
                             ref.read(_cartProvider.notifier).clear();
-                            Navigator.pop(ctx);
+                            ToastService.showSuccess('Đã xóa toàn bộ giỏ hàng');
+                            if (ctx.mounted) Navigator.pop(ctx);
                           }
                         },
                         child: const Text(
@@ -566,6 +597,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               ref
                                   .read(_cartProvider.notifier)
                                   .remove(item.productId);
+                              ToastService.showSuccess('Đã xóa ${item.name} khỏi giỏ hàng');
                             }
                           },
                         ),
@@ -608,19 +640,21 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.9),
-            child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+      builder: (ctx) => Consumer(
+        builder: (ctx, ref, _) {
+          final cart = ref.watch(_cartProvider);
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.9),
+              child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Text(
                 'Xác nhận thanh toán',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -683,24 +717,20 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
-                onPressed: () => _showCustomerPicker(context, setModalState),
+                onPressed: () => _showCustomerPicker(context),
                 icon: const Icon(Icons.person_search),
                 label: Text(
-                  _selectedCustomerName == null
+                  cart.customerName == null
                       ? 'Chọn khách hàng (mua chịu)'
-                      : 'Khách: $_selectedCustomerName',
+                      : 'Khách: ${cart.customerName}',
                 ),
               ),
-              if (_selectedCustomerName != null)
+              if (cart.customerName != null)
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      setState(() {
-                        _selectedCustomerId = null;
-                        _selectedCustomerName = null;
-                      });
-                      setModalState(() {});
+                      ref.read(_cartProvider.notifier).setCustomer(null, null);
                     },
                     child: const Text('Bỏ chọn khách'),
                   ),
@@ -712,12 +742,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ),
       ),
       ),
-      ),
+      );
+      },
       ),
     );
   }
 
-  void _showCustomerPicker(BuildContext context, [StateSetter? setModalState]) {
+  void _showCustomerPicker(BuildContext context) {
     showModalBottomSheet(useSafeArea: true,
       context: context,
       showDragHandle: true,
@@ -753,7 +784,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         child: OutlinedButton.icon(
                           onPressed: () {
                             Navigator.pop(ctx);
-                            _showQuickAddCustomer(context, setModalState);
+                            _showQuickAddCustomer(context);
                           },
                           icon: const Icon(Icons.person_add_alt_1),
                           label: const Text('+ Thêm khách hàng mới'),
@@ -784,12 +815,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               ),
                               subtitle: Text(c['phone']?.toString() ?? ''),
                               onTap: () {
-                                setState(() {
-                                  _selectedCustomerId = int.tryParse(c['id'].toString());
-                                  _selectedCustomerName = c['name']?.toString();
-                                });
-                                setModalState?.call(() {});
+                                final newId = TypeParser.asInt(c['id']);
+                                final newName = c['name']?.toString() ?? 'Khách hàng';
+                                ref.read(_cartProvider.notifier).setCustomer(newId == 0 ? null : newId, newName);
                                 Navigator.pop(ctx);
+                                if (newId != 0) {
+                                  ToastService.showSuccess('Đã chọn khách hàng: $newName');
+                                }
                               },
                             );
                           },
@@ -805,7 +837,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
   }
 
-  void _showQuickAddCustomer(BuildContext context, [StateSetter? setModalState]) {
+  void _showQuickAddCustomer(BuildContext context) {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     showDialog(
@@ -848,15 +880,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     if (phoneCtrl.text.trim().isNotEmpty)
                       'phone': phoneCtrl.text.trim(),
                   });
-                  final newId = int.tryParse(result['id'].toString());
-                  setState(() {
-                    _selectedCustomerId = newId;
-                    _selectedCustomerName = name;
-                  });
-                  setModalState?.call(() {});
+                  final newId = TypeParser.asInt(result['id']);
+                  ref.read(_cartProvider.notifier).setCustomer(newId == 0 ? null : newId, name);
                   ref.invalidate(customerListProvider);
-                  if (ctx.mounted) {
+                  if (context.mounted) {
                     Navigator.pop(ctx);
+                    if (newId != 0) {
+                      ToastService.showSuccess('Đã chọn khách hàng: $name');
+                    }
                   }
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -905,11 +936,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     'phone': phoneCtrl.text.trim(),
                 });
                 final newId = int.tryParse(result['id'].toString());
-                setState(() {
-                  _selectedCustomerId = newId;
-                  _selectedCustomerName = name;
-                });
-                setModalState?.call(() {});
+                ref.read(_cartProvider.notifier).setCustomer(newId, name);
                 ref.invalidate(customerListProvider);
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) {
@@ -981,7 +1008,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       final result = await ref.read(salesRepoProvider).create({
         'orderCode': orderCode,
         'items': items,
-        if (_selectedCustomerId != null) 'customerId': _selectedCustomerId,
+        if (cart.customerId != null) 'customerId': cart.customerId,
         'paymentMethod': method,
         'status': method == 'CASH' ? 'DELIVERED' : 'PENDING',
         'paidAmount': method == 'CASH' ? cart.total : 0,
@@ -992,10 +1019,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       if (method == 'CASH') {
         // Cash payment — done immediately
         ref.read(_cartProvider.notifier).clear();
-        setState(() {
-          _selectedCustomerId = null;
-          _selectedCustomerName = null;
-        });
 
         // Trigger UI updates across the app (Inventory, Finance, Sales Summary, Sales List)
         ref.invalidate(salesListProvider);
@@ -1071,10 +1094,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           );
           if (paid == true) {
             ref.read(_cartProvider.notifier).clear();
-            setState(() {
-              _selectedCustomerId = null;
-              _selectedCustomerName = null;
-            });
           }
         }
       }

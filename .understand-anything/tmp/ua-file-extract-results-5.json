@@ -1,0 +1,396 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 25,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": ".cursor/rules/codegraph.mdc",
+      "language": "mdc",
+      "fileCategory": "code",
+      "totalLines": 39,
+      "nonEmptyLines": 31,
+      "metrics": {}
+    },
+    {
+      "path": ".gitattributes",
+      "language": "unknown",
+      "fileCategory": "code",
+      "totalLines": 2,
+      "nonEmptyLines": 2,
+      "metrics": {}
+    },
+    {
+      "path": ".metadata",
+      "language": "unknown",
+      "fileCategory": "code",
+      "totalLines": 30,
+      "nonEmptyLines": 25,
+      "metrics": {}
+    },
+    {
+      "path": ".understand-anything/.understandignore",
+      "language": "unknown",
+      "fileCategory": "code",
+      "totalLines": 65,
+      "nonEmptyLines": 60,
+      "metrics": {}
+    },
+    {
+      "path": ".vercel/project.json",
+      "language": "json",
+      "fileCategory": "config",
+      "totalLines": 1,
+      "nonEmptyLines": 1,
+      "sections": [
+        {
+          "heading": "projectId",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "orgId",
+          "level": 1,
+          "line": 1
+        },
+        {
+          "heading": "projectName",
+          "level": 1,
+          "line": 1
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 0,
+        "functionCount": 0,
+        "classCount": 0,
+        "sectionCount": 3
+      }
+    },
+    {
+      "path": ".vercel/README.txt",
+      "language": "txt",
+      "fileCategory": "docs",
+      "totalLines": 11,
+      "nonEmptyLines": 9,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/build.gradle.kts",
+      "language": "kotlin",
+      "fileCategory": "code",
+      "totalLines": 44,
+      "nonEmptyLines": 38,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/debug/AndroidManifest.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 7,
+      "nonEmptyLines": 7,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/main/AndroidManifest.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 46,
+      "nonEmptyLines": 45,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/example/flutter_app/MainActivity.kt",
+      "language": "kotlin",
+      "fileCategory": "code",
+      "totalLines": 5,
+      "nonEmptyLines": 3,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/main/res/drawable-v21/launch_background.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/main/res/drawable/launch_background.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 9,
+      "nonEmptyLines": 9,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/main/res/values-night-v31/styles.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 21,
+      "nonEmptyLines": 20,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/main/res/values-night/styles.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 22,
+      "nonEmptyLines": 21,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/main/res/values-v31/styles.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 21,
+      "nonEmptyLines": 20,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/main/res/values/styles.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 22,
+      "nonEmptyLines": 21,
+      "metrics": {}
+    },
+    {
+      "path": "android/app/src/profile/AndroidManifest.xml",
+      "language": "xml",
+      "fileCategory": "config",
+      "totalLines": 7,
+      "nonEmptyLines": 7,
+      "metrics": {}
+    },
+    {
+      "path": "android/build.gradle.kts",
+      "language": "kotlin",
+      "fileCategory": "code",
+      "totalLines": 24,
+      "nonEmptyLines": 21,
+      "metrics": {}
+    },
+    {
+      "path": "android/gradle.properties",
+      "language": "properties",
+      "fileCategory": "config",
+      "totalLines": 3,
+      "nonEmptyLines": 3,
+      "metrics": {}
+    },
+    {
+      "path": "android/gradle/wrapper/gradle-wrapper.properties",
+      "language": "properties",
+      "fileCategory": "config",
+      "totalLines": 5,
+      "nonEmptyLines": 5,
+      "metrics": {}
+    },
+    {
+      "path": "android/settings.gradle.kts",
+      "language": "kotlin",
+      "fileCategory": "code",
+      "totalLines": 26,
+      "nonEmptyLines": 22,
+      "metrics": {}
+    },
+    {
+      "path": "backend/create_test_user.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 33,
+      "nonEmptyLines": 28,
+      "functions": [
+        {
+          "name": "createTestUser",
+          "startLine": 6,
+          "endLine": 31,
+          "params": []
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "createTestUser",
+          "callee": "AppDataSource.initialize",
+          "lineNumber": 7
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 8
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "userRepo.findOne",
+          "lineNumber": 9
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "console.log",
+          "lineNumber": 12
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "userRepo.remove",
+          "lineNumber": 13
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "bcrypt.hash",
+          "lineNumber": 16
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "userRepo.create",
+          "lineNumber": 17
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "userRepo.save",
+          "lineNumber": 28
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "console.log",
+          "lineNumber": 29
+        },
+        {
+          "caller": "createTestUser",
+          "callee": "AppDataSource.destroy",
+          "lineNumber": 30
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/auth/entities.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 44,
+      "nonEmptyLines": 31,
+      "classes": [
+        {
+          "name": "User",
+          "startLine": 4,
+          "endLine": 44,
+          "methods": [],
+          "properties": [
+            "id",
+            "username",
+            "passwordHash",
+            "fullName",
+            "email",
+            "phone",
+            "role",
+            "avatarUrl",
+            "isActive",
+            "isOnboarded",
+            "accountType",
+            "createdAt",
+            "updatedAt"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "User",
+          "line": 3,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/src/common/response.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 31,
+      "nonEmptyLines": 28,
+      "classes": [
+        {
+          "name": "ApiResponse",
+          "startLine": 1,
+          "endLine": 13,
+          "methods": [
+            "ok"
+          ],
+          "properties": [
+            "success",
+            "message",
+            "data"
+          ]
+        },
+        {
+          "name": "PageResponse",
+          "startLine": 15,
+          "endLine": 31,
+          "methods": [
+            "of"
+          ],
+          "properties": [
+            "items",
+            "total",
+            "page",
+            "limit",
+            "totalPages"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "ApiResponse",
+          "line": 1,
+          "isDefault": false
+        },
+        {
+          "name": "PageResponse",
+          "line": 15,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "of",
+          "callee": "Math.ceil",
+          "lineNumber": 28
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/src/config/db.config.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 46,
+      "nonEmptyLines": 43,
+      "exports": [
+        {
+          "name": "AppDataSource",
+          "line": 20,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 14,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    }
+  ]
+}

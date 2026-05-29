@@ -7,6 +7,7 @@ import 'core/router/app_router.dart';
 import 'core/network/api_client.dart';
 import 'core/utils/toast_service.dart';
 import 'features/auth/providers/auth_provider.dart';
+import 'package:bot_toast/bot_toast.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,6 +43,7 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Quản lý Bán hàng & Kho hàng',
       scaffoldMessengerKey: ToastService.scaffoldMessengerKey,
+      builder: BotToastInit(),
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(brandColor.color),
       darkTheme: AppTheme.darkTheme(brandColor.color),

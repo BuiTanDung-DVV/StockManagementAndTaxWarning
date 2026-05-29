@@ -21,5 +21,9 @@
   "bugs": {
     "url": "https://github.com/BuiTanDung-DVV/StockManagementAndTaxWarning/issues"
   },
-  "homepage": "https://github.com/BuiTanDung-DVV/StockManagementAndTaxWarning#readme"
+  "homepage": "https://github.com/BuiTanDung-DVV/StockManagementAndTaxWarning#readme",
+  "dependencies": {
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2"
+  }
 }

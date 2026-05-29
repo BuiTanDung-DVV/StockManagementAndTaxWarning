@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bot_toast/bot_toast.dart';
 import '../theme/app_theme.dart';
 
 class ToastService {
@@ -12,29 +13,20 @@ class ToastService {
     _showSnackBar(message, AppColors.danger);
   }
 
+  static void showInfo(String message) {
+    _showSnackBar(message, AppColors.info);
+  }
+
   static void showWarning(String message) {
     _showSnackBar(message, AppColors.warning);
   }
 
   static void _showSnackBar(String message, Color backgroundColor) {
-    final messenger = scaffoldMessengerKey.currentState;
-    if (messenger == null) return;
-
-    messenger.clearSnackBars(); // Clear existing to prevent lingering toast
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-        ),
-        backgroundColor: backgroundColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
-        showCloseIcon: true,
-        closeIconColor: Colors.white,
-      ),
+    BotToast.showText(
+      text: message,
+      contentColor: backgroundColor,
+      textStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+      duration: const Duration(seconds: 3),
     );
   }
 }

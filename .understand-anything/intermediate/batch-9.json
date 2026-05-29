@@ -1,0 +1,616 @@
+{
+  "nodes": [
+    {
+      "id": "file:ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
+      "type": "file",
+      "name": "Runner.xcscheme",
+      "filePath": "ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
+      "summary": "Tệp mã nguồn Runner.xcscheme của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:ios/Runner.xcworkspace/contents.xcworkspacedata",
+      "type": "file",
+      "name": "contents.xcworkspacedata",
+      "filePath": "ios/Runner.xcworkspace/contents.xcworkspacedata",
+      "summary": "Tệp mã nguồn contents.xcworkspacedata của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+      "type": "config",
+      "name": "IDEWorkspaceChecks.plist",
+      "filePath": "ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+      "summary": "Tệp cấu hình IDEWorkspaceChecks.plist cho dự án.",
+      "tags": [
+        "configuration",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+      "type": "file",
+      "name": "WorkspaceSettings.xcsettings",
+      "filePath": "ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+      "summary": "Tệp mã nguồn WorkspaceSettings.xcsettings của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:ios/Runner/AppDelegate.swift",
+      "type": "file",
+      "name": "AppDelegate.swift",
+      "filePath": "ios/Runner/AppDelegate.swift",
+      "summary": "Điểm khởi đầu của ứng dụng trên iOS, quản lý vòng đời ứng dụng.",
+      "tags": [
+        "entry-point",
+        "ios",
+        "lifecycle"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:ios/Runner/AppDelegate.swift:AppDelegate",
+      "type": "class",
+      "name": "AppDelegate",
+      "summary": "Lớp AppDelegate trong AppDelegate.swift.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "type": "config",
+      "name": "Contents.json",
+      "filePath": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "summary": "Tệp cấu hình Contents.json cho dự án.",
+      "tags": [
+        "configuration",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:ios/Runner/Assets.xcassets/LaunchBackground.imageset/Contents.json",
+      "type": "config",
+      "name": "Contents.json",
+      "filePath": "ios/Runner/Assets.xcassets/LaunchBackground.imageset/Contents.json",
+      "summary": "Tệp cấu hình Contents.json cho dự án.",
+      "tags": [
+        "configuration",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
+      "type": "config",
+      "name": "Contents.json",
+      "filePath": "ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
+      "summary": "Tệp cấu hình Contents.json cho dự án.",
+      "tags": [
+        "configuration",
+        "setup"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "document:ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md",
+      "summary": "Tài liệu hướng dẫn hoặc mô tả liên quan đến README.md",
+      "tags": [
+        "documentation",
+        "guide"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:ios/Runner/Base.lproj/LaunchScreen.storyboard",
+      "type": "file",
+      "name": "LaunchScreen.storyboard",
+      "filePath": "ios/Runner/Base.lproj/LaunchScreen.storyboard",
+      "summary": "Tệp mã nguồn LaunchScreen.storyboard của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:ios/Runner/Base.lproj/Main.storyboard",
+      "type": "file",
+      "name": "Main.storyboard",
+      "filePath": "ios/Runner/Base.lproj/Main.storyboard",
+      "summary": "Tệp mã nguồn Main.storyboard của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:ios/Runner/Info.plist",
+      "type": "config",
+      "name": "Info.plist",
+      "filePath": "ios/Runner/Info.plist",
+      "summary": "Tệp cấu hình Info.plist cho dự án.",
+      "tags": [
+        "configuration",
+        "setup"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:ios/Runner/Runner-Bridging-Header.h",
+      "type": "file",
+      "name": "Runner-Bridging-Header.h",
+      "filePath": "ios/Runner/Runner-Bridging-Header.h",
+      "summary": "Tệp mã nguồn Runner-Bridging-Header.h của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:ios/Runner/SceneDelegate.swift",
+      "type": "file",
+      "name": "SceneDelegate.swift",
+      "filePath": "ios/Runner/SceneDelegate.swift",
+      "summary": "Điểm khởi đầu của ứng dụng trên iOS, quản lý vòng đời ứng dụng.",
+      "tags": [
+        "entry-point",
+        "ios",
+        "lifecycle"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:ios/Runner/SceneDelegate.swift:SceneDelegate",
+      "type": "class",
+      "name": "SceneDelegate",
+      "summary": "Lớp SceneDelegate trong SceneDelegate.swift.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:ios/RunnerTests/RunnerTests.swift",
+      "type": "file",
+      "name": "RunnerTests.swift",
+      "filePath": "ios/RunnerTests/RunnerTests.swift",
+      "summary": "Chứa các bài kiểm thử tự động cho hệ thống.",
+      "tags": [
+        "test",
+        "quality-assurance"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:ios/RunnerTests/RunnerTests.swift:RunnerTests",
+      "type": "class",
+      "name": "RunnerTests",
+      "summary": "Lớp RunnerTests trong RunnerTests.swift.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/constants/app_strings.dart",
+      "type": "file",
+      "name": "app_strings.dart",
+      "filePath": "lib/core/constants/app_strings.dart",
+      "summary": "Tệp mã nguồn app_strings.dart của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/core/constants/app_strings.dart:AppStrings",
+      "type": "class",
+      "name": "AppStrings",
+      "summary": "Lớp AppStrings trong app_strings.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/guides/feature_guide_data.dart",
+      "type": "file",
+      "name": "feature_guide_data.dart",
+      "filePath": "lib/core/guides/feature_guide_data.dart",
+      "summary": "Tệp mã nguồn feature_guide_data.dart của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/core/guides/feature_guide_data.dart:FeatureGuideItem",
+      "type": "class",
+      "name": "FeatureGuideItem",
+      "summary": "Lớp FeatureGuideItem trong feature_guide_data.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/core/guides/feature_guide_data.dart:FeatureGuide",
+      "type": "class",
+      "name": "FeatureGuide",
+      "summary": "Lớp FeatureGuide trong feature_guide_data.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/guides/feature_guide_sheet.dart",
+      "type": "file",
+      "name": "feature_guide_sheet.dart",
+      "filePath": "lib/core/guides/feature_guide_sheet.dart",
+      "summary": "Tệp mã nguồn feature_guide_sheet.dart của dự án.",
+      "tags": [
+        "source-code",
+        "component"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "class:lib/core/guides/feature_guide_sheet.dart:_GuideItemCard",
+      "type": "class",
+      "name": "_GuideItemCard",
+      "summary": "Lớp _GuideItemCard trong feature_guide_sheet.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/network/api_client.dart",
+      "type": "file",
+      "name": "api_client.dart",
+      "filePath": "lib/core/network/api_client.dart",
+      "summary": "Cấu hình HTTP client, quản lý token và giao tiếp với API.",
+      "tags": [
+        "api-client",
+        "network",
+        "utility"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/core/network/api_client.dart:ApiClient",
+      "type": "class",
+      "name": "ApiClient",
+      "summary": "Lớp ApiClient trong api_client.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/core/network/api_client.dart:ApiException",
+      "type": "class",
+      "name": "ApiException",
+      "summary": "Lớp ApiException trong api_client.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/router/app_router.dart",
+      "type": "file",
+      "name": "app_router.dart",
+      "filePath": "lib/core/router/app_router.dart",
+      "summary": "Định tuyến và điều hướng các màn hình trong ứng dụng.",
+      "tags": [
+        "router",
+        "configuration",
+        "navigation"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/core/router/app_router.dart:_RouterNotifier",
+      "type": "class",
+      "name": "_RouterNotifier",
+      "summary": "Lớp _RouterNotifier trong app_router.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/theme/app_theme.dart",
+      "type": "file",
+      "name": "app_theme.dart",
+      "filePath": "lib/core/theme/app_theme.dart",
+      "summary": "Định nghĩa giao diện, màu sắc và theme cho ứng dụng.",
+      "tags": [
+        "theme",
+        "ui",
+        "configuration"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "class:lib/core/theme/app_theme.dart:AppColors",
+      "type": "class",
+      "name": "AppColors",
+      "summary": "Lớp AppColors trong app_theme.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/core/theme/app_theme.dart:AppTheme",
+      "type": "class",
+      "name": "AppTheme",
+      "summary": "Lớp AppTheme trong app_theme.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/core/theme/app_theme.dart:AppThemeColors",
+      "type": "class",
+      "name": "AppThemeColors",
+      "summary": "Lớp AppThemeColors trong app_theme.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/theme/theme_provider.dart",
+      "type": "file",
+      "name": "theme_provider.dart",
+      "filePath": "lib/core/theme/theme_provider.dart",
+      "summary": "Định nghĩa giao diện, màu sắc và theme cho ứng dụng.",
+      "tags": [
+        "theme",
+        "ui",
+        "configuration"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/core/theme/theme_provider.dart:BrandColorNotifier",
+      "type": "class",
+      "name": "BrandColorNotifier",
+      "summary": "Lớp BrandColorNotifier trong theme_provider.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/utils/parse_utils.dart",
+      "type": "file",
+      "name": "parse_utils.dart",
+      "filePath": "lib/core/utils/parse_utils.dart",
+      "summary": "Cung cấp các hàm tiện ích hỗ trợ tái sử dụng.",
+      "tags": [
+        "utility",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/utils/toast_service.dart",
+      "type": "file",
+      "name": "toast_service.dart",
+      "filePath": "lib/core/utils/toast_service.dart",
+      "summary": "Cung cấp các hàm tiện ích hỗ trợ tái sử dụng.",
+      "tags": [
+        "utility",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/core/utils/toast_service.dart:ToastService",
+      "type": "class",
+      "name": "ToastService",
+      "summary": "Lớp ToastService trong toast_service.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:lib/core/utils/type_parser.dart",
+      "type": "file",
+      "name": "type_parser.dart",
+      "filePath": "lib/core/utils/type_parser.dart",
+      "summary": "Cung cấp các hàm tiện ích hỗ trợ tái sử dụng.",
+      "tags": [
+        "utility",
+        "helper"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:lib/core/utils/type_parser.dart:TypeParser",
+      "type": "class",
+      "name": "TypeParser",
+      "summary": "Lớp TypeParser trong type_parser.dart.",
+      "tags": [
+        "class",
+        "model-or-service",
+        "oop"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:ios/Runner/AppDelegate.swift",
+      "target": "class:ios/Runner/AppDelegate.swift:AppDelegate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:ios/Runner/SceneDelegate.swift",
+      "target": "class:ios/Runner/SceneDelegate.swift:SceneDelegate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:ios/RunnerTests/RunnerTests.swift",
+      "target": "class:ios/RunnerTests/RunnerTests.swift:RunnerTests",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/constants/app_strings.dart",
+      "target": "class:lib/core/constants/app_strings.dart:AppStrings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/guides/feature_guide_data.dart",
+      "target": "class:lib/core/guides/feature_guide_data.dart:FeatureGuideItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/guides/feature_guide_data.dart",
+      "target": "class:lib/core/guides/feature_guide_data.dart:FeatureGuide",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/guides/feature_guide_sheet.dart",
+      "target": "class:lib/core/guides/feature_guide_sheet.dart:_GuideItemCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/network/api_client.dart",
+      "target": "class:lib/core/network/api_client.dart:ApiClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/network/api_client.dart",
+      "target": "class:lib/core/network/api_client.dart:ApiException",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/router/app_router.dart",
+      "target": "class:lib/core/router/app_router.dart:_RouterNotifier",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/theme/app_theme.dart",
+      "target": "class:lib/core/theme/app_theme.dart:AppColors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/theme/app_theme.dart",
+      "target": "class:lib/core/theme/app_theme.dart:AppTheme",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/theme/app_theme.dart",
+      "target": "class:lib/core/theme/app_theme.dart:AppThemeColors",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/theme/theme_provider.dart",
+      "target": "class:lib/core/theme/theme_provider.dart:BrandColorNotifier",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/utils/toast_service.dart",
+      "target": "class:lib/core/utils/toast_service.dart:ToastService",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:lib/core/utils/type_parser.dart",
+      "target": "class:lib/core/utils/type_parser.dart:TypeParser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    }
+  ]
+}

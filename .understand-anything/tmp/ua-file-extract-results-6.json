@@ -1,0 +1,6785 @@
+{
+  "scriptCompleted": true,
+  "filesAnalyzed": 25,
+  "filesSkipped": [],
+  "results": [
+    {
+      "path": "backend/src/config/env.config.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 36,
+      "nonEmptyLines": 33,
+      "exports": [
+        {
+          "name": "config",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "allowedOrigins",
+          "callee": "origins.split(',').map",
+          "lineNumber": 29
+        },
+        {
+          "caller": "allowedOrigins",
+          "callee": "origins.split",
+          "lineNumber": 29
+        },
+        {
+          "caller": "allowedOrigins",
+          "callee": "o.trim",
+          "lineNumber": 29
+        },
+        {
+          "caller": "allowedOrigins",
+          "callee": "Array.from",
+          "lineNumber": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/auth.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 109,
+      "nonEmptyLines": 101,
+      "functions": [
+        {
+          "name": "register",
+          "startLine": 6,
+          "endLine": 19,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "login",
+          "startLine": 21,
+          "endLine": 34,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "refreshToken",
+          "startLine": 36,
+          "endLine": 43,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "forgotPassword",
+          "startLine": 45,
+          "endLine": 58,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "resetPassword",
+          "startLine": 60,
+          "endLine": 73,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "completeOnboarding",
+          "startLine": 74,
+          "endLine": 90,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "searchShops",
+          "startLine": 92,
+          "endLine": 100,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "sendOtp",
+          "startLine": 102,
+          "endLine": 109,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "register",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "login",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "refreshToken",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "forgotPassword",
+          "line": 45,
+          "isDefault": false
+        },
+        {
+          "name": "resetPassword",
+          "line": 60,
+          "isDefault": false
+        },
+        {
+          "name": "completeOnboarding",
+          "line": 74,
+          "isDefault": false
+        },
+        {
+          "name": "searchShops",
+          "line": 92,
+          "isDefault": false
+        },
+        {
+          "name": "sendOtp",
+          "line": 102,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "register",
+          "callee": "authService.register",
+          "lineNumber": 8
+        },
+        {
+          "caller": "register",
+          "callee": "res.json",
+          "lineNumber": 9
+        },
+        {
+          "caller": "register",
+          "callee": "error.message.includes",
+          "lineNumber": 11
+        },
+        {
+          "caller": "register",
+          "callee": "error.message.includes",
+          "lineNumber": 11
+        },
+        {
+          "caller": "register",
+          "callee": "res.status(409).json",
+          "lineNumber": 12
+        },
+        {
+          "caller": "register",
+          "callee": "res.status",
+          "lineNumber": 12
+        },
+        {
+          "caller": "register",
+          "callee": "error.message.includes",
+          "lineNumber": 13
+        },
+        {
+          "caller": "register",
+          "callee": "error.message.includes",
+          "lineNumber": 13
+        },
+        {
+          "caller": "register",
+          "callee": "res.status(400).json",
+          "lineNumber": 14
+        },
+        {
+          "caller": "register",
+          "callee": "res.status",
+          "lineNumber": 14
+        },
+        {
+          "caller": "register",
+          "callee": "res.status(500).json",
+          "lineNumber": 16
+        },
+        {
+          "caller": "register",
+          "callee": "res.status",
+          "lineNumber": 16
+        },
+        {
+          "caller": "login",
+          "callee": "authService.login",
+          "lineNumber": 23
+        },
+        {
+          "caller": "login",
+          "callee": "res.json",
+          "lineNumber": 26
+        },
+        {
+          "caller": "login",
+          "callee": "res.status(401).json",
+          "lineNumber": 29
+        },
+        {
+          "caller": "login",
+          "callee": "res.status",
+          "lineNumber": 29
+        },
+        {
+          "caller": "login",
+          "callee": "res.status(500).json",
+          "lineNumber": 31
+        },
+        {
+          "caller": "login",
+          "callee": "res.status",
+          "lineNumber": 31
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "authService.refreshToken",
+          "lineNumber": 38
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "res.json",
+          "lineNumber": 39
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "res.status(401).json",
+          "lineNumber": 41
+        },
+        {
+          "caller": "refreshToken",
+          "callee": "res.status",
+          "lineNumber": 41
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "authService.forgotPassword",
+          "lineNumber": 47
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "res.json",
+          "lineNumber": 48
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "error.message.includes",
+          "lineNumber": 50
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "res.status(404).json",
+          "lineNumber": 51
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "res.status",
+          "lineNumber": 51
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "error.message.includes",
+          "lineNumber": 52
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "res.status(400).json",
+          "lineNumber": 53
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "res.status",
+          "lineNumber": 53
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "res.status(500).json",
+          "lineNumber": 55
+        },
+        {
+          "caller": "forgotPassword",
+          "callee": "res.status",
+          "lineNumber": 55
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "authService.resetPassword",
+          "lineNumber": 62
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "res.json",
+          "lineNumber": 63
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "error.message.includes",
+          "lineNumber": 65
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "res.status(404).json",
+          "lineNumber": 66
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "res.status",
+          "lineNumber": 66
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "error.message.includes",
+          "lineNumber": 67
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "error.message.includes",
+          "lineNumber": 67
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "res.status(400).json",
+          "lineNumber": 68
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "res.status",
+          "lineNumber": 68
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "res.status(500).json",
+          "lineNumber": 70
+        },
+        {
+          "caller": "resetPassword",
+          "callee": "res.status",
+          "lineNumber": 70
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "res.status(401).json",
+          "lineNumber": 79
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "res.status",
+          "lineNumber": 79
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "authService.completeOnboarding",
+          "lineNumber": 81
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "res.json",
+          "lineNumber": 82
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "res.status(409).json",
+          "lineNumber": 85
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "res.status",
+          "lineNumber": 85
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "res.status(500).json",
+          "lineNumber": 87
+        },
+        {
+          "caller": "completeOnboarding",
+          "callee": "res.status",
+          "lineNumber": 87
+        },
+        {
+          "caller": "searchShops",
+          "callee": "authService.searchShops",
+          "lineNumber": 95
+        },
+        {
+          "caller": "searchShops",
+          "callee": "res.json",
+          "lineNumber": 96
+        },
+        {
+          "caller": "searchShops",
+          "callee": "res.status(500).json",
+          "lineNumber": 98
+        },
+        {
+          "caller": "searchShops",
+          "callee": "res.status",
+          "lineNumber": 98
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "authService.sendOtp",
+          "lineNumber": 104
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "res.json",
+          "lineNumber": 105
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "res.status(400).json",
+          "lineNumber": 107
+        },
+        {
+          "caller": "sendOtp",
+          "callee": "res.status",
+          "lineNumber": 107
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 8,
+        "functionCount": 8,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/customer.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 64,
+      "nonEmptyLines": 51,
+      "functions": [
+        {
+          "name": "findAll",
+          "startLine": 6,
+          "endLine": 9,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "findOne",
+          "startLine": 11,
+          "endLine": 14,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "create",
+          "startLine": 16,
+          "endLine": 19,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "update",
+          "startLine": 21,
+          "endLine": 24,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "remove",
+          "startLine": 26,
+          "endLine": 29,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "receivables",
+          "startLine": 31,
+          "endLine": 34,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createReceivable",
+          "startLine": 36,
+          "endLine": 39,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "overdueDebts",
+          "startLine": 41,
+          "endLine": 44,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "debtAging",
+          "startLine": 46,
+          "endLine": 49,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getDebtEvidence",
+          "startLine": 51,
+          "endLine": 54,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "addEvidence",
+          "startLine": 56,
+          "endLine": 59,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "addPayment",
+          "startLine": 61,
+          "endLine": 64,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "findAll",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "findOne",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "create",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "update",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "remove",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "receivables",
+          "line": 31,
+          "isDefault": false
+        },
+        {
+          "name": "createReceivable",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "overdueDebts",
+          "line": 41,
+          "isDefault": false
+        },
+        {
+          "name": "debtAging",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "getDebtEvidence",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "addEvidence",
+          "line": 56,
+          "isDefault": false
+        },
+        {
+          "name": "addPayment",
+          "line": 61,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "findAll",
+          "callee": "res.json",
+          "lineNumber": 7
+        },
+        {
+          "caller": "findAll",
+          "callee": "customerService.findAll",
+          "lineNumber": 7
+        },
+        {
+          "caller": "findAll",
+          "callee": "res.status(500).json",
+          "lineNumber": 8
+        },
+        {
+          "caller": "findAll",
+          "callee": "res.status",
+          "lineNumber": 8
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.json",
+          "lineNumber": 12
+        },
+        {
+          "caller": "findOne",
+          "callee": "customerService.findById",
+          "lineNumber": 12
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.status(e.message === 'Customer not found' ? 404 : 500).json",
+          "lineNumber": 13
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.status",
+          "lineNumber": 13
+        },
+        {
+          "caller": "create",
+          "callee": "res.json",
+          "lineNumber": 17
+        },
+        {
+          "caller": "create",
+          "callee": "customerService.create",
+          "lineNumber": 17
+        },
+        {
+          "caller": "create",
+          "callee": "res.status(500).json",
+          "lineNumber": 18
+        },
+        {
+          "caller": "create",
+          "callee": "res.status",
+          "lineNumber": 18
+        },
+        {
+          "caller": "update",
+          "callee": "res.json",
+          "lineNumber": 22
+        },
+        {
+          "caller": "update",
+          "callee": "customerService.update",
+          "lineNumber": 22
+        },
+        {
+          "caller": "update",
+          "callee": "res.status(500).json",
+          "lineNumber": 23
+        },
+        {
+          "caller": "update",
+          "callee": "res.status",
+          "lineNumber": 23
+        },
+        {
+          "caller": "remove",
+          "callee": "res.json",
+          "lineNumber": 27
+        },
+        {
+          "caller": "remove",
+          "callee": "customerService.remove",
+          "lineNumber": 27
+        },
+        {
+          "caller": "remove",
+          "callee": "res.status(500).json",
+          "lineNumber": 28
+        },
+        {
+          "caller": "remove",
+          "callee": "res.status",
+          "lineNumber": 28
+        },
+        {
+          "caller": "receivables",
+          "callee": "res.json",
+          "lineNumber": 32
+        },
+        {
+          "caller": "receivables",
+          "callee": "customerService.getReceivables",
+          "lineNumber": 32
+        },
+        {
+          "caller": "receivables",
+          "callee": "res.status(500).json",
+          "lineNumber": 33
+        },
+        {
+          "caller": "receivables",
+          "callee": "res.status",
+          "lineNumber": 33
+        },
+        {
+          "caller": "createReceivable",
+          "callee": "res.json",
+          "lineNumber": 37
+        },
+        {
+          "caller": "createReceivable",
+          "callee": "res.status(500).json",
+          "lineNumber": 38
+        },
+        {
+          "caller": "createReceivable",
+          "callee": "res.status",
+          "lineNumber": 38
+        },
+        {
+          "caller": "overdueDebts",
+          "callee": "res.json",
+          "lineNumber": 42
+        },
+        {
+          "caller": "overdueDebts",
+          "callee": "customerService.getOverdueDebts",
+          "lineNumber": 42
+        },
+        {
+          "caller": "overdueDebts",
+          "callee": "res.status(500).json",
+          "lineNumber": 43
+        },
+        {
+          "caller": "overdueDebts",
+          "callee": "res.status",
+          "lineNumber": 43
+        },
+        {
+          "caller": "debtAging",
+          "callee": "res.json",
+          "lineNumber": 47
+        },
+        {
+          "caller": "debtAging",
+          "callee": "customerService.getDebtAging",
+          "lineNumber": 47
+        },
+        {
+          "caller": "debtAging",
+          "callee": "res.status(500).json",
+          "lineNumber": 48
+        },
+        {
+          "caller": "debtAging",
+          "callee": "res.status",
+          "lineNumber": 48
+        },
+        {
+          "caller": "getDebtEvidence",
+          "callee": "res.json",
+          "lineNumber": 52
+        },
+        {
+          "caller": "getDebtEvidence",
+          "callee": "customerService.getDebtEvidence",
+          "lineNumber": 52
+        },
+        {
+          "caller": "getDebtEvidence",
+          "callee": "res.status(500).json",
+          "lineNumber": 53
+        },
+        {
+          "caller": "getDebtEvidence",
+          "callee": "res.status",
+          "lineNumber": 53
+        },
+        {
+          "caller": "addEvidence",
+          "callee": "res.json",
+          "lineNumber": 57
+        },
+        {
+          "caller": "addEvidence",
+          "callee": "res.status(500).json",
+          "lineNumber": 58
+        },
+        {
+          "caller": "addEvidence",
+          "callee": "res.status",
+          "lineNumber": 58
+        },
+        {
+          "caller": "addPayment",
+          "callee": "res.json",
+          "lineNumber": 62
+        },
+        {
+          "caller": "addPayment",
+          "callee": "customerService.addPayment",
+          "lineNumber": 62
+        },
+        {
+          "caller": "addPayment",
+          "callee": "res.status(500).json",
+          "lineNumber": 63
+        },
+        {
+          "caller": "addPayment",
+          "callee": "res.status",
+          "lineNumber": 63
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 12,
+        "functionCount": 12,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/finance.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 215,
+      "nonEmptyLines": 200,
+      "functions": [
+        {
+          "name": "getCashTransactions",
+          "startLine": 9,
+          "endLine": 12,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createCashTransaction",
+          "startLine": 13,
+          "endLine": 16,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateCashTransaction",
+          "startLine": 17,
+          "endLine": 20,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deleteCashTransaction",
+          "startLine": 21,
+          "endLine": 24,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getCashFlowSummary",
+          "startLine": 25,
+          "endLine": 28,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getProfitLoss",
+          "startLine": 29,
+          "endLine": 32,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getInvoiceReconciliation",
+          "startLine": 33,
+          "endLine": 36,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getExpensesByCategory",
+          "startLine": 37,
+          "endLine": 40,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getDailyClosings",
+          "startLine": 42,
+          "endLine": 45,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getDailyClosingByDate",
+          "startLine": 46,
+          "endLine": 49,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createDailyClosing",
+          "startLine": 50,
+          "endLine": 53,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getCashAccounts",
+          "startLine": 55,
+          "endLine": 58,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getForecasts",
+          "startLine": 60,
+          "endLine": 63,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createForecast",
+          "startLine": 64,
+          "endLine": 67,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateForecast",
+          "startLine": 68,
+          "endLine": 71,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deleteForecast",
+          "startLine": 72,
+          "endLine": 75,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getBudgetPlans",
+          "startLine": 77,
+          "endLine": 80,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createBudgetPlan",
+          "startLine": 81,
+          "endLine": 84,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateBudgetPlan",
+          "startLine": 85,
+          "endLine": 88,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deleteBudgetPlan",
+          "startLine": 89,
+          "endLine": 92,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getInvoices",
+          "startLine": 95,
+          "endLine": 98,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getInvoiceSummary",
+          "startLine": 99,
+          "endLine": 102,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getInvoiceById",
+          "startLine": 103,
+          "endLine": 106,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createInvoice",
+          "startLine": 107,
+          "endLine": 110,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateInvoice",
+          "startLine": 111,
+          "endLine": 114,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deleteInvoice",
+          "startLine": 115,
+          "endLine": 118,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "issueEInvoice",
+          "startLine": 123,
+          "endLine": 126,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getTaxObligations",
+          "startLine": 129,
+          "endLine": 132,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createTaxObligation",
+          "startLine": 133,
+          "endLine": 136,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateTaxObligation",
+          "startLine": 137,
+          "endLine": 140,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deleteTaxObligation",
+          "startLine": 141,
+          "endLine": 144,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getPurchasesWithoutInvoice",
+          "startLine": 147,
+          "endLine": 150,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createPurchaseWithoutInvoice",
+          "startLine": 151,
+          "endLine": 171,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "approvePurchaseWithoutInvoice",
+          "startLine": 173,
+          "endLine": 193,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "rejectPurchaseWithoutInvoice",
+          "startLine": 195,
+          "endLine": 215,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "getCashTransactions",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "createCashTransaction",
+          "line": 13,
+          "isDefault": false
+        },
+        {
+          "name": "updateCashTransaction",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "deleteCashTransaction",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "getCashFlowSummary",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "getProfitLoss",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "getInvoiceReconciliation",
+          "line": 33,
+          "isDefault": false
+        },
+        {
+          "name": "getExpensesByCategory",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "getDailyClosings",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "getDailyClosingByDate",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "createDailyClosing",
+          "line": 50,
+          "isDefault": false
+        },
+        {
+          "name": "getCashAccounts",
+          "line": 55,
+          "isDefault": false
+        },
+        {
+          "name": "getForecasts",
+          "line": 60,
+          "isDefault": false
+        },
+        {
+          "name": "createForecast",
+          "line": 64,
+          "isDefault": false
+        },
+        {
+          "name": "updateForecast",
+          "line": 68,
+          "isDefault": false
+        },
+        {
+          "name": "deleteForecast",
+          "line": 72,
+          "isDefault": false
+        },
+        {
+          "name": "getBudgetPlans",
+          "line": 77,
+          "isDefault": false
+        },
+        {
+          "name": "createBudgetPlan",
+          "line": 81,
+          "isDefault": false
+        },
+        {
+          "name": "updateBudgetPlan",
+          "line": 85,
+          "isDefault": false
+        },
+        {
+          "name": "deleteBudgetPlan",
+          "line": 89,
+          "isDefault": false
+        },
+        {
+          "name": "getInvoices",
+          "line": 95,
+          "isDefault": false
+        },
+        {
+          "name": "getInvoiceSummary",
+          "line": 99,
+          "isDefault": false
+        },
+        {
+          "name": "getInvoiceById",
+          "line": 103,
+          "isDefault": false
+        },
+        {
+          "name": "createInvoice",
+          "line": 107,
+          "isDefault": false
+        },
+        {
+          "name": "updateInvoice",
+          "line": 111,
+          "isDefault": false
+        },
+        {
+          "name": "deleteInvoice",
+          "line": 115,
+          "isDefault": false
+        },
+        {
+          "name": "issueEInvoice",
+          "line": 123,
+          "isDefault": false
+        },
+        {
+          "name": "getTaxObligations",
+          "line": 129,
+          "isDefault": false
+        },
+        {
+          "name": "createTaxObligation",
+          "line": 133,
+          "isDefault": false
+        },
+        {
+          "name": "updateTaxObligation",
+          "line": 137,
+          "isDefault": false
+        },
+        {
+          "name": "deleteTaxObligation",
+          "line": 141,
+          "isDefault": false
+        },
+        {
+          "name": "getPurchasesWithoutInvoice",
+          "line": 147,
+          "isDefault": false
+        },
+        {
+          "name": "createPurchaseWithoutInvoice",
+          "line": 151,
+          "isDefault": false
+        },
+        {
+          "name": "approvePurchaseWithoutInvoice",
+          "line": 173,
+          "isDefault": false
+        },
+        {
+          "name": "rejectPurchaseWithoutInvoice",
+          "line": 195,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getCashTransactions",
+          "callee": "res.json",
+          "lineNumber": 10
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "financeService.getCashTransactions",
+          "lineNumber": 10
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "res.status(500).json",
+          "lineNumber": 11
+        },
+        {
+          "caller": "getCashTransactions",
+          "callee": "res.status",
+          "lineNumber": 11
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "res.json",
+          "lineNumber": 14
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "financeService.createCashTransaction",
+          "lineNumber": 14
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "res.status(500).json",
+          "lineNumber": 15
+        },
+        {
+          "caller": "createCashTransaction",
+          "callee": "res.status",
+          "lineNumber": 15
+        },
+        {
+          "caller": "updateCashTransaction",
+          "callee": "res.json",
+          "lineNumber": 18
+        },
+        {
+          "caller": "updateCashTransaction",
+          "callee": "financeService.updateCashTransaction",
+          "lineNumber": 18
+        },
+        {
+          "caller": "updateCashTransaction",
+          "callee": "res.status(e.message === 'Cash transaction not found' ? 404 : 500).json",
+          "lineNumber": 19
+        },
+        {
+          "caller": "updateCashTransaction",
+          "callee": "res.status",
+          "lineNumber": 19
+        },
+        {
+          "caller": "deleteCashTransaction",
+          "callee": "res.json",
+          "lineNumber": 22
+        },
+        {
+          "caller": "deleteCashTransaction",
+          "callee": "financeService.deleteCashTransaction",
+          "lineNumber": 22
+        },
+        {
+          "caller": "deleteCashTransaction",
+          "callee": "res.status(500).json",
+          "lineNumber": 23
+        },
+        {
+          "caller": "deleteCashTransaction",
+          "callee": "res.status",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "res.json",
+          "lineNumber": 26
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "financeService.getCashFlowSummary",
+          "lineNumber": 26
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "res.status(500).json",
+          "lineNumber": 27
+        },
+        {
+          "caller": "getCashFlowSummary",
+          "callee": "res.status",
+          "lineNumber": 27
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "res.json",
+          "lineNumber": 30
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "financeService.getProfitLoss",
+          "lineNumber": 30
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "res.status(500).json",
+          "lineNumber": 31
+        },
+        {
+          "caller": "getProfitLoss",
+          "callee": "res.status",
+          "lineNumber": 31
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "res.json",
+          "lineNumber": 34
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "financeService.getInvoiceReconciliation",
+          "lineNumber": 34
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "res.status(500).json",
+          "lineNumber": 35
+        },
+        {
+          "caller": "getInvoiceReconciliation",
+          "callee": "res.status",
+          "lineNumber": 35
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "res.json",
+          "lineNumber": 38
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "financeService.getExpensesByCategory",
+          "lineNumber": 38
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "res.status(500).json",
+          "lineNumber": 39
+        },
+        {
+          "caller": "getExpensesByCategory",
+          "callee": "res.status",
+          "lineNumber": 39
+        },
+        {
+          "caller": "getDailyClosings",
+          "callee": "res.json",
+          "lineNumber": 43
+        },
+        {
+          "caller": "getDailyClosings",
+          "callee": "financeService.getDailyClosings",
+          "lineNumber": 43
+        },
+        {
+          "caller": "getDailyClosings",
+          "callee": "res.status(500).json",
+          "lineNumber": 44
+        },
+        {
+          "caller": "getDailyClosings",
+          "callee": "res.status",
+          "lineNumber": 44
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "res.json",
+          "lineNumber": 47
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "financeService.getDailyClosingByDate",
+          "lineNumber": 47
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "res.status(500).json",
+          "lineNumber": 48
+        },
+        {
+          "caller": "getDailyClosingByDate",
+          "callee": "res.status",
+          "lineNumber": 48
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "res.json",
+          "lineNumber": 51
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "financeService.createDailyClosing",
+          "lineNumber": 51
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "res.status(500).json",
+          "lineNumber": 52
+        },
+        {
+          "caller": "createDailyClosing",
+          "callee": "res.status",
+          "lineNumber": 52
+        },
+        {
+          "caller": "getCashAccounts",
+          "callee": "res.json",
+          "lineNumber": 56
+        },
+        {
+          "caller": "getCashAccounts",
+          "callee": "financeService.getCashAccounts",
+          "lineNumber": 56
+        },
+        {
+          "caller": "getCashAccounts",
+          "callee": "res.status(500).json",
+          "lineNumber": 57
+        },
+        {
+          "caller": "getCashAccounts",
+          "callee": "res.status",
+          "lineNumber": 57
+        },
+        {
+          "caller": "getForecasts",
+          "callee": "res.json",
+          "lineNumber": 61
+        },
+        {
+          "caller": "getForecasts",
+          "callee": "financeService.getForecasts",
+          "lineNumber": 61
+        },
+        {
+          "caller": "getForecasts",
+          "callee": "res.status(500).json",
+          "lineNumber": 62
+        },
+        {
+          "caller": "getForecasts",
+          "callee": "res.status",
+          "lineNumber": 62
+        },
+        {
+          "caller": "createForecast",
+          "callee": "res.json",
+          "lineNumber": 65
+        },
+        {
+          "caller": "createForecast",
+          "callee": "financeService.createForecast",
+          "lineNumber": 65
+        },
+        {
+          "caller": "createForecast",
+          "callee": "res.status(500).json",
+          "lineNumber": 66
+        },
+        {
+          "caller": "createForecast",
+          "callee": "res.status",
+          "lineNumber": 66
+        },
+        {
+          "caller": "updateForecast",
+          "callee": "res.json",
+          "lineNumber": 69
+        },
+        {
+          "caller": "updateForecast",
+          "callee": "financeService.updateForecast",
+          "lineNumber": 69
+        },
+        {
+          "caller": "updateForecast",
+          "callee": "res.status(500).json",
+          "lineNumber": 70
+        },
+        {
+          "caller": "updateForecast",
+          "callee": "res.status",
+          "lineNumber": 70
+        },
+        {
+          "caller": "deleteForecast",
+          "callee": "financeService.deleteForecast",
+          "lineNumber": 73
+        },
+        {
+          "caller": "deleteForecast",
+          "callee": "res.json",
+          "lineNumber": 73
+        },
+        {
+          "caller": "deleteForecast",
+          "callee": "res.status(500).json",
+          "lineNumber": 74
+        },
+        {
+          "caller": "deleteForecast",
+          "callee": "res.status",
+          "lineNumber": 74
+        },
+        {
+          "caller": "getBudgetPlans",
+          "callee": "res.json",
+          "lineNumber": 78
+        },
+        {
+          "caller": "getBudgetPlans",
+          "callee": "financeService.getBudgetPlans",
+          "lineNumber": 78
+        },
+        {
+          "caller": "getBudgetPlans",
+          "callee": "res.status(500).json",
+          "lineNumber": 79
+        },
+        {
+          "caller": "getBudgetPlans",
+          "callee": "res.status",
+          "lineNumber": 79
+        },
+        {
+          "caller": "createBudgetPlan",
+          "callee": "res.json",
+          "lineNumber": 82
+        },
+        {
+          "caller": "createBudgetPlan",
+          "callee": "financeService.createBudgetPlan",
+          "lineNumber": 82
+        },
+        {
+          "caller": "createBudgetPlan",
+          "callee": "res.status(500).json",
+          "lineNumber": 83
+        },
+        {
+          "caller": "createBudgetPlan",
+          "callee": "res.status",
+          "lineNumber": 83
+        },
+        {
+          "caller": "updateBudgetPlan",
+          "callee": "res.json",
+          "lineNumber": 86
+        },
+        {
+          "caller": "updateBudgetPlan",
+          "callee": "financeService.updateBudgetPlan",
+          "lineNumber": 86
+        },
+        {
+          "caller": "updateBudgetPlan",
+          "callee": "res.status(500).json",
+          "lineNumber": 87
+        },
+        {
+          "caller": "updateBudgetPlan",
+          "callee": "res.status",
+          "lineNumber": 87
+        },
+        {
+          "caller": "deleteBudgetPlan",
+          "callee": "financeService.deleteBudgetPlan",
+          "lineNumber": 90
+        },
+        {
+          "caller": "deleteBudgetPlan",
+          "callee": "res.json",
+          "lineNumber": 90
+        },
+        {
+          "caller": "deleteBudgetPlan",
+          "callee": "res.status(500).json",
+          "lineNumber": 91
+        },
+        {
+          "caller": "deleteBudgetPlan",
+          "callee": "res.status",
+          "lineNumber": 91
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "res.json",
+          "lineNumber": 96
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "financeService.getInvoices",
+          "lineNumber": 96
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "res.status(500).json",
+          "lineNumber": 97
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "res.status",
+          "lineNumber": 97
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "res.json",
+          "lineNumber": 100
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "financeService.getInvoiceSummary",
+          "lineNumber": 100
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "res.status(500).json",
+          "lineNumber": 101
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "res.status",
+          "lineNumber": 101
+        },
+        {
+          "caller": "getInvoiceById",
+          "callee": "res.json",
+          "lineNumber": 104
+        },
+        {
+          "caller": "getInvoiceById",
+          "callee": "financeService.getInvoiceById",
+          "lineNumber": 104
+        },
+        {
+          "caller": "getInvoiceById",
+          "callee": "res.status(500).json",
+          "lineNumber": 105
+        },
+        {
+          "caller": "getInvoiceById",
+          "callee": "res.status",
+          "lineNumber": 105
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "res.json",
+          "lineNumber": 108
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "financeService.createInvoice",
+          "lineNumber": 108
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 109
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "res.status",
+          "lineNumber": 109
+        },
+        {
+          "caller": "updateInvoice",
+          "callee": "res.json",
+          "lineNumber": 112
+        },
+        {
+          "caller": "updateInvoice",
+          "callee": "financeService.updateInvoice",
+          "lineNumber": 112
+        },
+        {
+          "caller": "updateInvoice",
+          "callee": "res.status(e.message === 'Invoice not found' ? 404 : 500).json",
+          "lineNumber": 113
+        },
+        {
+          "caller": "updateInvoice",
+          "callee": "res.status",
+          "lineNumber": 113
+        },
+        {
+          "caller": "deleteInvoice",
+          "callee": "res.json",
+          "lineNumber": 116
+        },
+        {
+          "caller": "deleteInvoice",
+          "callee": "financeService.deleteInvoice",
+          "lineNumber": 116
+        },
+        {
+          "caller": "deleteInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 117
+        },
+        {
+          "caller": "deleteInvoice",
+          "callee": "res.status",
+          "lineNumber": 117
+        },
+        {
+          "caller": "issueEInvoice",
+          "callee": "res.json",
+          "lineNumber": 124
+        },
+        {
+          "caller": "issueEInvoice",
+          "callee": "eInvoiceService.issueInvoice",
+          "lineNumber": 124
+        },
+        {
+          "caller": "issueEInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 125
+        },
+        {
+          "caller": "issueEInvoice",
+          "callee": "res.status",
+          "lineNumber": 125
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "res.json",
+          "lineNumber": 130
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "financeService.getTaxObligations",
+          "lineNumber": 130
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "res.status(500).json",
+          "lineNumber": 131
+        },
+        {
+          "caller": "getTaxObligations",
+          "callee": "res.status",
+          "lineNumber": 131
+        },
+        {
+          "caller": "createTaxObligation",
+          "callee": "res.json",
+          "lineNumber": 134
+        },
+        {
+          "caller": "createTaxObligation",
+          "callee": "financeService.createTaxObligation",
+          "lineNumber": 134
+        },
+        {
+          "caller": "createTaxObligation",
+          "callee": "res.status(500).json",
+          "lineNumber": 135
+        },
+        {
+          "caller": "createTaxObligation",
+          "callee": "res.status",
+          "lineNumber": 135
+        },
+        {
+          "caller": "updateTaxObligation",
+          "callee": "res.json",
+          "lineNumber": 138
+        },
+        {
+          "caller": "updateTaxObligation",
+          "callee": "financeService.updateTaxObligation",
+          "lineNumber": 138
+        },
+        {
+          "caller": "updateTaxObligation",
+          "callee": "res.status(500).json",
+          "lineNumber": 139
+        },
+        {
+          "caller": "updateTaxObligation",
+          "callee": "res.status",
+          "lineNumber": 139
+        },
+        {
+          "caller": "deleteTaxObligation",
+          "callee": "res.json",
+          "lineNumber": 142
+        },
+        {
+          "caller": "deleteTaxObligation",
+          "callee": "financeService.deleteTaxObligation",
+          "lineNumber": 142
+        },
+        {
+          "caller": "deleteTaxObligation",
+          "callee": "res.status(500).json",
+          "lineNumber": 143
+        },
+        {
+          "caller": "deleteTaxObligation",
+          "callee": "res.status",
+          "lineNumber": 143
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "res.json",
+          "lineNumber": 148
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "financeService.getPurchasesWithoutInvoice",
+          "lineNumber": 148
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 149
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 149
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "res.json",
+          "lineNumber": 153
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "financeService.createPurchaseWithoutInvoice",
+          "lineNumber": 155
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String(e.message || '').startsWith",
+          "lineNumber": 165
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 165
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "res.status(400).json",
+          "lineNumber": 166
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 166
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String(e.message).replace",
+          "lineNumber": 166
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 166
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 169
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 169
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "res.json",
+          "lineNumber": 175
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "financeService.updatePurchaseWithoutInvoiceApproval",
+          "lineNumber": 177
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "String(e.message || '').startsWith",
+          "lineNumber": 187
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 187
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "res.status(400).json",
+          "lineNumber": 188
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 188
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "String(e.message).replace",
+          "lineNumber": 188
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 188
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 191
+        },
+        {
+          "caller": "approvePurchaseWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 191
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "res.json",
+          "lineNumber": 197
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "financeService.updatePurchaseWithoutInvoiceApproval",
+          "lineNumber": 199
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "String(e.message || '').startsWith",
+          "lineNumber": 209
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 209
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "res.status(400).json",
+          "lineNumber": 210
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 210
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "String(e.message).replace",
+          "lineNumber": 210
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "String",
+          "lineNumber": 210
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 213
+        },
+        {
+          "caller": "rejectPurchaseWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 213
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 35,
+        "functionCount": 35,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/inventory.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 107,
+      "nonEmptyLines": 94,
+      "functions": [
+        {
+          "name": "getStock",
+          "startLine": 6,
+          "endLine": 9,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getLowStock",
+          "startLine": 10,
+          "endLine": 16,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getMovements",
+          "startLine": 18,
+          "endLine": 21,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getWarehouses",
+          "startLine": 23,
+          "endLine": 26,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createWarehouse",
+          "startLine": 27,
+          "endLine": 30,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getXntReport",
+          "startLine": 32,
+          "endLine": 46,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getExpiringProducts",
+          "startLine": 47,
+          "endLine": 53,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getSlowMoving",
+          "startLine": 55,
+          "endLine": 61,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getPurchaseOrders",
+          "startLine": 63,
+          "endLine": 66,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createPurchaseOrder",
+          "startLine": 67,
+          "endLine": 70,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updatePurchaseOrder",
+          "startLine": 72,
+          "endLine": 75,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deletePurchaseOrder",
+          "startLine": 77,
+          "endLine": 80,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getStockTakes",
+          "startLine": 82,
+          "endLine": 85,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createStockTake",
+          "startLine": 87,
+          "endLine": 97,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateStockTake",
+          "startLine": 99,
+          "endLine": 102,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deleteStockTake",
+          "startLine": 104,
+          "endLine": 107,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "getStock",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "getLowStock",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "getMovements",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "getWarehouses",
+          "line": 23,
+          "isDefault": false
+        },
+        {
+          "name": "createWarehouse",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "getXntReport",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "getExpiringProducts",
+          "line": 47,
+          "isDefault": false
+        },
+        {
+          "name": "getSlowMoving",
+          "line": 55,
+          "isDefault": false
+        },
+        {
+          "name": "getPurchaseOrders",
+          "line": 63,
+          "isDefault": false
+        },
+        {
+          "name": "createPurchaseOrder",
+          "line": 67,
+          "isDefault": false
+        },
+        {
+          "name": "updatePurchaseOrder",
+          "line": 72,
+          "isDefault": false
+        },
+        {
+          "name": "deletePurchaseOrder",
+          "line": 77,
+          "isDefault": false
+        },
+        {
+          "name": "getStockTakes",
+          "line": 82,
+          "isDefault": false
+        },
+        {
+          "name": "createStockTake",
+          "line": 87,
+          "isDefault": false
+        },
+        {
+          "name": "updateStockTake",
+          "line": 99,
+          "isDefault": false
+        },
+        {
+          "name": "deleteStockTake",
+          "line": 104,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getStock",
+          "callee": "res.json",
+          "lineNumber": 7
+        },
+        {
+          "caller": "getStock",
+          "callee": "inventoryService.getStock",
+          "lineNumber": 7
+        },
+        {
+          "caller": "getStock",
+          "callee": "res.status(500).json",
+          "lineNumber": 8
+        },
+        {
+          "caller": "getStock",
+          "callee": "res.status",
+          "lineNumber": 8
+        },
+        {
+          "caller": "getLowStock",
+          "callee": "res.json",
+          "lineNumber": 13
+        },
+        {
+          "caller": "getLowStock",
+          "callee": "inventoryService.getLowStock",
+          "lineNumber": 13
+        },
+        {
+          "caller": "getLowStock",
+          "callee": "res.status(500).json",
+          "lineNumber": 15
+        },
+        {
+          "caller": "getLowStock",
+          "callee": "res.status",
+          "lineNumber": 15
+        },
+        {
+          "caller": "getMovements",
+          "callee": "res.json",
+          "lineNumber": 19
+        },
+        {
+          "caller": "getMovements",
+          "callee": "inventoryService.getMovements",
+          "lineNumber": 19
+        },
+        {
+          "caller": "getMovements",
+          "callee": "res.status(500).json",
+          "lineNumber": 20
+        },
+        {
+          "caller": "getMovements",
+          "callee": "res.status",
+          "lineNumber": 20
+        },
+        {
+          "caller": "getWarehouses",
+          "callee": "res.json",
+          "lineNumber": 24
+        },
+        {
+          "caller": "getWarehouses",
+          "callee": "inventoryService.getWarehouses",
+          "lineNumber": 24
+        },
+        {
+          "caller": "getWarehouses",
+          "callee": "res.status(500).json",
+          "lineNumber": 25
+        },
+        {
+          "caller": "getWarehouses",
+          "callee": "res.status",
+          "lineNumber": 25
+        },
+        {
+          "caller": "createWarehouse",
+          "callee": "res.json",
+          "lineNumber": 28
+        },
+        {
+          "caller": "createWarehouse",
+          "callee": "inventoryService.createWarehouse",
+          "lineNumber": 28
+        },
+        {
+          "caller": "createWarehouse",
+          "callee": "res.status(500).json",
+          "lineNumber": 29
+        },
+        {
+          "caller": "createWarehouse",
+          "callee": "res.status",
+          "lineNumber": 29
+        },
+        {
+          "caller": "getXntReport",
+          "callee": "res.json",
+          "lineNumber": 35
+        },
+        {
+          "caller": "getXntReport",
+          "callee": "inventoryService.getXntReport",
+          "lineNumber": 37
+        },
+        {
+          "caller": "getXntReport",
+          "callee": "res.status(500).json",
+          "lineNumber": 45
+        },
+        {
+          "caller": "getXntReport",
+          "callee": "res.status",
+          "lineNumber": 45
+        },
+        {
+          "caller": "getExpiringProducts",
+          "callee": "res.json",
+          "lineNumber": 50
+        },
+        {
+          "caller": "getExpiringProducts",
+          "callee": "inventoryService.getExpiringProducts",
+          "lineNumber": 50
+        },
+        {
+          "caller": "getExpiringProducts",
+          "callee": "res.status(500).json",
+          "lineNumber": 52
+        },
+        {
+          "caller": "getExpiringProducts",
+          "callee": "res.status",
+          "lineNumber": 52
+        },
+        {
+          "caller": "getSlowMoving",
+          "callee": "res.json",
+          "lineNumber": 58
+        },
+        {
+          "caller": "getSlowMoving",
+          "callee": "inventoryService.getSlowMovingProducts",
+          "lineNumber": 58
+        },
+        {
+          "caller": "getSlowMoving",
+          "callee": "res.status(500).json",
+          "lineNumber": 60
+        },
+        {
+          "caller": "getSlowMoving",
+          "callee": "res.status",
+          "lineNumber": 60
+        },
+        {
+          "caller": "getPurchaseOrders",
+          "callee": "res.json",
+          "lineNumber": 64
+        },
+        {
+          "caller": "getPurchaseOrders",
+          "callee": "inventoryService.getPurchaseOrders",
+          "lineNumber": 64
+        },
+        {
+          "caller": "getPurchaseOrders",
+          "callee": "res.status(500).json",
+          "lineNumber": 65
+        },
+        {
+          "caller": "getPurchaseOrders",
+          "callee": "res.status",
+          "lineNumber": 65
+        },
+        {
+          "caller": "createPurchaseOrder",
+          "callee": "res.json",
+          "lineNumber": 68
+        },
+        {
+          "caller": "createPurchaseOrder",
+          "callee": "inventoryService.createPurchaseOrder",
+          "lineNumber": 68
+        },
+        {
+          "caller": "createPurchaseOrder",
+          "callee": "res.status(500).json",
+          "lineNumber": 69
+        },
+        {
+          "caller": "createPurchaseOrder",
+          "callee": "res.status",
+          "lineNumber": 69
+        },
+        {
+          "caller": "updatePurchaseOrder",
+          "callee": "res.json",
+          "lineNumber": 73
+        },
+        {
+          "caller": "updatePurchaseOrder",
+          "callee": "inventoryService.updatePurchaseOrder",
+          "lineNumber": 73
+        },
+        {
+          "caller": "updatePurchaseOrder",
+          "callee": "res.status(500).json",
+          "lineNumber": 74
+        },
+        {
+          "caller": "updatePurchaseOrder",
+          "callee": "res.status",
+          "lineNumber": 74
+        },
+        {
+          "caller": "deletePurchaseOrder",
+          "callee": "res.json",
+          "lineNumber": 78
+        },
+        {
+          "caller": "deletePurchaseOrder",
+          "callee": "inventoryService.deletePurchaseOrder",
+          "lineNumber": 78
+        },
+        {
+          "caller": "deletePurchaseOrder",
+          "callee": "res.status(500).json",
+          "lineNumber": 79
+        },
+        {
+          "caller": "deletePurchaseOrder",
+          "callee": "res.status",
+          "lineNumber": 79
+        },
+        {
+          "caller": "getStockTakes",
+          "callee": "res.json",
+          "lineNumber": 83
+        },
+        {
+          "caller": "getStockTakes",
+          "callee": "inventoryService.getStockTakes",
+          "lineNumber": 83
+        },
+        {
+          "caller": "getStockTakes",
+          "callee": "res.status(500).json",
+          "lineNumber": 84
+        },
+        {
+          "caller": "getStockTakes",
+          "callee": "res.status",
+          "lineNumber": 84
+        },
+        {
+          "caller": "createStockTake",
+          "callee": "Date.now().toString().slice",
+          "lineNumber": 92
+        },
+        {
+          "caller": "createStockTake",
+          "callee": "Date.now().toString",
+          "lineNumber": 92
+        },
+        {
+          "caller": "createStockTake",
+          "callee": "Date.now",
+          "lineNumber": 92
+        },
+        {
+          "caller": "createStockTake",
+          "callee": "res.json",
+          "lineNumber": 94
+        },
+        {
+          "caller": "createStockTake",
+          "callee": "inventoryService.createStockTake",
+          "lineNumber": 94
+        },
+        {
+          "caller": "createStockTake",
+          "callee": "res.status(500).json",
+          "lineNumber": 96
+        },
+        {
+          "caller": "createStockTake",
+          "callee": "res.status",
+          "lineNumber": 96
+        },
+        {
+          "caller": "updateStockTake",
+          "callee": "res.json",
+          "lineNumber": 100
+        },
+        {
+          "caller": "updateStockTake",
+          "callee": "inventoryService.updateStockTake",
+          "lineNumber": 100
+        },
+        {
+          "caller": "updateStockTake",
+          "callee": "res.status(500).json",
+          "lineNumber": 101
+        },
+        {
+          "caller": "updateStockTake",
+          "callee": "res.status",
+          "lineNumber": 101
+        },
+        {
+          "caller": "deleteStockTake",
+          "callee": "res.json",
+          "lineNumber": 105
+        },
+        {
+          "caller": "deleteStockTake",
+          "callee": "inventoryService.deleteStockTake",
+          "lineNumber": 105
+        },
+        {
+          "caller": "deleteStockTake",
+          "callee": "res.status(500).json",
+          "lineNumber": 106
+        },
+        {
+          "caller": "deleteStockTake",
+          "callee": "res.status",
+          "lineNumber": 106
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 16,
+        "functionCount": 16,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/notification.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 39,
+      "nonEmptyLines": 34,
+      "functions": [
+        {
+          "name": "listNotifications",
+          "startLine": 7,
+          "endLine": 15,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getUnreadCount",
+          "startLine": 17,
+          "endLine": 23,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "markRead",
+          "startLine": 25,
+          "endLine": 31,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "markAllRead",
+          "startLine": 33,
+          "endLine": 39,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "listNotifications",
+          "line": 7,
+          "isDefault": false
+        },
+        {
+          "name": "getUnreadCount",
+          "line": 17,
+          "isDefault": false
+        },
+        {
+          "name": "markRead",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "markAllRead",
+          "line": 33,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "listNotifications",
+          "callee": "res.json",
+          "lineNumber": 12
+        },
+        {
+          "caller": "listNotifications",
+          "callee": "svc.findAll",
+          "lineNumber": 12
+        },
+        {
+          "caller": "listNotifications",
+          "callee": "res.status(500).json",
+          "lineNumber": 14
+        },
+        {
+          "caller": "listNotifications",
+          "callee": "res.status",
+          "lineNumber": 14
+        },
+        {
+          "caller": "getUnreadCount",
+          "callee": "res.json",
+          "lineNumber": 20
+        },
+        {
+          "caller": "getUnreadCount",
+          "callee": "svc.unreadCount",
+          "lineNumber": 20
+        },
+        {
+          "caller": "getUnreadCount",
+          "callee": "res.status(500).json",
+          "lineNumber": 22
+        },
+        {
+          "caller": "getUnreadCount",
+          "callee": "res.status",
+          "lineNumber": 22
+        },
+        {
+          "caller": "markRead",
+          "callee": "res.json",
+          "lineNumber": 28
+        },
+        {
+          "caller": "markRead",
+          "callee": "svc.markRead",
+          "lineNumber": 28
+        },
+        {
+          "caller": "markRead",
+          "callee": "res.status(400).json",
+          "lineNumber": 30
+        },
+        {
+          "caller": "markRead",
+          "callee": "res.status",
+          "lineNumber": 30
+        },
+        {
+          "caller": "markAllRead",
+          "callee": "res.json",
+          "lineNumber": 36
+        },
+        {
+          "caller": "markAllRead",
+          "callee": "svc.markAllRead",
+          "lineNumber": 36
+        },
+        {
+          "caller": "markAllRead",
+          "callee": "res.status(500).json",
+          "lineNumber": 38
+        },
+        {
+          "caller": "markAllRead",
+          "callee": "res.status",
+          "lineNumber": 38
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/product.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 78,
+      "nonEmptyLines": 71,
+      "functions": [
+        {
+          "name": "findAllProducts",
+          "startLine": 6,
+          "endLine": 9,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "findProductById",
+          "startLine": 10,
+          "endLine": 13,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createProduct",
+          "startLine": 14,
+          "endLine": 17,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateProduct",
+          "startLine": 18,
+          "endLine": 21,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deleteProduct",
+          "startLine": 22,
+          "endLine": 25,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "calculatePrice",
+          "startLine": 27,
+          "endLine": 30,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "addCostItem",
+          "startLine": 32,
+          "endLine": 35,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "removeCostItem",
+          "startLine": 36,
+          "endLine": 39,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getPriceHistory",
+          "startLine": 41,
+          "endLine": 44,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getBatches",
+          "startLine": 45,
+          "endLine": 48,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createBatch",
+          "startLine": 49,
+          "endLine": 52,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getConversions",
+          "startLine": 53,
+          "endLine": 56,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createConversion",
+          "startLine": 57,
+          "endLine": 60,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "findAllCategories",
+          "startLine": 62,
+          "endLine": 65,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createCategory",
+          "startLine": 66,
+          "endLine": 69,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "findAllCostTypes",
+          "startLine": 71,
+          "endLine": 74,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createCostType",
+          "startLine": 75,
+          "endLine": 78,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "findAllProducts",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "findProductById",
+          "line": 10,
+          "isDefault": false
+        },
+        {
+          "name": "createProduct",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "updateProduct",
+          "line": 18,
+          "isDefault": false
+        },
+        {
+          "name": "deleteProduct",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "calculatePrice",
+          "line": 27,
+          "isDefault": false
+        },
+        {
+          "name": "addCostItem",
+          "line": 32,
+          "isDefault": false
+        },
+        {
+          "name": "removeCostItem",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "getPriceHistory",
+          "line": 41,
+          "isDefault": false
+        },
+        {
+          "name": "getBatches",
+          "line": 45,
+          "isDefault": false
+        },
+        {
+          "name": "createBatch",
+          "line": 49,
+          "isDefault": false
+        },
+        {
+          "name": "getConversions",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "createConversion",
+          "line": 57,
+          "isDefault": false
+        },
+        {
+          "name": "findAllCategories",
+          "line": 62,
+          "isDefault": false
+        },
+        {
+          "name": "createCategory",
+          "line": 66,
+          "isDefault": false
+        },
+        {
+          "name": "findAllCostTypes",
+          "line": 71,
+          "isDefault": false
+        },
+        {
+          "name": "createCostType",
+          "line": 75,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "findAllProducts",
+          "callee": "res.json",
+          "lineNumber": 7
+        },
+        {
+          "caller": "findAllProducts",
+          "callee": "productService.findAllProducts",
+          "lineNumber": 7
+        },
+        {
+          "caller": "findAllProducts",
+          "callee": "res.status(500).json",
+          "lineNumber": 8
+        },
+        {
+          "caller": "findAllProducts",
+          "callee": "res.status",
+          "lineNumber": 8
+        },
+        {
+          "caller": "findProductById",
+          "callee": "res.json",
+          "lineNumber": 11
+        },
+        {
+          "caller": "findProductById",
+          "callee": "productService.findProductById",
+          "lineNumber": 11
+        },
+        {
+          "caller": "findProductById",
+          "callee": "res.status(e.message === 'Product not found' ? 404 : 500).json",
+          "lineNumber": 12
+        },
+        {
+          "caller": "findProductById",
+          "callee": "res.status",
+          "lineNumber": 12
+        },
+        {
+          "caller": "createProduct",
+          "callee": "res.json",
+          "lineNumber": 15
+        },
+        {
+          "caller": "createProduct",
+          "callee": "productService.createProduct",
+          "lineNumber": 15
+        },
+        {
+          "caller": "createProduct",
+          "callee": "res.status(e.message === 'Mã SKU này đã tồn tại trong hệ thống' || e.message === 'Mã vạch này đã tồn tại trong hệ thống' ? 409 : 500).json",
+          "lineNumber": 16
+        },
+        {
+          "caller": "createProduct",
+          "callee": "res.status",
+          "lineNumber": 16
+        },
+        {
+          "caller": "updateProduct",
+          "callee": "res.json",
+          "lineNumber": 19
+        },
+        {
+          "caller": "updateProduct",
+          "callee": "productService.updateProduct",
+          "lineNumber": 19
+        },
+        {
+          "caller": "updateProduct",
+          "callee": "res.status(e.message === 'Mã SKU này đã tồn tại trong hệ thống' || e.message === 'Mã vạch này đã tồn tại trong hệ thống' ? 409 : 500).json",
+          "lineNumber": 20
+        },
+        {
+          "caller": "updateProduct",
+          "callee": "res.status",
+          "lineNumber": 20
+        },
+        {
+          "caller": "deleteProduct",
+          "callee": "res.json",
+          "lineNumber": 23
+        },
+        {
+          "caller": "deleteProduct",
+          "callee": "productService.deleteProduct",
+          "lineNumber": 23
+        },
+        {
+          "caller": "deleteProduct",
+          "callee": "res.status(500).json",
+          "lineNumber": 24
+        },
+        {
+          "caller": "deleteProduct",
+          "callee": "res.status",
+          "lineNumber": 24
+        },
+        {
+          "caller": "calculatePrice",
+          "callee": "res.json",
+          "lineNumber": 28
+        },
+        {
+          "caller": "calculatePrice",
+          "callee": "productService.calculateSuggestedPrice",
+          "lineNumber": 28
+        },
+        {
+          "caller": "calculatePrice",
+          "callee": "res.status(500).json",
+          "lineNumber": 29
+        },
+        {
+          "caller": "calculatePrice",
+          "callee": "res.status",
+          "lineNumber": 29
+        },
+        {
+          "caller": "addCostItem",
+          "callee": "res.json",
+          "lineNumber": 33
+        },
+        {
+          "caller": "addCostItem",
+          "callee": "productService.addCostItem",
+          "lineNumber": 33
+        },
+        {
+          "caller": "addCostItem",
+          "callee": "res.status(500).json",
+          "lineNumber": 34
+        },
+        {
+          "caller": "addCostItem",
+          "callee": "res.status",
+          "lineNumber": 34
+        },
+        {
+          "caller": "removeCostItem",
+          "callee": "res.json",
+          "lineNumber": 37
+        },
+        {
+          "caller": "removeCostItem",
+          "callee": "productService.removeCostItem",
+          "lineNumber": 37
+        },
+        {
+          "caller": "removeCostItem",
+          "callee": "res.status(500).json",
+          "lineNumber": 38
+        },
+        {
+          "caller": "removeCostItem",
+          "callee": "res.status",
+          "lineNumber": 38
+        },
+        {
+          "caller": "getPriceHistory",
+          "callee": "res.json",
+          "lineNumber": 42
+        },
+        {
+          "caller": "getPriceHistory",
+          "callee": "productService.getPriceHistory",
+          "lineNumber": 42
+        },
+        {
+          "caller": "getPriceHistory",
+          "callee": "res.status(500).json",
+          "lineNumber": 43
+        },
+        {
+          "caller": "getPriceHistory",
+          "callee": "res.status",
+          "lineNumber": 43
+        },
+        {
+          "caller": "getBatches",
+          "callee": "res.json",
+          "lineNumber": 46
+        },
+        {
+          "caller": "getBatches",
+          "callee": "productService.findBatches",
+          "lineNumber": 46
+        },
+        {
+          "caller": "getBatches",
+          "callee": "res.status(500).json",
+          "lineNumber": 47
+        },
+        {
+          "caller": "getBatches",
+          "callee": "res.status",
+          "lineNumber": 47
+        },
+        {
+          "caller": "createBatch",
+          "callee": "res.json",
+          "lineNumber": 50
+        },
+        {
+          "caller": "createBatch",
+          "callee": "productService.createBatch",
+          "lineNumber": 50
+        },
+        {
+          "caller": "createBatch",
+          "callee": "res.status(500).json",
+          "lineNumber": 51
+        },
+        {
+          "caller": "createBatch",
+          "callee": "res.status",
+          "lineNumber": 51
+        },
+        {
+          "caller": "getConversions",
+          "callee": "res.json",
+          "lineNumber": 54
+        },
+        {
+          "caller": "getConversions",
+          "callee": "productService.findConversions",
+          "lineNumber": 54
+        },
+        {
+          "caller": "getConversions",
+          "callee": "res.status(500).json",
+          "lineNumber": 55
+        },
+        {
+          "caller": "getConversions",
+          "callee": "res.status",
+          "lineNumber": 55
+        },
+        {
+          "caller": "createConversion",
+          "callee": "res.json",
+          "lineNumber": 58
+        },
+        {
+          "caller": "createConversion",
+          "callee": "productService.createConversion",
+          "lineNumber": 58
+        },
+        {
+          "caller": "createConversion",
+          "callee": "res.status(500).json",
+          "lineNumber": 59
+        },
+        {
+          "caller": "createConversion",
+          "callee": "res.status",
+          "lineNumber": 59
+        },
+        {
+          "caller": "findAllCategories",
+          "callee": "res.json",
+          "lineNumber": 63
+        },
+        {
+          "caller": "findAllCategories",
+          "callee": "productService.findAllCategories",
+          "lineNumber": 63
+        },
+        {
+          "caller": "findAllCategories",
+          "callee": "res.status(500).json",
+          "lineNumber": 64
+        },
+        {
+          "caller": "findAllCategories",
+          "callee": "res.status",
+          "lineNumber": 64
+        },
+        {
+          "caller": "createCategory",
+          "callee": "res.json",
+          "lineNumber": 67
+        },
+        {
+          "caller": "createCategory",
+          "callee": "productService.createCategory",
+          "lineNumber": 67
+        },
+        {
+          "caller": "createCategory",
+          "callee": "res.status(500).json",
+          "lineNumber": 68
+        },
+        {
+          "caller": "createCategory",
+          "callee": "res.status",
+          "lineNumber": 68
+        },
+        {
+          "caller": "findAllCostTypes",
+          "callee": "res.json",
+          "lineNumber": 72
+        },
+        {
+          "caller": "findAllCostTypes",
+          "callee": "productService.findAllCostTypes",
+          "lineNumber": 72
+        },
+        {
+          "caller": "findAllCostTypes",
+          "callee": "res.status(500).json",
+          "lineNumber": 73
+        },
+        {
+          "caller": "findAllCostTypes",
+          "callee": "res.status",
+          "lineNumber": 73
+        },
+        {
+          "caller": "createCostType",
+          "callee": "res.json",
+          "lineNumber": 76
+        },
+        {
+          "caller": "createCostType",
+          "callee": "productService.createCostType",
+          "lineNumber": 76
+        },
+        {
+          "caller": "createCostType",
+          "callee": "res.status(e.message === 'Cost type name exists' ? 409 : 500).json",
+          "lineNumber": 77
+        },
+        {
+          "caller": "createCostType",
+          "callee": "res.status",
+          "lineNumber": 77
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 17,
+        "functionCount": 17,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/sales.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 69,
+      "nonEmptyLines": 58,
+      "functions": [
+        {
+          "name": "validationMessage",
+          "startLine": 6,
+          "endLine": 6,
+          "params": [
+            "e"
+          ]
+        },
+        {
+          "name": "isValidation",
+          "startLine": 7,
+          "endLine": 11,
+          "params": [
+            "message"
+          ]
+        },
+        {
+          "name": "sendServiceError",
+          "startLine": 13,
+          "endLine": 20,
+          "params": [
+            "res",
+            "e"
+          ]
+        },
+        {
+          "name": "findAll",
+          "startLine": 22,
+          "endLine": 28,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "summary",
+          "startLine": 30,
+          "endLine": 33,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "findOne",
+          "startLine": 35,
+          "endLine": 41,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "create",
+          "startLine": 43,
+          "endLine": 46,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "cancel",
+          "startLine": 48,
+          "endLine": 51,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateOrder",
+          "startLine": 53,
+          "endLine": 59,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "addPayment",
+          "startLine": 61,
+          "endLine": 64,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createReturn",
+          "startLine": 66,
+          "endLine": 69,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "findAll",
+          "line": 22,
+          "isDefault": false
+        },
+        {
+          "name": "summary",
+          "line": 30,
+          "isDefault": false
+        },
+        {
+          "name": "findOne",
+          "line": 35,
+          "isDefault": false
+        },
+        {
+          "name": "create",
+          "line": 43,
+          "isDefault": false
+        },
+        {
+          "name": "cancel",
+          "line": 48,
+          "isDefault": false
+        },
+        {
+          "name": "updateOrder",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "addPayment",
+          "line": 61,
+          "isDefault": false
+        },
+        {
+          "name": "createReturn",
+          "line": 66,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "validationMessage",
+          "callee": "String",
+          "lineNumber": 6
+        },
+        {
+          "caller": "isValidation",
+          "callee": "message.startsWith",
+          "lineNumber": 8
+        },
+        {
+          "caller": "isValidation",
+          "callee": "message.includes",
+          "lineNumber": 10
+        },
+        {
+          "caller": "isValidation",
+          "callee": "message.includes",
+          "lineNumber": 11
+        },
+        {
+          "caller": "sendServiceError",
+          "callee": "validationMessage",
+          "lineNumber": 14
+        },
+        {
+          "caller": "sendServiceError",
+          "callee": "isValidation",
+          "lineNumber": 15
+        },
+        {
+          "caller": "sendServiceError",
+          "callee": "res.status(400).json",
+          "lineNumber": 16
+        },
+        {
+          "caller": "sendServiceError",
+          "callee": "res.status",
+          "lineNumber": 16
+        },
+        {
+          "caller": "sendServiceError",
+          "callee": "message.replace",
+          "lineNumber": 16
+        },
+        {
+          "caller": "sendServiceError",
+          "callee": "res.status(500).json",
+          "lineNumber": 19
+        },
+        {
+          "caller": "sendServiceError",
+          "callee": "res.status",
+          "lineNumber": 19
+        },
+        {
+          "caller": "findAll",
+          "callee": "res.json",
+          "lineNumber": 25
+        },
+        {
+          "caller": "findAll",
+          "callee": "salesService.findAll",
+          "lineNumber": 25
+        },
+        {
+          "caller": "findAll",
+          "callee": "sendServiceError",
+          "lineNumber": 27
+        },
+        {
+          "caller": "summary",
+          "callee": "res.json",
+          "lineNumber": 31
+        },
+        {
+          "caller": "summary",
+          "callee": "salesService.summary",
+          "lineNumber": 31
+        },
+        {
+          "caller": "summary",
+          "callee": "sendServiceError",
+          "lineNumber": 32
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.json",
+          "lineNumber": 36
+        },
+        {
+          "caller": "findOne",
+          "callee": "salesService.findById",
+          "lineNumber": 36
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.status(404).json",
+          "lineNumber": 38
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.status",
+          "lineNumber": 38
+        },
+        {
+          "caller": "findOne",
+          "callee": "sendServiceError",
+          "lineNumber": 39
+        },
+        {
+          "caller": "create",
+          "callee": "res.json",
+          "lineNumber": 44
+        },
+        {
+          "caller": "create",
+          "callee": "salesService.create",
+          "lineNumber": 44
+        },
+        {
+          "caller": "create",
+          "callee": "sendServiceError",
+          "lineNumber": 45
+        },
+        {
+          "caller": "cancel",
+          "callee": "res.json",
+          "lineNumber": 49
+        },
+        {
+          "caller": "cancel",
+          "callee": "salesService.cancel",
+          "lineNumber": 49
+        },
+        {
+          "caller": "cancel",
+          "callee": "sendServiceError",
+          "lineNumber": 50
+        },
+        {
+          "caller": "updateOrder",
+          "callee": "res.json",
+          "lineNumber": 54
+        },
+        {
+          "caller": "updateOrder",
+          "callee": "salesService.updateOrder",
+          "lineNumber": 54
+        },
+        {
+          "caller": "updateOrder",
+          "callee": "res.status(404).json",
+          "lineNumber": 56
+        },
+        {
+          "caller": "updateOrder",
+          "callee": "res.status",
+          "lineNumber": 56
+        },
+        {
+          "caller": "updateOrder",
+          "callee": "sendServiceError",
+          "lineNumber": 57
+        },
+        {
+          "caller": "addPayment",
+          "callee": "res.json",
+          "lineNumber": 62
+        },
+        {
+          "caller": "addPayment",
+          "callee": "salesService.addPayment",
+          "lineNumber": 62
+        },
+        {
+          "caller": "addPayment",
+          "callee": "sendServiceError",
+          "lineNumber": 63
+        },
+        {
+          "caller": "createReturn",
+          "callee": "res.json",
+          "lineNumber": 67
+        },
+        {
+          "caller": "createReturn",
+          "callee": "salesService.createReturn",
+          "lineNumber": 67
+        },
+        {
+          "caller": "createReturn",
+          "callee": "sendServiceError",
+          "lineNumber": 68
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 8,
+        "functionCount": 11,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/shop-member.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 54,
+      "nonEmptyLines": 44,
+      "functions": [
+        {
+          "name": "shopId",
+          "startLine": 7,
+          "endLine": 7,
+          "params": [
+            "req"
+          ]
+        },
+        {
+          "name": "listMembers",
+          "startLine": 9,
+          "endLine": 12,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "listPending",
+          "startLine": 14,
+          "endLine": 17,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "approveMember",
+          "startLine": 19,
+          "endLine": 22,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "rejectMember",
+          "startLine": 24,
+          "endLine": 27,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "inviteMember",
+          "startLine": 29,
+          "endLine": 35,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateMemberRole",
+          "startLine": 37,
+          "endLine": 40,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "removeMember",
+          "startLine": 42,
+          "endLine": 45,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getMyShops",
+          "startLine": 48,
+          "endLine": 54,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "listMembers",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "listPending",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "approveMember",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "rejectMember",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "inviteMember",
+          "line": 29,
+          "isDefault": false
+        },
+        {
+          "name": "updateMemberRole",
+          "line": 37,
+          "isDefault": false
+        },
+        {
+          "name": "removeMember",
+          "line": 42,
+          "isDefault": false
+        },
+        {
+          "name": "getMyShops",
+          "line": 48,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "listMembers",
+          "callee": "res.json",
+          "lineNumber": 10
+        },
+        {
+          "caller": "listMembers",
+          "callee": "svc.findAll",
+          "lineNumber": 10
+        },
+        {
+          "caller": "listMembers",
+          "callee": "shopId",
+          "lineNumber": 10
+        },
+        {
+          "caller": "listMembers",
+          "callee": "res.status(500).json",
+          "lineNumber": 11
+        },
+        {
+          "caller": "listMembers",
+          "callee": "res.status",
+          "lineNumber": 11
+        },
+        {
+          "caller": "listPending",
+          "callee": "res.json",
+          "lineNumber": 15
+        },
+        {
+          "caller": "listPending",
+          "callee": "svc.findAllPending",
+          "lineNumber": 15
+        },
+        {
+          "caller": "listPending",
+          "callee": "shopId",
+          "lineNumber": 15
+        },
+        {
+          "caller": "listPending",
+          "callee": "res.status(500).json",
+          "lineNumber": 16
+        },
+        {
+          "caller": "listPending",
+          "callee": "res.status",
+          "lineNumber": 16
+        },
+        {
+          "caller": "approveMember",
+          "callee": "res.json",
+          "lineNumber": 20
+        },
+        {
+          "caller": "approveMember",
+          "callee": "svc.approve",
+          "lineNumber": 20
+        },
+        {
+          "caller": "approveMember",
+          "callee": "shopId",
+          "lineNumber": 20
+        },
+        {
+          "caller": "approveMember",
+          "callee": "res.status(400).json",
+          "lineNumber": 21
+        },
+        {
+          "caller": "approveMember",
+          "callee": "res.status",
+          "lineNumber": 21
+        },
+        {
+          "caller": "rejectMember",
+          "callee": "res.json",
+          "lineNumber": 25
+        },
+        {
+          "caller": "rejectMember",
+          "callee": "svc.reject",
+          "lineNumber": 25
+        },
+        {
+          "caller": "rejectMember",
+          "callee": "shopId",
+          "lineNumber": 25
+        },
+        {
+          "caller": "rejectMember",
+          "callee": "res.status(400).json",
+          "lineNumber": 26
+        },
+        {
+          "caller": "rejectMember",
+          "callee": "res.status",
+          "lineNumber": 26
+        },
+        {
+          "caller": "inviteMember",
+          "callee": "res.json",
+          "lineNumber": 32
+        },
+        {
+          "caller": "inviteMember",
+          "callee": "svc.invite",
+          "lineNumber": 32
+        },
+        {
+          "caller": "inviteMember",
+          "callee": "shopId",
+          "lineNumber": 32
+        },
+        {
+          "caller": "inviteMember",
+          "callee": "res.status(400).json",
+          "lineNumber": 34
+        },
+        {
+          "caller": "inviteMember",
+          "callee": "res.status",
+          "lineNumber": 34
+        },
+        {
+          "caller": "updateMemberRole",
+          "callee": "res.json",
+          "lineNumber": 38
+        },
+        {
+          "caller": "updateMemberRole",
+          "callee": "svc.updateRole",
+          "lineNumber": 38
+        },
+        {
+          "caller": "updateMemberRole",
+          "callee": "shopId",
+          "lineNumber": 38
+        },
+        {
+          "caller": "updateMemberRole",
+          "callee": "res.status(400).json",
+          "lineNumber": 39
+        },
+        {
+          "caller": "updateMemberRole",
+          "callee": "res.status",
+          "lineNumber": 39
+        },
+        {
+          "caller": "removeMember",
+          "callee": "res.json",
+          "lineNumber": 43
+        },
+        {
+          "caller": "removeMember",
+          "callee": "svc.remove",
+          "lineNumber": 43
+        },
+        {
+          "caller": "removeMember",
+          "callee": "shopId",
+          "lineNumber": 43
+        },
+        {
+          "caller": "removeMember",
+          "callee": "res.status(400).json",
+          "lineNumber": 44
+        },
+        {
+          "caller": "removeMember",
+          "callee": "res.status",
+          "lineNumber": 44
+        },
+        {
+          "caller": "getMyShops",
+          "callee": "res.json",
+          "lineNumber": 51
+        },
+        {
+          "caller": "getMyShops",
+          "callee": "svc.getUserShops",
+          "lineNumber": 51
+        },
+        {
+          "caller": "getMyShops",
+          "callee": "res.status(500).json",
+          "lineNumber": 53
+        },
+        {
+          "caller": "getMyShops",
+          "callee": "res.status",
+          "lineNumber": 53
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 8,
+        "functionCount": 9,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/shop-role.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 32,
+      "nonEmptyLines": 25,
+      "functions": [
+        {
+          "name": "shopId",
+          "startLine": 7,
+          "endLine": 7,
+          "params": [
+            "req"
+          ]
+        },
+        {
+          "name": "listRoles",
+          "startLine": 9,
+          "endLine": 12,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getRole",
+          "startLine": 14,
+          "endLine": 17,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createRole",
+          "startLine": 19,
+          "endLine": 22,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateRole",
+          "startLine": 24,
+          "endLine": 27,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "deleteRole",
+          "startLine": 29,
+          "endLine": 32,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "listRoles",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "getRole",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "createRole",
+          "line": 19,
+          "isDefault": false
+        },
+        {
+          "name": "updateRole",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "deleteRole",
+          "line": 29,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "listRoles",
+          "callee": "res.json",
+          "lineNumber": 10
+        },
+        {
+          "caller": "listRoles",
+          "callee": "svc.findAll",
+          "lineNumber": 10
+        },
+        {
+          "caller": "listRoles",
+          "callee": "shopId",
+          "lineNumber": 10
+        },
+        {
+          "caller": "listRoles",
+          "callee": "res.status(500).json",
+          "lineNumber": 11
+        },
+        {
+          "caller": "listRoles",
+          "callee": "res.status",
+          "lineNumber": 11
+        },
+        {
+          "caller": "getRole",
+          "callee": "res.json",
+          "lineNumber": 15
+        },
+        {
+          "caller": "getRole",
+          "callee": "svc.findOne",
+          "lineNumber": 15
+        },
+        {
+          "caller": "getRole",
+          "callee": "shopId",
+          "lineNumber": 15
+        },
+        {
+          "caller": "getRole",
+          "callee": "res.status(500).json",
+          "lineNumber": 16
+        },
+        {
+          "caller": "getRole",
+          "callee": "res.status",
+          "lineNumber": 16
+        },
+        {
+          "caller": "createRole",
+          "callee": "res.json",
+          "lineNumber": 20
+        },
+        {
+          "caller": "createRole",
+          "callee": "svc.create",
+          "lineNumber": 20
+        },
+        {
+          "caller": "createRole",
+          "callee": "shopId",
+          "lineNumber": 20
+        },
+        {
+          "caller": "createRole",
+          "callee": "res.status(400).json",
+          "lineNumber": 21
+        },
+        {
+          "caller": "createRole",
+          "callee": "res.status",
+          "lineNumber": 21
+        },
+        {
+          "caller": "updateRole",
+          "callee": "res.json",
+          "lineNumber": 25
+        },
+        {
+          "caller": "updateRole",
+          "callee": "svc.update",
+          "lineNumber": 25
+        },
+        {
+          "caller": "updateRole",
+          "callee": "shopId",
+          "lineNumber": 25
+        },
+        {
+          "caller": "updateRole",
+          "callee": "res.status(400).json",
+          "lineNumber": 26
+        },
+        {
+          "caller": "updateRole",
+          "callee": "res.status",
+          "lineNumber": 26
+        },
+        {
+          "caller": "deleteRole",
+          "callee": "res.json",
+          "lineNumber": 30
+        },
+        {
+          "caller": "deleteRole",
+          "callee": "svc.remove",
+          "lineNumber": 30
+        },
+        {
+          "caller": "deleteRole",
+          "callee": "shopId",
+          "lineNumber": 30
+        },
+        {
+          "caller": "deleteRole",
+          "callee": "res.status(400).json",
+          "lineNumber": 31
+        },
+        {
+          "caller": "deleteRole",
+          "callee": "res.status",
+          "lineNumber": 31
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 5,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/supplier.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 34,
+      "nonEmptyLines": 27,
+      "functions": [
+        {
+          "name": "findAll",
+          "startLine": 6,
+          "endLine": 9,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "findOne",
+          "startLine": 11,
+          "endLine": 14,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "create",
+          "startLine": 16,
+          "endLine": 19,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "update",
+          "startLine": 21,
+          "endLine": 24,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "remove",
+          "startLine": 26,
+          "endLine": 29,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "payables",
+          "startLine": 31,
+          "endLine": 34,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "findAll",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "findOne",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "create",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "update",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "remove",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "payables",
+          "line": 31,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "findAll",
+          "callee": "res.json",
+          "lineNumber": 7
+        },
+        {
+          "caller": "findAll",
+          "callee": "supplierService.findAll",
+          "lineNumber": 7
+        },
+        {
+          "caller": "findAll",
+          "callee": "res.status(500).json",
+          "lineNumber": 8
+        },
+        {
+          "caller": "findAll",
+          "callee": "res.status",
+          "lineNumber": 8
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.json",
+          "lineNumber": 12
+        },
+        {
+          "caller": "findOne",
+          "callee": "supplierService.findById",
+          "lineNumber": 12
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.status(e.message === 'Supplier not found' ? 404 : 500).json",
+          "lineNumber": 13
+        },
+        {
+          "caller": "findOne",
+          "callee": "res.status",
+          "lineNumber": 13
+        },
+        {
+          "caller": "create",
+          "callee": "res.json",
+          "lineNumber": 17
+        },
+        {
+          "caller": "create",
+          "callee": "supplierService.create",
+          "lineNumber": 17
+        },
+        {
+          "caller": "create",
+          "callee": "res.status(500).json",
+          "lineNumber": 18
+        },
+        {
+          "caller": "create",
+          "callee": "res.status",
+          "lineNumber": 18
+        },
+        {
+          "caller": "update",
+          "callee": "res.json",
+          "lineNumber": 22
+        },
+        {
+          "caller": "update",
+          "callee": "supplierService.update",
+          "lineNumber": 22
+        },
+        {
+          "caller": "update",
+          "callee": "res.status(500).json",
+          "lineNumber": 23
+        },
+        {
+          "caller": "update",
+          "callee": "res.status",
+          "lineNumber": 23
+        },
+        {
+          "caller": "remove",
+          "callee": "res.json",
+          "lineNumber": 27
+        },
+        {
+          "caller": "remove",
+          "callee": "supplierService.remove",
+          "lineNumber": 27
+        },
+        {
+          "caller": "remove",
+          "callee": "res.status(500).json",
+          "lineNumber": 28
+        },
+        {
+          "caller": "remove",
+          "callee": "res.status",
+          "lineNumber": 28
+        },
+        {
+          "caller": "payables",
+          "callee": "res.json",
+          "lineNumber": 32
+        },
+        {
+          "caller": "payables",
+          "callee": "supplierService.getPayables",
+          "lineNumber": 32
+        },
+        {
+          "caller": "payables",
+          "callee": "res.status(500).json",
+          "lineNumber": 33
+        },
+        {
+          "caller": "payables",
+          "callee": "res.status",
+          "lineNumber": 33
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 6,
+        "functionCount": 6,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/system.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 70,
+      "nonEmptyLines": 55,
+      "functions": [
+        {
+          "name": "getShopProfile",
+          "startLine": 6,
+          "endLine": 9,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "saveShopProfile",
+          "startLine": 11,
+          "endLine": 14,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getActivityLogs",
+          "startLine": 16,
+          "endLine": 19,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getInvoices",
+          "startLine": 21,
+          "endLine": 24,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getInvoiceById",
+          "startLine": 26,
+          "endLine": 29,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getInvoiceSummary",
+          "startLine": 31,
+          "endLine": 34,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createInvoice",
+          "startLine": 36,
+          "endLine": 39,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "scanInvoice",
+          "startLine": 41,
+          "endLine": 44,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getInvoiceScans",
+          "startLine": 46,
+          "endLine": 49,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createInvoiceScan",
+          "startLine": 51,
+          "endLine": 54,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateInvoiceScan",
+          "startLine": 56,
+          "endLine": 59,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getPurchasesWithoutInvoice",
+          "startLine": 61,
+          "endLine": 64,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "createPurchaseWithoutInvoice",
+          "startLine": 66,
+          "endLine": 69,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "getShopProfile",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "saveShopProfile",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "getActivityLogs",
+          "line": 16,
+          "isDefault": false
+        },
+        {
+          "name": "getInvoices",
+          "line": 21,
+          "isDefault": false
+        },
+        {
+          "name": "getInvoiceById",
+          "line": 26,
+          "isDefault": false
+        },
+        {
+          "name": "getInvoiceSummary",
+          "line": 31,
+          "isDefault": false
+        },
+        {
+          "name": "createInvoice",
+          "line": 36,
+          "isDefault": false
+        },
+        {
+          "name": "scanInvoice",
+          "line": 41,
+          "isDefault": false
+        },
+        {
+          "name": "getInvoiceScans",
+          "line": 46,
+          "isDefault": false
+        },
+        {
+          "name": "createInvoiceScan",
+          "line": 51,
+          "isDefault": false
+        },
+        {
+          "name": "updateInvoiceScan",
+          "line": 56,
+          "isDefault": false
+        },
+        {
+          "name": "getPurchasesWithoutInvoice",
+          "line": 61,
+          "isDefault": false
+        },
+        {
+          "name": "createPurchaseWithoutInvoice",
+          "line": 66,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getShopProfile",
+          "callee": "res.json",
+          "lineNumber": 7
+        },
+        {
+          "caller": "getShopProfile",
+          "callee": "systemService.getShopProfile",
+          "lineNumber": 7
+        },
+        {
+          "caller": "getShopProfile",
+          "callee": "res.status(500).json",
+          "lineNumber": 8
+        },
+        {
+          "caller": "getShopProfile",
+          "callee": "res.status",
+          "lineNumber": 8
+        },
+        {
+          "caller": "saveShopProfile",
+          "callee": "res.json",
+          "lineNumber": 12
+        },
+        {
+          "caller": "saveShopProfile",
+          "callee": "systemService.updateShopProfile",
+          "lineNumber": 12
+        },
+        {
+          "caller": "saveShopProfile",
+          "callee": "res.status(500).json",
+          "lineNumber": 13
+        },
+        {
+          "caller": "saveShopProfile",
+          "callee": "res.status",
+          "lineNumber": 13
+        },
+        {
+          "caller": "getActivityLogs",
+          "callee": "res.json",
+          "lineNumber": 17
+        },
+        {
+          "caller": "getActivityLogs",
+          "callee": "systemService.getActivityLogs",
+          "lineNumber": 17
+        },
+        {
+          "caller": "getActivityLogs",
+          "callee": "res.status(500).json",
+          "lineNumber": 18
+        },
+        {
+          "caller": "getActivityLogs",
+          "callee": "res.status",
+          "lineNumber": 18
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "res.json",
+          "lineNumber": 22
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "systemService.getInvoices",
+          "lineNumber": 22
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "res.status(500).json",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInvoices",
+          "callee": "res.status",
+          "lineNumber": 23
+        },
+        {
+          "caller": "getInvoiceById",
+          "callee": "res.json",
+          "lineNumber": 27
+        },
+        {
+          "caller": "getInvoiceById",
+          "callee": "res.status(500).json",
+          "lineNumber": 28
+        },
+        {
+          "caller": "getInvoiceById",
+          "callee": "res.status",
+          "lineNumber": 28
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "res.json",
+          "lineNumber": 32
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "res.status(500).json",
+          "lineNumber": 33
+        },
+        {
+          "caller": "getInvoiceSummary",
+          "callee": "res.status",
+          "lineNumber": 33
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "res.json",
+          "lineNumber": 37
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 38
+        },
+        {
+          "caller": "createInvoice",
+          "callee": "res.status",
+          "lineNumber": 38
+        },
+        {
+          "caller": "scanInvoice",
+          "callee": "res.json",
+          "lineNumber": 42
+        },
+        {
+          "caller": "scanInvoice",
+          "callee": "systemService.scanInvoice",
+          "lineNumber": 42
+        },
+        {
+          "caller": "scanInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 43
+        },
+        {
+          "caller": "scanInvoice",
+          "callee": "res.status",
+          "lineNumber": 43
+        },
+        {
+          "caller": "getInvoiceScans",
+          "callee": "res.json",
+          "lineNumber": 47
+        },
+        {
+          "caller": "getInvoiceScans",
+          "callee": "res.status(500).json",
+          "lineNumber": 48
+        },
+        {
+          "caller": "getInvoiceScans",
+          "callee": "res.status",
+          "lineNumber": 48
+        },
+        {
+          "caller": "createInvoiceScan",
+          "callee": "res.json",
+          "lineNumber": 52
+        },
+        {
+          "caller": "createInvoiceScan",
+          "callee": "res.status(500).json",
+          "lineNumber": 53
+        },
+        {
+          "caller": "createInvoiceScan",
+          "callee": "res.status",
+          "lineNumber": 53
+        },
+        {
+          "caller": "updateInvoiceScan",
+          "callee": "res.json",
+          "lineNumber": 57
+        },
+        {
+          "caller": "updateInvoiceScan",
+          "callee": "res.status(500).json",
+          "lineNumber": 58
+        },
+        {
+          "caller": "updateInvoiceScan",
+          "callee": "res.status",
+          "lineNumber": 58
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "res.json",
+          "lineNumber": 62
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "systemService.getPurchaseWithoutInvoice",
+          "lineNumber": 62
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 63
+        },
+        {
+          "caller": "getPurchasesWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 63
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "res.json",
+          "lineNumber": 67
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "res.status(500).json",
+          "lineNumber": 68
+        },
+        {
+          "caller": "createPurchaseWithoutInvoice",
+          "callee": "res.status",
+          "lineNumber": 68
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 13,
+        "functionCount": 13,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/tax-config.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 90,
+      "nonEmptyLines": 81,
+      "functions": [
+        {
+          "name": "getTaxConfig",
+          "startLine": 5,
+          "endLine": 66,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateTaxConfig",
+          "startLine": 68,
+          "endLine": 90,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "getTaxConfig",
+          "line": 5,
+          "isDefault": false
+        },
+        {
+          "name": "updateTaxConfig",
+          "line": 68,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getTaxConfig",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 12
+        },
+        {
+          "caller": "getTaxConfig",
+          "callee": "shopRepo.findOne",
+          "lineNumber": 13
+        },
+        {
+          "caller": "getTaxConfig",
+          "callee": "res.json",
+          "lineNumber": 61
+        },
+        {
+          "caller": "getTaxConfig",
+          "callee": "console.error",
+          "lineNumber": 63
+        },
+        {
+          "caller": "getTaxConfig",
+          "callee": "res.status(500).json",
+          "lineNumber": 64
+        },
+        {
+          "caller": "getTaxConfig",
+          "callee": "res.status",
+          "lineNumber": 64
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "res.status(400).json",
+          "lineNumber": 71
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "res.status",
+          "lineNumber": 71
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 73
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "shopRepo.findOne",
+          "lineNumber": 74
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "shopRepo.create",
+          "lineNumber": 76
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "shopRepo.save",
+          "lineNumber": 84
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "res.json",
+          "lineNumber": 85
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "console.error",
+          "lineNumber": 87
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "res.status(500).json",
+          "lineNumber": 88
+        },
+        {
+          "caller": "updateTaxConfig",
+          "callee": "res.status",
+          "lineNumber": 88
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/controllers/tax.controller.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 110,
+      "nonEmptyLines": 96,
+      "functions": [
+        {
+          "name": "getConfig",
+          "startLine": 9,
+          "endLine": 36,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "updateConfig",
+          "startLine": 38,
+          "endLine": 56,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "exportToHTKK",
+          "startLine": 58,
+          "endLine": 97,
+          "params": [
+            "req",
+            "res"
+          ]
+        },
+        {
+          "name": "getTaxEstimate",
+          "startLine": 99,
+          "endLine": 110,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "getConfig",
+          "line": 9,
+          "isDefault": false
+        },
+        {
+          "name": "updateConfig",
+          "line": 38,
+          "isDefault": false
+        },
+        {
+          "name": "exportToHTKK",
+          "line": 58,
+          "isDefault": false
+        },
+        {
+          "name": "getTaxEstimate",
+          "line": 99,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "getConfig",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 12
+        },
+        {
+          "caller": "getConfig",
+          "callee": "shopRepo.findOne",
+          "lineNumber": 13
+        },
+        {
+          "caller": "getConfig",
+          "callee": "res.json",
+          "lineNumber": 15
+        },
+        {
+          "caller": "getConfig",
+          "callee": "res.status(500).json",
+          "lineNumber": 34
+        },
+        {
+          "caller": "getConfig",
+          "callee": "res.status",
+          "lineNumber": 34
+        },
+        {
+          "caller": "updateConfig",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 43
+        },
+        {
+          "caller": "updateConfig",
+          "callee": "shopRepo.findOne",
+          "lineNumber": 44
+        },
+        {
+          "caller": "updateConfig",
+          "callee": "shopRepo.save",
+          "lineNumber": 49
+        },
+        {
+          "caller": "updateConfig",
+          "callee": "res.json",
+          "lineNumber": 52
+        },
+        {
+          "caller": "updateConfig",
+          "callee": "res.status(500).json",
+          "lineNumber": 54
+        },
+        {
+          "caller": "updateConfig",
+          "callee": "res.status",
+          "lineNumber": 54
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "new Date().getFullYear().toString",
+          "lineNumber": 62
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "new Date().getFullYear",
+          "lineNumber": 62
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "taxService.getTaxReportData",
+          "lineNumber": 64
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "builder.buildObject",
+          "lineNumber": 89
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "res.setHeader",
+          "lineNumber": 91
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "res.setHeader",
+          "lineNumber": 92
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "res.send",
+          "lineNumber": 93
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "res.status(500).json",
+          "lineNumber": 95
+        },
+        {
+          "caller": "exportToHTKK",
+          "callee": "res.status",
+          "lineNumber": 95
+        },
+        {
+          "caller": "getTaxEstimate",
+          "callee": "new Date().getFullYear().toString",
+          "lineNumber": 103
+        },
+        {
+          "caller": "getTaxEstimate",
+          "callee": "new Date().getFullYear",
+          "lineNumber": 103
+        },
+        {
+          "caller": "getTaxEstimate",
+          "callee": "taxService.getTaxReportData",
+          "lineNumber": 105
+        },
+        {
+          "caller": "getTaxEstimate",
+          "callee": "res.json",
+          "lineNumber": 106
+        },
+        {
+          "caller": "getTaxEstimate",
+          "callee": "res.status(500).json",
+          "lineNumber": 108
+        },
+        {
+          "caller": "getTaxEstimate",
+          "callee": "res.status",
+          "lineNumber": 108
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 4,
+        "functionCount": 4,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/customer/entities.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 201,
+      "nonEmptyLines": 139,
+      "classes": [
+        {
+          "name": "Customer",
+          "startLine": 5,
+          "endLine": 69,
+          "methods": [],
+          "properties": [
+            "id",
+            "code",
+            "shopId",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "taxCode",
+            "identityNumber",
+            "identityImageUrl",
+            "avatarUrl",
+            "dateOfBirth",
+            "customerType",
+            "zaloPhone",
+            "creditLimit",
+            "balance",
+            "notes",
+            "isActive",
+            "receivables",
+            "createdAt",
+            "updatedAt"
+          ]
+        },
+        {
+          "name": "Receivable",
+          "startLine": 72,
+          "endLine": 127,
+          "methods": [],
+          "properties": [
+            "id",
+            "customer",
+            "shopId",
+            "orderId",
+            "amount",
+            "paidAmount",
+            "dueDate",
+            "status",
+            "remainingAmount",
+            "notes",
+            "debtReason",
+            "witnessName",
+            "reminderEnabled",
+            "lastReminderAt",
+            "evidences",
+            "paymentHistory",
+            "createdAt",
+            "updatedAt"
+          ]
+        },
+        {
+          "name": "DebtEvidence",
+          "startLine": 130,
+          "endLine": 164,
+          "methods": [],
+          "properties": [
+            "id",
+            "receivable",
+            "shopId",
+            "payableId",
+            "type",
+            "fileUrl",
+            "fileName",
+            "fileSize",
+            "description",
+            "uploadedBy",
+            "uploadedAt"
+          ]
+        },
+        {
+          "name": "DebtPaymentHistory",
+          "startLine": 167,
+          "endLine": 201,
+          "methods": [],
+          "properties": [
+            "id",
+            "receivable",
+            "shopId",
+            "payableId",
+            "amount",
+            "paymentMethod",
+            "paymentDate",
+            "evidenceUrl",
+            "notes",
+            "recordedBy",
+            "createdAt"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Customer",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "Receivable",
+          "line": 71,
+          "isDefault": false
+        },
+        {
+          "name": "DebtEvidence",
+          "line": 129,
+          "isDefault": false
+        },
+        {
+          "name": "DebtPaymentHistory",
+          "line": 166,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 4,
+        "functionCount": 0,
+        "classCount": 4
+      }
+    },
+    {
+      "path": "backend/src/finance/entities.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 417,
+      "nonEmptyLines": 288,
+      "classes": [
+        {
+          "name": "CashAccount",
+          "startLine": 5,
+          "endLine": 23,
+          "methods": [],
+          "properties": [
+            "id",
+            "name",
+            "shopId",
+            "accountType",
+            "balance",
+            "isActive"
+          ]
+        },
+        {
+          "name": "TaxRule",
+          "startLine": 26,
+          "endLine": 47,
+          "methods": [],
+          "properties": [
+            "id",
+            "industryCode",
+            "name",
+            "vatRate",
+            "pitRate",
+            "effectiveFrom",
+            "effectiveTo"
+          ]
+        },
+        {
+          "name": "CashTransaction",
+          "startLine": 50,
+          "endLine": 105,
+          "methods": [],
+          "properties": [
+            "id",
+            "transactionCode",
+            "shopId",
+            "type",
+            "category",
+            "amount",
+            "paymentMethod",
+            "account",
+            "counterparty",
+            "referenceType",
+            "referenceId",
+            "transactionDate",
+            "notes",
+            "receiptImageUrl",
+            "runningBalance",
+            "approvedBy",
+            "createdBy",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "BudgetPlan",
+          "startLine": 108,
+          "endLine": 144,
+          "methods": [],
+          "properties": [
+            "id",
+            "name",
+            "shopId",
+            "period",
+            "startDate",
+            "endDate",
+            "plannedIncome",
+            "plannedExpense",
+            "actualIncome",
+            "actualExpense",
+            "notes",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "CashflowForecast",
+          "startLine": 147,
+          "endLine": 171,
+          "methods": [],
+          "properties": [
+            "id",
+            "forecastDate",
+            "shopId",
+            "expectedIncome",
+            "expectedExpense",
+            "expectedBalance",
+            "notes",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "DailyClosing",
+          "startLine": 175,
+          "endLine": 220,
+          "methods": [],
+          "properties": [
+            "id",
+            "closingDate",
+            "shopId",
+            "openingCash",
+            "closingCash",
+            "expectedCash",
+            "cashDifference",
+            "totalSales",
+            "totalReturns",
+            "totalIncome",
+            "totalExpense",
+            "orderCount",
+            "notes",
+            "closedBy",
+            "closedAt"
+          ]
+        },
+        {
+          "name": "Invoice",
+          "startLine": 223,
+          "endLine": 286,
+          "methods": [],
+          "properties": [
+            "id",
+            "invoiceNumber",
+            "shopId",
+            "invoiceSymbol",
+            "invoiceType",
+            "invoiceDate",
+            "partnerName",
+            "partnerTaxCode",
+            "partnerAddress",
+            "partnerIdentityNumber",
+            "referenceType",
+            "referenceId",
+            "subtotal",
+            "taxAmount",
+            "totalAmount",
+            "paymentMethod",
+            "paymentStatus",
+            "imageUrl",
+            "notes",
+            "createdBy",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "TaxObligation",
+          "startLine": 289,
+          "endLine": 319,
+          "methods": [],
+          "properties": [
+            "id",
+            "period",
+            "shopId",
+            "vatDeclared",
+            "pitDeclared",
+            "vatPaid",
+            "pitPaid",
+            "dueDate",
+            "status",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "PurchaseWithoutInvoice",
+          "startLine": 322,
+          "endLine": 385,
+          "methods": [],
+          "properties": [
+            "id",
+            "recordCode",
+            "shopId",
+            "purchaseDate",
+            "sellerName",
+            "sellerIdentityNumber",
+            "sellerAddress",
+            "sellerPhone",
+            "sellerSignatureUrl",
+            "totalAmount",
+            "items",
+            "paymentMethod",
+            "paymentProofUrl",
+            "marketPriceReference",
+            "notes",
+            "approvalStatus",
+            "approvalNotes",
+            "approvedAt",
+            "approvedBy",
+            "createdBy",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "PurchaseWithoutInvoiceItem",
+          "startLine": 388,
+          "endLine": 416,
+          "methods": [],
+          "properties": [
+            "id",
+            "purchase",
+            "shopId",
+            "productName",
+            "productId",
+            "warehouseId",
+            "quantity",
+            "unitPrice",
+            "subtotal"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "CashAccount",
+          "line": 4,
+          "isDefault": false
+        },
+        {
+          "name": "TaxRule",
+          "line": 25,
+          "isDefault": false
+        },
+        {
+          "name": "CashTransaction",
+          "line": 49,
+          "isDefault": false
+        },
+        {
+          "name": "BudgetPlan",
+          "line": 107,
+          "isDefault": false
+        },
+        {
+          "name": "CashflowForecast",
+          "line": 146,
+          "isDefault": false
+        },
+        {
+          "name": "DailyClosing",
+          "line": 173,
+          "isDefault": false
+        },
+        {
+          "name": "Invoice",
+          "line": 222,
+          "isDefault": false
+        },
+        {
+          "name": "TaxObligation",
+          "line": 288,
+          "isDefault": false
+        },
+        {
+          "name": "PurchaseWithoutInvoice",
+          "line": 321,
+          "isDefault": false
+        },
+        {
+          "name": "PurchaseWithoutInvoiceItem",
+          "line": 387,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 10,
+        "functionCount": 0,
+        "classCount": 10
+      }
+    },
+    {
+      "path": "backend/src/finance/entities/financial-ledger.entity.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 39,
+      "nonEmptyLines": 29,
+      "classes": [
+        {
+          "name": "FinancialLedger",
+          "startLine": 9,
+          "endLine": 39,
+          "methods": [],
+          "properties": [
+            "id",
+            "shopId",
+            "eventType",
+            "amount",
+            "paymentMethod",
+            "accountId",
+            "referenceId",
+            "description",
+            "createdAt",
+            "createdBy"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "FinancialLedger",
+          "line": 8,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/src/finance/ledger.entity.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 59,
+      "nonEmptyLines": 43,
+      "classes": [
+        {
+          "name": "JournalEntry",
+          "startLine": 4,
+          "endLine": 31,
+          "methods": [],
+          "properties": [
+            "id",
+            "shopId",
+            "entryDate",
+            "referenceType",
+            "referenceId",
+            "description",
+            "isVoided",
+            "createdAt",
+            "lines"
+          ]
+        },
+        {
+          "name": "JournalLine",
+          "startLine": 34,
+          "endLine": 59,
+          "methods": [],
+          "properties": [
+            "id",
+            "journalEntryId",
+            "journalEntry",
+            "accountCode",
+            "amount",
+            "entryType",
+            "createdAt"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "JournalEntry",
+          "line": 3,
+          "isDefault": false
+        },
+        {
+          "name": "JournalLine",
+          "line": 33,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 0,
+        "classCount": 2
+      }
+    },
+    {
+      "path": "backend/src/index.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 160,
+      "nonEmptyLines": 144,
+      "functions": [
+        {
+          "name": "vercelHandler",
+          "startLine": 125,
+          "endLine": 158,
+          "params": [
+            "req",
+            "res"
+          ]
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "vercelHandler",
+          "callee": "AppDataSource.initialize",
+          "lineNumber": 128
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "console.log",
+          "lineNumber": 129
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "AppDataSource.query",
+          "lineNumber": 131
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "AppDataSource.query",
+          "lineNumber": 138
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "console.log",
+          "lineNumber": 148
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "console.log",
+          "lineNumber": 150
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "console.log",
+          "lineNumber": 153
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "res.status(500).json",
+          "lineNumber": 154
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "res.status",
+          "lineNumber": 154
+        },
+        {
+          "caller": "vercelHandler",
+          "callee": "app",
+          "lineNumber": 157
+        }
+      ],
+      "metrics": {
+        "importCount": 20,
+        "exportCount": 0,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/inventory/entities.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 233,
+      "nonEmptyLines": 165,
+      "classes": [
+        {
+          "name": "Warehouse",
+          "startLine": 7,
+          "endLine": 22,
+          "methods": [],
+          "properties": [
+            "id",
+            "name",
+            "shopId",
+            "address",
+            "isActive"
+          ]
+        },
+        {
+          "name": "InventoryStock",
+          "startLine": 25,
+          "endLine": 51,
+          "methods": [],
+          "properties": [
+            "id",
+            "productId",
+            "shopId",
+            "product",
+            "warehouseId",
+            "warehouse",
+            "quantity",
+            "updatedAt"
+          ]
+        },
+        {
+          "name": "InventoryMovement",
+          "startLine": 54,
+          "endLine": 87,
+          "methods": [],
+          "properties": [
+            "id",
+            "productId",
+            "shopId",
+            "warehouseId",
+            "movementType",
+            "quantity",
+            "referenceType",
+            "referenceId",
+            "notes",
+            "createdBy",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "PurchaseOrder",
+          "startLine": 90,
+          "endLine": 148,
+          "methods": [],
+          "properties": [
+            "id",
+            "orderCode",
+            "shopId",
+            "supplierId",
+            "supplier",
+            "warehouseId",
+            "orderDate",
+            "paymentDueDate",
+            "invoiceNumber",
+            "status",
+            "subtotal",
+            "discountAmount",
+            "taxAmount",
+            "totalAmount",
+            "paidAmount",
+            "notes",
+            "createdBy",
+            "items",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "PurchaseOrderItem",
+          "startLine": 151,
+          "endLine": 171,
+          "methods": [],
+          "properties": [
+            "id",
+            "order",
+            "product",
+            "quantity",
+            "unitPrice",
+            "subtotal"
+          ]
+        },
+        {
+          "name": "StockTake",
+          "startLine": 174,
+          "endLine": 207,
+          "methods": [],
+          "properties": [
+            "id",
+            "stockTakeCode",
+            "shopId",
+            "stockTakeDate",
+            "status",
+            "notes",
+            "items",
+            "createdBy",
+            "approvedBy",
+            "completedAt",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "StockTakeItem",
+          "startLine": 210,
+          "endLine": 233,
+          "methods": [],
+          "properties": [
+            "id",
+            "stockTake",
+            "product",
+            "systemQty",
+            "actualQty",
+            "difference",
+            "notes"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "Warehouse",
+          "line": 6,
+          "isDefault": false
+        },
+        {
+          "name": "InventoryStock",
+          "line": 24,
+          "isDefault": false
+        },
+        {
+          "name": "InventoryMovement",
+          "line": 53,
+          "isDefault": false
+        },
+        {
+          "name": "PurchaseOrder",
+          "line": 89,
+          "isDefault": false
+        },
+        {
+          "name": "PurchaseOrderItem",
+          "line": 150,
+          "isDefault": false
+        },
+        {
+          "name": "StockTake",
+          "line": 173,
+          "isDefault": false
+        },
+        {
+          "name": "StockTakeItem",
+          "line": 209,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 2,
+        "exportCount": 7,
+        "functionCount": 0,
+        "classCount": 7
+      }
+    },
+    {
+      "path": "backend/src/inventory/lot.entity.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 43,
+      "nonEmptyLines": 30,
+      "classes": [
+        {
+          "name": "InventoryLot",
+          "startLine": 5,
+          "endLine": 42,
+          "methods": [],
+          "properties": [
+            "id",
+            "product",
+            "productId",
+            "shopId",
+            "purchaseId",
+            "batchId",
+            "lotDate",
+            "initialQty",
+            "remainingQty",
+            "costPrice",
+            "notes",
+            "createdAt"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "InventoryLot",
+          "line": 4,
+          "isDefault": false
+        }
+      ],
+      "metrics": {
+        "importCount": 1,
+        "exportCount": 1,
+        "functionCount": 0,
+        "classCount": 1
+      }
+    },
+    {
+      "path": "backend/src/middleware/auth.middleware.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 80,
+      "nonEmptyLines": 69,
+      "functions": [
+        {
+          "name": "authenticateJwt",
+          "startLine": 14,
+          "endLine": 65,
+          "params": [
+            "req",
+            "res",
+            "next"
+          ]
+        },
+        {
+          "name": "requireShopId",
+          "startLine": 72,
+          "endLine": 80,
+          "params": [
+            "req",
+            "res",
+            "next"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "authenticateJwt",
+          "line": 14,
+          "isDefault": false
+        },
+        {
+          "name": "requireShopId",
+          "line": 72,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "authenticateJwt",
+          "callee": "authHeader.split",
+          "lineNumber": 19
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "res.status(401).json",
+          "lineNumber": 25
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "res.status",
+          "lineNumber": 25
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "jwt.verify",
+          "lineNumber": 29
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "parseInt",
+          "lineNumber": 35
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "isNaN",
+          "lineNumber": 36
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "AppDataSource.initialize",
+          "lineNumber": 38
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 40
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "memberRepo.findOne",
+          "lineNumber": 41
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "res.status(403).json",
+          "lineNumber": 46
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "res.status",
+          "lineNumber": 46
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "requestContext.getStore",
+          "lineNumber": 53
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "next",
+          "lineNumber": 61
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "res.status(401).json",
+          "lineNumber": 63
+        },
+        {
+          "caller": "authenticateJwt",
+          "callee": "res.status",
+          "lineNumber": 63
+        },
+        {
+          "caller": "requireShopId",
+          "callee": "isNaN",
+          "lineNumber": 73
+        },
+        {
+          "caller": "requireShopId",
+          "callee": "res.status(400).json",
+          "lineNumber": 74
+        },
+        {
+          "caller": "requireShopId",
+          "callee": "res.status",
+          "lineNumber": 74
+        },
+        {
+          "caller": "requireShopId",
+          "callee": "next",
+          "lineNumber": 79
+        }
+      ],
+      "metrics": {
+        "importCount": 4,
+        "exportCount": 2,
+        "functionCount": 2,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/middleware/context.middleware.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 22,
+      "nonEmptyLines": 18,
+      "functions": [
+        {
+          "name": "contextMiddleware",
+          "startLine": 13,
+          "endLine": 22,
+          "params": [
+            "req",
+            "res",
+            "next"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "requestContext",
+          "line": 11,
+          "isDefault": false
+        },
+        {
+          "name": "contextMiddleware",
+          "line": 13,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "contextMiddleware",
+          "callee": "requestContext.run",
+          "lineNumber": 19
+        },
+        {
+          "caller": "contextMiddleware",
+          "callee": "next",
+          "lineNumber": 20
+        }
+      ],
+      "metrics": {
+        "importCount": 0,
+        "exportCount": 2,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/middleware/lock-transaction.middleware.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 139,
+      "nonEmptyLines": 125,
+      "functions": [
+        {
+          "name": "lockTransactionMiddleware",
+          "startLine": 14,
+          "endLine": 139,
+          "params": [
+            "req",
+            "res",
+            "next"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "lockTransactionMiddleware",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "['POST', 'PUT', 'PATCH', 'DELETE'].includes",
+          "lineNumber": 16
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "next",
+          "lineNumber": 19
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "next",
+          "lineNumber": 22
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.initialize",
+          "lineNumber": 25
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 29
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "memberRepo.findOne",
+          "lineNumber": 30
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "next",
+          "lineNumber": 35
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "path.match",
+          "lineNumber": 55
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "path.match",
+          "lineNumber": 56
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "path.match",
+          "lineNumber": 57
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "path.match",
+          "lineNumber": 58
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "path.match",
+          "lineNumber": 59
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "path.match",
+          "lineNumber": 60
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "parseInt",
+          "lineNumber": 63
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 64
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "repo.findOne",
+          "lineNumber": 65
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "parseInt",
+          "lineNumber": 71
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 72
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "repo.findOne",
+          "lineNumber": 73
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "parseInt",
+          "lineNumber": 79
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 80
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "repo.findOne",
+          "lineNumber": 81
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "parseInt",
+          "lineNumber": 87
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 88
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "repo.findOne",
+          "lineNumber": 89
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "parseInt",
+          "lineNumber": 95
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 96
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "repo.findOne",
+          "lineNumber": 97
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "parseInt",
+          "lineNumber": 103
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 104
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "repo.findOne",
+          "lineNumber": 105
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "targetDate.getFullYear",
+          "lineNumber": 114
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "String(targetDate.getMonth() + 1).padStart",
+          "lineNumber": 115
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "String",
+          "lineNumber": 115
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "targetDate.getMonth",
+          "lineNumber": 115
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "String(targetDate.getDate()).padStart",
+          "lineNumber": 116
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "String",
+          "lineNumber": 116
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "targetDate.getDate",
+          "lineNumber": 116
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 119
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "closingRepo.createQueryBuilder('c')\n                .where('c.shop_id = :shopId', { shopId })\n                .andWhere('CAST(c.closing_date AS DATE) = :date', { date: dateString })\n                .getOne",
+          "lineNumber": 122
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "closingRepo.createQueryBuilder('c')\n                .where('c.shop_id = :shopId', { shopId })\n                .andWhere",
+          "lineNumber": 122
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "closingRepo.createQueryBuilder('c')\n                .where",
+          "lineNumber": 122
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "closingRepo.createQueryBuilder",
+          "lineNumber": 122
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "res.status(403).json",
+          "lineNumber": 128
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "res.status",
+          "lineNumber": 128
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "console.error",
+          "lineNumber": 134
+        },
+        {
+          "caller": "lockTransactionMiddleware",
+          "callee": "next",
+          "lineNumber": 138
+        }
+      ],
+      "metrics": {
+        "importCount": 6,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    },
+    {
+      "path": "backend/src/middleware/permission.middleware.ts",
+      "language": "typescript",
+      "fileCategory": "code",
+      "totalLines": 65,
+      "nonEmptyLines": 56,
+      "functions": [
+        {
+          "name": "requirePermission",
+          "startLine": 14,
+          "endLine": 65,
+          "params": [
+            "key",
+            "level"
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "name": "requirePermission",
+          "line": 14,
+          "isDefault": false
+        }
+      ],
+      "callGraph": [
+        {
+          "caller": "requirePermission",
+          "callee": "res.status(400).json",
+          "lineNumber": 23
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "res.status",
+          "lineNumber": 23
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "AppDataSource.getRepository",
+          "lineNumber": 27
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "memberRepo.findOne",
+          "lineNumber": 28
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "res.status(403).json",
+          "lineNumber": 34
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "res.status",
+          "lineNumber": 34
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "next",
+          "lineNumber": 38
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "JSON.parse",
+          "lineNumber": 43
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "Array.isArray",
+          "lineNumber": 46
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "keys.some",
+          "lineNumber": 47
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "hierarchy.indexOf",
+          "lineNumber": 51
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "hierarchy.indexOf",
+          "lineNumber": 52
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "res.status(403).json",
+          "lineNumber": 57
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "res.status",
+          "lineNumber": 57
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "next",
+          "lineNumber": 60
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "res.status(500).json",
+          "lineNumber": 62
+        },
+        {
+          "caller": "requirePermission",
+          "callee": "res.status",
+          "lineNumber": 62
+        }
+      ],
+      "metrics": {
+        "importCount": 3,
+        "exportCount": 1,
+        "functionCount": 1,
+        "classCount": 0
+      }
+    }
+  ]
+}

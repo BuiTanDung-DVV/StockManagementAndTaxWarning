@@ -1,0 +1,41 @@
+{
+  "nodes": [
+    {
+      "id": "config:assets/lottie/empty.json",
+      "type": "config",
+      "name": "empty.json",
+      "filePath": "assets/lottie/empty.json",
+      "summary": "Cấu hình hiệu ứng Lottie để hiển thị giao diện khi không có dữ liệu (empty state).",
+      "tags": ["configuration", "ui-asset", "lottie-animation", "empty-state"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:assets/lottie/error.json",
+      "type": "config",
+      "name": "error.json",
+      "filePath": "assets/lottie/error.json",
+      "summary": "Cấu hình hiệu ứng Lottie để hiển thị giao diện khi xảy ra lỗi.",
+      "tags": ["configuration", "ui-asset", "lottie-animation", "error-state"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:assets/lottie/loading.json",
+      "type": "config",
+      "name": "loading.json",
+      "filePath": "assets/lottie/loading.json",
+      "summary": "Cấu hình hiệu ứng Lottie để hiển thị giao diện trong quá trình tải dữ liệu.",
+      "tags": ["configuration", "ui-asset", "lottie-animation", "loading-state"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:assets/lottie/success.json",
+      "type": "config",
+      "name": "success.json",
+      "filePath": "assets/lottie/success.json",
+      "summary": "Cấu hình hiệu ứng Lottie để hiển thị giao diện khi thao tác thành công.",
+      "tags": ["configuration", "ui-asset", "lottie-animation", "success-state"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": []
+}

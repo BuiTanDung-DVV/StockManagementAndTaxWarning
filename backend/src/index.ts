@@ -103,11 +103,12 @@ if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
           await AppDataSource.query(`
               CREATE TABLE IF NOT EXISTS otps (
                   id SERIAL PRIMARY KEY,
-                  phone VARCHAR(20) NOT NULL,
+                  phone VARCHAR(255) NOT NULL,
                   otp_code VARCHAR(10) NOT NULL,
                   expires_at TIMESTAMP NOT NULL,
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
               );
+              ALTER TABLE otps ALTER COLUMN phone TYPE VARCHAR(255);
           `);
           console.log('✅ Dynamic schema sync complete for shop_profiles and otps');
       } catch (e) {
@@ -137,11 +138,12 @@ const vercelHandler = async (req: express.Request, res: express.Response) => {
           await AppDataSource.query(`
               CREATE TABLE IF NOT EXISTS otps (
                   id SERIAL PRIMARY KEY,
-                  phone VARCHAR(20) NOT NULL,
+                  phone VARCHAR(255) NOT NULL,
                   otp_code VARCHAR(10) NOT NULL,
                   expires_at TIMESTAMP NOT NULL,
                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
               );
+              ALTER TABLE otps ALTER COLUMN phone TYPE VARCHAR(255);
           `);
           console.log('✅ Dynamic schema sync complete for shop_profiles and otps');
       } catch (e) {

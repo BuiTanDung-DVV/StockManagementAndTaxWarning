@@ -1,0 +1,24 @@
+{
+  "projectRoot": "d:\\SalesAndStockManagement",
+  "batchFiles": [
+    {"path": "backend/database/20260421_phase1_hkd_updates.sql", "language": "sql", "sizeLines": 24, "fileCategory": "data"},
+    {"path": "backend/database/20260504_optimize_indexes.sql", "language": "sql", "sizeLines": 68, "fileCategory": "data"},
+    {"path": "backend/database/20260524_create_journal_ledger.sql", "language": "sql", "sizeLines": 29, "fileCategory": "data"},
+    {"path": "backend/database/20260525_create_financial_ledger.sql", "language": "sql", "sizeLines": 13, "fileCategory": "data"},
+    {"path": "backend/database/20260525_create_sales_order_lot_deductions.sql", "language": "sql", "sizeLines": 7, "fileCategory": "data"},
+    {"path": "backend/database/20260525_create_tax_rules.sql", "language": "sql", "sizeLines": 9, "fileCategory": "data"},
+    {"path": "backend/database/20260525_recreate_financial_ledger.sql", "language": "sql", "sizeLines": 20, "fileCategory": "data"},
+    {"path": "backend/database/QLKH.sql", "language": "sql", "sizeLines": 728, "fileCategory": "data"}
+  ],
+  "batchImportData": {
+    "backend/database/20260421_phase1_hkd_updates.sql": [],
+    "backend/database/20260504_optimize_indexes.sql": [],
+    "backend/database/20260524_create_journal_ledger.sql": [],
+    "backend/database/20260525_create_financial_ledger.sql": [],
+    "backend/database/20260525_create_sales_order_lot_deductions.sql": [],
+    "backend/database/20260525_create_tax_rules.sql": [],
+    "backend/database/20260525_recreate_financial_ledger.sql": [],
+    "backend/database/QLKH.sql": []
+  },
+  "neighborMap": {}
+}

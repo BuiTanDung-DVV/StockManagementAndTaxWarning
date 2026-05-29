@@ -5,9 +5,10 @@ class SalesRepository {
   final ApiClient _api;
   SalesRepository(this._api);
 
-  Future<Map<String, dynamic>> findAll({int page = 1, int limit = 20, String? status}) async {
+  Future<Map<String, dynamic>> findAll({int page = 1, int limit = 20, String? status, int? customerId}) async {
     final params = <String, dynamic>{'page': '$page', 'limit': '$limit'};
     if (status != null) params['status'] = status;
+    if (customerId != null) params['customerId'] = '$customerId';
     return await _api.get('/sales-orders', params: params);
   }
 
@@ -23,8 +24,8 @@ class SalesRepository {
 
 final salesRepoProvider = Provider<SalesRepository>((ref) => SalesRepository(ref.read(apiClientProvider)));
 
-final salesListProvider = FutureProvider.family<Map<String, dynamic>, ({int page, String? status})>((ref, args) {
-  return ref.read(salesRepoProvider).findAll(page: args.page, status: args.status);
+final salesListProvider = FutureProvider.family<Map<String, dynamic>, ({int page, String? status, int? customerId})>((ref, args) {
+  return ref.read(salesRepoProvider).findAll(page: args.page, status: args.status, customerId: args.customerId);
 });
 
 final salesDetailProvider = FutureProvider.family<Map<String, dynamic>, int>((ref, id) {
