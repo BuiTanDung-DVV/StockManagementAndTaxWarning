@@ -91,6 +91,22 @@ backend/dev-scripts/
 stitch_qu_n_l_b_n_h_ng_kho_h_ng/
 skills-lock.json
 
-# Local AI agent folders
+# Local AI agent folders & Tools
 .agent/
 .agents/
+.codegraph/
+codegraph/
+.cursor/
+.understand-anything/
+
+# Deployment configs
+.vercel/
+
+# Temporary / Junk Files
+bug/
+fix_imports*.js
+generate_graph*.py
+recent_logs.txt
+replace_*.js
+test-*.js
+tmp*.txt
