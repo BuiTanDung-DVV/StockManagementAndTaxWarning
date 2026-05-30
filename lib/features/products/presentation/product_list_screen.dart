@@ -229,6 +229,19 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                           maxLines: 1, 
                                           overflow: TextOverflow.ellipsis
                                         ),
+                                        if (p['description'] != null && p['description'].toString().trim().isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            p['description'].toString().trim(),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: c.textSecondary,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                         const SizedBox(height: 4),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

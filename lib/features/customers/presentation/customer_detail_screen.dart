@@ -84,7 +84,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                         child: ListTile(
                           title: Text(order['orderCode'] ?? ''),
                           subtitle: Text(order['orderDate']?.toString().substring(0, 10) ?? ''),
-                          trailing: Text(_currFmt.format(num.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                          trailing: Text(_currFmt.format(num.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                         ),
                       );
                     },

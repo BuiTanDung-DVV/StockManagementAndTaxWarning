@@ -832,14 +832,12 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                         });
                         ref.invalidate(salesDetailProvider(orderId));
                         ref.invalidate(salesListProvider);
-                        if (context.mounted) {
+                        if (ctx.mounted) {
                           Navigator.of(ctx).pop();
-                          ToastService.showSuccess('Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)}');
                         }
+                        ToastService.showSuccess('Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)}');
                       } catch (e) {
-                        if (context.mounted) {
-                          ToastService.showError('Lỗi: $e');
-                        }
+                        ToastService.showError('Lỗi: $e');
                       }
                     },
                     icon: const Icon(Icons.assignment_return_rounded, size: 18, color: Colors.white),

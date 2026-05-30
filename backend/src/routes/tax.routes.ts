@@ -7,7 +7,7 @@ const router = Router();
 router.use(authenticateJwt);
 
 router.get('/config', requirePermission('finance', 'view'), taxCtrl.getConfig);
-router.put('/config', requirePermission('finance', 'manage'), taxCtrl.updateConfig);
+router.put('/config', requirePermission('finance', 'edit'), taxCtrl.updateConfig);
 
 router.get('/export-htkk', requirePermission('finance', 'view'), taxCtrl.exportToHTKK);
 router.get('/estimate', requirePermission('finance', 'view'), taxCtrl.getTaxEstimate);
