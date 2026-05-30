@@ -156,6 +156,9 @@ export class PurchaseOrderItem {
     @JoinColumn({ name: 'order_id' })
     order: PurchaseOrder;
 
+    @Column({ name: 'product_id' })
+    productId: number;
+
     @ManyToOne(() => Product)
     @JoinColumn({ name: 'product_id' })
     product: Product;
@@ -181,6 +184,9 @@ export class StockTake {
     @Column({ name: 'shop_id', nullable: true })
     shopId: number;
 
+    @Column({ name: 'warehouse_id', nullable: true })
+    warehouseId: number;
+
     @Column({ name: 'stock_take_date', type: 'date' })
     stockTakeDate: Date;
 
@@ -195,6 +201,7 @@ export class StockTake {
 
     @Column({ name: 'created_by', nullable: true })
     createdBy: number;
+
 
     @Column({ name: 'approved_by', nullable: true })
     approvedBy: number;

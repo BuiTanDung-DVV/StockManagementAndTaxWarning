@@ -33,7 +33,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final listAsync = ref.watch(salesListProvider((page: _page, status: _status)));
+    final listAsync = ref.watch(salesListProvider((page: _page, status: _status, customerId: null)));
 
     return Scaffold(
       backgroundColor: c.bg,

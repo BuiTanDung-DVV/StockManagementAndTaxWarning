@@ -118,7 +118,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
               final totalAmount = asDouble(po['totalAmount']);
               final createdAt = po['createdAt']?.toString().split('T').first ?? '';
               final invoiceNumber = po['invoiceNumber'] ?? '';
-              final status = po['status'] ?? '';
+              final status = (po['status'] ?? '').toString().toUpperCase();
 
               Color statusColor;
               String statusLabel;
@@ -212,12 +212,13 @@ class PurchaseOrderScreen extends ConsumerWidget {
                                     }
                                   );
 
-                                  if (confirm == true) {
-                                    if (!ctx.mounted) return;
-                                    Navigator.pop(ctx);
-                                    try {
-                                      await ref.read(inventoryRepoProvider).updatePurchaseOrder(po['id'], {'status': 'COMPLETED'});
-                                      ToastService.showSuccess('Đã duyệt nhập kho thành công');
+                                    if (confirm == true) {
+                                      if (!ctx.mounted) return;
+                                      Navigator.pop(ctx);
+                                      try {
+                                        final poId = po['id'] is int ? po['id'] : int.tryParse(po['id']?.toString() ?? '0') ?? 0;
+                                        await ref.read(inventoryRepoProvider).updatePurchaseOrder(poId, {'status': 'COMPLETED'});
+                                        ToastService.showSuccess('Đã duyệt nhập kho thành công');
                                       ref.invalidate(purchaseOrdersProvider);
                                     } catch (e) {
                                       ToastService.showError('Lỗi khi duyệt nhập kho: $e');

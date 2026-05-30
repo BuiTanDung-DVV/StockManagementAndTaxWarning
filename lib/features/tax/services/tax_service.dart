@@ -25,11 +25,17 @@ class TaxService {
   Future<void> exportHTKK(String period, String year) async {
     final token = _apiClient.token;
     final shopId = _apiClient.shopId;
-    final urlString = '${ApiClient.baseUrl}/tax/export-htkk?period=$period&year=$year&token=$token&shopId=$shopId';
-    final url = Uri.parse(urlString);
+    
+    final baseUri = Uri.parse('${ApiClient.baseUrl}/tax/export-htkk');
+    final url = baseUri.replace(queryParameters: {
+      'period': period,
+      'year': year,
+      'token': token ?? '',
+      'shopId': shopId ?? '',
+    });
     
     try {
-      final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(url);
       if (!launched) {
          throw Exception('Trình duyệt đã chặn tải xuống');
       }

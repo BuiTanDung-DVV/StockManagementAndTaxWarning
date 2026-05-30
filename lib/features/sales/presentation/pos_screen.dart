@@ -696,20 +696,41 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         },
                         icon: const Icon(Icons.money),
                         label: const Text('Tiền mặt'),
+                        style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: SizedBox(
                       height: 52,
-                      child: ElevatedButton.icon(
+                      child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.pop(ctx);
                           _processPayment('BANK_TRANSFER');
                         },
                         icon: const Icon(Icons.qr_code_2),
                         label: const Text('Chuyển khoản'),
+                        style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          if (cart.customerId == null) {
+                            ToastService.showError('Vui lòng chọn khách hàng để thực hiện bán nợ');
+                            return;
+                          }
+                          Navigator.pop(ctx);
+                          _processPayment('DEBT');
+                        },
+                        icon: const Icon(Icons.credit_score),
+                        label: const Text('Ghi nợ'),
+                        style: ElevatedButton.styleFrom(padding: EdgeInsets.zero),
                       ),
                     ),
                   ),
@@ -1016,8 +1037,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
       final orderId = result['id'] as int;
 
-      if (method == 'CASH') {
-        // Cash payment — done immediately
+      if (method == 'CASH' || method == 'DEBT') {
+        // Cash or Debt payment — done immediately
         ref.read(_cartProvider.notifier).clear();
 
         // Trigger UI updates across the app (Inventory, Finance, Sales Summary, Sales List)
@@ -1026,25 +1047,29 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         ref.invalidate(productListProvider);
         ref.invalidate(lowStockProvider);
         ref.invalidate(taxObligationsProvider);
+        ref.invalidate(customerListProvider); // to update customer debt
 
         await _tts.setLanguage('vi-VN');
         await _tts.setSpeechRate(0.45);
-        await _tts.speak('Thanh toán tiền mặt thành công');
+        
+        final msg = method == 'CASH' ? 'Thanh toán tiền mặt thành công' : 'Đã ghi nợ thành công';
+        await _tts.speak(msg);
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text('Thanh toán tiền mặt thành công!'),
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text(method == 'CASH' ? 'Thanh toán tiền mặt thành công!' : 'Tạo đơn hàng ghi nợ thành công!'),
                 ],
               ),
               backgroundColor: AppColors.success,
             ),
           );
         }
-      } else {
+      } else if (method == 'BANK_TRANSFER') {
         // Bank transfer — navigate to QR screen
         final shop = await ref.read(shopProfileProvider.future);
         final bankId = (shop['bankId'] ?? '').toString();

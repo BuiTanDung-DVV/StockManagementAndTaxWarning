@@ -25,10 +25,15 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
 
+  let decoded: any;
   try {
-    const decoded = jwt.verify(token, config.jwtSecret) as any;
+    decoded = jwt.verify(token, config.jwtSecret);
     req.user = decoded;
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
 
+  try {
     // Parse shop ID from header or query param (validation deferred to requireShopId)
     const shopIdValue = req.headers['x-shop-id'] || req.query.shopId;
     if (shopIdValue) {
@@ -59,8 +64,9 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
     }
 
     next();
-  } catch (error) {
-    res.status(401).json({ success: false, message: 'Unauthorized' });
+  } catch (error: any) {
+    console.error('Auth middleware DB error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error during authentication' });
   }
 };
 
