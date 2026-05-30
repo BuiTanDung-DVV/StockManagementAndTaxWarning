@@ -1,113 +1,164 @@
-# 📦 Sales & Stock Management System (with Tax Warning)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/BuiTanDung-DVV/StockManagementAndTaxWarning/main/web/icons/Icon-192.png" alt="Logo" width="120" height="120">
 
-[![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)](https://flutter.dev)
-[![Node.js](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
-[![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)](https://expressjs.com)
-[![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![PostgreSQL](https://img.shields.io/badge/postgresql-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
-[![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
+  # SmartStock & Tax Warning System
 
-Hệ thống quản lý bán hàng, tồn kho và cảnh báo thuế tích hợp toàn diện. Dự án được thiết kế dưới dạng **Monorepo** bao gồm ứng dụng di động Flutter (Frontend) và máy chủ Node.js/TypeScript (Backend API).
+  **Comprehensive Sales, Inventory, and Tax Management Solution**
+
+  [![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
+  [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
+  [![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+  [Features](#-key-features) •
+  [Architecture](#-architecture) •
+  [Getting Started](#-getting-started) •
+  [Tech Stack](#-tech-stack) •
+  [Deployment](#-deployment)
+</div>
 
 ---
 
-## 🚀 Các Tính Năng Chính
+## 🎯 Overview
 
-*   **Quản Lý Kho Hàng**: Nhập kho, xuất kho, kiểm kê và quản lý lô sản phẩm (Lot Tracking), ngày hết hạn.
-*   **Quản Lý Bán Hàng**: Lập hóa đơn bán hàng, ghi nhận doanh thu và quản lý trả hàng (Sales Returns).
-*   **Tài Chính & Kế Toán**: Ghi nhận sổ nhật ký chung (Journal Ledger), doanh thu, giá vốn hàng bán (COGS).
-*   **Cảnh Báo Thuế**: Tính toán thuế suất và tự động đưa ra cảnh báo cho các hộ kinh doanh cá thể hoặc doanh nghiệp.
-*   **Bảo Mật Phân Quyền**: Cơ chế phân quyền theo vai trò (RBAC - Role-Based Access Control) chặt chẽ giữa Chủ cửa hàng (Owner) và Nhân viên (Staff).
+**SmartStock & Tax Warning** is an enterprise-grade monorepo application designed for small to medium businesses (SMEs) and individual household businesses (Hộ Kinh Doanh). It seamlessly integrates POS (Point of Sale), advanced inventory tracking, finance ledgers, and automated tax obligation warnings based on regional compliance.
+
+## ✨ Key Features
+
+*   🛒 **Point of Sale (POS) & Sales Management:** 
+    * Fast checkout process with barcode scanning support.
+    * Order tracking, invoice generation, and sales returns management.
+*   📦 **Advanced Inventory Control:** 
+    * Track stock levels in real-time.
+    * Lot tracking, FIFO cost calculation, and low-stock/expiring product alerts.
+    * Purchase orders and stock-take management.
+*   💼 **Finance & Ledgering:** 
+    * Double-entry bookkeeping system (Journal Ledger).
+    * Track Cost of Goods Sold (COGS), daily cashflow, and profit/loss statements.
+*   📊 **Tax Warning & Compliance:** 
+    * Automated estimation of Value Added Tax (VAT) and Personal Income Tax (PIT).
+    * Export XML declarations compatible with HTKK (Mẫu 01/CNKD).
+*   🔐 **Role-Based Access Control (RBAC):** 
+    * Multi-tier access for Owners, Managers, and Staff members.
 
 ---
 
-## 📁 Cấu Trúc Dự Án (Monorepo)
+## 🏛 Architecture
+
+The project is structured as a **Monorepo** containing both the Flutter frontend application and the Express.js backend API, allowing for streamlined development and deployment.
 
 ```text
-D:\SalesAndStockManagement
-├── android/ & ios/ & web/       # Các thư mục cấu hình nền tảng di động & web của Flutter
-├── assets/                       # Thư mục chứa hình ảnh, fonts, tài nguyên chung
-├── lib/                          # Mã nguồn Flutter Frontend (Clean Architecture)
-│   ├── core/                     # Cấu hình hệ thống (Theme, Router, Network, Widgets chung)
-│   └── features/                 # Các Module nghiệp vụ (Auth, Product, Stock, Finance...)
-├── backend/                      # Mã nguồn Node.js / Express Backend API
-│   ├── src/                      # Source code chính của Backend
-│   │   ├── config/               # Cấu hình cơ sở dữ liệu và biến môi trường
-│   │   ├── controllers/          # Tầng xử lý logic yêu cầu HTTP
-│   │   ├── middleware/           # Middleware (Auth JWT, CORS, RBAC, Context)
-│   │   ├── routes/               # Định tuyến các endpoint API
-│   │   └── services/             # Tầng xử lý nghiệp vụ chính (Business Logic)
-│   ├── dev-scripts/              # [Mới] Scripts phát triển và dọn dẹp DB local (được Gitignore)
-│   ├── vercel.json               # Cấu hình triển khai Serverless trên Vercel
-│   └── package.json              # Khai báo thư viện và script backend
-├── .gitignore                    # Quản lý các tệp tin loại trừ khỏi Git
-└── README.md                     # Tài liệu giới thiệu dự án
+StockManagementAndTaxWarning/
+├── backend/                  # Node.js REST API
+│   ├── src/                  
+│   │   ├── config/           # Database & Environment configurations
+│   │   ├── controllers/      # HTTP Request handlers
+│   │   ├── middleware/       # JWT Auth, CORS, Error Handling
+│   │   ├── routes/           # Express Route definitions
+│   │   └── services/         # Core Business Logic & TypeORM Repositories
+│   └── vercel.json           # Serverless Deployment Config
+│
+├── lib/                      # Flutter Frontend App
+│   ├── core/                 # Shared utilities, routing (GoRouter), theme
+│   └── features/             # Feature-based modular architecture
+│       ├── auth/             # Authentication & Onboarding
+│       ├── sales/            # POS & Order Management
+│       ├── inventory/        # Stock, Purchase Orders
+│       ├── finance/          # Cashflow, Ledger
+│       └── tax/              # Tax Estimation & HTKK Export
+│
+├── android/, ios/, web/      # Flutter platform-specific wrappers
+└── .env.example              # Example environment variables
 ```
 
 ---
 
-## 🛠️ Hướng Dẫn Cài Đặt & Chạy Local
+## 💻 Tech Stack
 
-### 1. Cấu hình Backend
+### Frontend (Client)
+- **Framework:** [Flutter](https://flutter.dev/) (Web, Android, iOS, Windows)
+- **State Management:** [Riverpod](https://riverpod.dev/)
+- **Routing:** [GoRouter](https://pub.dev/packages/go_router)
+- **Networking:** [Dio](https://pub.dev/packages/dio)
 
-1.  Di chuyển vào thư mục backend:
-    ```bash
-    cd backend
-    ```
-2.  Cài đặt các gói thư viện:
-    ```bash
-    npm install
-    ```
-3.  Tạo tệp `.env` dựa trên cấu hình mẫu:
-    ```env
-    PORT=8080
-    DATABASE_URL=postgresql://user:password@host:port/database
-    JWT_SECRET=your_jwt_secret_key_here
-    ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-    ```
-4.  Khởi chạy Backend ở chế độ phát triển (Development):
-    ```bash
-    npm run dev
-    ```
+### Backend (Server)
+- **Runtime:** [Node.js](https://nodejs.org/)
+- **Framework:** [Express.js](https://expressjs.com/)
+- **Language:** TypeScript
+- **ORM:** [TypeORM](https://typeorm.io/)
+- **Database:** PostgreSQL (Hosted on [Supabase](https://supabase.com/))
 
-### 2. Cấu hình Frontend (Flutter)
+---
 
-1.  Quay lại thư mục gốc dự án:
-    ```bash
-    cd ..
-    ```
-2.  Tải các package Dart:
-    ```bash
-    flutter pub get
-    ```
-3.  Khởi chạy ứng dụng Flutter ở môi trường Development:
-    ```bash
-    flutter run --dart-define-from-file=env/dev.json
-    ```
+## 🚀 Getting Started
 
-### 3. Build & Deploy Bản Beta
+### Prerequisites
+Before you begin, ensure you have the following installed:
+*   [Flutter SDK](https://docs.flutter.dev/get-started/install) (v3.19+)
+*   [Node.js](https://nodejs.org/) (v18+)
+*   [Git](https://git-scm.com/)
 
-Để đóng gói thành ứng dụng cài đặt (APK cho Android, EXE cho Windows) với môi trường Production, chạy lệnh sau:
+### 1. Backend Setup
+
 ```bash
-# Build cho Android (Tạo file APK)
-flutter build apk --release --dart-define-from-file=env/prod.json
+# Navigate to the backend directory
+cd backend
 
-# Build cho Windows (Tạo file .exe)
-flutter build windows --release --dart-define-from-file=env/prod.json
+# Install dependencies
+npm install
+
+# Create environment configuration
+cp .env.example .env
 ```
+> Edit `.env` and fill in your `DATABASE_URL` and `JWT_SECRET`.
 
-## ☁️ Cấu Hình Triển Khai (Vercel)
+```bash
+# Start the development server
+npm run dev
+```
+*The API will run locally at `http://localhost:8080`.*
 
-Khi triển khai Backend lên Vercel, bạn cần cấu hình các biến môi trường sau trong **Vercel Dashboard** (Settings > Environment Variables):
+### 2. Frontend Setup
 
-*   `DATABASE_URL`: Đường dẫn kết nối CSDL PostgreSQL (Supabase).
-*   `JWT_SECRET`: Chuỗi khóa bảo mật dùng để ký và xác thực JWT token.
-*   `ALLOWED_ORIGINS`: Danh sách tên miền Frontend được phép gọi API (ví dụ: `https://frontend.vercel.app`), cách nhau bởi dấu phẩy.
-*   `DB_SYNC`: Thiết lập thành `false` ở môi trường Production.
+```bash
+# Navigate to the project root (Flutter directory)
+cd ..
+
+# Install Flutter dependencies
+flutter pub get
+
+# Run the app on Chrome (Web) or Emulator
+flutter run -d chrome
+```
 
 ---
 
-## 📄 Giấy phép (License)
+## ☁️ Deployment
 
-Dự án này được cấp phép theo tiêu chuẩn **MIT License**.
+### Backend (Vercel)
+The backend is optimized for Vercel Serverless Functions.
+1. Import the repository to Vercel.
+2. Set the Root Directory to `backend/`.
+3. Add the following Environment Variables in the Vercel Dashboard:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `ALLOWED_ORIGINS` (e.g., `https://your-frontend-domain.vercel.app`)
 
+### Frontend (Vercel / Firebase Hosting)
+To deploy the Flutter Web app:
+```bash
+flutter build web --release
+```
+Upload the contents of the `build/web` directory to your preferred hosting provider.
+
+---
+
+## 🛡️ License
+
+This project is licensed under the **MIT License**. See the `LICENSE` file for more details.
+
+<div align="center">
+  <i>Built with ❤️ for SME digital transformation.</i>
+</div>
