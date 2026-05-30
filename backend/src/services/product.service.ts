@@ -49,6 +49,7 @@ export class ProductService {
     }
 
     async createProduct(shopId: number, dto: any) {
+        dto.barcode = dto.barcode?.trim() || null;
         const sku = String(dto.sku || '').trim() || `SKU${Date.now().toString().slice(-8)}`;
         const existsSku = await this.productRepo.findOne({ where: { sku, shopId } });
         if (existsSku) throw new Error('Mã SKU này đã tồn tại trong hệ thống');
@@ -88,6 +89,7 @@ export class ProductService {
     }
 
     async updateProduct(shopId: number, id: number, dto: any) {
+        dto.barcode = dto.barcode?.trim() || null;
         const product = await this.loadProductEntity(shopId, id);
         if (dto.sku && dto.sku !== product.sku) {
             const existsSku = await this.productRepo.findOne({ where: { sku: dto.sku, shopId } });

@@ -90,7 +90,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // If logged in:
-      if (!isOnboarded || shopState.shops.isEmpty) {
+      if (!isOnboarded || shopState.userShops.isEmpty) {
         if (state.matchedLocation != '/onboarding') return '/onboarding';
         return null;
       }
@@ -102,14 +102,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // If ACTIVE and logged in, accessing Auth/Onboarding routes should redirect to '/'
-      if (isLoginRoute || state.matchedLocation == '/onboarding' || state.matchedLocation == '/waiting-approval') {
+      if (isLoginRoute || 
+          (state.matchedLocation == '/onboarding' && isOnboarded && shopState.userShops.isNotEmpty) || 
+          (state.matchedLocation == '/waiting-approval' && !isPending && !isRejected)) {
         return '/';
       }
 
       // Check route-level permission guards
       bool checkRoutePermission(String path) {
         // Allow if shop data hasn't loaded yet to prevent kicking user to Dashboard on F5
-        if (shopState.userShops.isEmpty) return true; 
+        if (shopState.userShops.isEmpty && path != '/onboarding' && path != '/waiting-approval') return true; 
 
         if (shopState.isOwner) return true;
         

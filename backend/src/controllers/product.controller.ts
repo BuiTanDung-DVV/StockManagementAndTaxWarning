@@ -13,11 +13,11 @@ export const findProductById = async (req: Request, res: Response) => {
 };
 export const createProduct = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.createProduct((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(e.message === 'Mã SKU này đã tồn tại trong hệ thống' || e.message === 'Mã vạch này đã tồn tại trong hệ thống' ? 409 : 500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e.message?.includes('tồn tại') ? 409 : 500).json({ success: false, message: e.message }); }
 };
 export const updateProduct = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.updateProduct((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(e.message === 'Mã SKU này đã tồn tại trong hệ thống' || e.message === 'Mã vạch này đã tồn tại trong hệ thống' ? 409 : 500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e.message?.includes('tồn tại') ? 409 : 500).json({ success: false, message: e.message }); }
 };
 export const deleteProduct = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.deleteProduct((req as any).shopId, +req.params.id) }); }

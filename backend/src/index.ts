@@ -121,36 +121,48 @@ if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
     .catch((error) => console.log('❌ Database connection error: ', error));
 }
 
+let dbInitPromise: Promise<void> | null = null;
+
 // Function to handle requests on Vercel
 const vercelHandler = async (req: express.Request, res: express.Response) => {
   if (!AppDataSource.isInitialized) {
+    if (!dbInitPromise) {
+      dbInitPromise = (async () => {
+        try {
+          await AppDataSource.initialize();
+          console.log('🚀 Database connected for Vercel Serverless');
+          try {
+              await AppDataSource.query(`
+                  ALTER TABLE shop_profiles 
+                  ADD COLUMN IF NOT EXISTS business_sector VARCHAR(50) DEFAULT 'TRADE',
+                  ADD COLUMN IF NOT EXISTS apply_vat_reduction BOOLEAN DEFAULT false,
+                  ADD COLUMN IF NOT EXISTS custom_vat_rate DECIMAL(5,2),
+                  ADD COLUMN IF NOT EXISTS custom_pit_rate DECIMAL(5,2);
+              `);
+              await AppDataSource.query(`
+                  CREATE TABLE IF NOT EXISTS otps (
+                      id SERIAL PRIMARY KEY,
+                      phone VARCHAR(255) NOT NULL,
+                      otp_code VARCHAR(10) NOT NULL,
+                      expires_at TIMESTAMP NOT NULL,
+                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                  );
+                  ALTER TABLE otps ALTER COLUMN phone TYPE VARCHAR(255);
+              `);
+              console.log('✅ Dynamic schema sync complete for shop_profiles and otps');
+          } catch (e) {
+              console.log('⚠️ Dynamic schema sync error:', e);
+          }
+        } catch (error) {
+          console.log('❌ Database connection error: ', error);
+          dbInitPromise = null; // allow retry
+          throw error;
+        }
+      })();
+    }
     try {
-      await AppDataSource.initialize();
-      console.log('🚀 Database connected for Vercel Serverless');
-      try {
-          await AppDataSource.query(`
-              ALTER TABLE shop_profiles 
-              ADD COLUMN IF NOT EXISTS business_sector VARCHAR(50) DEFAULT 'TRADE',
-              ADD COLUMN IF NOT EXISTS apply_vat_reduction BOOLEAN DEFAULT false,
-              ADD COLUMN IF NOT EXISTS custom_vat_rate DECIMAL(5,2),
-              ADD COLUMN IF NOT EXISTS custom_pit_rate DECIMAL(5,2);
-          `);
-          await AppDataSource.query(`
-              CREATE TABLE IF NOT EXISTS otps (
-                  id SERIAL PRIMARY KEY,
-                  phone VARCHAR(255) NOT NULL,
-                  otp_code VARCHAR(10) NOT NULL,
-                  expires_at TIMESTAMP NOT NULL,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-              );
-              ALTER TABLE otps ALTER COLUMN phone TYPE VARCHAR(255);
-          `);
-          console.log('✅ Dynamic schema sync complete for shop_profiles and otps');
-      } catch (e) {
-          console.log('⚠️ Dynamic schema sync error:', e);
-      }
+      await dbInitPromise;
     } catch (error) {
-      console.log('❌ Database connection error: ', error);
       return res.status(500).json({ success: false, message: 'Database connection failed' });
     }
   }

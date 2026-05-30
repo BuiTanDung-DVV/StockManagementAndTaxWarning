@@ -71,7 +71,13 @@ class ActivityLogScreen extends ConsumerWidget {
                       parsed.forEach((key, value) {
                         if (value != null && value.toString().isNotEmpty) {
                           final translatedKey = _translateLogKey(key.toString());
-                          parts.add('• $translatedKey: $value');
+                          String displayValue = value.toString();
+                          if (value is Map || value is List) {
+                            try {
+                              displayValue = const JsonEncoder.withIndent('  ').convert(value);
+                            } catch (_) {}
+                          }
+                          parts.add('• $translatedKey: $displayValue');
                         }
                       });
                       formattedMetadata = parts.join('\n');
