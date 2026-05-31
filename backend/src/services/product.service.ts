@@ -18,7 +18,7 @@ export class ProductService {
     private cogsService = new COGSService();
 
     // === PRODUCT CRUD ===
-    async findAllProducts(shopId: number, page = 1, limit = 20, search?: string) {
+    async findAllProducts(shopId: number, page = 1, limit = 20, search?: string, tag?: string) {
         const qb = this.productRepo.createQueryBuilder('p')
             .leftJoinAndSelect('p.category', 'category')
             .leftJoinAndSelect('p.costItems', 'costItems')
@@ -31,6 +31,10 @@ export class ProductService {
                    .orWhere('p.sku LIKE :search', { search: `%${search}%` })
                    .orWhere('p.barcode LIKE :search', { search: `%${search}%` });
             }));
+        }
+
+        if (tag) {
+            qb.andWhere('p.tags LIKE :tag', { tag: `%${tag}%` });
         }
 
         const [items, total] = await qb.skip((page - 1) * limit)
@@ -66,8 +70,9 @@ export class ProductService {
         try {
             saved = await this.productRepo.save(product as any) as Product;
         } catch (e: any) {
-            if (e.code === '23505' || (e.message && e.message.includes('unique constraint'))) {
-                if (e.message && e.message.includes('barcode')) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
+            const msg = (e.message || '').toLowerCase();
+            if (e.code === '23505' || e.code === 'SQLITE_CONSTRAINT' || msg.includes('unique')) {
+                if (msg.includes('barcode')) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
                 throw new Error('Mã SKU này đã tồn tại trong hệ thống');
             }
             throw e;
@@ -105,8 +110,9 @@ export class ProductService {
         try {
             await this.productRepo.save(product);
         } catch (e: any) {
-            if (e.code === '23505' || (e.message && e.message.includes('unique constraint'))) {
-                if (e.message && e.message.includes('barcode')) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
+            const msg = (e.message || '').toLowerCase();
+            if (e.code === '23505' || e.code === 'SQLITE_CONSTRAINT' || msg.includes('unique')) {
+                if (msg.includes('barcode')) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
                 throw new Error('Mã SKU này đã tồn tại trong hệ thống');
             }
             throw e;
