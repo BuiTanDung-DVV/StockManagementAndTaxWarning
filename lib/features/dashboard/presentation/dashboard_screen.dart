@@ -23,13 +23,12 @@ final _currFmt = NumberFormat.currency(
   symbol: '₫',
   decimalDigits: 0,
 );
-final _today = DateTime.now();
-final _from = DateTime(
-  _today.year,
-  _today.month,
-  1,
-).toIso8601String().split('T')[0];
-final _to = _today.toIso8601String().split('T')[0];
+class _DashboardTimeFilter extends Notifier<String> {
+  @override
+  String build() => 'month';
+  void update(String val) => state = val;
+}
+final _dashboardTimeFilterProvider = NotifierProvider<_DashboardTimeFilter, String>(_DashboardTimeFilter.new);
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -42,7 +41,33 @@ class DashboardScreen extends ConsumerWidget {
     final hasFinance = shopState.isOwner || shopState.hasPermission('finance');
     final hasInventory = shopState.isOwner || shopState.hasPermission('inventory');
 
-    final salesAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(salesSummaryProvider((from: _from, to: _to))) : null;
+    final filter = ref.watch(_dashboardTimeFilterProvider);
+    final today = DateTime.now();
+    
+    String from1, to1, from2, to2;
+    String label1, label2;
+    
+    if (filter == 'week') {
+      final weekStart = today.subtract(Duration(days: today.weekday - 1));
+      from1 = weekStart.toIso8601String().split('T')[0];
+      to1 = today.toIso8601String().split('T')[0];
+      final lastWeekStart = weekStart.subtract(const Duration(days: 7));
+      from2 = lastWeekStart.toIso8601String().split('T')[0];
+      to2 = weekStart.subtract(const Duration(days: 1)).toIso8601String().split('T')[0];
+      label1 = 'Tuần này';
+      label2 = 'Tuần trước';
+    } else {
+      // month
+      from1 = DateTime(today.year, today.month, 1).toIso8601String().split('T')[0];
+      to1 = today.toIso8601String().split('T')[0];
+      from2 = DateTime(today.year, today.month - 1, 1).toIso8601String().split('T')[0];
+      to2 = DateTime(today.year, today.month, 0).toIso8601String().split('T')[0];
+      label1 = 'Tháng này';
+      label2 = 'Tháng trước';
+    }
+
+    final salesAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(salesSummaryProvider((from: from1, to: to1))) : null;
+    final salesAsync2 = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(salesSummaryProvider((from: from2, to: to2))) : null;
     final lowStockAsync = hasInventory && shopState.userShops.isNotEmpty ? ref.watch(lowStockProvider) : null;
 
     if (shopState.userShops.isEmpty) {
@@ -281,7 +306,15 @@ class DashboardScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          _DashboardRevenueChart((data['daily'] as List?) ?? []),
+                          const SizedBox(height: 16),
+                          _TimeFilterBar(filter, (v) => ref.read(_dashboardTimeFilterProvider.notifier).update(v)),
+                          salesAsync2?.whenOrNull(
+                            data: (data2) => _ComparisonBarChart(
+                              (data['daily'] as List?) ?? [],
+                              (data2['daily'] as List?) ?? [],
+                              label1, label2
+                            ),
+                          ) ?? const ShimmerDashboard(),
                         ],
                       );
                     },
@@ -912,36 +945,132 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-class _DashboardRevenueChart extends StatelessWidget {
-  final List<dynamic> dailyData;
-  const _DashboardRevenueChart(this.dailyData);
+class _TimeFilterBar extends StatelessWidget {
+  final String currentFilter;
+  final Function(String) onChanged;
+  const _TimeFilterBar(this.currentFilter, this.onChanged);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildBtn(context, 'week', 'Tuần này', theme, c),
+          _buildBtn(context, 'month', 'Tháng này', theme, c),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBtn(BuildContext context, String val, String label, ThemeData theme, AppThemeColors c) {
+    final active = currentFilter == val;
+    return GestureDetector(
+      onTap: () => onChanged(val),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? theme.colorScheme.primary.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: active ? FontWeight.bold : FontWeight.w500,
+            color: active ? theme.colorScheme.primary : c.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComparisonBarChart extends StatelessWidget {
+  final List<dynamic> currentData;
+  final List<dynamic> previousData;
+  final String label1, label2;
+  const _ComparisonBarChart(this.currentData, this.previousData, this.label1, this.label2);
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
 
-    if (dailyData.isEmpty) {
-      return const SizedBox.shrink();
+    if (currentData.isEmpty && previousData.isEmpty) {
+      return Container(
+        height: 220,
+        margin: const EdgeInsets.only(top: 14),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              HugeIcon(icon: HugeIcons.strokeRoundedAnalytics01, size: 32, color: c.textMuted),
+              const SizedBox(height: 8),
+              Text('Chưa có dữ liệu giao dịch', style: TextStyle(color: c.textSecondary, fontSize: 13)),
+            ],
+          ),
+        ),
+      );
     }
 
-    final spots = <FlSpot>[];
-    double maxRevenue = 0.0;
+    final maxLen = currentData.length > previousData.length ? currentData.length : previousData.length;
+    double maxRev = 0;
     
-    for (int i = 0; i < dailyData.length; i++) {
-      final item = dailyData[i];
-      final rev = num.tryParse(item['revenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
-      spots.add(FlSpot(i.toDouble(), rev));
-      if (rev > maxRevenue) maxRevenue = rev;
+    // Create grouped data
+    final barGroups = <BarChartGroupData>[];
+    for (int i = 0; i < maxLen; i++) {
+      double rev1 = 0;
+      double rev2 = 0;
+      if (i < currentData.length) {
+        rev1 = num.tryParse(currentData[i]['revenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
+        if (rev1 > maxRev) maxRev = rev1;
+      }
+      if (i < previousData.length) {
+        rev2 = num.tryParse(previousData[i]['revenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
+        if (rev2 > maxRev) maxRev = rev2;
+      }
+      
+      barGroups.add(BarChartGroupData(
+        x: i,
+        barRods: [
+          BarChartRodData(
+            toY: rev2,
+            color: c.textMuted.withValues(alpha: 0.4),
+            width: 12,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          BarChartRodData(
+            toY: rev1,
+            color: theme.colorScheme.primary,
+            width: 12,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
+        barsSpace: 4,
+      ));
     }
 
-    if (maxRevenue == 0) maxRevenue = 1000000;
-    final double maxXVal = dailyData.length > 1 ? (dailyData.length - 1).toDouble() : 1.0;
+    if (maxRev == 0) maxRev = 1000000;
 
     return Container(
-      height: 180,
+      height: 240,
       margin: const EdgeInsets.only(top: 14),
-      padding: const EdgeInsets.only(left: 10, right: 16, top: 16, bottom: 8),
+      padding: const EdgeInsets.only(left: 4, right: 16, top: 16, bottom: 8),
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(24),
@@ -961,47 +1090,85 @@ class _DashboardRevenueChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 6, bottom: 12),
+            padding: const EdgeInsets.only(left: 12, bottom: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Biểu đồ doanh thu tuần này',
+                  'So sánh doanh thu',
                   style: GoogleFonts.outfit(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: c.textSecondary,
                   ),
                 ),
-                Text(
-                  'đơn vị: VNĐ',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: c.textMuted,
-                  ),
+                Row(
+                  children: [
+                    _buildLegendItem(label2, c.textMuted.withValues(alpha: 0.4), c.textMuted),
+                    const SizedBox(width: 12),
+                    _buildLegendItem(label1, theme.colorScheme.primary, c.textSecondary),
+                  ],
                 ),
               ],
             ),
           ),
           Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: c.divider.withValues(alpha: 0.3),
-                    strokeWidth: 1,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxRev * 1.15,
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (group) => c.surface,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final val = NumberFormat.compact(locale: 'vi_VN').format(rod.toY);
+                      final label = rodIndex == 0 ? label2 : label1;
+                      return BarTooltipItem(
+                        '$label\n$val',
+                        GoogleFonts.outfit(
+                          color: rodIndex == 0 ? c.textSecondary : theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      );
+                    },
                   ),
                 ),
                 titlesData: FlTitlesData(
                   show: true,
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= currentData.length) return const SizedBox.shrink();
+                        final dateStr = currentData[idx]['date'] as String? ?? '';
+                        if (dateStr.length < 5) return const SizedBox.shrink();
+                        final parts = dateStr.split('-');
+                        final displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                        
+                        // Limit labels if too many
+                        if (currentData.length > 7 && idx % (currentData.length / 5).ceil() != 0 && idx != currentData.length - 1) {
+                          return const SizedBox.shrink();
+                        }
+                        
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            displayDate,
+                            style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 36,
+                      reservedSize: 40,
                       getTitlesWidget: (value, meta) {
                         if (value == meta.max || value == meta.min) return const SizedBox.shrink();
                         String label = '';
@@ -1014,96 +1181,53 @@ class _DashboardRevenueChart extends StatelessWidget {
                         }
                         return Text(
                           label,
-                          style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.right,
                         );
                       },
                     ),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 22,
-                      getTitlesWidget: (value, meta) {
-                        final idx = value.toInt();
-                        if (idx < 0 || idx >= dailyData.length) return const SizedBox.shrink();
-                        final dateStr = dailyData[idx]['date'] as String? ?? '';
-                        if (dateStr.length < 5) return const SizedBox.shrink();
-                        final parts = dateStr.split('-');
-                        final displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
-                        
-                        if (dailyData.length > 5 && idx % (dailyData.length / 4).ceil() != 0 && idx != dailyData.length - 1) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            displayDate,
-                            style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
-                          ),
-                        );
-                      },
-                    ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: c.divider.withValues(alpha: 0.3),
+                    strokeWidth: 1,
                   ),
                 ),
                 borderData: FlBorderData(show: false),
-                minX: 0,
-                maxX: maxXVal,
-                minY: 0,
-                maxY: maxRevenue * 1.15,
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (touchedSpot) => c.surface,
-                    getTooltipItems: (touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        final val = NumberFormat.compact(locale: 'vi_VN').format(spot.y);
-                        final dateStr = dailyData[spot.x.toInt()]['date'] as String? ?? '';
-                        return LineTooltipItem(
-                          '$dateStr\n$val',
-                          GoogleFonts.outfit(
-                            color: c.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        );
-                      }).toList();
-                    },
-                  ),
-                ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    color: theme.colorScheme.primary,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                        radius: 3,
-                        color: theme.colorScheme.primary,
-                        strokeWidth: 1,
-                        strokeColor: Colors.white,
-                      ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        colors: [
-                          theme.colorScheme.primary.withValues(alpha: 0.15),
-                          theme.colorScheme.primary.withValues(alpha: 0.0),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                  ),
-                ],
+                barGroups: barGroups,
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color, Color textColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: textColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
