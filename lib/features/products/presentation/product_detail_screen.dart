@@ -145,6 +145,30 @@ class ProductDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                if (p['tags'] != null) ...[
+                  const SizedBox(height: 12),
+                  Center(child: _buildTagsRow(p['tags'], c, theme)),
+                ],
+                if (!descIsMissing) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Mô tả sản phẩm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                        const SizedBox(height: 8),
+                        Text(description, style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary, height: 1.5)),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // Info Section 1: General Info
@@ -153,28 +177,6 @@ class ProductDetailScreen extends ConsumerWidget {
                   if (category.isNotEmpty) _InfoTile('Danh mục phân loại', category),
                   if (unit.isNotEmpty) _InfoTile('Đơn vị tính', unit),
                   if (barcode.isNotEmpty) _InfoTile('Mã vạch barcode', barcode),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Divider(color: c.divider.withValues(alpha: 0.3)),
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Mô tả:', style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          description,
-                          style: GoogleFonts.inter(
-                            fontSize: 13, 
-                            color: descIsMissing ? c.textSecondary.withValues(alpha: 0.7) : c.textPrimary, 
-                            height: 1.4,
-                            fontStyle: descIsMissing ? FontStyle.italic : null,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ]),
 
                 // Info Section 2: Pricing details
@@ -253,6 +255,33 @@ class ProductDetailScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildTagsRow(dynamic tagsRaw, AppThemeColors c, ThemeData theme) {
+    List<String> tags = [];
+    if (tagsRaw is List) {
+      tags = tagsRaw.map((e) => e.toString()).toList();
+    } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
+      tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
+    }
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 6,
+      runSpacing: 6,
+      children: tags.map((t) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          t,
+          style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+        ),
+      )).toList(),
     );
   }
 }

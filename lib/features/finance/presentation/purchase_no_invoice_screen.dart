@@ -505,6 +505,25 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    if (productC.text.trim().isNotEmpty) {
+      final quantity = double.tryParse(qtyC.text) ?? 0;
+      final unitPrice = double.tryParse(unitPriceC.text) ?? 0;
+      if (quantity > 0 && unitPrice >= 0) {
+        lineItems.add({
+          'productName': productC.text.trim(),
+          'productId': _selectedProductId,
+          'quantity': quantity,
+          'unitPrice': unitPrice,
+          'subtotal': quantity * unitPrice,
+        });
+        productC.clear();
+        qtyC.text = '1';
+        unitPriceC.clear();
+        _selectedProductId = null;
+      }
+    }
+
     if (lineItems.isEmpty) {
       setState(() => _errorMessage = 'Vui lòng thêm ít nhất 1 mặt hàng');
       ToastService.showError('Vui lòng thêm ít nhất 1 mặt hàng');
@@ -545,7 +564,7 @@ class _AddPurchaseNoInvoiceDialogState extends ConsumerState<_AddPurchaseNoInvoi
       context: context,
       showDragHandle: true,
       builder: (ctx) {
-        final productAsync = ref.watch(productListProvider((page: 1, search: null)));
+        final productAsync = ref.watch(productListProvider((page: 1, search: null, tag: null)));
         return productAsync.when(
           loading: () => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
           error: (e, _) => SizedBox(height: 220, child: Center(child: Text('Lỗi tải sản phẩm: $e'))),

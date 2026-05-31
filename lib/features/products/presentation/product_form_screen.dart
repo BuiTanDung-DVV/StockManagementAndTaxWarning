@@ -26,7 +26,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _currentStockCtrl = TextEditingController();
   final _minStockCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
+  final _tagInputCtrl = TextEditingController();
 
+  List<String> _tags = [];
   bool _saving = false;
   bool get _isEdit => widget.product != null;
 
@@ -45,6 +47,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _currentStockCtrl.text = '${p['currentStock'] ?? p['stock'] ?? ''}';
       _minStockCtrl.text = '${p['minStock'] ?? p['min_stock'] ?? ''}';
       _descCtrl.text = p['description'] ?? '';
+      
+      final tagsRaw = p['tags'];
+      if (tagsRaw is List) {
+        _tags = tagsRaw.map((e) => e.toString()).toList();
+      } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
+        _tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
+      }
     }
   }
 
@@ -78,6 +87,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         'currentStock': int.tryParse(_currentStockCtrl.text.trim()) ?? 0,
         'minStock': int.tryParse(_minStockCtrl.text.trim()) ?? 0,
         'description': _descCtrl.text.trim(),
+        'tags': _tags,
       };
       if (_isEdit) {
         await repo.update(widget.product!['id'], data);
@@ -85,7 +95,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         await repo.create(data);
       }
       if (!mounted) return;
-      ref.invalidate(productListProvider((page: 1, search: null)));
+      ref.invalidate(productListProvider((page: 1, search: null, tag: null)));
       ToastService.showSuccess(_isEdit ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!');
       Navigator.of(context).pop(true);
       return;
@@ -113,6 +123,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     _currentStockCtrl.dispose();
     _minStockCtrl.dispose();
     _descCtrl.dispose();
+    _tagInputCtrl.dispose();
     super.dispose();
   }
 
@@ -318,6 +329,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 maxLines: 3,
               ),
 
+              const SizedBox(height: 24),
+              _sectionHeader('Gắn nhãn (Tags)', theme, c),
+              const SizedBox(height: 12),
+              _buildTagEditor(c, theme),
+
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -434,6 +450,91 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
+    );
+  }
+
+  Widget _buildTagEditor(AppThemeColors c, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _tagInputCtrl,
+          style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+          decoration: InputDecoration(
+            labelText: 'Thêm thẻ (Nhấn Enter hoặc Phẩy)',
+            labelStyle: TextStyle(color: c.textSecondary, fontSize: 13),
+            hintText: 'VD: Khuyến mãi, Hàng mới, Bán chạy',
+            hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.all(12),
+              child: HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 18, color: theme.colorScheme.primary),
+            ),
+            filled: true,
+            fillColor: c.card,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: c.divider),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: c.divider),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.8),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+          onChanged: (val) {
+            if (val.endsWith(',')) {
+              final newTag = val.substring(0, val.length - 1).trim();
+              if (newTag.isNotEmpty && !_tags.contains(newTag)) {
+                setState(() {
+                  _tags.add(newTag);
+                  _tagInputCtrl.clear();
+                });
+              } else {
+                _tagInputCtrl.text = newTag;
+                _tagInputCtrl.selection = TextSelection.fromPosition(TextPosition(offset: newTag.length));
+              }
+            }
+          },
+          onFieldSubmitted: (val) {
+            final newTag = val.trim();
+            if (newTag.isNotEmpty && !_tags.contains(newTag)) {
+              setState(() {
+                _tags.add(newTag);
+                _tagInputCtrl.clear();
+              });
+            }
+          },
+        ),
+        if (_tags.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _tags.map((t) {
+                return Chip(
+                  label: Text(
+                    t,
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: c.textPrimary),
+                  ),
+                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  deleteIcon: Icon(Icons.close, size: 16, color: c.textSecondary),
+                  onDeleted: () {
+                    setState(() => _tags.remove(t));
+                  },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+      ],
     );
   }
 }

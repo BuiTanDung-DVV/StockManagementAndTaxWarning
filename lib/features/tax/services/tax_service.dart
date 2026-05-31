@@ -35,7 +35,10 @@ class TaxService {
     });
     
     try {
-      final launched = await launchUrl(url);
+      final launched = await launchUrl(
+        url,
+        mode: LaunchMode.platformDefault,
+      );
       if (!launched) {
          throw Exception('Trình duyệt đã chặn tải xuống');
       }

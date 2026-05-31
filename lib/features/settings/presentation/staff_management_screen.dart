@@ -70,6 +70,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
     final usernameCtrl = TextEditingController();
     int? selectedRoleId;
     bool isSubmitting = false;
+    String? errorMessage;
     
     final result = await showDialog<bool>(
       context: context,
@@ -130,8 +131,33 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                               child: Text(r['name'] as String, style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary)),
                             ))
                         .toList(),
-                    onChanged: isSubmitting ? null : (v) => setDlg(() => selectedRoleId = v),
+                    onChanged: isSubmitting ? null : (v) => setDlg(() {
+                      selectedRoleId = v;
+                      errorMessage = null;
+                    }),
                   ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage!,
+                              style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -151,6 +177,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
 
                         setDlg(() {
                           isSubmitting = true;
+                          errorMessage = null;
                         });
 
                         final api = ref.read(apiClientProvider);
@@ -167,8 +194,8 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                           if (!ctx.mounted) return;
                           setDlg(() {
                             isSubmitting = false;
+                            errorMessage = e is ApiException ? e.message : 'Lỗi: $e';
                           });
-                          ToastService.showError(e is ApiException ? e.message : 'Lỗi: $e');
                         }
                       },
                 style: ElevatedButton.styleFrom(

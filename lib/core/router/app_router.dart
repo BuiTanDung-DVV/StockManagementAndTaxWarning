@@ -20,6 +20,9 @@ import '../../features/suppliers/presentation/supplier_detail_screen.dart';
 import '../../features/inventory/presentation/inventory_screen.dart';
 import '../../features/inventory/presentation/stock_take_screen.dart';
 import '../../features/inventory/presentation/purchase_order_screen.dart';
+import '../../features/inventory/presentation/purchase_order_detail_screen.dart';
+import '../../features/finance/presentation/transaction_detail_screen.dart';
+import '../../features/sales/presentation/return_detail_screen.dart';
 import '../../features/finance/presentation/finance_screen.dart';
 import '../../features/finance/presentation/daily_closing_screen.dart';
 import '../../features/finance/presentation/profit_loss_screen.dart';
@@ -89,7 +92,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         return isLoginRoute ? null : '/login';
       }
 
-      // If logged in:
+      // Wait for shop state to load before redirecting
+      if (shopState.isLoading) {
+        return isLoginRoute ? '/' : null;
+      }
+
+      // If logged in and loaded:
       if (!isOnboarded || shopState.userShops.isEmpty) {
         if (state.matchedLocation != '/onboarding') return '/onboarding';
         return null;
@@ -189,6 +197,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/sales', builder: (_, _) => const SalesListScreen()),
           GoRoute(path: '/pos', builder: (_, _) => const PosScreen()),
           GoRoute(path: '/sales/:id', builder: (_, state) => OrderDetailScreen(id: int.parse(state.pathParameters['id']!))),
+          GoRoute(
+            path: '/returns/detail',
+            builder: (_, state) => ReturnDetailScreen(returnInfo: state.extra as Map<dynamic, dynamic>? ?? {}),
+          ),
           // Products
           GoRoute(path: '/products', builder: (_, _) => const ProductListScreen()),
           GoRoute(path: '/products/form', builder: (_, state) => ProductFormScreen(product: state.extra as Map<String, dynamic>?)),
@@ -206,6 +218,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/stock-take', builder: (_, _) => const StockTakeScreen()),
           GoRoute(path: '/purchase-orders', builder: (_, _) => const PurchaseOrderScreen()),
           GoRoute(path: '/xnt-report', builder: (_, _) => const XntReportScreen()),
+          GoRoute(
+            path: '/purchase-orders/detail',
+            builder: (_, state) => PurchaseOrderDetailScreen(purchaseOrder: state.extra as Map<dynamic, dynamic>? ?? {}),
+          ),
           // Finance
           GoRoute(path: '/finance', builder: (_, _) => const FinanceScreen()),
           GoRoute(path: '/daily-closing', builder: (_, _) => const DailyClosingScreen()),
@@ -220,6 +236,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/salary-ledger', builder: (_, _) => const SalaryLedgerScreen()),
           GoRoute(path: '/tax-declaration', builder: (_, _) => const TaxDeclarationScreen()),
           GoRoute(path: '/transactions', builder: (_, _) => const TransactionHistoryScreen()),
+          GoRoute(
+            path: '/transactions/detail',
+            builder: (_, state) => TransactionDetailScreen(transaction: state.extra as Map<dynamic, dynamic>? ?? {}),
+          ),
           GoRoute(path: '/tax-estimate', builder: (_, _) => const TaxEstimateScreen()),
           // Settings
           GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),

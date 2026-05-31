@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/sectioned_form_dialog.dart';
+import '../../../core/widgets/address_input_field.dart';
 import '../providers/supplier_provider.dart';
 
 class SupplierFormScreen extends ConsumerStatefulWidget {
@@ -140,13 +141,11 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 12),
-                _field(
-                  'Địa chỉ văn phòng giao dịch',
-                  _addressCtrl,
-                  HugeIcons.strokeRoundedLocation01,
-                  c,
-                  theme,
-                  maxLines: 2,
+                AddressInputField(
+                  label: 'Địa chỉ văn phòng giao dịch',
+                  initialValue: _addressCtrl.text,
+                  colors: c,
+                  onChanged: (v) => _addressCtrl.text = v,
                 ),
                 const SizedBox(height: 12),
                 _field(

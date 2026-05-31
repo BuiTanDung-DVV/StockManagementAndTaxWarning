@@ -144,6 +144,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       return;
     }
 
+    if (otpCode.length != 6) {
+      setState(() => _error = 'Mã xác thực OTP phải gồm 6 chữ số');
+      return;
+    }
+
     if (pass != confirmPass) {
       setState(() => _error = 'Mật khẩu xác nhận không khớp');
       return;
@@ -296,6 +301,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         icon: Icons.contact_mail_rounded,
                         c: c,
                         theme: theme,
+                        enabled: !_otpSent,
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
@@ -469,6 +475,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     required AppThemeColors c,
     required ThemeData theme,
     bool obscureText = false,
+    bool enabled = true,
     Widget? suffixIcon,
   }) {
     return AnimatedContainer(
@@ -488,6 +495,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         controller: controller,
         focusNode: focusNode,
         obscureText: obscureText,
+        enabled: enabled,
         style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
         decoration: InputDecoration(
           hintText: hintText,

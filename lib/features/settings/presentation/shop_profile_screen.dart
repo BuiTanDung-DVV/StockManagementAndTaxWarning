@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/address_input_field.dart';
 import '../providers/system_provider.dart';
 
 class ShopProfileScreen extends ConsumerStatefulWidget {
@@ -125,8 +126,12 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
                   _buildField('Số điện thoại', _phoneCtrl, HugeIcons.strokeRoundedCall02, c,
                       keyboardType: TextInputType.phone),
                   const SizedBox(height: 12),
-                  _buildField('Địa chỉ', _addressCtrl, HugeIcons.strokeRoundedLocation01, c,
-                      maxLines: 2),
+                  AddressInputField(
+                    label: 'Địa chỉ',
+                    initialValue: _addressCtrl.text,
+                    colors: c,
+                    onChanged: (v) => _addressCtrl.text = v,
+                  ),
                   const SizedBox(height: 12),
                   _buildField('Email', _emailCtrl, HugeIcons.strokeRoundedMail01, c,
                       keyboardType: TextInputType.emailAddress),

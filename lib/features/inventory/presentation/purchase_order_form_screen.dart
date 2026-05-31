@@ -138,7 +138,7 @@ class _PurchaseOrderFormScreenState
       await ref.read(inventoryRepoProvider).createPurchaseOrder(payload);
       ref.invalidate(purchaseOrdersProvider);
       ref.invalidate(stockProvider(null));
-      ref.invalidate(productListProvider((page: 1, search: null)));
+      ref.invalidate(productListProvider((page: 1, search: null, tag: null)));
       ref.invalidate(lowStockProvider);
 
       if (mounted) {
@@ -162,7 +162,7 @@ class _PurchaseOrderFormScreenState
       supplierListProvider((page: 1, search: null)),
     );
     final productsAsync = ref.watch(
-      productListProvider((page: 1, search: null)),
+      productListProvider((page: 1, search: null, tag: null)),
     );
     final warehousesAsync = ref.watch(warehousesProvider);
 
