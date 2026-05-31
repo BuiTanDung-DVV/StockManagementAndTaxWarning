@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/sectioned_form_dialog.dart';
+import '../../../core/widgets/address_input_field.dart';
 import '../providers/customer_provider.dart';
 
 class CustomerFormScreen extends ConsumerStatefulWidget {
@@ -101,7 +102,12 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                 const SizedBox(height: 16),
                 _field('Email', _emailCtrl, HugeIcons.strokeRoundedMail01, c, keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 16),
-                _field('Địa chỉ', _addressCtrl, HugeIcons.strokeRoundedLocation01, c, maxLines: 2),
+                AddressInputField(
+                  label: 'Địa chỉ',
+                  initialValue: _addressCtrl.text,
+                  colors: c,
+                  onChanged: (v) => _addressCtrl.text = v,
+                ),
                 const SizedBox(height: 16),
                 _field('Mã số thuế', _taxCodeCtrl, HugeIcons.strokeRoundedInvoice01, c),
                 const SizedBox(height: 16),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
@@ -292,14 +293,38 @@ class OrderDetailScreen extends ConsumerWidget {
                                 final refundAmt = double.tryParse(rMap['refundAmount']?.toString() ?? '0') ?? 0.0;
                                 final retCode = (rMap['returnCode'] ?? '').toString();
                                 final retReason = (rMap['reason'] ?? '').toString();
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _InfoRow('Mã phiếu trả', retCode, c),
-                                    _InfoRow('Tiền hoàn lại', _currFmt.format(refundAmt), c),
-                                    if (retReason.isNotEmpty)
-                                      _InfoRow('Lý do', retReason, c),
-                                  ],
+                                return Container(
+                                  margin: const EdgeInsets.only(top: 8),
+                                  decoration: BoxDecoration(
+                                    color: c.surface,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: c.divider),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: () => context.push('/returns/detail', extra: ret),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            _InfoRow('Mã phiếu trả', retCode, c),
+                                            _InfoRow('Tiền hoàn lại', _currFmt.format(refundAmt), c),
+                                            if (retReason.isNotEmpty)
+                                              _InfoRow('Lý do', retReason, c),
+                                            const SizedBox(height: 4),
+                                            Align(
+                                              alignment: Alignment.centerRight,
+                                              child: Text('Bấm để xem chi tiết', style: GoogleFonts.inter(fontSize: 10, color: c.textMuted)),
+                                            )
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 );
                               })),
                             ],

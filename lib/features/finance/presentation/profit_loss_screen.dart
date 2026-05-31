@@ -18,6 +18,7 @@ class ProfitLossScreen extends ConsumerStatefulWidget {
 
 class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
   late DateTimeRange _range;
+  int _touchedIndex = -1;
 
   @override
   void initState() {
@@ -138,88 +139,138 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Cơ cấu dòng tiền & Lợi nhuận',
-                        style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: c.textPrimary),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Phân bổ dòng tiền dựa trên tổng doanh thu',
-                        style: TextStyle(fontSize: 11, color: c.textSecondary),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
+                  child: Builder(
+                    builder: (context) {
+                      final sectionsList = <({Color color, double value, String pct, String title})>[];
+                      if (netProfit > 0) {
+                        sectionsList.add((color: AppColors.success, value: netProfit.toDouble(), pct: '$netPct%', title: 'Lợi nhuận ròng'));
+                      }
+                      if (cogs > 0) {
+                        sectionsList.add((color: AppColors.danger, value: cogs.toDouble(), pct: '$cogsPct%', title: 'Giá vốn (COGS)'));
+                      }
+                      if (expenses > 0) {
+                        sectionsList.add((color: AppColors.warning, value: expenses.toDouble(), pct: '$expensesPct%', title: 'Vận hành (OPEX)'));
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Pie Chart
-                          SizedBox(
-                            width: 130,
-                            height: 130,
-                            child: PieChart(
-                              PieChartData(
-                                sectionsSpace: 3,
-                                centerSpaceRadius: 30,
-                                startDegreeOffset: -90,
-                                sections: [
-                                  if (netProfit > 0)
-                                    PieChartSectionData(
-                                      color: AppColors.success,
-                                      value: netProfit.toDouble(),
-                                      title: '$netPct%',
-                                      radius: 28,
-                                      titleStyle: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                      ),
+                          Text(
+                            'Cơ cấu dòng tiền & Lợi nhuận',
+                            style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: c.textPrimary),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Phân bổ dòng tiền dựa trên tổng doanh thu',
+                            style: TextStyle(fontSize: 11, color: c.textSecondary),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              // Pie Chart
+                              SizedBox(
+                                width: 130,
+                                height: 130,
+                                child: PieChart(
+                                  PieChartData(
+                                    pieTouchData: PieTouchData(
+                                      touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                                        setState(() {
+                                          if (!event.isInterestedForInteractions ||
+                                              pieTouchResponse == null ||
+                                              pieTouchResponse.touchedSection == null) {
+                                            _touchedIndex = -1;
+                                            return;
+                                          }
+                                          _touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                                        });
+                                      },
                                     ),
-                                  if (cogs > 0)
-                                    PieChartSectionData(
-                                      color: AppColors.danger,
-                                      value: cogs.toDouble(),
-                                      title: '$cogsPct%',
-                                      radius: 28,
-                                      titleStyle: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                      ),
+                                    sectionsSpace: 3,
+                                    centerSpaceRadius: 30,
+                                    startDegreeOffset: -90,
+                                    sections: List.generate(sectionsList.length, (index) {
+                                      final isTouched = index == _touchedIndex;
+                                      final item = sectionsList[index];
+                                      final double radius = isTouched ? 36.0 : 28.0;
+                                      return PieChartSectionData(
+                                        color: item.color,
+                                        value: item.value,
+                                        title: item.pct,
+                                        radius: radius,
+                                        titleStyle: GoogleFonts.outfit(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontSize: isTouched ? 12 : 10,
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              // Legends
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _ChartLegend('Lợi nhuận ròng', AppColors.success, '$netPct%'),
+                                    const SizedBox(height: 10),
+                                    _ChartLegend('Giá vốn (COGS)', AppColors.danger, '$cogsPct%'),
+                                    const SizedBox(height: 10),
+                                    _ChartLegend('Vận hành (OPEX)', AppColors.warning, '$expensesPct%'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_touchedIndex >= 0 && _touchedIndex < sectionsList.length) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: sectionsList[_touchedIndex].color.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: sectionsList[_touchedIndex].color.withValues(alpha: 0.25),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: sectionsList[_touchedIndex].color,
+                                      shape: BoxShape.circle,
                                     ),
-                                  if (expenses > 0)
-                                    PieChartSectionData(
-                                      color: AppColors.warning,
-                                      value: expenses.toDouble(),
-                                      title: '$expensesPct%',
-                                      radius: 28,
-                                      titleStyle: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                      ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    sectionsList[_touchedIndex].title,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                      color: c.textPrimary,
                                     ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    _fmt(sectionsList[_touchedIndex].value),
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: sectionsList[_touchedIndex].color,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 24),
-                          // Legends
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _ChartLegend('Lợi nhuận ròng', AppColors.success, '$netPct%'),
-                                const SizedBox(height: 10),
-                                _ChartLegend('Giá vốn (COGS)', AppColors.danger, '$cogsPct%'),
-                                const SizedBox(height: 10),
-                                _ChartLegend('Vận hành (OPEX)', AppColors.warning, '$expensesPct%'),
-                              ],
-                            ),
-                          ),
+                          ],
                         ],
-                      ),
-                    ],
+                      );
+                    }
                   ),
                 ),
                 

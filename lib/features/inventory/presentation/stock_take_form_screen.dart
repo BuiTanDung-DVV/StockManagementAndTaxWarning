@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../providers/inventory_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
 
 class _StkItem {
   int? productId;
@@ -95,24 +96,12 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
   }
 
   Future<void> _save() async {
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Xác nhận lưu', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: Text('Bạn có chắc chắn muốn lưu phiếu kiểm kê này? Số lượng tồn kho thực tế sẽ được cập nhật ngay lập tức.', style: GoogleFonts.inter()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Hủy', style: GoogleFonts.inter(color: AppThemeColors.of(context).textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Lưu', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+    final bool? confirm = await AppConfirmModal.show(
+      context,
+      title: 'Xác nhận lưu',
+      message: 'Bạn có chắc chắn muốn lưu phiếu kiểm kê này? Số lượng tồn kho thực tế sẽ được cập nhật ngay lập tức.',
+      confirmText: 'Lưu',
+      cancelText: 'Hủy',
     );
 
     if (confirm != true) return;
@@ -157,7 +146,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
     final theme = Theme.of(context);
     final warehousesAsync = ref.watch(warehousesProvider);
     final productsAsync = ref.watch(
-      productListProvider((page: 1, search: null)),
+      productListProvider((page: 1, search: null, tag: null)),
     );
     final stockAsync = ref.watch(stockProvider(null));
 

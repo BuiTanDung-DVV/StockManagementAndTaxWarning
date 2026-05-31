@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -41,8 +42,37 @@ class DashboardScreen extends ConsumerWidget {
     final hasFinance = shopState.isOwner || shopState.hasPermission('finance');
     final hasInventory = shopState.isOwner || shopState.hasPermission('inventory');
 
-    final salesAsync = hasFinance ? ref.watch(salesSummaryProvider((from: _from, to: _to))) : null;
-    final lowStockAsync = hasInventory ? ref.watch(lowStockProvider) : null;
+    final salesAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(salesSummaryProvider((from: _from, to: _to))) : null;
+    final lowStockAsync = hasInventory && shopState.userShops.isNotEmpty ? ref.watch(lowStockProvider) : null;
+
+    if (shopState.userShops.isEmpty) {
+      return Scaffold(
+        backgroundColor: c.bg,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                HugeIcon(icon: HugeIcons.strokeRoundedStore02, color: theme.colorScheme.primary, size: 64),
+                const SizedBox(height: 16),
+                Text('Chưa có cửa hàng nào', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: c.textPrimary)),
+                const SizedBox(height: 8),
+                Text('Bạn cần tạo cửa hàng hoặc chờ chủ shop duyệt yêu cầu tham gia.', 
+                  textAlign: TextAlign.center, 
+                  style: GoogleFonts.inter(fontSize: 14, color: c.textSecondary)
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => ref.invalidate(shopProvider), 
+                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedRefresh, color: Colors.white, size: 20),
+                  label: const Text('Tải lại trạng thái'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -251,6 +281,7 @@ class DashboardScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
+                          _DashboardRevenueChart((data['daily'] as List?) ?? []),
                         ],
                       );
                     },
@@ -306,10 +337,7 @@ class DashboardScreen extends ConsumerWidget {
                       final progress = RevenueThreshold.getProgress(revenue).clamp(0.0, 1.0);
                       final color = RevenueThreshold.getColor(revenue);
                       final nextThreshold = RevenueThreshold.getNextThreshold(revenue);
-                      return Semantics(
-                        label: 'Ngưỡng doanh thu: ${RevenueThreshold.getTierLabel(revenue)}. ${RevenueThreshold.getObligation(revenue)}',
-                        button: true,
-                        child: GestureDetector(
+                      return GestureDetector(
                           onTap: () => context.push('/tax-calculator'),
                           child: Container(
                             padding: const EdgeInsets.all(18),
@@ -407,8 +435,7 @@ class DashboardScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                      ), // closes GestureDetector
-                    ); // closes Semantics
+                      ); // closes GestureDetector
                   },
                   ) ?? const SizedBox.shrink(),
 
@@ -659,10 +686,7 @@ class _TaxObligationReminder extends ConsumerWidget {
                 urgencyIcon = Icons.info_outline_rounded;
               }
 
-              return Semantics(
-                label: 'Cảnh báo thuế $period, còn phải nộp ${_currFmt.format(totalOwed)}, $urgencyLabel',
-                button: true,
-                child: GestureDetector(
+              return GestureDetector(
                   onTap: () => context.push('/tax-obligations'),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 10),
@@ -739,8 +763,7 @@ class _TaxObligationReminder extends ConsumerWidget {
                     ],
                   ),
                 ),
-              ), // closes GestureDetector
-            ); // closes Semantics
+              ); // closes GestureDetector
           }).toList(),
           ),
         );
@@ -884,6 +907,202 @@ class _QuickAction extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DashboardRevenueChart extends StatelessWidget {
+  final List<dynamic> dailyData;
+  const _DashboardRevenueChart(this.dailyData);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+
+    if (dailyData.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final spots = <FlSpot>[];
+    double maxRevenue = 0.0;
+    
+    for (int i = 0; i < dailyData.length; i++) {
+      final item = dailyData[i];
+      final rev = num.tryParse(item['revenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      spots.add(FlSpot(i.toDouble(), rev));
+      if (rev > maxRevenue) maxRevenue = rev;
+    }
+
+    if (maxRevenue == 0) maxRevenue = 1000000;
+    final double maxXVal = dailyData.length > 1 ? (dailyData.length - 1).toDouble() : 1.0;
+
+    return Container(
+      height: 180,
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.only(left: 10, right: 16, top: 16, bottom: 8),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.02),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 6, bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Biểu đồ doanh thu tuần này',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: c.textSecondary,
+                  ),
+                ),
+                Text(
+                  'đơn vị: VNĐ',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: c.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: c.divider.withValues(alpha: 0.3),
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 36,
+                      getTitlesWidget: (value, meta) {
+                        if (value == meta.max || value == meta.min) return const SizedBox.shrink();
+                        String label = '';
+                        if (value >= 1000000) {
+                          label = '${(value / 1000000).toStringAsFixed(0)}Tr';
+                        } else if (value >= 1000) {
+                          label = '${(value / 1000).toStringAsFixed(0)}K';
+                        } else {
+                          label = value.toStringAsFixed(0);
+                        }
+                        return Text(
+                          label,
+                          style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.right,
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 22,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= dailyData.length) return const SizedBox.shrink();
+                        final dateStr = dailyData[idx]['date'] as String? ?? '';
+                        if (dateStr.length < 5) return const SizedBox.shrink();
+                        final parts = dateStr.split('-');
+                        final displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                        
+                        if (dailyData.length > 5 && idx % (dailyData.length / 4).ceil() != 0 && idx != dailyData.length - 1) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            displayDate,
+                            style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                minX: 0,
+                maxX: maxXVal,
+                minY: 0,
+                maxY: maxRevenue * 1.15,
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (touchedSpot) => c.surface,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final val = NumberFormat.compact(locale: 'vi_VN').format(spot.y);
+                        final dateStr = dailyData[spot.x.toInt()]['date'] as String? ?? '';
+                        return LineTooltipItem(
+                          '$dateStr\n$val',
+                          GoogleFonts.outfit(
+                            color: c.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: theme.colorScheme.primary,
+                    barWidth: 3,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                        radius: 3,
+                        color: theme.colorScheme.primary,
+                        strokeWidth: 1,
+                        strokeColor: Colors.white,
+                      ),
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          theme.colorScheme.primary.withValues(alpha: 0.15),
+                          theme.colorScheme.primary.withValues(alpha: 0.0),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

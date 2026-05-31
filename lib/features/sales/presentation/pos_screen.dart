@@ -181,7 +181,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final c = AppThemeColors.of(context);
     final cart = ref.watch(_cartProvider);
     final productsAsync = ref.watch(
-      productListProvider((page: 1, search: _search.isEmpty ? null : _search)),
+      productListProvider((page: 1, search: _search.isEmpty ? null : _search, tag: null)),
     );
 
     return Scaffold(
@@ -447,12 +447,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '${cart.itemCount} sản phẩm',
+                            cart.customerName != null 
+                                ? '${cart.itemCount} sp • Khách: ${cart.customerName}' 
+                                : '${cart.itemCount} sản phẩm',
                             style: TextStyle(
                               fontSize: 12,
-                              color: c.textSecondary,
+                              color: cart.customerName != null ? AppColors.info : c.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -956,8 +960,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   if (phoneCtrl.text.trim().isNotEmpty)
                     'phone': phoneCtrl.text.trim(),
                 });
-                final newId = int.tryParse(result['id'].toString());
-                ref.read(_cartProvider.notifier).setCustomer(newId, name);
+                final newId = TypeParser.asInt(result['id']);
+                ref.read(_cartProvider.notifier).setCustomer(newId == 0 ? null : newId, name);
                 ref.invalidate(customerListProvider);
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) {

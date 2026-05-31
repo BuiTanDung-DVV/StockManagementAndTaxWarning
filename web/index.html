@@ -110,6 +110,18 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async=""></script>
-
+  <script>
+    {{flutter_js}}
+    {{flutter_build_config}}
+    
+    _flutter.loader.load({
+      config: {
+        renderer: "canvaskit"
+      },
+      onEntrypointLoaded: async function(engineInitializer) {
+        const appRunner = await engineInitializer.initializeEngine();
+        appRunner.runApp();
+      }
+    });
+  </script>
 </body></html>
