@@ -465,8 +465,8 @@ export class FinanceService {
 
         const rawItems = Array.isArray(dto.items) ? dto.items : [];
         const items = rawItems
-            .map((i) => {
-                const productName = String(i.productName || '').trim();
+            .map((i: any) => {
+                const productName = String(i.productName || i.itemName || i.name || '').trim();
                 const productId = i.productId ? Number(i.productId) : undefined;
                 const quantity = Number(i.quantity || 0);
                 const unitPrice = Number(i.unitPrice || 0);
@@ -477,7 +477,7 @@ export class FinanceService {
             .filter((i): i is PurchaseWithoutInvoiceItem => !!i);
 
         if (items.length === 0) {
-            throw new Error('Validation: Bảng kê phải có ít nhất 1 mặt hàng hợp lệ');
+            throw new Error('Validation: Bảng kê phải có ít nhất 1 mặt hàng hợp lệ (cần productName/itemName, quantity > 0, unitPrice >= 0)');
         }
 
         const computedTotal = items.reduce((sum, i) => sum + Number(i.subtotal), 0);

@@ -4,7 +4,7 @@ import { ProductService } from '../services/product.service';
 const productService = new ProductService();
 
 export const findAllProducts = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await productService.findAllProducts((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.search as string) }); }
+    try { res.json({ success: true, data: await productService.findAllProducts((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.search as string, req.query.tag as string) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 export const findProductById = async (req: Request, res: Response) => {
