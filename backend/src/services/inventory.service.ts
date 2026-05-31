@@ -271,7 +271,13 @@ export class InventoryService {
             notes: i.notes
         }));
         if (!dto.stockTakeDate && dto.takeDate) dto.stockTakeDate = dto.takeDate;
-        return this.stockTakeRepo.save(this.stockTakeRepo.create({ ...dto, items, shopId }));
+        
+        let warehouseId = dto.warehouseId;
+        if (!warehouseId) {
+            warehouseId = await this.ensureDefaultWarehouseId(shopId);
+        }
+
+        return this.stockTakeRepo.save(this.stockTakeRepo.create({ ...dto, warehouseId, items, shopId }));
     }
 
     async updateStockTake(shopId: number, id: number, dto: any) {

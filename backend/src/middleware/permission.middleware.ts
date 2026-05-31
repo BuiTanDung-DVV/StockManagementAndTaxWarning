@@ -63,3 +63,30 @@ export const requirePermission = (key: string | string[], level: 'view' | 'edit'
         }
     };
 };
+
+/**
+ * Middleware: Strictly requires the authenticated user to be the OWNER of the shop.
+ */
+export const requireOwner = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user?.sub;
+        const shopId = req.shopId || req.query.shopId || req.headers['x-shop-id'];
+
+        if (!shopId) {
+            return res.status(400).json({ success: false, message: 'Thiếu thông tin cửa hàng' });
+        }
+
+        const memberRepo = AppDataSource.getRepository(ShopMember);
+        const member = await memberRepo.findOne({
+            where: { userId, shopId: +shopId, isActive: true }
+        });
+
+        if (!member || member.memberType !== 'OWNER') {
+            return res.status(403).json({ success: false, message: 'Chức năng này chỉ dành cho Chủ cửa hàng' });
+        }
+
+        next();
+    } catch {
+        res.status(500).json({ success: false, message: 'Lỗi kiểm tra quyền chủ cửa hàng' });
+    }
+};

@@ -93,6 +93,9 @@ export class Product {
     @Column({ length: 1000, nullable: true })
     description: string;
 
+    @Column({ type: 'simple-array', nullable: true })
+    tags: string[];
+
     @Column({ name: 'is_active', default: true })
     isActive: boolean;
 

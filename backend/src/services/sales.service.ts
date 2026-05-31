@@ -51,11 +51,25 @@ export class SalesService {
             .where("o.shop_id = :shopId AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { shopId, fromDate, toDate })
             .getRawOne();
 
+        const daily = await this.orderRepo.createQueryBuilder('o')
+            .select("TO_CHAR(o.order_date, 'YYYY-MM-DD')", 'date')
+            .addSelect('COALESCE(SUM(o.total_amount), 0)', 'revenue')
+            .addSelect('COUNT(o.id)', 'orderCount')
+            .where("o.shop_id = :shopId AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { shopId, fromDate, toDate })
+            .groupBy("TO_CHAR(o.order_date, 'YYYY-MM-DD')")
+            .orderBy("TO_CHAR(o.order_date, 'YYYY-MM-DD')", 'ASC')
+            .getRawMany();
+
         return {
             totalRevenue: Number(result?.totalRevenue || 0),
             totalCogs: Number(result?.totalCogs || 0),
             grossProfit: Number(result?.totalRevenue || 0) - Number(result?.totalCogs || 0),
             orderCount: Number(result?.orderCount || 0),
+            daily: daily.map(d => ({
+                date: d.date,
+                revenue: Number(d.revenue || 0),
+                orderCount: Number(d.orderCount || 0)
+            }))
         };
     }
 
