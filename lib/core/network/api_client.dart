@@ -234,6 +234,9 @@ class ApiClient {
   /// Load token from SharedPreferences on startup
   Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
+    if (kIsWeb) {
+      await prefs.reload();
+    }
     _token = prefs.getString('auth_token');
     _refreshToken = prefs.getString('refresh_token');
     _shopId = prefs.getString('shop_id');

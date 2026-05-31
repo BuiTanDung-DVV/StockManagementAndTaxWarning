@@ -20,7 +20,7 @@ class ShopState {
     this.status,
     this.permissions = const {},
     this.userShops = const [],
-    this.isLoading = false,
+    this.isLoading = true,
   });
 
   bool get isOwner => memberType == 'OWNER' || userShops.isEmpty;

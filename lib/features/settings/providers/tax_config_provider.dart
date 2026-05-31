@@ -195,10 +195,14 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
     if (state.businessType == BusinessType.services) sectorStr = 'SERVICE';
     if (state.businessType == BusinessType.other) sectorStr = 'OTHER';
 
-    await api.put('/tax/config', data: {
-        'businessSector': sectorStr,
-        'applyVatReduction': state.vatReduction20,
-    });
+    try {
+      await api.put('/tax/config', data: {
+          'businessSector': sectorStr,
+          'applyVatReduction': state.vatReduction20,
+      });
+    } catch (e) {
+      debugPrint('Lưu cấu hình thuế lên server thất bại, đã lưu cục bộ: $e');
+    }
   }
 
   void setBusinessType(BusinessType type) {

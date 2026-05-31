@@ -91,12 +91,12 @@ class AuthNotifier extends Notifier<AuthState> {
         // If profile fetch fails due to explicit auth error (401/403), logout
         bool isUnauthorized = false;
         if (e is DioException) {
-          isUnauthorized = e.response?.statusCode == 401 || e.response?.statusCode == 403;
+          isUnauthorized = e.response?.statusCode == 401;
         } else if (e is ApiException) {
-          isUnauthorized = e.statusCode == 401 || e.statusCode == 403;
+          isUnauthorized = e.statusCode == 401;
         } else {
           final eStr = e.toString().toLowerCase();
-          if (eStr.contains('hết hạn') || eStr.contains('không có quyền') || eStr.contains('401') || eStr.contains('403')) {
+          if (eStr.contains('hết hạn') || eStr.contains('401')) {
             isUnauthorized = true;
           }
         }

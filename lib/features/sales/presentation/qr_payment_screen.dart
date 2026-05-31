@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/network/api_client.dart';
 import '../../products/providers/product_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
@@ -93,37 +94,13 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
   }
 
   Future<void> _cancelOrder() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Hủy đơn hàng?',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-        ),
-        content: const Text('Bạn có chắc chắn muốn hủy đơn hàng này không? Dữ liệu không thể khôi phục.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Không', 
-              style: TextStyle(color: AppThemeColors.of(context).textSecondary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger.withValues(alpha: 0.1),
-              foregroundColor: AppColors.danger,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text('Hủy đơn'),
-          ),
-        ],
-      ),
+    final confirm = await AppConfirmModal.show(
+      context,
+      title: 'Hủy đơn hàng?',
+      message: 'Bạn có chắc chắn muốn hủy đơn hàng này không? Dữ liệu không thể khôi phục.',
+      confirmText: 'Hủy đơn',
+      cancelText: 'Không',
+      isDestructive: true,
     );
     if (confirm != true) return;
     try {

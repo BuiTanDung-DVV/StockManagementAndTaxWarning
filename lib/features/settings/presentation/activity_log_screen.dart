@@ -55,9 +55,43 @@ class ActivityLogScreen extends ConsumerWidget {
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (_, i) {
                 final log = items[i] as Map;
-                final message = (log['message'] ?? log['action'] ?? 'Hoạt động').toString();
-                final actor = (log['actor'] ?? log['user']?['username'] ?? 'Hệ thống').toString();
+                
+                // 1. Better Actor parsing
+                final userObj = log['user'];
+                String actor = 'Hệ thống';
+                if (userObj is Map) {
+                  actor = (userObj['fullName'] ?? userObj['username'] ?? 'Người dùng').toString();
+                } else if (log['actor'] != null) {
+                  actor = log['actor'].toString();
+                }
+
+                // 2. Better Action/Message Parsing
+                String rawAction = (log['action'] ?? '').toString();
+                String message = (log['message'] ?? '').toString();
+                if (message.isEmpty) {
+                  message = _translateAction(rawAction);
+                }
+
+                // 3. Readable Date
                 final rawDate = (log['createdAt'] ?? log['created_at'] ?? '').toString();
+                String formattedDate = rawDate;
+                String timeOnly = '';
+                try {
+                  final dt = DateTime.parse(rawDate).toLocal();
+                  final now = DateTime.now();
+                  final difference = now.difference(dt);
+                  
+                  timeOnly = DateFormat('HH:mm').format(dt);
+                  if (difference.inDays == 0 && now.day == dt.day) {
+                    formattedDate = 'Hôm nay';
+                  } else if (difference.inDays <= 1 && (now.day - dt.day == 1 || (now.day == 1 && difference.inHours < 48))) {
+                    formattedDate = 'Hôm qua';
+                  } else {
+                    formattedDate = DateFormat('dd/MM/yyyy').format(dt);
+                  }
+                } catch (_) {}
+
+                // 4. Metadata Parsing
                 final rawMetadata = log['details'] ?? log['metadata'];
                 String formattedMetadata = '';
                 if (rawMetadata != null) {
@@ -73,9 +107,7 @@ class ActivityLogScreen extends ConsumerWidget {
                           final translatedKey = _translateLogKey(key.toString());
                           String displayValue = value.toString();
                           if (value is Map || value is List) {
-                            try {
-                              displayValue = const JsonEncoder.withIndent('  ').convert(value);
-                            } catch (_) {}
+                            displayValue = '[Dữ liệu phức hợp]'; // Simplified for readability
                           }
                           parts.add('• $translatedKey: $displayValue');
                         }
@@ -90,29 +122,26 @@ class ActivityLogScreen extends ConsumerWidget {
                     formattedMetadata = rawMetadata.toString();
                   }
                 }
-                
-                String formattedDate = rawDate;
-                String timeOnly = '';
-                try {
-                  final dt = DateTime.parse(rawDate).toLocal();
-                  formattedDate = DateFormat('dd/MM/yyyy').format(dt);
-                  timeOnly = DateFormat('HH:mm').format(dt);
-                } catch (_) {}
 
                 IconData actionIcon = Icons.history_rounded;
                 Color actionColor = AppColors.primary;
-                if (message.toLowerCase().contains('tạo') || message.toLowerCase().contains('thêm') || message.toLowerCase().contains('create')) {
+                final searchStr = (message + ' ' + rawAction).toLowerCase();
+                
+                if (searchStr.contains('tạo') || searchStr.contains('thêm') || searchStr.contains('create')) {
                   actionIcon = Icons.add_circle_outline_rounded;
                   actionColor = AppColors.success;
-                } else if (message.toLowerCase().contains('xóa') || message.toLowerCase().contains('delete') || message.toLowerCase().contains('hủy')) {
+                } else if (searchStr.contains('xóa') || searchStr.contains('delete') || searchStr.contains('remove')) {
                   actionIcon = Icons.delete_outline_rounded;
                   actionColor = AppColors.danger;
-                } else if (message.toLowerCase().contains('cập nhật') || message.toLowerCase().contains('sửa') || message.toLowerCase().contains('update')) {
+                } else if (searchStr.contains('cập nhật') || searchStr.contains('sửa') || searchStr.contains('update')) {
                   actionIcon = Icons.edit_outlined;
                   actionColor = AppColors.warning;
-                } else if (message.toLowerCase().contains('đăng nhập') || message.toLowerCase().contains('login')) {
+                } else if (searchStr.contains('đăng nhập') || searchStr.contains('login')) {
                   actionIcon = Icons.login_rounded;
                   actionColor = AppColors.info;
+                } else if (searchStr.contains('thanh toán') || searchStr.contains('payment')) {
+                  actionIcon = Icons.payments_outlined;
+                  actionColor = AppColors.success;
                 }
 
                 return Container(
@@ -198,6 +227,25 @@ class ActivityLogScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _translateAction(String action) {
+  final Map<String, String> map = {
+    'CREATE': 'Tạo mới dữ liệu',
+    'UPDATE': 'Cập nhật thông tin',
+    'DELETE': 'Xóa bản ghi',
+    'LOGIN': 'Đăng nhập hệ thống',
+    'LOGOUT': 'Đăng xuất hệ thống',
+    'CREATE_PRODUCT': 'Thêm sản phẩm mới',
+    'UPDATE_PRODUCT': 'Cập nhật sản phẩm',
+    'DELETE_PRODUCT': 'Xóa sản phẩm',
+    'CREATE_ORDER': 'Tạo đơn hàng mới',
+    'UPDATE_ORDER': 'Cập nhật đơn hàng',
+    'CANCEL_ORDER': 'Hủy đơn hàng',
+    'PAYMENT': 'Thanh toán đơn hàng',
+    'RETURN_ORDER': 'Khách trả hàng',
+  };
+  return map[action.toUpperCase()] ?? action;
 }
 
 String _translateLogKey(String key) {

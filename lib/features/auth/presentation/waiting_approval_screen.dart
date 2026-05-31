@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -113,9 +114,19 @@ class WaitingApprovalScreen extends ConsumerWidget {
                     TextButton.icon(
                       icon: const Icon(Icons.logout_rounded, size: 18),
                       label: const Text('Đăng xuất tài khoản'),
-                      onPressed: () {
-                        ref.read(authProvider.notifier).logout();
-                        context.go('/login');
+                      onPressed: () async {
+                        final confirm = await AppConfirmModal.show(
+                          context,
+                          title: 'Đăng xuất',
+                          message: 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này?',
+                          confirmText: 'Đăng xuất',
+                          cancelText: 'Hủy',
+                          isDestructive: true,
+                        );
+                        if (confirm == true) {
+                          ref.read(authProvider.notifier).logout();
+                          if (context.mounted) context.go('/login');
+                        }
                       },
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.danger,

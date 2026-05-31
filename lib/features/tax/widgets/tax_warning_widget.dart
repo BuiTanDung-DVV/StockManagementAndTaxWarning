@@ -44,10 +44,7 @@ class TaxWarningWidget extends StatelessWidget {
     final c = AppThemeColors.of(context);
     final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
-    return Semantics(
-      label: 'Cảnh báo nghĩa vụ thuế. Tổng doanh thu: ${fmt.format(totalRevenue)}. VAT ước tính: ${fmt.format(vatOwed)}. TNCN ước tính: ${fmt.format(pitOwed)}.',
-      container: true,
-      child: Container(
+    return Container(
         decoration: BoxDecoration(
           color: AppColors.warning.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
@@ -108,8 +105,7 @@ class TaxWarningWidget extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildRow(String label, String value, AppThemeColors c) {

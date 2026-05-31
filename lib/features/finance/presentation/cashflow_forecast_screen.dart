@@ -95,14 +95,91 @@ class CashflowForecastScreen extends ConsumerWidget {
                             Expanded(
                               child: LineChart(
                                 LineChartData(
-                                  gridData: const FlGridData(show: false),
-                                  titlesData: const FlTitlesData(
-                                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                    bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  gridData: FlGridData(
+                                    show: true,
+                                    drawVerticalLine: false,
+                                    getDrawingHorizontalLine: (value) => FlLine(
+                                      color: c.divider.withValues(alpha: 0.3),
+                                      strokeWidth: 1,
+                                    ),
+                                  ),
+                                  titlesData: FlTitlesData(
+                                    show: true,
+                                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    leftTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        reservedSize: 42,
+                                        getTitlesWidget: (value, meta) {
+                                          if (value == meta.max || value == meta.min) return const SizedBox.shrink();
+                                          final isNeg = value < 0;
+                                          final absVal = value.abs();
+                                          String label = '';
+                                          if (absVal >= 1000000) {
+                                            label = '${isNeg ? '-' : ''}${(absVal / 1000000).toStringAsFixed(0)}Tr';
+                                          } else if (absVal >= 1000) {
+                                            label = '${isNeg ? '-' : ''}${(absVal / 1000).toStringAsFixed(0)}K';
+                                          } else {
+                                            label = '${isNeg ? '-' : ''}${absVal.toStringAsFixed(0)}';
+                                          }
+                                          return Text(
+                                            label,
+                                            style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                                            textAlign: TextAlign.right,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    bottomTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        reservedSize: 22,
+                                        getTitlesWidget: (value, meta) {
+                                          final idx = value.toInt();
+                                          if (idx < 0 || idx >= forecasts.length) return const SizedBox.shrink();
+                                          final f = forecasts[idx];
+                                          final dateStr = f['forecastDate']?.toString().split('T').first ?? '';
+                                          if (dateStr.length < 5) return const SizedBox.shrink();
+                                          final parts = dateStr.split('-');
+                                          final displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                                          
+                                          if (forecasts.length > 5 && idx % (forecasts.length / 4).ceil() != 0 && idx != forecasts.length - 1) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return Padding(
+                                            padding: const EdgeInsets.only(top: 4),
+                                            child: Text(
+                                              displayDate,
+                                              style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
                                   ),
                                   borderData: FlBorderData(show: false),
+                                  lineTouchData: LineTouchData(
+                                    touchTooltipData: LineTouchTooltipData(
+                                      getTooltipColor: (touchedSpot) => c.surface,
+                                      getTooltipItems: (touchedSpots) {
+                                        return touchedSpots.map((spot) {
+                                          final f = forecasts[spot.x.toInt()];
+                                          final balance = spot.y;
+                                          final formatted = NumberFormat.compact(locale: 'vi_VN').format(balance);
+                                          final dateStr = f['forecastDate']?.toString().split('T').first ?? '';
+                                          return LineTooltipItem(
+                                            '$dateStr\n$formatted',
+                                            GoogleFonts.outfit(
+                                              color: c.textPrimary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          );
+                                        }).toList();
+                                      },
+                                    ),
+                                  ),
                                   lineBarsData: [
                                     LineChartBarData(
                                       spots: forecasts.asMap().entries.map((entry) {
@@ -120,7 +197,14 @@ class CashflowForecastScreen extends ConsumerWidget {
                                       dotData: const FlDotData(show: true),
                                       belowBarData: BarAreaData(
                                         show: true,
-                                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            theme.colorScheme.primary.withValues(alpha: 0.15),
+                                            theme.colorScheme.primary.withValues(alpha: 0.0),
+                                          ],
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                        ),
                                       ),
                                     ),
                                   ],
