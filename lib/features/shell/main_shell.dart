@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../settings/providers/shop_provider.dart';
@@ -89,21 +90,81 @@ class MainShell extends ConsumerWidget {
 
     final idx = _currentIndex(context, allTabs);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 800;
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: Stack(
+        children: [
+          // Ambient Background (Mesh Gradient style)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: Theme.of(context).brightness == Brightness.dark
+                      ? [
+                          const Color(0xFF0F172A),
+                          const Color(0xFF1E1B4B),
+                          const Color(0xFF020617),
+                        ]
+                      : [
+                          const Color(0xFFE0F2FE),
+                          const Color(0xFFF1F5F9),
+                          const Color(0xFFE0E7FF),
+                        ],
+                ),
+              ),
+            ),
+          ),
+          // Ambient Orbs
+          Positioned(
+            top: -150,
+            left: -100,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: primaryColor.withValues(alpha: 0.15),
+                boxShadow: [
+                  BoxShadow(color: primaryColor.withValues(alpha: 0.15), blurRadius: 100),
+                ]
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -50,
+            right: -100,
+            child: Container(
+              width: 500,
+              height: 500,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.purpleAccent.withValues(alpha: 0.1),
+                boxShadow: [
+                  BoxShadow(color: Colors.purpleAccent.withValues(alpha: 0.1), blurRadius: 100),
+                ]
+              ),
+            ),
+          ),
+          
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isDesktop = constraints.maxWidth >= 800;
 
-        if (isDesktop) {
-          return Scaffold(
-            backgroundColor: c.bg,
-            body: Row(
-              children: [
-                Container(
-                  width: 260,
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    border: Border(right: BorderSide(color: c.divider)),
-                  ),
+                if (isDesktop) {
+                  return Row(
+                    children: [
+                      ClipRRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                          child: Container(
+                            width: 260,
+                            decoration: BoxDecoration(
+                              color: c.surface.withValues(alpha: 0.6),
+                              border: Border(right: BorderSide(color: c.divider.withValues(alpha: 0.3))),
+                            ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -186,51 +247,91 @@ class MainShell extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Expanded(child: child),
-              ],
+              ),
             ),
-          );
+            Expanded(
+                        child: ClipRRect(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                            child: Container(
+                              color: c.bg.withValues(alpha: 0.4),
+                              child: child,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
         }
 
-        return Scaffold(
-          body: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: child,
-            ),
-          ),
-          bottomNavigationBar: SafeArea(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              decoration: BoxDecoration(
-                color: c.card.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  for (int i = 0; i < allTabs.length; i++)
-                    _NavItem(
-                      icon: allTabs[i].icon,
-                      label: allTabs[i].label,
-                      isActive: i == idx,
-                      onTap: () => context.go(allTabs[i].route),
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            color: c.bg.withValues(alpha: 0.4),
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 480),
+                                child: child,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                ],
-              ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: c.card.withValues(alpha: 0.7),
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: primaryColor.withValues(alpha: 0.05),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    for (int i = 0; i < allTabs.length; i++)
+                                      _NavItem(
+                                        icon: allTabs[i].icon,
+                                        label: allTabs[i].label,
+                                        isActive: i == idx,
+                                        onTap: () => context.go(allTabs[i].route),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

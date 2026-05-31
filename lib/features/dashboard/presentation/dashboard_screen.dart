@@ -1,16 +1,19 @@
-import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'package:intl/intl.dart';
+
+import '../../../core/constants/app_strings.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../sales/providers/sales_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../settings/providers/tax_config_provider.dart';
@@ -100,7 +103,7 @@ class DashboardScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: c.bg,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: RefreshIndicator(
           color: theme.colorScheme.primary,
@@ -359,6 +362,16 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ],
 
+                if (hasFinance && salesAsync != null) ...[
+                  const SizedBox(height: 20),
+                  const _TopProductsChart(), // Using mock data
+                ],
+                
+                if (hasInventory) ...[
+                  const SizedBox(height: 20),
+                  const _InventoryDonutChart(), // Using mock data
+                ],
+                
                 if (hasFinance && salesAsync != null) ...[
                   const SizedBox(height: 20),
 
@@ -817,21 +830,25 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: c.card,
+        color: c.card.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: color.withValues(alpha: 0.15),
-          width: 1.5,
+          color: c.divider.withValues(alpha: 0.3),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.04),
+            color: color.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -885,6 +902,8 @@ class _SummaryCard extends StatelessWidget {
           ),
         ],
       ),
+      ),
+      ),
     );
   }
 }
@@ -899,25 +918,31 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: c.card,
+          color: c.card.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: c.divider.withValues(alpha: 0.4),
+            color: c.divider.withValues(alpha: 0.3),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF232C51).withValues(alpha: 0.03),
+              color: primaryColor.withValues(alpha: 0.03),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Column(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
@@ -940,6 +965,8 @@ class _QuickAction extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      ),
       ),
     );
   }
@@ -1228,6 +1255,272 @@ class _ComparisonBarChart extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TopProductsChart extends StatelessWidget {
+  const _TopProductsChart();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+
+    // Mock Data
+    final mockData = [
+      {'name': 'Phân bón NPK 15-15-15', 'value': 12500000},
+      {'name': 'Thuốc trừ sâu Sinh Học', 'value': 8300000},
+      {'name': 'Cuốc xẻng làm vườn', 'value': 4500000},
+      {'name': 'Hạt giống Cà Chua', 'value': 3200000},
+      {'name': 'Bình xịt 20L', 'value': 2100000},
+    ];
+
+    return Container(
+      height: 250,
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16),
+      decoration: BoxDecoration(
+        color: c.card.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Top 5 Sản phẩm doanh thu cao',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: c.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceBetween,
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (group) => c.surface,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          final val = NumberFormat.compact(locale: 'vi_VN').format(rod.toY);
+                          return BarTooltipItem(
+                            '${mockData[group.x.toInt()]['name']}\n$val đ',
+                            GoogleFonts.outfit(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 28,
+                          getTitlesWidget: (value, meta) {
+                            if (value == meta.max || value == meta.min) return const SizedBox.shrink();
+                            String label = '';
+                            if (value >= 1000000) {
+                              label = '${(value / 1000000).toStringAsFixed(0)}Tr';
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                label,
+                                style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 80,
+                          getTitlesWidget: (value, meta) {
+                            final idx = value.toInt();
+                            if (idx < 0 || idx >= mockData.length) return const SizedBox.shrink();
+                            final name = mockData[idx]['name'] as String;
+                            final shortName = name.length > 12 ? '${name.substring(0, 10)}...' : name;
+                            return Text(
+                              shortName,
+                              style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.right,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: true,
+                      drawHorizontalLine: false,
+                      getDrawingVerticalLine: (value) => FlLine(
+                        color: c.divider.withValues(alpha: 0.3),
+                        strokeWidth: 1,
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    barGroups: mockData.asMap().entries.map((entry) {
+                      final val = (entry.value['value'] as num).toDouble();
+                      return BarChartGroupData(
+                        x: entry.key,
+                        barRods: [
+                          BarChartRodData(
+                            toY: val,
+                            color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                            width: 14,
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(4),
+                              bottomRight: Radius.circular(4),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                    maxY: 15000000,
+                  ),
+                  duration: const Duration(milliseconds: 300),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InventoryDonutChart extends StatelessWidget {
+  const _InventoryDonutChart();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+
+    // Mock Data
+    final mockData = [
+      {'name': 'Vật tư NN', 'value': 45.0, 'color': Colors.green},
+      {'name': 'Phân bón', 'value': 30.0, 'color': Colors.blue},
+      {'name': 'Thuốc BVTV', 'value': 15.0, 'color': Colors.orange},
+      {'name': 'Khác', 'value': 10.0, 'color': Colors.grey},
+    ];
+
+    return Container(
+      height: 250,
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16),
+      decoration: BoxDecoration(
+        color: c.card.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Cơ cấu Hàng tồn kho (Mock)',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: c.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                          sections: mockData.map((e) {
+                            return PieChartSectionData(
+                              color: e['color'] as Color,
+                              value: e['value'] as double,
+                              title: '${e['value']}%',
+                              radius: 20,
+                              titleStyle: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: mockData.map((e) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: e['color'] as Color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    e['name'] as String,
+                                    style: TextStyle(fontSize: 11, color: c.textSecondary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
