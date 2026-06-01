@@ -6,7 +6,8 @@ export class TagController {
     static async getAll(req: Request, res: Response) {
         try {
             const shopId = (req as any).shopId!;
-            const tags = await AppDataSource.getRepository(Tag).find({ where: { shopId } });
+            const type = (req.query.type as string) || 'product';
+            const tags = await AppDataSource.getRepository(Tag).find({ where: { shopId, type } });
             res.json({ success: true, data: tags });
         } catch (error) {
             console.error('Error fetching tags:', error);
@@ -17,19 +18,20 @@ export class TagController {
     static async create(req: Request, res: Response) {
         try {
             const shopId = (req as any).shopId!;
-            const { name, color } = req.body;
+            const { name, color, type } = req.body;
             
             if (!name) {
                 return res.status(400).json({ success: false, message: 'Tên nhãn không được để trống' });
             }
 
+            const tagType = type || 'product';
             const repo = AppDataSource.getRepository(Tag);
-            const existing = await repo.findOne({ where: { shopId, name: name.trim() } });
+            const existing = await repo.findOne({ where: { shopId, type: tagType, name: name.trim() } });
             if (existing) {
                 return res.status(400).json({ success: false, message: 'Nhãn này đã tồn tại' });
             }
 
-            const tag = repo.create({ shopId, name: name.trim(), color: color || '#3B82F6' });
+            const tag = repo.create({ shopId, type: tagType, name: name.trim(), color: color || '#3B82F6' });
             await repo.save(tag);
             res.json({ success: true, data: tag });
         } catch (error) {
@@ -42,16 +44,17 @@ export class TagController {
         try {
             const shopId = (req as any).shopId!;
             const id = parseInt(req.params.id);
-            const { name, color } = req.body;
+            const { name, color, type } = req.body;
+            const tagType = type || 'product';
 
             const repo = AppDataSource.getRepository(Tag);
-            const tag = await repo.findOne({ where: { id, shopId } });
+            const tag = await repo.findOne({ where: { id, shopId, type: tagType } });
             if (!tag) {
                 return res.status(404).json({ success: false, message: 'Không tìm thấy nhãn' });
             }
 
             if (name) {
-                const existing = await repo.findOne({ where: { shopId, name: name.trim() } });
+                const existing = await repo.findOne({ where: { shopId, type: tagType, name: name.trim() } });
                 if (existing && existing.id !== tag.id) {
                     return res.status(400).json({ success: false, message: 'Tên nhãn đã tồn tại' });
                 }

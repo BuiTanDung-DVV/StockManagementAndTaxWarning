@@ -8,7 +8,8 @@ import '../../../core/theme/app_theme.dart';
 import '../providers/tag_provider.dart';
 
 class TagManagementScreen extends ConsumerStatefulWidget {
-  const TagManagementScreen({super.key});
+  final String type;
+  const TagManagementScreen({super.key, this.type = 'product'});
 
   @override
   ConsumerState<TagManagementScreen> createState() => _TagManagementScreenState();
@@ -95,11 +96,11 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                         
                         try {
                           if (tag == null) {
-                            await ref.read(tagRepoProvider).create(name, selectedColor);
+                            await ref.read(tagRepoProvider).create(name, selectedColor, type: widget.type);
                           } else {
-                            await ref.read(tagRepoProvider).update(tag.id, name, selectedColor);
+                            await ref.read(tagRepoProvider).update(tag.id, name, selectedColor, type: widget.type);
                           }
-                          ref.invalidate(tagListProvider);
+                          ref.invalidate(tagListProvider(widget.type));
                           if (context.mounted) Navigator.pop(ctx);
                         } catch (e) {
                           // error
@@ -140,7 +141,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
     if (confirm == true) {
       try {
         await ref.read(tagRepoProvider).delete(tag.id);
-        ref.invalidate(tagListProvider);
+        ref.invalidate(tagListProvider(widget.type));
       } catch (e) {
         // error
       }
@@ -151,7 +152,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final tagsAsync = ref.watch(tagListProvider);
+    final tagsAsync = ref.watch(tagListProvider(widget.type));
 
     return Scaffold(
       backgroundColor: c.bg,

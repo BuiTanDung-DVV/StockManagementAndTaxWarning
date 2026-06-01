@@ -13,6 +13,9 @@ export class Tag {
 
     @Column({ length: 20, default: '#3B82F6' })
     color: string;
+
+    @Column({ length: 50, default: 'product' })
+    type: string;
 }
 
 @Entity('categories')

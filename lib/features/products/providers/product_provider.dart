@@ -36,7 +36,7 @@ final categoriesProvider = FutureProvider<List<dynamic>>((ref) {
 
 final availableTagsProvider = FutureProvider<List<TagModel>>((ref) async {
   // Fetch managed tags
-  final managedTags = await ref.read(tagRepoProvider).getAll();
+  final managedTags = await ref.read(tagRepoProvider).getAll(type: 'product');
   final tagMap = { for (var t in managedTags) t.name: t };
 
   // Fetch recent products to find used tags not in managed list
