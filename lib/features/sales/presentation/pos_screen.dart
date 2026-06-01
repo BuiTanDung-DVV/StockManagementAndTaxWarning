@@ -239,21 +239,22 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       itemCount: tags.length,
                       itemBuilder: (ctx, i) {
                         final t = tags[i];
-                        final isSelected = _tag == t;
+                        final isSelected = _tag == t.name;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Semantics(
                             button: true,
-                            label: isSelected ? 'Bỏ lọc nhãn $t' : 'Lọc theo nhãn $t',
+                            label: isSelected ? 'Bỏ lọc nhãn ${t.name}' : 'Lọc theo nhãn ${t.name}',
                             selected: isSelected,
                             child: ChoiceChip(
-                              label: Text(t, style: const TextStyle(fontSize: 12)),
+                              label: Text(t.name, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : t.uiColor)),
                               selected: isSelected,
                               onSelected: (selected) {
-                                setState(() => _tag = selected ? t : '');
+                                setState(() => _tag = selected ? t.name : '');
                               },
-                              selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                              backgroundColor: c.surface,
+                              selectedColor: t.uiColor,
+                              backgroundColor: t.uiColor.withValues(alpha: 0.1),
+                              side: BorderSide(color: t.uiColor.withValues(alpha: 0.3)),
                             ),
                           ),
                         );

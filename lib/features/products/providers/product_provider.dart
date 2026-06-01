@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import 'tag_provider.dart';
 
 class ProductRepository {
   final ApiClient _api;
@@ -33,28 +34,38 @@ final categoriesProvider = FutureProvider<List<dynamic>>((ref) {
   return ref.read(productRepoProvider).findCategories();
 });
 
-final availableTagsProvider = FutureProvider<List<String>>((ref) async {
-  // Fetch a batch of products to extract unique tags (for the Tag Bar)
+final availableTagsProvider = FutureProvider<List<TagModel>>((ref) async {
+  // Fetch managed tags
+  final managedTags = await ref.read(tagRepoProvider).getAll();
+  final tagMap = { for (var t in managedTags) t.name: t };
+
+  // Fetch recent products to find used tags not in managed list
   final res = await ref.read(productRepoProvider).findAll(limit: 500);
   final items = (res['items'] as List?) ?? [];
-  final Set<String> tagSet = {};
+  final Set<String> usedTags = {};
   
   for (final item in items) {
     final tagsRaw = item['tags'];
     if (tagsRaw is List) {
       for (final t in tagsRaw) {
         if (t != null && t.toString().trim().isNotEmpty) {
-          tagSet.add(t.toString().trim());
+          usedTags.add(t.toString().trim());
         }
       }
     } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
       final parts = tagsRaw.split(',');
       for (final p in parts) {
-        if (p.trim().isNotEmpty) tagSet.add(p.trim());
+        if (p.trim().isNotEmpty) usedTags.add(p.trim());
       }
     }
   }
   
-  final list = tagSet.toList()..sort();
+  for (final t in usedTags) {
+    if (!tagMap.containsKey(t)) {
+      tagMap[t] = TagModel(id: -1, name: t, color: '#9CA3AF'); // Gray color for unmanaged tags
+    }
+  }
+
+  final list = tagMap.values.toList()..sort((a, b) => a.name.compareTo(b.name));
   return list;
 });

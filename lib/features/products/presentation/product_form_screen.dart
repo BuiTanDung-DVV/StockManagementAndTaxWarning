@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../providers/product_provider.dart';
+import '../providers/tag_provider.dart';
 import '../../../core/network/api_client.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
@@ -457,84 +460,134 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
-          controller: _tagInputCtrl,
-          style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-          decoration: InputDecoration(
-            labelText: 'Thêm thẻ (Nhấn Enter hoặc Phẩy)',
-            labelStyle: TextStyle(color: c.textSecondary, fontSize: 13),
-            hintText: 'VD: Khuyến mãi, Hàng mới, Bán chạy',
-            hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
-            prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: HugeIcon(icon: HugeIcons.strokeRoundedTag01, size: 18, color: theme.colorScheme.primary),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Nhãn (Tags)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: c.textSecondary)),
+            TextButton.icon(
+              onPressed: () => _showTagPicker(c, theme),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Chọn / Thêm nhãn'),
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ),
-            filled: true,
-            fillColor: c.card,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: c.divider),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: c.divider),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.8),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-          onChanged: (val) {
-            if (val.endsWith(',')) {
-              final newTag = val.substring(0, val.length - 1).trim();
-              if (newTag.isNotEmpty && !_tags.contains(newTag)) {
-                setState(() {
-                  _tags.add(newTag);
-                  _tagInputCtrl.clear();
-                });
-              } else {
-                _tagInputCtrl.text = newTag;
-                _tagInputCtrl.selection = TextSelection.fromPosition(TextPosition(offset: newTag.length));
-              }
-            }
-          },
-          onFieldSubmitted: (val) {
-            final newTag = val.trim();
-            if (newTag.isNotEmpty && !_tags.contains(newTag)) {
-              setState(() {
-                _tags.add(newTag);
-                _tagInputCtrl.clear();
-              });
-            }
-          },
+          ],
         ),
-        if (_tags.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _tags.map((t) {
-                return Chip(
-                  label: Text(
-                    t,
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: c.textPrimary),
-                  ),
-                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  deleteIcon: Icon(Icons.close, size: 16, color: c.textSecondary),
-                  onDeleted: () {
-                    setState(() => _tags.remove(t));
-                  },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
-                  ),
-                );
-              }).toList(),
+        const SizedBox(height: 8),
+        if (_tags.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              color: c.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: c.divider, style: BorderStyle.solid),
             ),
+            child: Text('Chưa có nhãn nào được chọn', style: GoogleFonts.inter(color: c.textMuted, fontSize: 13, fontStyle: FontStyle.italic)),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _tags.map((tag) {
+              return Chip(
+                label: Text(tag, style: GoogleFonts.inter(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500)),
+                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.8),
+                deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                onDeleted: () => setState(() => _tags.remove(tag)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                side: BorderSide.none,
+              );
+            }).toList(),
           ),
       ],
+    );
+  }
+
+  void _showTagPicker(AppThemeColors c, ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: c.bg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return Consumer(
+          builder: (ctx, ref, child) {
+            final tagsAsync = ref.watch(tagListProvider);
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Chọn nhãn', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: c.textPrimary)),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  tagsAsync.when(
+                    data: (tags) {
+                      if (tags.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text('Bạn chưa có nhãn nào trong danh mục. Hãy vào "Quản lý nhãn" để tạo.', style: GoogleFonts.inter(color: c.textSecondary)),
+                        );
+                      }
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: tags.map((t) {
+                          final isSelected = _tags.contains(t.name);
+                          return FilterChip(
+                            label: Text(t.name, style: TextStyle(color: isSelected ? Colors.white : t.uiColor, fontWeight: FontWeight.w500)),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _tags.add(t.name);
+                                } else {
+                                  _tags.remove(t.name);
+                                }
+                              });
+                            },
+                            selectedColor: t.uiColor,
+                            backgroundColor: t.uiColor.withValues(alpha: 0.1),
+                            side: BorderSide(color: t.uiColor.withValues(alpha: 0.3)),
+                            checkmarkColor: Colors.white,
+                          );
+                        }).toList(),
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (_, __) => const Text('Lỗi tải danh sách nhãn'),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        context.push('/products/tags');
+                      },
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedSettings01, color: Colors.blue, size: 20),
+                      label: const Text('Quản lý nhãn nâng cao'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
