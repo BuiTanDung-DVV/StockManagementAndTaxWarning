@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
@@ -81,6 +82,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedTag01, color: Colors.white, size: 22),
+            onPressed: () => context.push('/products/tags'),
+            tooltip: 'Quản lý Nhãn',
+          ),
           featureGuideButton(context, 'product_list'),
         ],
       ),
@@ -113,21 +119,22 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       itemCount: tags.length,
                       itemBuilder: (ctx, i) {
                         final t = tags[i];
-                        final isSelected = tagQuery == t;
+                        final isSelected = tagQuery == t.name;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Semantics(
                             button: true,
-                            label: isSelected ? 'Bỏ lọc nhãn $t' : 'Lọc theo nhãn $t',
+                            label: isSelected ? 'Bỏ lọc nhãn ${t.name}' : 'Lọc theo nhãn ${t.name}',
                             selected: isSelected,
                             child: ChoiceChip(
-                              label: Text(t, style: const TextStyle(fontSize: 12)),
+                              label: Text(t.name, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : t.uiColor)),
                               selected: isSelected,
                               onSelected: (selected) {
-                                ref.read(_productTagFilterProvider.notifier).set(selected ? t : '');
+                                ref.read(_productTagFilterProvider.notifier).set(selected ? t.name : '');
                               },
-                              selectedColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-                              backgroundColor: c.surface,
+                              selectedColor: t.uiColor,
+                              backgroundColor: t.uiColor.withValues(alpha: 0.1),
+                              side: BorderSide(color: t.uiColor.withValues(alpha: 0.3)),
                             ),
                           ),
                         );
