@@ -58,6 +58,9 @@ export class Customer {
     @Column({ name: 'is_active', default: true })
     isActive: boolean;
 
+    @Column('simple-array', { nullable: true })
+    tags: string[];
+
     @OneToMany(() => Receivable, (r) => r.customer)
     receivables: Receivable[];
 
