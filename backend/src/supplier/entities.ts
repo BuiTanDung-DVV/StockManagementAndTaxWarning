@@ -47,6 +47,9 @@ export class Supplier {
     @Column({ name: 'is_active', default: true })
     isActive: boolean;
 
+    @Column('simple-array', { nullable: true })
+    tags: string[];
+
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 

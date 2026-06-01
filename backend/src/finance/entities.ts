@@ -100,6 +100,9 @@ export class CashTransaction {
     @Column({ name: 'created_by', nullable: true })
     createdBy: number;
 
+    @Column('simple-array', { nullable: true })
+    tags: string[];
+
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 }
