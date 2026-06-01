@@ -63,6 +63,9 @@ export class SalesOrder {
     @Column({ name: 'created_by', nullable: true })
     createdBy: number;
 
+    @Column('simple-array', { nullable: true })
+    tags: string[];
+
     @OneToMany(() => SalesOrderItem, (i) => i.order, { cascade: true })
     items: SalesOrderItem[];
 

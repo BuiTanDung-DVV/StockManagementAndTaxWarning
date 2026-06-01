@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/inline_tag_picker.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/tag_provider.dart';
@@ -516,189 +517,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       backgroundColor: c.bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        return const _InlineTagPicker();
+        return InlineTagPicker(
+          type: 'product',
+          selectedTags: _tags,
+          onTagsChanged: (newTags) => setState(() => _tags = newTags),
+        );
       },
     );
   }
 }
 
-class _InlineTagPicker extends ConsumerStatefulWidget {
-  const _InlineTagPicker();
-  @override
-  ConsumerState<_InlineTagPicker> createState() => _InlineTagPickerState();
-}
-
-class _InlineTagPickerState extends ConsumerState<_InlineTagPicker> {
-  bool _isCreating = false;
-  final _nameCtrl = TextEditingController();
-  final List<String> _predefinedColors = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#64748B', '#000000'];
-  String _selectedColor = '#3B82F6';
-  
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-    final tagsAsync = ref.watch(tagListProvider('product'));
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(_isCreating ? 'Tạo nhãn mới' : 'Chọn nhãn', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: c.textPrimary)),
-              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (!_isCreating) ...[
-            tagsAsync.when(
-              data: (tags) {
-                if (tags.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text('Chưa có nhãn nào. Hãy tạo mới.', style: GoogleFonts.inter(color: c.textSecondary)),
-                  );
-                }
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: tags.map((t) {
-                    final parentState = context.findAncestorStateOfType<ConsumerState<ProductFormScreen>>() as dynamic;
-                    final isSelected = parentState._tags.contains(t.name);
-                    return FilterChip(
-                      label: Text(t.name, style: TextStyle(color: isSelected ? Colors.white : t.uiColor, fontWeight: FontWeight.w500)),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        parentState.setState(() {
-                          if (selected) {
-                            parentState._tags.add(t.name);
-                          } else {
-                            parentState._tags.remove(t.name);
-                          }
-                        });
-                      },
-                      selectedColor: t.uiColor,
-                      backgroundColor: t.uiColor.withValues(alpha: 0.1),
-                      side: BorderSide(color: t.uiColor.withValues(alpha: 0.3)),
-                      checkmarkColor: Colors.white,
-                    );
-                  }).toList(),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text('Lỗi tải danh sách nhãn'),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => setState(() => _isCreating = true),
-                    icon: const Icon(Icons.add, color: Colors.blue, size: 20),
-                    label: const Text('Tạo nhãn mới'),
-                  ),
-                ),
-                if (ref.watch(authProvider).isShopOwner) ...[
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        context.push('/products/tags');
-                      },
-                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedSettings01, color: Colors.blue, size: 20),
-                      label: const Text('Quản lý nâng cao'),
-                    ),
-                  ),
-                ]
-              ],
-            ),
-          ] else ...[
-            Text('Tên nhãn', style: GoogleFonts.inter(fontSize: 13, color: c.textSecondary)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _nameCtrl,
-              style: GoogleFonts.inter(color: c.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Nhập tên...',
-                filled: true,
-                fillColor: c.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Màu sắc', style: GoogleFonts.inter(fontSize: 13, color: c.textSecondary)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _predefinedColors.map((hex) {
-                final isSelected = _selectedColor == hex;
-                final colorVal = Color(int.parse('FF${hex.substring(1)}', radix: 16));
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedColor = hex),
-                  child: Container(
-                    width: 32, height: 32,
-                    decoration: BoxDecoration(
-                      color: colorVal,
-                      shape: BoxShape.circle,
-                      border: isSelected ? Border.all(color: theme.colorScheme.primary, width: 2) : null,
-                    ),
-                    child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => setState(() => _isCreating = false),
-                    child: const Text('Hủy'),
-                  ),
-                ),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final name = _nameCtrl.text.trim();
-                      if (name.isEmpty) return;
-                      try {
-                        final tag = await ref.read(tagRepoProvider).create(name, _selectedColor, type: 'product');
-                        if (!mounted) return;
-                        final parentState = context.findAncestorStateOfType<ConsumerState<ProductFormScreen>>() as dynamic;
-                        parentState.setState(() {
-                          parentState._tags.add(tag.name);
-                        });
-                        ref.invalidate(tagListProvider('product'));
-                        setState(() => _isCreating = false);
-                      } catch (e) {
-                        ToastService.showError('Tên nhãn đã tồn tại hoặc có lỗi');
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Lưu & Chọn', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-}

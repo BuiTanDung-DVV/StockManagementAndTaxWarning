@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/sectioned_form_dialog.dart';
 import '../../../core/widgets/address_input_field.dart';
+import '../../../core/widgets/inline_tag_picker.dart';
 import '../providers/customer_provider.dart';
 
 class CustomerFormScreen extends ConsumerStatefulWidget {
@@ -22,6 +24,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
   final _addressCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _taxCodeCtrl = TextEditingController();
+  List<String> _tags = [];
 
   bool _saving = false;
   bool get _isEdit => widget.customer != null;
@@ -37,6 +40,9 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       _addressCtrl.text = c['address'] ?? '';
       _noteCtrl.text = c['notes'] ?? c['note'] ?? '';
       _taxCodeCtrl.text = c['taxCode'] ?? c['tax_code'] ?? '';
+      if (c['tags'] != null && c['tags'] is List) {
+        _tags = List<String>.from(c['tags']);
+      }
     }
   }
 
@@ -52,6 +58,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
         'address': _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
         'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
         'taxCode': _taxCodeCtrl.text.trim().isEmpty ? null : _taxCodeCtrl.text.trim(),
+        'tags': _tags,
       };
       if (_isEdit) {
         await repo.update(widget.customer!['id'], data);
@@ -112,11 +119,72 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                 _field('Mã số thuế', _taxCodeCtrl, HugeIcons.strokeRoundedInvoice01, c),
                 const SizedBox(height: 16),
                 _field('Ghi chú', _noteCtrl, HugeIcons.strokeRoundedNote, c, maxLines: 3),
+                const SizedBox(height: 16),
+                Text('Nhãn phân loại', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary)),
+                const SizedBox(height: 8),
+                _buildTagEditor(c),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTagEditor(AppThemeColors c) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_tags.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _tags.map((tag) {
+              return Chip(
+                label: Text(tag, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500)),
+                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                onDeleted: () => setState(() => _tags.remove(tag)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                side: BorderSide.none,
+              );
+            }).toList(),
+          ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: c.bg,
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              builder: (ctx) {
+                return InlineTagPicker(
+                  type: 'customer',
+                  selectedTags: _tags,
+                  onTagsChanged: (newTags) => setState(() => _tags = newTags),
+                );
+              },
+            );
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 16, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 4),
+                Text('Chọn/Thêm nhãn', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

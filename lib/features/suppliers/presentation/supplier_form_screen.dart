@@ -6,6 +6,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/sectioned_form_dialog.dart';
 import '../../../core/widgets/address_input_field.dart';
+import '../../../core/widgets/inline_tag_picker.dart';
 import '../providers/supplier_provider.dart';
 
 class SupplierFormScreen extends ConsumerStatefulWidget {
@@ -24,6 +25,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
   final _taxCodeCtrl = TextEditingController();
   final _contactPersonCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+  List<String> _tags = [];
 
   bool _saving = false;
   bool get _isEdit => widget.supplier != null;
@@ -40,6 +42,9 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
       _taxCodeCtrl.text = s['taxCode'] ?? s['tax_code'] ?? '';
       _contactPersonCtrl.text = s['contactPerson'] ?? s['contact_person'] ?? '';
       _noteCtrl.text = s['notes'] ?? s['note'] ?? '';
+      if (s['tags'] != null && s['tags'] is List) {
+        _tags = List<String>.from(s['tags']);
+      }
     }
   }
 
@@ -56,6 +61,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
         'taxCode': _taxCodeCtrl.text.trim().isEmpty ? null : _taxCodeCtrl.text.trim(),
         'contactPerson': _contactPersonCtrl.text.trim().isEmpty ? null : _contactPersonCtrl.text.trim(),
         'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        'tags': _tags,
       };
       if (_isEdit) {
         await repo.update(widget.supplier!['id'], data);
@@ -164,11 +170,72 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                   theme,
                   maxLines: 3,
                 ),
+                const SizedBox(height: 12),
+                Text('Nhãn phân loại', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary)),
+                const SizedBox(height: 8),
+                _buildTagEditor(c),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTagEditor(AppThemeColors c) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_tags.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _tags.map((tag) {
+              return Chip(
+                label: Text(tag, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500)),
+                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                onDeleted: () => setState(() => _tags.remove(tag)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                side: BorderSide.none,
+              );
+            }).toList(),
+          ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: c.bg,
+              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              builder: (ctx) {
+                return InlineTagPicker(
+                  type: 'supplier',
+                  selectedTags: _tags,
+                  onTagsChanged: (newTags) => setState(() => _tags = newTags),
+                );
+              },
+            );
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 16, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 4),
+                Text('Chọn/Thêm nhãn', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
