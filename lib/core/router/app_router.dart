@@ -13,6 +13,7 @@ import '../../features/sales/presentation/pos_screen.dart';
 import '../../features/sales/presentation/order_detail_screen.dart';
 import '../../features/products/presentation/product_list_screen.dart';
 import '../../features/products/presentation/product_detail_screen.dart';
+import '../../features/products/presentation/tag_management_screen.dart';
 import '../../features/customers/presentation/customer_list_screen.dart';
 import '../../features/customers/presentation/customer_detail_screen.dart';
 import '../../features/suppliers/presentation/supplier_list_screen.dart';
@@ -203,6 +204,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           // Products
           GoRoute(path: '/products', builder: (_, _) => const ProductListScreen()),
+          GoRoute(path: '/products/tags', builder: (_, _) => const TagManagementScreen()),
           GoRoute(path: '/products/form', builder: (_, state) => ProductFormScreen(product: state.extra as Map<String, dynamic>?)),
           GoRoute(path: '/products/:id', builder: (_, state) => ProductDetailScreen(id: int.parse(state.pathParameters['id']!))),
           // Customers

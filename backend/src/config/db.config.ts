@@ -8,7 +8,7 @@ import { User } from '../auth/entities';
 import { ShopRole, ShopMember, Notification } from '../shop/entities';
 import { Customer, Receivable, DebtEvidence, DebtPaymentHistory } from '../customer/entities';
 import { Supplier, Payable } from '../supplier/entities';
-import { Category, Product, CostType, ProductCostItem, ProductBatch, UnitConversion, ProductPriceHistory } from '../product/entities';
+import { Category, Product, CostType, ProductCostItem, ProductBatch, UnitConversion, ProductPriceHistory, Tag } from '../product/entities';
 import { Warehouse, InventoryStock, InventoryMovement, PurchaseOrder, PurchaseOrderItem, StockTake, StockTakeItem } from '../inventory/entities';
 import { InventoryLot } from '../inventory/lot.entity';
 import { SalesOrder, SalesOrderItem, SalesOrderPayment, SalesReturn, SalesReturnItem, SalesOrderLotDeduction } from '../sales/entities';
@@ -33,7 +33,7 @@ export const AppDataSource = new DataSource({
   synchronize: false, // Schema managed by Supabase — never auto-sync
   entities: [
     User, ShopRole, ShopMember, Notification, Customer, Receivable, DebtEvidence, DebtPaymentHistory,
-    Supplier, Payable, Category, Product, CostType, ProductCostItem, ProductBatch, UnitConversion,
+    Supplier, Payable, Category, Tag, Product, CostType, ProductCostItem, ProductBatch, UnitConversion,
     ProductPriceHistory, Warehouse, InventoryStock, InventoryMovement, PurchaseOrder, PurchaseOrderItem,
     StockTake, StockTakeItem, InventoryLot, SalesOrder, SalesOrderItem, SalesOrderPayment, SalesReturn,
     SalesReturnItem, SalesOrderLotDeduction, ShopProfile, ActivityLog, InvoiceScan, SystemInvoice,

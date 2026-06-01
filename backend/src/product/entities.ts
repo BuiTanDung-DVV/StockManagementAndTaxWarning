@@ -1,5 +1,20 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
+@Entity('tags')
+export class Tag {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ name: 'shop_id' })
+    shopId: number;
+
+    @Column({ length: 100 })
+    name: string;
+
+    @Column({ length: 20, default: '#3B82F6' })
+    color: string;
+}
+
 @Entity('categories')
 export class Category {
     @PrimaryGeneratedColumn()
