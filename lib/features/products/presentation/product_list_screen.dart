@@ -98,24 +98,49 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             onSearchChanged: _onSearchChanged,
             onFilterTap: _showFilterSheet,
           ),
-          if (tagQuery.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Text('Đang lọc thẻ:', style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary)),
-                  const SizedBox(width: 8),
-                  Chip(
-                    label: Text(tagQuery, style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.primary)),
-                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    deleteIcon: const Icon(Icons.close, size: 14),
-                    onDeleted: () => ref.read(_productTagFilterProvider.notifier).set(''),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-            ),
-          
+          // Horizontal Tag Bar
+          Consumer(
+            builder: (ctx, ref, child) {
+              final tagsAsync = ref.watch(availableTagsProvider);
+              return tagsAsync.when(
+                data: (tags) {
+                  if (tags.isEmpty) return const SizedBox.shrink();
+                  return SizedBox(
+                    height: 40,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: tags.length,
+                      itemBuilder: (ctx, i) {
+                        final t = tags[i];
+                        final isSelected = tagQuery == t;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Semantics(
+                            button: true,
+                            label: isSelected ? 'Bỏ lọc nhãn $t' : 'Lọc theo nhãn $t',
+                            selected: isSelected,
+                            child: ChoiceChip(
+                              label: Text(t, style: const TextStyle(fontSize: 12)),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                ref.read(_productTagFilterProvider.notifier).set(selected ? t : '');
+                              },
+                              selectedColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                              backgroundColor: c.surface,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
           Expanded(
             child: listAsync.when(
               data: (data) {

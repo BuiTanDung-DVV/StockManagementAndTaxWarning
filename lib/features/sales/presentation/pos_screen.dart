@@ -168,6 +168,7 @@ class PosScreen extends ConsumerStatefulWidget {
 class _PosScreenState extends ConsumerState<PosScreen> {
   final _searchCtrl = TextEditingController();
   String _search = '';
+  String _tag = '';
   bool _creating = false;
 
   @override
@@ -181,7 +182,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final c = AppThemeColors.of(context);
     final cart = ref.watch(_cartProvider);
     final productsAsync = ref.watch(
-      productListProvider((page: 1, search: _search.isEmpty ? null : _search, tag: null)),
+      productListProvider((page: 1, search: _search.isEmpty ? null : _search, tag: _tag.isEmpty ? null : _tag)),
     );
 
     return Scaffold(
@@ -222,6 +223,50 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               onChanged: (v) => setState(() => _search = v),
             ),
           ),
+
+          // Tag Filter Bar
+          Consumer(
+            builder: (ctx, r, child) {
+              final tagsAsync = r.watch(availableTagsProvider);
+              return tagsAsync.when(
+                data: (tags) {
+                  if (tags.isEmpty) return const SizedBox.shrink();
+                  return SizedBox(
+                    height: 40,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: tags.length,
+                      itemBuilder: (ctx, i) {
+                        final t = tags[i];
+                        final isSelected = _tag == t;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Semantics(
+                            button: true,
+                            label: isSelected ? 'Bỏ lọc nhãn $t' : 'Lọc theo nhãn $t',
+                            selected: isSelected,
+                            child: ChoiceChip(
+                              label: Text(t, style: const TextStyle(fontSize: 12)),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() => _tag = selected ? t : '');
+                              },
+                              selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                              backgroundColor: c.surface,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
 
           // Product list
           Expanded(
