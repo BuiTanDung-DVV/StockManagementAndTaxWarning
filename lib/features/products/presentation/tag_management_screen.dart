@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/tag_provider.dart';
 
 class TagManagementScreen extends ConsumerStatefulWidget {
@@ -153,6 +154,16 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final tagsAsync = ref.watch(tagListProvider(widget.type));
+    final isOwner = ref.watch(authProvider).isShopOwner;
+
+    if (!isOwner) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Quản lý nhãn')),
+        body: Center(
+          child: Text('Bạn không có quyền truy cập tính năng này', style: GoogleFonts.inter(fontSize: 16)),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: c.bg,

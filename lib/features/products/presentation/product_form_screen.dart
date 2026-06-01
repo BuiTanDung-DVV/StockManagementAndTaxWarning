@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/tag_provider.dart';
 import '../../../core/network/api_client.dart';
@@ -597,14 +599,29 @@ class _InlineTagPickerState extends ConsumerState<_InlineTagPicker> {
               error: (_, __) => const Text('Lỗi tải danh sách nhãn'),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: () => setState(() => _isCreating = true),
-                icon: const Icon(Icons.add, color: Colors.blue, size: 20),
-                label: const Text('Tạo nhãn mới'),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => setState(() => _isCreating = true),
+                    icon: const Icon(Icons.add, color: Colors.blue, size: 20),
+                    label: const Text('Tạo nhãn mới'),
+                  ),
+                ),
+                if (ref.watch(authProvider).isShopOwner) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.push('/products/tags');
+                      },
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedSettings01, color: Colors.blue, size: 20),
+                      label: const Text('Quản lý nâng cao'),
+                    ),
+                  ),
+                ]
+              ],
             ),
           ] else ...[
             Text('Tên nhãn', style: GoogleFonts.inter(fontSize: 13, color: c.textSecondary)),
