@@ -6,14 +6,16 @@ class TagModel {
   final int id;
   final String name;
   final String color;
+  final String type;
 
-  TagModel({required this.id, required this.name, required this.color});
+  TagModel({required this.id, required this.name, required this.color, this.type = 'product'});
 
   factory TagModel.fromJson(Map<String, dynamic> json) {
     return TagModel(
       id: json['id'] as int,
       name: json['name'] as String,
       color: json['color'] as String? ?? '#3B82F6',
+      type: json['type'] as String? ?? 'product',
     );
   }
 
@@ -30,19 +32,19 @@ class TagRepository {
   final ApiClient _api;
   TagRepository(this._api);
 
-  Future<List<TagModel>> getAll() async {
-    final res = await _api.get('/tags');
+  Future<List<TagModel>> getAll({String type = 'product'}) async {
+    final res = await _api.get('/tags', params: {'type': type});
     final data = res['data'] as List? ?? [];
     return data.map((e) => TagModel.fromJson(e)).toList();
   }
 
-  Future<TagModel> create(String name, String color) async {
-    final res = await _api.post('/tags', data: {'name': name, 'color': color});
+  Future<TagModel> create(String name, String color, {String type = 'product'}) async {
+    final res = await _api.post('/tags', data: {'name': name, 'color': color, 'type': type});
     return TagModel.fromJson(res['data']);
   }
 
-  Future<TagModel> update(int id, String name, String color) async {
-    final res = await _api.put('/tags/$id', data: {'name': name, 'color': color});
+  Future<TagModel> update(int id, String name, String color, {String type = 'product'}) async {
+    final res = await _api.put('/tags/$id', data: {'name': name, 'color': color, 'type': type});
     return TagModel.fromJson(res['data']);
   }
 
@@ -53,6 +55,6 @@ class TagRepository {
 
 final tagRepoProvider = Provider<TagRepository>((ref) => TagRepository(ref.read(apiClientProvider)));
 
-final tagListProvider = FutureProvider<List<TagModel>>((ref) async {
-  return await ref.read(tagRepoProvider).getAll();
+final tagListProvider = FutureProvider.family<List<TagModel>, String>((ref, type) async {
+  return await ref.read(tagRepoProvider).getAll(type: type);
 });
