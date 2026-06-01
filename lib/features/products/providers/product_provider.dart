@@ -32,3 +32,29 @@ final productDetailProvider = FutureProvider.family<Map<String, dynamic>, int>((
 final categoriesProvider = FutureProvider<List<dynamic>>((ref) {
   return ref.read(productRepoProvider).findCategories();
 });
+
+final availableTagsProvider = FutureProvider<List<String>>((ref) async {
+  // Fetch a batch of products to extract unique tags (for the Tag Bar)
+  final res = await ref.read(productRepoProvider).findAll(limit: 500);
+  final items = (res['items'] as List?) ?? [];
+  final Set<String> tagSet = {};
+  
+  for (final item in items) {
+    final tagsRaw = item['tags'];
+    if (tagsRaw is List) {
+      for (final t in tagsRaw) {
+        if (t != null && t.toString().trim().isNotEmpty) {
+          tagSet.add(t.toString().trim());
+        }
+      }
+    } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
+      final parts = tagsRaw.split(',');
+      for (final p in parts) {
+        if (p.trim().isNotEmpty) tagSet.add(p.trim());
+      }
+    }
+  }
+  
+  final list = tagSet.toList()..sort();
+  return list;
+});
