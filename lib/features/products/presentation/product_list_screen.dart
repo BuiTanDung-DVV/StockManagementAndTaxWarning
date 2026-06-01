@@ -12,6 +12,8 @@ import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/filter_bar.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
@@ -82,11 +84,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedTag01, color: Colors.white, size: 22),
-            onPressed: () => context.push('/products/tags'),
-            tooltip: 'Quản lý Nhãn',
-          ),
+          if (ref.watch(authProvider).isShopOwner)
+            IconButton(
+              icon: const HugeIcon(icon: HugeIcons.strokeRoundedTag01, color: Colors.white, size: 22),
+              onPressed: () => context.push('/products/tags'),
+              tooltip: 'Quản lý Nhãn',
+            ),
           featureGuideButton(context, 'product_list'),
         ],
       ),
