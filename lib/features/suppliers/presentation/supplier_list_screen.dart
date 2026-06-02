@@ -198,7 +198,7 @@ class SupplierListScreen extends ConsumerWidget {
     }
 
     // Auto tags
-    if (_isNew(s['createdAt'])) {
+    if (_isNew(s['createdAt'] ?? s['created_at'])) {
       if (!tags.contains('Mới')) tags.insert(0, 'Mới');
     }
 

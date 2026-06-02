@@ -242,7 +242,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     if (debt > 0) {
       if (!tags.contains('Đang nợ')) tags.insert(0, 'Đang nợ');
     }
-    if (_isNew(cust['createdAt'])) {
+    if (_isNew(cust['createdAt'] ?? cust['created_at'])) {
       if (!tags.contains('Mới')) tags.insert(0, 'Mới');
     }
 
