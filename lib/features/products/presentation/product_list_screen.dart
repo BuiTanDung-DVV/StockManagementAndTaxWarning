@@ -15,6 +15,8 @@ import '../../../core/widgets/filter_bar.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
+import '../../sales/providers/sales_provider.dart';
+import '../../sales/providers/sales_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
@@ -65,6 +67,15 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     final searchQuery = ref.watch(_productSearchQueryProvider);
     final tagQuery = ref.watch(_productTagFilterProvider);
     final listAsync = ref.watch(productListProvider((page: 1, search: searchQuery.isEmpty ? null : searchQuery, tag: tagQuery.isEmpty ? null : tagQuery)));
+    
+    // Get Top Products for "Bán chạy" Smart Tag
+    final now = DateTime.now();
+    final firstDayOfMonth = DateTime(now.year, now.month, 1);
+    final topProductsAsync = ref.watch(topProductsProvider((
+      from: firstDayOfMonth.toIso8601String(), 
+      to: now.toIso8601String()
+    )));
+    final topProductNames = topProductsAsync.value?.map((e) => e['name'].toString()).toList() ?? [];
     
     return Scaffold(
       backgroundColor: c.bg,
@@ -304,10 +315,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                           ),
                                         ],
                                         const SizedBox(height: 4),
-                                        if (p['tags'] != null) ...[
-                                            _buildTagsRow(p['tags'], c, theme),
-                                            const SizedBox(height: 6),
-                                          ],
+                                        _buildTagsRow(p['tags'], stock, p, topProductNames, c, theme),
+                                        const SizedBox(height: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                           decoration: BoxDecoration(
@@ -402,30 +411,73 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     );
   }
 
-  Widget _buildTagsRow(dynamic tagsRaw, AppThemeColors c, ThemeData theme) {
+  Widget _buildTagsRow(dynamic tagsRaw, num stock, Map<String, dynamic> p, List<String> topProductNames, AppThemeColors c, ThemeData theme) {
     List<String> tags = [];
     if (tagsRaw is List) {
       tags = tagsRaw.map((e) => e.toString()).toList();
     } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
       tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
     }
+    
+    // Auto Tags Mechanism
+    if (stock <= 0) {
+      if (!tags.contains('Hết hàng')) tags.insert(0, 'Hết hàng');
+    } else if (stock <= 10) {
+      if (!tags.contains('Sắp hết')) tags.insert(0, 'Sắp hết');
+    }
+
+    // Bán chạy (Dựa vào API Top Products của tháng hiện tại)
+    final productName = p['name']?.toString() ?? '';
+    if (topProductNames.contains(productName)) {
+      if (!tags.contains('Bán chạy')) tags.insert(0, 'Bán chạy');
+    }
+
+    // Mới (Tạo trong vòng 7 ngày)
+    if (p['createdAt'] != null) {
+      final createdAt = DateTime.tryParse(p['createdAt'].toString());
+      if (createdAt != null && DateTime.now().difference(createdAt).inDays <= 7) {
+        if (!tags.contains('Mới')) tags.insert(0, 'Mới');
+      }
+    }
+
     if (tags.isEmpty) return const SizedBox.shrink();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: tags.take(3).map((t) => Container(
-          margin: const EdgeInsets.only(right: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            t,
-            style: GoogleFonts.inter(fontSize: 9, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-          ),
-        )).toList(),
+        children: tags.take(4).map((t) {
+          // Special colors for auto tags
+          Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
+          Color textColor = theme.colorScheme.primary;
+          
+          if (t == 'Hết hàng') {
+            bgColor = AppColors.danger.withValues(alpha: 0.1);
+            textColor = AppColors.danger;
+          } else if (t == 'Sắp hết') {
+            bgColor = AppColors.warning.withValues(alpha: 0.1);
+            textColor = AppColors.warning;
+          } else if (t == 'Bán chạy') {
+            bgColor = Colors.purple.withValues(alpha: 0.1);
+            textColor = Colors.purple;
+          } else if (t == 'Mới') {
+            bgColor = Colors.blue.withValues(alpha: 0.1);
+            textColor = Colors.blue;
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: textColor.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              t,
+              style: GoogleFonts.inter(fontSize: 9, color: textColor, fontWeight: FontWeight.bold),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

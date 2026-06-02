@@ -165,6 +165,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
+                                  if (cust['tags'] != null || debt > 0 || _isNew(cust['createdAt']) || cust['customerType'] == 'VIP')
+                                    _buildTagsRow(cust, debt, tc, theme),
                                 ],
                               ),
                             ],
@@ -212,6 +215,71 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           message: 'Lỗi: $e', 
           onRetry: () => ref.invalidate(customerListProvider)
         ),
+      ),
+    );
+  }
+
+  bool _isNew(dynamic createdAtRaw) {
+    if (createdAtRaw == null) return false;
+    final createdAt = DateTime.tryParse(createdAtRaw.toString());
+    if (createdAt == null) return false;
+    return DateTime.now().difference(createdAt).inDays <= 30;
+  }
+
+  Widget _buildTagsRow(Map<String, dynamic> cust, double debt, AppThemeColors c, ThemeData theme) {
+    List<String> tags = [];
+    final tagsRaw = cust['tags'];
+    if (tagsRaw is List) {
+      tags = tagsRaw.map((e) => e.toString()).toList();
+    } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
+      tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
+    }
+
+    // Auto tags
+    if (cust['customerType'] == 'VIP') {
+      if (!tags.contains('VIP')) tags.insert(0, 'VIP');
+    }
+    if (debt > 0) {
+      if (!tags.contains('Đang nợ')) tags.insert(0, 'Đang nợ');
+    }
+    if (_isNew(cust['createdAt'])) {
+      if (!tags.contains('Mới')) tags.insert(0, 'Mới');
+    }
+
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: tags.take(3).map((t) {
+          Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
+          Color textColor = theme.colorScheme.primary;
+
+          if (t == 'Đang nợ') {
+            bgColor = AppColors.danger.withValues(alpha: 0.1);
+            textColor = AppColors.danger;
+          } else if (t == 'VIP') {
+            bgColor = Colors.purple.withValues(alpha: 0.1);
+            textColor = Colors.purple;
+          } else if (t == 'Mới') {
+            bgColor = Colors.blue.withValues(alpha: 0.1);
+            textColor = Colors.blue;
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: textColor.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              t,
+              style: GoogleFonts.inter(fontSize: 9, color: textColor, fontWeight: FontWeight.bold),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

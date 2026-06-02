@@ -14,6 +14,7 @@ class SupplierListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     final listAsync = ref.watch(supplierListProvider((page: 1, search: null)));
 
     return Scaffold(
@@ -149,6 +150,9 @@ class SupplierListScreen extends ConsumerWidget {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
+                                  const SizedBox(height: 4),
+                                  if (s['tags'] != null || _isNew(s['createdAt']))
+                                    _buildTagsRow(s, c, theme),
                                 ],
                               ),
                             ),
@@ -173,6 +177,59 @@ class SupplierListScreen extends ConsumerWidget {
           message: 'Lỗi tải dữ liệu: $e',
           onRetry: () => ref.invalidate(supplierListProvider),
         ),
+      ),
+    );
+  }
+
+  bool _isNew(dynamic createdAtRaw) {
+    if (createdAtRaw == null) return false;
+    final createdAt = DateTime.tryParse(createdAtRaw.toString());
+    if (createdAt == null) return false;
+    return DateTime.now().difference(createdAt).inDays <= 30;
+  }
+
+  Widget _buildTagsRow(Map<String, dynamic> s, AppThemeColors c, ThemeData theme) {
+    List<String> tags = [];
+    final tagsRaw = s['tags'];
+    if (tagsRaw is List) {
+      tags = tagsRaw.map((e) => e.toString()).toList();
+    } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
+      tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
+    }
+
+    // Auto tags
+    if (_isNew(s['createdAt'])) {
+      if (!tags.contains('Mới')) tags.insert(0, 'Mới');
+    }
+
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: tags.take(3).map((t) {
+          Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
+          Color textColor = theme.colorScheme.primary;
+
+          if (t == 'Mới') {
+            bgColor = Colors.blue.withValues(alpha: 0.1);
+            textColor = Colors.blue;
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: textColor.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              t,
+              style: GoogleFonts.inter(fontSize: 9, color: textColor, fontWeight: FontWeight.bold),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

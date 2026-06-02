@@ -173,6 +173,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                       }
 
                       final total = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
+                      final paid = double.tryParse(order['amountPaid']?.toString() ?? order['paidAmount']?.toString() ?? '0') ?? 0.0;
                       final customerName = order['customer']?['name'] ?? 'Khách mua lẻ';
 
                       return Container(
@@ -229,6 +230,8 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
+                                        const SizedBox(height: 4),
+                                        _buildTagsRow(order, paid, total, c, theme),
                                       ],
                                     ),
                                   ),
@@ -296,6 +299,66 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           ),
         ),
         backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Widget _buildTagsRow(Map<String, dynamic> order, double paid, double total, AppThemeColors c, ThemeData theme) {
+    List<String> tags = [];
+    final tagsRaw = order['tags'];
+    if (tagsRaw is List) {
+      tags = tagsRaw.map((e) => e.toString()).toList();
+    } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
+      tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
+    }
+
+    // Auto tags
+    if (order['status'] != 'CANCELLED') {
+      if (paid < total) {
+        if (!tags.contains('Còn nợ')) tags.insert(0, 'Còn nợ');
+      } else if (paid > 0 && paid >= total) {
+        if (!tags.contains('Đã TT')) tags.insert(0, 'Đã TT');
+      }
+    }
+    
+    if (order['customer'] == null) {
+      if (!tags.contains('Khách lẻ')) tags.insert(0, 'Khách lẻ');
+    }
+
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: tags.take(3).map((t) {
+          Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
+          Color textColor = theme.colorScheme.primary;
+
+          if (t == 'Còn nợ') {
+            bgColor = AppColors.warning.withValues(alpha: 0.1);
+            textColor = AppColors.warning;
+          } else if (t == 'Khách lẻ') {
+            bgColor = Colors.blueGrey.withValues(alpha: 0.1);
+            textColor = Colors.blueGrey;
+          } else if (t == 'Đã TT') {
+            bgColor = AppColors.success.withValues(alpha: 0.1);
+            textColor = AppColors.success;
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: textColor.withValues(alpha: 0.2)),
+            ),
+            child: Text(
+              t,
+              style: GoogleFonts.inter(fontSize: 9, color: textColor, fontWeight: FontWeight.bold),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

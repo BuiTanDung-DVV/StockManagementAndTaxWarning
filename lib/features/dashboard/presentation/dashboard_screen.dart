@@ -71,7 +71,11 @@ class DashboardScreen extends ConsumerWidget {
 
     final salesAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(salesSummaryProvider((from: from1, to: to1))) : null;
     final salesAsync2 = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(salesSummaryProvider((from: from2, to: to2))) : null;
+    final topProductsAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(topProductsProvider((from: from1, to: to1))) : null;
+    final cashFlowAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(cashSummaryProvider((from: from1, to: to1))) : null;
+    
     final lowStockAsync = hasInventory && shopState.userShops.isNotEmpty ? ref.watch(lowStockProvider) : null;
+    final inventoryCatAsync = hasInventory && shopState.userShops.isNotEmpty ? ref.watch(inventoryCategoriesSummaryProvider) : null;
 
     if (shopState.userShops.isEmpty) {
       return Scaffold(
@@ -110,10 +114,13 @@ class DashboardScreen extends ConsumerWidget {
           onRefresh: () async {
             if (hasFinance) {
               ref.invalidate(salesSummaryProvider);
+              ref.invalidate(topProductsProvider);
+              ref.invalidate(cashSummaryProvider);
               ref.invalidate(taxObligationsProvider);
             }
             if (hasInventory) {
               ref.invalidate(lowStockProvider);
+              ref.invalidate(inventoryCategoriesSummaryProvider);
             }
           },
           child: SingleChildScrollView(
@@ -247,6 +254,7 @@ class DashboardScreen extends ConsumerWidget {
                       final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
                       final orders = data['totalOrders'] ?? data['orderCount'] ?? 0;
                       final avgOrder = orders > 0 ? revenue / orders : 0.0;
+                      final grossProfit = num.tryParse(data['grossProfit']?.toString() ?? '0')?.toDouble() ?? 0.0;
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -276,39 +284,54 @@ class DashboardScreen extends ConsumerWidget {
                             children: [
                               Expanded(
                                 child: _SummaryCard(
+                                  'Lợi nhuận gộp',
+                                  _currFmt.format(grossProfit),
+                                  HugeIcons.strokeRoundedMoney04,
+                                  Colors.purple,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _SummaryCard(
                                   AppStrings.dashboardAvgOrder,
                                   _currFmt.format(avgOrder),
                                   HugeIcons.strokeRoundedAnalytics01,
                                   AppColors.info,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: hasInventory && lowStockAsync != null
-                                    ? lowStockAsync.when(
-                                        data: (items) => _SummaryCard(
-                                          AppStrings.dashboardLowStock,
-                                          '${items.length}',
-                                          HugeIcons.strokeRoundedAlert02,
-                                          items.isEmpty ? AppColors.success : AppColors.danger,
-                                        ),
-                                        loading: () => _SummaryCard(
-                                          AppStrings.dashboardLowStock,
-                                          '...',
-                                          HugeIcons.strokeRoundedAlert02,
-                                          AppColors.warning,
-                                        ),
-                                        error: (_, _) => _SummaryCard(
-                                          AppStrings.dashboardLowStock,
-                                          '?',
-                                          HugeIcons.strokeRoundedAlert02,
-                                          AppColors.danger,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
                             ],
                           ),
+                          if (hasInventory && lowStockAsync != null) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: lowStockAsync.when(
+                                    data: (items) => _SummaryCard(
+                                      AppStrings.dashboardLowStock,
+                                      '${items.length}',
+                                      HugeIcons.strokeRoundedAlert02,
+                                      items.isEmpty ? AppColors.success : AppColors.danger,
+                                    ),
+                                    loading: () => _SummaryCard(
+                                      AppStrings.dashboardLowStock,
+                                      '...',
+                                      HugeIcons.strokeRoundedAlert02,
+                                      AppColors.warning,
+                                    ),
+                                    error: (_, _) => _SummaryCard(
+                                      AppStrings.dashboardLowStock,
+                                      '?',
+                                      HugeIcons.strokeRoundedAlert02,
+                                      AppColors.danger,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(child: SizedBox.shrink()),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           _TimeFilterBar(filter, (v) => ref.read(_dashboardTimeFilterProvider.notifier).update(v)),
                           salesAsync2?.whenOrNull(
@@ -362,14 +385,35 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ],
 
-                if (hasFinance && salesAsync != null) ...[
+                if (hasFinance && topProductsAsync != null) ...[
                   const SizedBox(height: 20),
-                  const _TopProductsChart(), // Using mock data
+                  topProductsAsync.when(
+                    data: (data) => data.isEmpty 
+                        ? const SizedBox.shrink() 
+                        : _TopProductsChart(data),
+                    loading: () => const ShimmerDashboard(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                 ],
                 
-                if (hasInventory) ...[
+                if (hasInventory && inventoryCatAsync != null) ...[
                   const SizedBox(height: 20),
-                  const _InventoryDonutChart(), // Using mock data
+                  inventoryCatAsync.when(
+                    data: (data) => data.isEmpty 
+                        ? const SizedBox.shrink() 
+                        : _InventoryDonutChart(data),
+                    loading: () => const ShimmerDashboard(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ],
+
+                if (hasFinance && cashFlowAsync != null) ...[
+                  const SizedBox(height: 20),
+                  cashFlowAsync.when(
+                    data: (data) => _CashFlowAreaChart((data['dailyFlow'] as List?) ?? [], label1),
+                    loading: () => const ShimmerDashboard(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                 ],
                 
                 if (hasFinance && salesAsync != null) ...[
@@ -1260,21 +1304,15 @@ class _ComparisonBarChart extends StatelessWidget {
 }
 
 class _TopProductsChart extends StatelessWidget {
-  const _TopProductsChart();
+  final List<dynamic> data;
+  const _TopProductsChart(this.data);
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
 
-    // Mock Data
-    final mockData = [
-      {'name': 'Phân bón NPK 15-15-15', 'value': 12500000},
-      {'name': 'Thuốc trừ sâu Sinh Học', 'value': 8300000},
-      {'name': 'Cuốc xẻng làm vườn', 'value': 4500000},
-      {'name': 'Hạt giống Cà Chua', 'value': 3200000},
-      {'name': 'Bình xịt 20L', 'value': 2100000},
-    ];
+    if (data.isEmpty) return const SizedBox.shrink();
 
     return Container(
       height: 250,
@@ -1313,11 +1351,11 @@ class _TopProductsChart extends StatelessWidget {
                     alignment: BarChartAlignment.spaceBetween,
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
-                        getTooltipColor: (group) => c.surface,
+                            getTooltipColor: (group) => c.surface,
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
                           final val = NumberFormat.compact(locale: 'vi_VN').format(rod.toY);
                           return BarTooltipItem(
-                            '${mockData[group.x.toInt()]['name']}\n$val đ',
+                            '${data[group.x.toInt()]['name']}\n$val đ',
                             GoogleFonts.outfit(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
@@ -1357,8 +1395,8 @@ class _TopProductsChart extends StatelessWidget {
                           reservedSize: 80,
                           getTitlesWidget: (value, meta) {
                             final idx = value.toInt();
-                            if (idx < 0 || idx >= mockData.length) return const SizedBox.shrink();
-                            final name = mockData[idx]['name'] as String;
+                            if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                            final name = data[idx]['name'] as String;
                             final shortName = name.length > 12 ? '${name.substring(0, 10)}...' : name;
                             return Text(
                               shortName,
@@ -1379,8 +1417,8 @@ class _TopProductsChart extends StatelessWidget {
                       ),
                     ),
                     borderData: FlBorderData(show: false),
-                    barGroups: mockData.asMap().entries.map((entry) {
-                      final val = (entry.value['value'] as num).toDouble();
+                    barGroups: data.asMap().entries.map((entry) {
+                      final val = num.tryParse(entry.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
                       return BarChartGroupData(
                         x: entry.key,
                         barRods: [
@@ -1396,7 +1434,6 @@ class _TopProductsChart extends StatelessWidget {
                         ],
                       );
                     }).toList(),
-                    maxY: 15000000,
                   ),
                   duration: const Duration(milliseconds: 300),
                 ),
@@ -1410,20 +1447,30 @@ class _TopProductsChart extends StatelessWidget {
 }
 
 class _InventoryDonutChart extends StatelessWidget {
-  const _InventoryDonutChart();
+  final List<dynamic> data;
+  const _InventoryDonutChart(this.data);
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
 
-    // Mock Data
-    final mockData = [
-      {'name': 'Vật tư NN', 'value': 45.0, 'color': Colors.green},
-      {'name': 'Phân bón', 'value': 30.0, 'color': Colors.blue},
-      {'name': 'Thuốc BVTV', 'value': 15.0, 'color': Colors.orange},
-      {'name': 'Khác', 'value': 10.0, 'color': Colors.grey},
-    ];
+    if (data.isEmpty) return const SizedBox.shrink();
+
+    // Map data to chart format
+    final total = data.fold<double>(0, (sum, item) => sum + (num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0.0));
+    final colors = [AppColors.success, AppColors.info, AppColors.warning, theme.colorScheme.primary, AppColors.danger, Colors.purple, Colors.teal];
+    
+    final chartData = data.asMap().entries.map((e) {
+      final val = num.tryParse(e.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      final pct = total > 0 ? (val / total * 100) : 0.0;
+      return {
+        'name': e.value['name'],
+        'value': pct,
+        'color': colors[e.key % colors.length],
+        'rawValue': val,
+      };
+    }).toList();
 
     return Container(
       height: 250,
@@ -1448,7 +1495,7 @@ class _InventoryDonutChart extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Cơ cấu Hàng tồn kho (Mock)',
+                'Cơ cấu Hàng tồn kho (Theo Category)',
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -1465,11 +1512,11 @@ class _InventoryDonutChart extends StatelessWidget {
                         PieChartData(
                           sectionsSpace: 2,
                           centerSpaceRadius: 40,
-                          sections: mockData.map((e) {
+                          sections: chartData.map((e) {
                             return PieChartSectionData(
                               color: e['color'] as Color,
                               value: e['value'] as double,
-                              title: '${e['value']}%',
+                              title: '${(e['value'] as double).toStringAsFixed(1)}%',
                               radius: 20,
                               titleStyle: const TextStyle(
                                 fontSize: 10,
@@ -1486,7 +1533,7 @@ class _InventoryDonutChart extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: mockData.map((e) {
+                        children: chartData.map((e) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Row(
@@ -1520,6 +1567,133 @@ class _InventoryDonutChart extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CashFlowAreaChart extends StatelessWidget {
+  final List<dynamic> data;
+  final String label;
+  const _CashFlowAreaChart(this.data, this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+
+    if (data.isEmpty) return const SizedBox.shrink();
+
+    final spotsIncome = <FlSpot>[];
+    final spotsExpense = <FlSpot>[];
+
+    double maxY = 0;
+    for (int i = 0; i < data.length; i++) {
+      final inc = num.tryParse(data[i]['income']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      final exp = num.tryParse(data[i]['expense']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      spotsIncome.add(FlSpot(i.toDouble(), inc));
+      spotsExpense.add(FlSpot(i.toDouble(), exp));
+      if (inc > maxY) maxY = inc;
+      if (exp > maxY) maxY = exp;
+    }
+
+    if (maxY == 0) maxY = 1000000;
+
+    return Container(
+      height: 240,
+      padding: const EdgeInsets.only(left: 4, right: 16, top: 16, bottom: 8),
+      decoration: BoxDecoration(
+        color: c.card.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 12, bottom: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Dòng tiền ($label)', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: c.textSecondary)),
+                Row(
+                  children: [
+                    Container(width: 10, height: 10, decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(3))),
+                    const SizedBox(width: 4),
+                    Text('Thu', style: TextStyle(fontSize: 10, color: c.textSecondary, fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 12),
+                    Container(width: 10, height: 10, decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(3))),
+                    const SizedBox(width: 4),
+                    Text('Chi', style: TextStyle(fontSize: 10, color: c.textSecondary, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (v) => FlLine(color: c.divider.withValues(alpha: 0.2), strokeWidth: 1)),
+                titlesData: FlTitlesData(
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 22,
+                      getTitlesWidget: (v, m) {
+                        final idx = v.toInt();
+                        if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                        if (data.length > 7 && idx % (data.length / 5).ceil() != 0 && idx != data.length - 1) return const SizedBox.shrink();
+                        final dateStr = data[idx]['date'] as String? ?? '';
+                        if (dateStr.length < 5) return const SizedBox.shrink();
+                        final parts = dateStr.split('-');
+                        final displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                        return Padding(padding: const EdgeInsets.only(top: 8), child: Text(displayDate, style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold)));
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (v, m) {
+                        if (v == m.max || v == m.min) return const SizedBox.shrink();
+                        String lbl = v >= 1000000 ? '${(v / 1000000).toStringAsFixed(0)}Tr' : (v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}K' : v.toStringAsFixed(0));
+                        return Text(lbl, style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.right);
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                minX: 0,
+                maxX: (data.length - 1).toDouble(),
+                minY: 0,
+                maxY: maxY * 1.2,
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spotsIncome,
+                    isCurved: true,
+                    color: theme.colorScheme.primary,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(show: true, color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+                  ),
+                  LineChartBarData(
+                    spots: spotsExpense,
+                    isCurved: true,
+                    color: AppColors.danger,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(show: true, color: AppColors.danger.withValues(alpha: 0.1)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
