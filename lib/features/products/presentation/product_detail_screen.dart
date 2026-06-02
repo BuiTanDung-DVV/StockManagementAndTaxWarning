@@ -42,18 +42,6 @@ class ProductDetailScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           featureGuideButton(context, 'product_detail'),
-          IconButton(
-            icon: const Icon(Icons.edit_rounded),
-            onPressed: () async {
-              if (detailAsync.hasValue) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => ProductFormScreen(product: detailAsync.value!)),
-                );
-                ref.invalidate(productDetailProvider(id));
-              }
-            },
-          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -255,6 +243,19 @@ class ProductDetailScreen extends ConsumerWidget {
           );
         },
       ),
+      floatingActionButton: detailAsync.hasValue ? FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ProductFormScreen(product: detailAsync.value!)),
+          );
+          ref.invalidate(productDetailProvider(id));
+        },
+        icon: const Icon(Icons.edit_rounded),
+        label: const Text('Chỉnh sửa', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: Colors.white,
+      ) : null,
     );
   }
 
