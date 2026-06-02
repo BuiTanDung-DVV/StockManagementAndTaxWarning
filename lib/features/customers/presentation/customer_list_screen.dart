@@ -76,16 +76,11 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                 child: RefreshIndicator(
                   color: theme.colorScheme.primary,
                   onRefresh: () async => ref.invalidate(customerListProvider),
-                  child: GridView.builder(
+                  child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: items.length,
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 450,
-                mainAxisExtent: 95, // Expanded slightly to fit high-end paddings
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 0,
-              ),
+              separatorBuilder: (_, __) => Divider(height: 1, color: tc.divider.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
                 final cust = items[i];
                 final debt = asDouble(cust['totalDebt'] ?? cust['balance']);
@@ -94,22 +89,10 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                 return GestureDetector(
                   onTap: () => context.push('/customers/${cust['id']}'),
                   child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: tc.card, 
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: tc.divider.withValues(alpha: 0.5),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.015),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                    margin: const EdgeInsets.only(bottom: 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
                     ),
                     child: Row(
                       children: [

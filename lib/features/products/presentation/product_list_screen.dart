@@ -175,16 +175,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                 return RefreshIndicator(
                   color: theme.colorScheme.primary,
                   onRefresh: () async => ref.invalidate(productListProvider),
-                  child: GridView.builder(
+                  child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: items.length,
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 450,
-                      mainAxisExtent: 140, // Increased to fit tags
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
                     itemBuilder: (_, i) {
                       final p = items[i];
                       final price = TypeParser.asDouble(p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice']);
@@ -194,26 +189,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
                       return Container(
                         decoration: BoxDecoration(
-                          color: c.card,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: isOutOfStock 
-                                ? AppColors.danger.withValues(alpha: 0.2)
-                                : c.divider.withValues(alpha: 0.5),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                          color: Colors.transparent,
                         ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(8),
                             onTap: () {
                               final rawId = p['id'];
                               final id = rawId is int ? rawId : int.tryParse('${rawId ?? ''}');
