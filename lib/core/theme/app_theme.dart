@@ -30,70 +30,38 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     required this.inputBorder,
   });
 
-  /// Convenience accessor
   static AppThemeColors of(BuildContext context) =>
       Theme.of(context).extension<AppThemeColors>()!;
 
-  // ── Dark palette (Sleek Dark Obsidian & Space Navy) ──
+  // ── Taste-Skill: Dark Monochrome (Zinc 950/900) + High Contrast ──
   static const dark = AppThemeColors(
-    bg: Color(0xFF080C16),          // deep space navy
-    surface: Color(0xFF101625),     // dark container surface
-    card: Color(0xFF171E30),        // elevated slate-navy card
-    cardAlt: Color(0xFF20293F),     // high-contrast active state
-    textPrimary: Color(0xFFF8FAFC), // crisp slate-50 white text
-    textSecondary: Color(0xFFCBD5E1), // slate-300 secondary text
-    textMuted: Color(0xFF64748B),     // slate-500 muted text
-    divider: Color(0xFF1E293B),
-    inputFill: Color(0xFF101625),
-    inputBorder: Color(0xFF334155),
+    bg: Color(0xFF09090B),          // Zinc 950
+    surface: Color(0xFF09090B),     // Zinc 950
+    card: Color(0xFF18181B),        // Zinc 900
+    cardAlt: Color(0xFF27272A),     // Zinc 800
+    textPrimary: Color(0xFFFAFAFA), // Zinc 50
+    textSecondary: Color(0xFFA1A1AA), // Zinc 400
+    textMuted: Color(0xFF71717A),     // Zinc 500
+    divider: Color(0xFF27272A),       // Zinc 800
+    inputFill: Color(0xFF09090B),
+    inputBorder: Color(0xFF27272A),
   );
 
-  // ── Light palette (Lumina POS style - Vivid & Clean) ──
+  // ── Taste-Skill: Light Monochrome (Pure White / Zinc 50) ──
   static const light = AppThemeColors(
-    bg: Color(0xFFF7F5FF),       // Lumina Background
-    surface: Color(0xFFEFEFFF),  // Structural Sections (Surface Container Low)
-    card: Color(0xFFFFFFFF),     // Interactive/Lifted (Lowest)
-    cardAlt: Color(0xFFD5DBFF),  // Active States (Highest)
-    textPrimary: Color(0xFF232C51),   // On Surface (no pure black)
-    textSecondary: Color(0xFF515981), // On Surface Variant
-    textMuted: Color(0xFFA2ABD7),     // Outline Variant (Ghost)
-    divider: Color(0xFFD5DBFF),       // Soft tone shifts instead of hard lines
-    inputFill: Color(0xFFEFEFFF),
-    inputBorder: Color(0x26A2ABD7),   // 15% opacity Ghost Border
+    bg: Color(0xFFFAFAFA),       // Zinc 50
+    surface: Color(0xFFF4F4F5),  // Zinc 100
+    card: Color(0xFFFFFFFF),     // Pure White
+    cardAlt: Color(0xFFE4E4E7),  // Zinc 200
+    textPrimary: Color(0xFF09090B),   // Zinc 950
+    textSecondary: Color(0xFF52525B), // Zinc 600
+    textMuted: Color(0xFFA1A1AA),     // Zinc 400
+    divider: Color(0xFFE4E4E7),       // Zinc 200
+    inputFill: Color(0xFFFAFAFA),
+    inputBorder: Color(0xFFE4E4E7),
   );
 
-  // ── Create dynamic light palette (Dynamic Tinting via HSLColor) ──
-  static AppThemeColors createLight(Color primary) {
-    final hsl = HSLColor.fromColor(primary);
-    
-    // Nền sáng và các thẻ (surface) pha nhẹ màu chính
-    final bg = hsl.withLightness(0.97).withSaturation(0.08).toColor();
-    final surface = hsl.withLightness(0.94).withSaturation(0.12).toColor();
-    const card = Colors.white;
-    final cardAlt = hsl.withLightness(0.88).withSaturation(0.18).toColor();
-    
-    // Chữ tương phản cao có sắc tố pha từ màu chính
-    final textPrimary = hsl.withLightness(0.15).withSaturation(0.30).toColor();
-    final textSecondary = hsl.withLightness(0.32).withSaturation(0.20).toColor();
-    final textMuted = hsl.withLightness(0.50).withSaturation(0.15).toColor();
-    
-    final divider = hsl.withLightness(0.92).withSaturation(0.10).toColor();
-    final inputFill = hsl.withLightness(0.96).withSaturation(0.06).toColor();
-    final inputBorder = primary.withValues(alpha: 0.15);
-    
-    return AppThemeColors(
-      bg: bg,
-      surface: surface,
-      card: card,
-      cardAlt: cardAlt,
-      textPrimary: textPrimary,
-      textSecondary: textSecondary,
-      textMuted: textMuted,
-      divider: divider,
-      inputFill: inputFill,
-      inputBorder: inputBorder,
-    );
-  }
+  static AppThemeColors createLight(Color primary) => light;
 
   @override
   AppThemeColors copyWith({
@@ -136,17 +104,17 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 // ─────────────────────────────────────────────
 
 class AppColors {
-  static Color primary = const Color(0xFF0058BB);
-  static Color primaryLight = const Color(0xFF6C9FFF);
-  static Color primaryDark = const Color(0xFF004CA4);
+  // Taste-Skill: Electric Blue (Saturated Pop)
+  static Color primary = const Color(0xFF2563EB); // Blue 600
+  static Color primaryLight = const Color(0xFF3B82F6); // Blue 500
+  static Color primaryDark = const Color(0xFF1D4ED8); // Blue 700
 
   // Semantic
-  static const success = Color(0xFF22C55E);
-  static const warning = Color(0xFFF59E0B);
-  static const danger = Color(0xFFB31B25);
-  static const info = Color(0xFF06B6D4);
+  static const success = Color(0xFF10B981); // Emerald 500
+  static const warning = Color(0xFFF59E0B); // Amber 500
+  static const danger = Color(0xFFEF4444);  // Red 500
+  static const info = Color(0xFF0EA5E9);    // Sky 500
 
-  // Lumina Button Gradient
   static LinearGradient get primaryGradient => LinearGradient(
     colors: [primary, primaryLight],
     begin: Alignment.topLeft,
@@ -156,11 +124,11 @@ class AppColors {
   static void updateColors(Color brandColor, bool isDark) {
     primary = brandColor;
     if (isDark) {
-      primaryLight = const Color(0xFF818CF8);
-      primaryDark = const Color(0xFF312E81);
+      primaryLight = const Color(0xFF3B82F6);
+      primaryDark = const Color(0xFF1E3A8A);
     } else {
-      primaryLight = Color.alphaBlend(Colors.white.withValues(alpha: 0.35), brandColor);
-      primaryDark = Color.alphaBlend(Colors.black.withValues(alpha: 0.25), brandColor);
+      primaryLight = Color.alphaBlend(Colors.white.withValues(alpha: 0.2), brandColor);
+      primaryDark = Color.alphaBlend(Colors.black.withValues(alpha: 0.2), brandColor);
     }
   }
 }
@@ -170,34 +138,40 @@ class AppColors {
 // ─────────────────────────────────────────────
 
 class AppTheme {
+  // Taste-Skill: SHAPE CONSISTENCY LOCK (12px everywhere)
+  static const double _radius = 12.0;
+
   static ThemeData darkTheme(Color primaryColor) => _buildTheme(Brightness.dark, AppThemeColors.dark, primaryColor);
-  static ThemeData lightTheme(Color primaryColor) => _buildTheme(Brightness.light, AppThemeColors.createLight(primaryColor), primaryColor);
+  static ThemeData lightTheme(Color primaryColor) => _buildTheme(Brightness.light, AppThemeColors.light, primaryColor);
 
   static ThemeData _buildTheme(Brightness brightness, AppThemeColors colors, Color primaryColor) {
     final isDark = brightness == Brightness.dark;
     final base = isDark ? ThemeData.dark() : ThemeData.light();
-    final primaryLight = Color.alphaBlend(Colors.white.withValues(alpha: 0.35), primaryColor);
-    final primaryDark = Color.alphaBlend(Colors.black.withValues(alpha: 0.25), primaryColor);
+    
+    // Primary colors
+    final primaryLight = Color.alphaBlend(Colors.white.withValues(alpha: 0.2), primaryColor);
+    final primaryDark = Color.alphaBlend(Colors.black.withValues(alpha: 0.2), primaryColor);
 
+    // Taste-Skill: Typography (Outfit for display, Inter for body - tracking tightened)
     final outfitTextTheme = GoogleFonts.outfitTextTheme(base.textTheme);
     final interTextTheme = GoogleFonts.interTextTheme(base.textTheme);
 
     final textTheme = base.textTheme.copyWith(
-      displayLarge: outfitTextTheme.displayLarge,
-      displayMedium: outfitTextTheme.displayMedium,
-      displaySmall: outfitTextTheme.displaySmall,
-      headlineLarge: outfitTextTheme.headlineLarge,
-      headlineMedium: outfitTextTheme.headlineMedium,
-      headlineSmall: outfitTextTheme.headlineSmall,
-      titleLarge: outfitTextTheme.titleLarge,
-      titleMedium: outfitTextTheme.titleMedium,
-      titleSmall: outfitTextTheme.titleSmall,
-      bodyLarge: interTextTheme.bodyLarge,
-      bodyMedium: interTextTheme.bodyMedium,
-      bodySmall: interTextTheme.bodySmall,
-      labelLarge: interTextTheme.labelLarge,
-      labelMedium: interTextTheme.labelMedium,
-      labelSmall: interTextTheme.labelSmall,
+      displayLarge: outfitTextTheme.displayLarge?.copyWith(letterSpacing: -1.0, height: 1.1),
+      displayMedium: outfitTextTheme.displayMedium?.copyWith(letterSpacing: -0.5, height: 1.1),
+      displaySmall: outfitTextTheme.displaySmall?.copyWith(letterSpacing: -0.25, height: 1.1),
+      headlineLarge: outfitTextTheme.headlineLarge?.copyWith(letterSpacing: -0.5, height: 1.2),
+      headlineMedium: outfitTextTheme.headlineMedium?.copyWith(letterSpacing: -0.25, height: 1.2),
+      headlineSmall: outfitTextTheme.headlineSmall?.copyWith(letterSpacing: 0, height: 1.2),
+      titleLarge: outfitTextTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+      titleMedium: outfitTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      titleSmall: outfitTextTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      bodyLarge: interTextTheme.bodyLarge?.copyWith(letterSpacing: -0.01),
+      bodyMedium: interTextTheme.bodyMedium?.copyWith(letterSpacing: -0.01),
+      bodySmall: interTextTheme.bodySmall?.copyWith(letterSpacing: 0),
+      labelLarge: interTextTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500),
+      labelMedium: interTextTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500),
+      labelSmall: interTextTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
     ).apply(
       bodyColor: colors.textPrimary,
       displayColor: colors.textPrimary,
@@ -224,22 +198,26 @@ class AppTheme {
       dividerTheme: DividerThemeData(
         color: colors.divider,
         thickness: 1,
-        space: 16,
+        space: 0, // Taste-Skill: minimal space
       ),
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: colors.bg,
         elevation: 0,
         centerTitle: false,
+        scrolledUnderElevation: 0,
         titleTextStyle: GoogleFonts.outfit(
-          fontSize: 22, fontWeight: FontWeight.bold, color: colors.textPrimary,
+          fontSize: 20, fontWeight: FontWeight.w600, color: colors.textPrimary, letterSpacing: -0.5
         ),
         iconTheme: IconThemeData(color: colors.textPrimary),
       ),
       cardTheme: CardThemeData(
         color: colors.card,
-        elevation: isDark ? 0 : 0, // No shadow by default to preserve the glass feel
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // xl corner radius
+        elevation: 0, // Taste-Skill: No shadows unless active elevation
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_radius),
+          side: BorderSide(color: colors.divider, width: 1), // Taste-Skill: 1px border instead of shadow
+        ),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -247,21 +225,21 @@ class AppTheme {
         selectedItemColor: primaryColor,
         unselectedItemColor: colors.textMuted,
         type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        elevation: 0, // No shadow
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colors.inputFill,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(_radius),
           borderSide: BorderSide(color: colors.inputBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(_radius),
           borderSide: BorderSide(color: colors.inputBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(_radius),
           borderSide: BorderSide(color: primaryLight, width: 2),
         ),
         hintStyle: TextStyle(color: colors.textMuted),
@@ -272,29 +250,39 @@ class AppTheme {
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // xl radius
-          textStyle: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600),
-          elevation: 2,
-          shadowColor: primaryDark.withValues(alpha: 0.4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radius)),
+          textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+          elevation: 0, // Taste-Skill: No fake shadows
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(_radius))),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: colors.card.withValues(alpha: 0.9), // Glassmorphism base
-        elevation: 20,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+        backgroundColor: colors.card,
+        elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(_radius)),
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: colors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // xl radius
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_radius),
+          side: BorderSide(color: colors.divider, width: 1),
+        ),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: colors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_radius),
+          side: BorderSide(color: colors.divider, width: 1),
+        ),
       ),
     );
   }

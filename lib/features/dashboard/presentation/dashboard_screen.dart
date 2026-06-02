@@ -129,121 +129,53 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Banner Profile with Glassmorphism
-                Container(
-                  margin: const EdgeInsets.only(bottom: 24),
-                  height: 150,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                        blurRadius: 24,
-                        offset: const Offset(0, 10),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 32, top: 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Xin chào, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'}',
+                              style: theme.textTheme.headlineLarge?.copyWith(
+                                color: c.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tổng quan hôm nay',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      featureGuideButton(context, 'dashboard'),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: c.divider, width: 1),
+                        ),
+                        child: IconButton(
+                          icon: HugeIcon(
+                            icon: HugeIcons.strokeRoundedNotification03,
+                            color: c.textPrimary,
+                            size: 22,
+                          ),
+                          onPressed: () => context.push('/notifications'),
+                          tooltip: 'Thông báo',
+                        ),
                       ),
                     ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Stack(
-                      children: [
-                        // Background Banner Image with sophisticated dark blend
-                        Positioned.fill(
-                          child: CachedNetworkImage(
-                            imageUrl: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop',
-                            fit: BoxFit.cover,
-                            color: Colors.black.withValues(alpha: 0.55),
-                            colorBlendMode: BlendMode.darken,
-                            placeholder: (context, url) => Container(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                            ),
-                          ),
-                        ),
-                        // Glassy gradient glow overlay
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  theme.colorScheme.primary.withValues(alpha: 0.3),
-                                  Colors.transparent,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Text Content overlay
-                        Positioned(
-                          left: 20,
-                          bottom: 20,
-                          right: 20,
-                          top: 20,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'Xin chào, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'} 👋',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.white.withValues(alpha: 0.85),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          'Tổng quan hôm nay',
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  featureGuideButton(context, 'dashboard'),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.18),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.25),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: IconButton(
-                                      icon: const HugeIcon(
-                                        icon: HugeIcons.strokeRoundedNotification03,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                      onPressed: () => context.push('/notifications'),
-                                      tooltip: 'Thông báo',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
 
@@ -871,28 +803,18 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: c.card.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(24),
+        color: c.card,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: c.divider.withValues(alpha: 0.3),
+          color: c.divider,
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
