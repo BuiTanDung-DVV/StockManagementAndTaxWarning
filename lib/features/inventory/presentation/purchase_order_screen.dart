@@ -102,15 +102,11 @@ class PurchaseOrderScreen extends ConsumerWidget {
               message: 'Chưa có đơn mua hàng nào được tạo',
             );
           }
-          return GridView.builder(
+          return ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 450,
-              mainAxisExtent: 96,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 0,
-            ),
             physics: const BouncingScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
             itemCount: items.length,
             itemBuilder: (_, i) {
               final po = items[i] as Map;
@@ -143,14 +139,8 @@ class PurchaseOrderScreen extends ConsumerWidget {
 
               return GestureDetector(
                 onTap: () => context.push('/purchase-orders/detail', extra: po),
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  color: c.card,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(color: c.divider.withValues(alpha: 0.5)),
-                  ),
+                child: Container(
+                  color: Colors.transparent,
                   child: Padding(
                     padding: const EdgeInsets.all(14),
                     child: Row(
