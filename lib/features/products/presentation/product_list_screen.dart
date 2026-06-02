@@ -427,14 +427,13 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     }
 
     // Bán chạy (Dựa vào API Top Products của tháng hiện tại)
-    final productName = p['name']?.toString() ?? '';
-    if (topProductNames.contains(productName)) {
+    if (topProductNames.contains(p['name']?.toString())) {
       if (!tags.contains('Bán chạy')) tags.insert(0, 'Bán chạy');
     }
 
-    // Mới (Tạo trong vòng 7 ngày)
-    if (p['createdAt'] != null) {
-      final createdAt = DateTime.tryParse(p['createdAt'].toString());
+    final createdAtStr = p['createdAt'] ?? p['created_at'];
+    if (createdAtStr != null) {
+      final createdAt = DateTime.tryParse(createdAtStr.toString());
       if (createdAt != null && DateTime.now().difference(createdAt).inDays <= 7) {
         if (!tags.contains('Mới')) tags.insert(0, 'Mới');
       }
