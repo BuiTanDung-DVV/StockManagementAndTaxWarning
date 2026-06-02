@@ -36,19 +36,6 @@ class SupplierDetailScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           featureGuideButton(context, 'supplier_detail'),
-          IconButton(
-            icon: const Icon(Icons.edit_rounded),
-            onPressed: () async {
-              if (detailAsync.hasValue) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => SupplierFormScreen(supplier: detailAsync.value!)),
-                );
-                ref.invalidate(supplierDetailProvider(id));
-                ref.invalidate(supplierListProvider);
-              }
-            },
-          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -179,6 +166,20 @@ class SupplierDetailScreen extends ConsumerWidget {
           );
         },
       ),
+      floatingActionButton: detailAsync.hasValue ? FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => SupplierFormScreen(supplier: detailAsync.value!)),
+          );
+          ref.invalidate(supplierDetailProvider(id));
+          ref.invalidate(supplierListProvider);
+        },
+        icon: const Icon(Icons.edit_rounded),
+        label: const Text('Chỉnh sửa', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: c.primary,
+        foregroundColor: Colors.white,
+      ) : null,
     );
   }
 }
