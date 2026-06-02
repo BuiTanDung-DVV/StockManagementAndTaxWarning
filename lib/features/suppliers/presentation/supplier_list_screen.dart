@@ -64,15 +64,10 @@ class SupplierListScreen extends ConsumerWidget {
           }
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(supplierListProvider),
-            child: GridView.builder(
+            child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: items.length,
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 450,
-                mainAxisExtent: 104,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 0,
-              ),
+              separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
               physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
               itemBuilder: (_, i) {
                 final s = items[i];
@@ -81,15 +76,13 @@ class SupplierListScreen extends ConsumerWidget {
                 final term = s['paymentTermDays'];
 
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                  margin: const EdgeInsets.only(bottom: 0),
+                  decoration: const BoxDecoration(
+                    color: Colors.transparent,
                   ),
                   child: Material(
                     color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(12),
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
                       onTap: () => context.push('/suppliers/${s['id']}'),

@@ -94,15 +94,11 @@ class StockTakeScreen extends ConsumerWidget {
               message: 'Chưa có dữ liệu tồn kho',
             );
           }
-          return GridView.builder(
+          return ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 450,
-              mainAxisExtent: 90,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 0,
-            ),
             physics: const BouncingScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
             itemCount: items.length,
             itemBuilder: (_, i) {
               final item = items[i] as Map;
@@ -113,12 +109,10 @@ class StockTakeScreen extends ConsumerWidget {
               final isLow = (qty is num && minStock is num && qty <= minStock);
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 10),
+                margin: const EdgeInsets.only(bottom: 0),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: c.card,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
                 ),
                 child: Row(
                   children: [

@@ -139,16 +139,11 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(salesListProvider),
-                  child: GridView.builder(
+                  child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                     itemCount: items.length,
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 450,
-                      mainAxisExtent: 92,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 0,
-                    ),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
                     itemBuilder: (_, i) {
                       final order = items[i];
                       final orderStatus = order['status'] ?? 'PENDING';
@@ -177,15 +172,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                       final customerName = order['customer']?['name'] ?? 'Khách mua lẻ';
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        decoration: BoxDecoration(
-                          color: c.card,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                        margin: const EdgeInsets.only(bottom: 0),
+                        decoration: const BoxDecoration(
+                          color: Colors.transparent,
                         ),
                         child: Material(
                           color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(12),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
                             onTap: () => context.push('/sales/${order['id']}'),
