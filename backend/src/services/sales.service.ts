@@ -73,6 +73,34 @@ export class SalesService {
         };
     }
 
+    async getTopProducts(shopId: number, from?: string, to?: string) {
+        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const toDate = to ? new Date(to) : new Date();
+        toDate.setHours(23, 59, 59, 999);
+
+        // Query top 5 selling products by revenue
+        const topProducts = await AppDataSource.query(`
+            SELECT 
+                p.name, 
+                SUM(oi.subtotal) as value 
+            FROM order_items oi
+            JOIN sales_orders o ON oi.order_id = o.id
+            JOIN products p ON oi.product_id = p.id
+            WHERE o.shop_id = $1 
+              AND o.order_date >= $2 
+              AND o.order_date <= $3 
+              AND o.status != 'CANCELLED'
+            GROUP BY p.id, p.name
+            ORDER BY value DESC
+            LIMIT 5
+        `, [shopId, fromDate, toDate]);
+
+        return topProducts.map((p: any) => ({
+            name: p.name,
+            value: Number(p.value)
+        }));
+    }
+
     async findById(shopId: number, id: number) {
         const order = await this.orderRepo.findOne({ where: { id, shopId }, relations: ['items', 'items.product', 'payments'] });
         if (!order) throw new Error('Order not found');

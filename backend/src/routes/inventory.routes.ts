@@ -13,6 +13,7 @@ router.get('/inventory/low-stock', requirePermission('inventory', 'view'), inven
 router.get('/inventory/movements', requirePermission('inventory', 'view'), inventoryCtrl.getMovements);
 router.get('/inventory/warehouses', requirePermission('inventory', 'view'), inventoryCtrl.getWarehouses);
 router.post('/inventory/warehouses', requirePermission('inventory', 'edit'), inventoryCtrl.createWarehouse);
+router.get('/inventory/categories-summary', requirePermission('inventory', 'view'), inventoryCtrl.getCategoriesSummary);
 router.get('/inventory/xnt-report', requirePermission('inventory', 'view'), inventoryCtrl.getXntReport);
 router.get('/inventory/expiring-products', requirePermission('inventory', 'view'), inventoryCtrl.getExpiringProducts);
 router.get('/inventory/slow-moving', requirePermission('inventory', 'view'), inventoryCtrl.getSlowMoving);

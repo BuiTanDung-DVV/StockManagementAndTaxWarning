@@ -29,7 +29,12 @@ export const findAll = async (req: Request, res: Response) => {
 
 export const summary = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await salesService.summary((req as any).shopId, req.query.from as string, req.query.to as string) }); }
-    catch (e: any) { sendServiceError(res, e); }
+    catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
+};
+
+export const topProducts = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await salesService.getTopProducts((req as any).shopId, req.query.from as string, req.query.to as string) }); }
+    catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
 export const findOne = async (req: Request, res: Response) => {
