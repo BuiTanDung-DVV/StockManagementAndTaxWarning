@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/customer_provider.dart';
 import '../../sales/providers/sales_provider.dart';
+import 'customer_form_screen.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
 
@@ -95,6 +96,19 @@ class CustomerDetailScreen extends ConsumerWidget {
           );
         },
       ),
+      floatingActionButton: customerAsync.hasValue ? FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => CustomerFormScreen(customer: customerAsync.value!)),
+          );
+          ref.invalidate(customerDetailProvider(id));
+        },
+        icon: const Icon(Icons.edit_rounded),
+        label: const Text('Chỉnh sửa', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ) : null,
     );
   }
 }
