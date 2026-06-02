@@ -143,9 +143,24 @@ export class FinanceService {
             .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate', { shopId, fromDate })
             .getRawOne();
 
+        const dailyFlowRaw = await this.cashTxRepo.createQueryBuilder('t')
+            .select("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')", 'date')
+            .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
+            .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
+            .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate', { shopId, fromDate })
+            .groupBy("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')")
+            .orderBy("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')", 'ASC')
+            .getRawMany();
+
+        const dailyFlow = dailyFlowRaw.map((d: any) => ({
+            date: d.date,
+            income: Number(d.income),
+            expense: Number(d.expense)
+        }));
+
         const income = Number(result?.income || 0);
         const expense = Number(result?.expense || 0);
-        return { income, expense, balance: income - expense, period: period || 'month' };
+        return { income, expense, balance: income - expense, period: period || 'month', dailyFlow };
     }
 
     async getProfitLoss(shopId: number, from?: string, to?: string) {

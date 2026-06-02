@@ -50,6 +50,25 @@ export class InventoryService {
     async getWarehouses(shopId: number) { return this.warehouseRepo.find({ where: { shopId } }); }
     async createWarehouse(shopId: number, dto: Partial<Warehouse>) { return this.warehouseRepo.save(this.warehouseRepo.create({ ...dto, shopId })); }
 
+    async getCategoriesSummary(shopId: number) {
+        const query = `
+            SELECT 
+                COALESCE(c.name, 'Chưa phân loại') as name, 
+                COALESCE(SUM(s.quantity * p.cost_price), 0) as value 
+            FROM inventory_stocks s
+            JOIN products p ON s.product_id = p.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE s.shop_id = $1 AND s.quantity > 0
+            GROUP BY c.id, c.name
+            ORDER BY value DESC
+        `;
+        const result = await AppDataSource.query(query, [shopId]);
+        return result.map((r: any) => ({
+            name: r.name,
+            value: Number(r.value)
+        }));
+    }
+
     // Reports
     async getXntReport(shopId: number, from?: string, to?: string, warehouseId?: number) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
