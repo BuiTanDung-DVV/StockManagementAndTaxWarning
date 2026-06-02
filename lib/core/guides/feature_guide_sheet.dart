@@ -16,9 +16,9 @@ void showFeatureGuide(BuildContext context, String screenKey) {
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (ctx) => DraggableScrollableSheet(
-      initialChildSize: 0.55,
-      minChildSize: 0.35,
-      maxChildSize: 0.85,
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 1.0,
       expand: false,
       builder: (_, controller) {
         final c = AppThemeColors.of(ctx);
