@@ -177,7 +177,7 @@ class SupplierDetailScreen extends ConsumerWidget {
         },
         icon: const Icon(Icons.edit_rounded),
         label: const Text('Chỉnh sửa', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: c.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
       ) : null,
     );
@@ -195,8 +195,8 @@ class _Card extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(12), // Taste-Skill Shape Consistency
+        border: Border.all(color: c.divider), // Solid border, no alpha
       ),
       child: Column(
         children: children,
