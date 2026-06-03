@@ -150,9 +150,10 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  if (cust['tags'] != null || debt > 0 || _isNew(cust['createdAt']) || cust['customerType'] == 'VIP')
-                                    _buildTagsRow(cust, debt, tc, theme),
+                                  if (cust['tags'] != null || debt > 0 || _isNew(cust['createdAt']) || cust['customerType'] == 'VIP') ...[
+                                    const SizedBox(width: 8),
+                                    Expanded(child: _buildTagsRow(cust, debt, tc, theme)),
+                                  ],
                                 ],
                               ),
                             ],
