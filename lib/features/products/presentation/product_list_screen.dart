@@ -99,7 +99,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         actions: [
           if (ref.watch(authProvider).isShopOwner)
             IconButton(
-              icon: const HugeIcon(icon: HugeIcons.strokeRoundedTag01, color: Colors.white, size: 22),
+              icon: HugeIcon(icon: HugeIcons.strokeRoundedTag01, color: c.textPrimary, size: 22),
               onPressed: () => context.push('/products/tags'),
               tooltip: 'Quản lý Nhãn',
             ),
