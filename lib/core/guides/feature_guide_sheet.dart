@@ -16,10 +16,11 @@ void showFeatureGuide(BuildContext context, String screenKey) {
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (ctx) => DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
       maxChildSize: 1.0,
-      expand: false,
+      expand: true,
+      snap: true,
       builder: (_, controller) {
         final c = AppThemeColors.of(ctx);
         return Column(children: [
