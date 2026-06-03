@@ -516,17 +516,17 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   Widget _qtyButton(IconData icon, VoidCallback onTap) {
     return SizedBox(
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       child: IconButton(
         onPressed: () {
           onTap();
           HapticFeedback.lightImpact();
         },
-        icon: Icon(icon, size: 18, color: AppColors.primary),
+        icon: Icon(icon, size: 20, color: AppColors.primary),
         style: IconButton.styleFrom(
           backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         padding: EdgeInsets.zero,
       ),

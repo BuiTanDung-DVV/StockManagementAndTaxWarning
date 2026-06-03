@@ -808,11 +808,19 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: c.divider,
+          color: c.divider.withValues(alpha: 0.5),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -853,6 +861,8 @@ class _SummaryCard extends StatelessWidget {
               fontSize: 22, 
               fontWeight: FontWeight.bold,
               color: c.textPrimary,
+              letterSpacing: -0.5,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -888,17 +898,18 @@ class _QuickAction extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: c.card.withValues(alpha: 0.6),
+          color: c.card.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: c.divider.withValues(alpha: 0.3),
+            color: c.divider.withValues(alpha: 0.4),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withValues(alpha: 0.03),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
+              color: primaryColor.withValues(alpha: 0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+              spreadRadius: -5,
             ),
           ],
         ),
