@@ -10,6 +10,8 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_badge.dart';
 import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/filter_bar.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
@@ -298,42 +300,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                         const SizedBox(height: 4),
                                         _buildTagsRow(p['tags'], stock, p, topProductNames, c, theme),
                                         const SizedBox(height: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: isOutOfStock 
-                                                ? AppColors.danger.withValues(alpha: 0.08)
-                                                : (stock < 10 
-                                                    ? AppColors.warning.withValues(alpha: 0.08)
-                                                    : AppColors.success.withValues(alpha: 0.08)),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Container(
-                                                width: 6,
-                                                height: 6,
-                                                decoration: BoxDecoration(
-                                                  color: isOutOfStock 
-                                                      ? AppColors.danger
-                                                      : (stock < 10 ? AppColors.warning : AppColors.success),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                isOutOfStock ? 'Hết hàng' : 'Còn tồn: $stock', 
-                                                style: TextStyle(
-                                                  fontSize: 10.5, 
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isOutOfStock 
-                                                      ? AppColors.danger
-                                                      : (stock < 10 ? AppColors.warning : AppColors.success),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                        AppBadge(
+                                          label: isOutOfStock ? 'Hết hàng' : 'Còn tồn: $stock',
+                                          color: isOutOfStock 
+                                              ? AppColors.danger
+                                              : (stock < 10 ? AppColors.warning : AppColors.success),
                                         ),
                                       ],
                                     ),
@@ -342,12 +313,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                   
                                   // Price tag Outfit bold
                                   Text(
-                                    _currFmt.format(price), 
+                                    _currFmt.format(price),
                                     style: GoogleFonts.outfit(
                                       fontWeight: FontWeight.w800, 
                                       fontSize: 14,
-                                      color: theme.colorScheme.primary,
-                                    )
+                                      color: c.textPrimary,
+                                    ),
                                   ),
                                 ],
                               ),

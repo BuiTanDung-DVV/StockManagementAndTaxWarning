@@ -18,6 +18,7 @@ import 'qr_payment_screen.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_badge.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -291,14 +292,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         : null,
                   );
                 }
-                return ListView.builder(
+                return ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
                     bottom: cart.items.isNotEmpty ? 120 : 24,
-                    top: 8,
                   ),
                   itemCount: products.length,
+                  separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
                   itemBuilder: (_, i) {
                     final p = products[i];
                     final id = p['id'] as int;
@@ -313,22 +313,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         .firstOrNull;
 
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: c.card,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: c.divider.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.015),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent,
                       ),
                       child: Row(
                         children: [
@@ -367,29 +354,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                     Text(
                                       _currFmt.format(price),
                                       style: TextStyle(
-                                        color: AppColors.primary,
+                                        color: c.textPrimary,
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     const SizedBox(width: 10),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: c.surface,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'Kho: $stock',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: c.textSecondary,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
+                                    AppBadge(
+                                      label: 'Kho: $stock',
+                                      color: (stock is num && stock <= 0) ? AppColors.danger : AppColors.success,
                                     ),
                                   ],
                                 ),

@@ -102,13 +102,14 @@ class PurchaseOrderScreen extends ConsumerWidget {
               message: 'Chưa có đơn mua hàng nào được tạo',
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            physics: const BouncingScrollPhysics(),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
-            itemCount: items.length,
-            itemBuilder: (_, i) {
+          return Container(
+            color: c.card,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              physics: const BouncingScrollPhysics(),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
+              itemBuilder: (_, i) {
               final po = items[i] as Map;
               final code = po['orderCode'] ?? po['code'] ?? 'PO-${po['id'] ?? i}';
               final supplierName = po['supplier']?['name'] ?? po['supplierName'] ?? 'Không rõ nhà cung cấp';
@@ -230,7 +231,8 @@ class PurchaseOrderScreen extends ConsumerWidget {
               ),
             ),
           );
-        },
+              },
+            ),
           );
         },
       ),

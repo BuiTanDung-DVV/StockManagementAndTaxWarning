@@ -94,13 +94,14 @@ class StockTakeScreen extends ConsumerWidget {
               message: 'Chưa có dữ liệu tồn kho',
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            physics: const BouncingScrollPhysics(),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
-            itemCount: items.length,
-            itemBuilder: (_, i) {
+          return Container(
+            color: c.card,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              physics: const BouncingScrollPhysics(),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
+              itemBuilder: (_, i) {
               final item = items[i] as Map;
               final name = item['product']?['name'] ?? item['productName'] ?? 'Sản phẩm không tên';
               final sku = item['product']?['sku'] ?? item['sku'] ?? '';
@@ -187,8 +188,9 @@ class StockTakeScreen extends ConsumerWidget {
                 ),
               );
             },
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }
