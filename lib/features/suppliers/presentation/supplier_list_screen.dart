@@ -62,9 +62,11 @@ class SupplierListScreen extends ConsumerWidget {
               subtitle: 'Hãy đăng ký đối tác nhà cung cấp đầu tiên của bạn để nhập kho.',
             );
           }
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(supplierListProvider),
-            child: ListView.separated(
+          return Container(
+            color: c.card,
+            child: RefreshIndicator(
+              onRefresh: () async => ref.invalidate(supplierListProvider),
+              child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: items.length,
               separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
