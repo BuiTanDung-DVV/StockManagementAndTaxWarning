@@ -165,6 +165,7 @@ class SupplierListScreen extends ConsumerWidget {
                 );
               },
             ),
+            ),
           );
         },
         loading: () => const ShimmerList(),
