@@ -36,42 +36,48 @@ class InvoiceListScreen extends ConsumerWidget {
           final items = (data['items'] as List?) ?? [];
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            padding: const EdgeInsets.only(top: 16, bottom: 100),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Legal Disclaimer
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, color: theme.colorScheme.primary, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Tính năng lưu trữ số hóa Hóa đơn điện tử nội bộ. Ứng dụng không tự phát hành hóa đơn GTGT.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: c.textSecondary,
-                            height: 1.4,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, color: theme.colorScheme.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Tính năng lưu trữ số hóa Hóa đơn điện tử nội bộ. Ứng dụng không tự phát hành hóa đơn GTGT.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: c.textSecondary,
+                              height: 1.4,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
 
                 // Summary Metrics - Taste-Skill: Left-aligned, no heavy cards
-                Text(
-                  'Thuế VAT tháng này',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: c.textPrimary,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Thuế VAT tháng này',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: c.textPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -84,35 +90,38 @@ class InvoiceListScreen extends ConsumerWidget {
                     final vatOut = asNum(summary['vatOut']);
                     final vatOwed = asNum(summary['vatOwed']);
                     
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetricItem(
-                            'VAT đầu vào', 
-                            _fmt(vatIn), 
-                            AppColors.success, 
-                            c, theme
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildMetricItem(
+                              'VAT đầu vào', 
+                              _fmt(vatIn), 
+                              AppColors.success, 
+                              c, theme
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMetricItem(
-                            'VAT đầu ra', 
-                            _fmt(vatOut), 
-                            AppColors.danger, 
-                            c, theme
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildMetricItem(
+                              'VAT đầu ra', 
+                              _fmt(vatOut), 
+                              AppColors.danger, 
+                              c, theme
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMetricItem(
-                            'Phải nộp', 
-                            _fmt(vatOwed), 
-                            vatOwed > 0 ? AppColors.danger : AppColors.success, 
-                            c, theme
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildMetricItem(
+                              'Phải nộp', 
+                              _fmt(vatOwed), 
+                              vatOwed > 0 ? AppColors.danger : AppColors.success, 
+                              c, theme
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -120,24 +129,27 @@ class InvoiceListScreen extends ConsumerWidget {
                 const SizedBox(height: 32),
 
                 // List header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Danh sách hóa đơn',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: c.textPrimary,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Danh sách hóa đơn',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: c.textPrimary,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${items.length} bản ghi',
-                      style: theme.textTheme.bodySmall?.copyWith(color: c.textMuted),
-                    ),
-                  ],
+                      Text(
+                        '${items.length} bản ghi',
+                        style: theme.textTheme.bodySmall?.copyWith(color: c.textMuted),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 if (items.isEmpty)
                   AppEmpty(
@@ -149,11 +161,14 @@ class InvoiceListScreen extends ConsumerWidget {
                     ),
                   )
                 else
-                  // Taste-Skill: ListView instead of GridView, with simple separators, no card backgrounds
+                  // Taste-Skill: Flat List
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: c.divider),
-                      borderRadius: BorderRadius.circular(12),
+                      color: c.card,
+                      border: Border(
+                        top: BorderSide(color: c.divider.withValues(alpha: 0.5)),
+                        bottom: BorderSide(color: c.divider.withValues(alpha: 0.5)),
+                      ),
                     ),
                     child: ListView.separated(
                       padding: EdgeInsets.zero,

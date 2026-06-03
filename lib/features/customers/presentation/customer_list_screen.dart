@@ -73,10 +73,12 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                 onSearchChanged: (v) => setState(() => _searchQuery = v),
               ),
               Expanded(
-                child: RefreshIndicator(
-                  color: theme.colorScheme.primary,
-                  onRefresh: () async => ref.invalidate(customerListProvider),
-                  child: ListView.separated(
+                child: Container(
+                  color: tc.card,
+                  child: RefreshIndicator(
+                    color: theme.colorScheme.primary,
+                    onRefresh: () async => ref.invalidate(customerListProvider),
+                    child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: items.length,
@@ -187,7 +189,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                   ),
                 );
               },
-            ), // GridView
+                      ),
+                    ),
                   ), // RefreshIndicator
                 ), // Expanded
               ], // Children array

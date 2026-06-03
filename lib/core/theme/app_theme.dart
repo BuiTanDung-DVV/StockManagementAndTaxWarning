@@ -196,7 +196,7 @@ class AppTheme {
       cardColor: colors.card,
       dividerColor: colors.divider,
       dividerTheme: DividerThemeData(
-        color: colors.divider,
+        color: colors.divider.withValues(alpha: 0.5),
         thickness: 1,
         space: 0, // Taste-Skill: minimal space
       ),
@@ -259,7 +259,7 @@ class AppTheme {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(_radius))),
+        shape: const StadiumBorder(),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: colors.card,
