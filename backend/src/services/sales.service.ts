@@ -101,6 +101,26 @@ export class SalesService {
         }));
     }
 
+    async paymentMethodSummary(shopId: number, from?: string, to?: string) {
+        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const toDate = to ? new Date(to) : new Date();
+        toDate.setHours(23, 59, 59, 999);
+
+        const methods = await this.orderRepo.createQueryBuilder('o')
+            .select('o.payment_method', 'method')
+            .addSelect('COUNT(o.id)', 'count')
+            .addSelect('COALESCE(SUM(o.total_amount), 0)', 'total')
+            .where("o.shop_id = :shopId AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'", { shopId, fromDate, toDate })
+            .groupBy('o.payment_method')
+            .getRawMany();
+
+        return methods.map(m => ({
+            method: m.method || 'UNKNOWN',
+            count: Number(m.count || 0),
+            total: Number(m.total || 0)
+        }));
+    }
+
     async findById(shopId: number, id: number) {
         const order = await this.orderRepo.findOne({ where: { id, shopId }, relations: ['items', 'items.product', 'payments'] });
         if (!order) throw new Error('Order not found');
@@ -263,7 +283,7 @@ export class SalesService {
                 const receivable = manager.create(Receivable, {
                     shopId,
                     customer,
-                    order: savedOrder,
+                    orderId: savedOrder.id,
                     amount: unpaidAmount,
                     paidAmount: 0,
                     dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),
@@ -339,7 +359,7 @@ export class SalesService {
             await manager.save(SalesOrder, order);
 
             const receivable = await manager.findOne(Receivable, { 
-                where: { shopId, order: { id } } as any, 
+                where: { shopId, orderId: id } as any, 
                 relations: ['customer'] 
             });
             if (receivable && receivable.status !== 'CANCELLED') {
@@ -482,7 +502,7 @@ export class SalesService {
 
             // Cập nhật Receivable nếu tồn tại
             const receivable = await manager.findOne(Receivable, {
-                where: { shopId, order: { id: orderId } } as any,
+                where: { shopId, orderId } as any,
             });
             if (receivable && receivable.status !== 'PAID' && receivable.status !== 'CANCELLED') {
                 receivable.paidAmount = Number(receivable.paidAmount || 0) + amount;

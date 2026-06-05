@@ -7,6 +7,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/chart_widgets.dart';
 import '../providers/sales_provider.dart';
 
 final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
@@ -126,7 +127,10 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          
+
+          // ── Sales Summary + Chart ──
+          _buildSalesSummarySection(ref, c, theme),
+
           Expanded(
             child: listAsync.when(
               data: (data) {
@@ -292,6 +296,115 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           ),
         ),
         backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  Widget _buildSalesSummarySection(WidgetRef ref, AppThemeColors c, ThemeData theme) {
+    final now = DateTime.now();
+    final monthFrom = DateTime(now.year, now.month, 1).toIso8601String().split('T')[0];
+    final monthTo = now.toIso8601String().split('T')[0];
+    final summaryAsync = ref.watch(salesSummaryProvider((from: monthFrom, to: monthTo)));
+
+    return summaryAsync.when(
+      loading: () => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Container(
+          height: 60,
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (data) {
+        final totalOrders = (data['totalOrders'] ?? data['count'] ?? 0) as num;
+        final totalRevenue = double.tryParse(data['totalRevenue']?.toString() ?? data['revenue']?.toString() ?? '0') ?? 0.0;
+        final grossProfit = double.tryParse(data['grossProfit']?.toString() ?? data['profit']?.toString() ?? '0') ?? 0.0;
+        final daily = (data['daily'] as List?) ?? [];
+
+        // Last 7 entries for bar chart
+        final last7 = daily.length > 7 ? daily.sublist(daily.length - 7) : daily;
+        final barValues = last7.map<double>((d) => double.tryParse(d['revenue']?.toString() ?? d['totalRevenue']?.toString() ?? '0') ?? 0.0).toList();
+        final barLabels = last7.map<String>((d) {
+          final dateStr = d['date']?.toString() ?? '';
+          if (dateStr.length >= 10) {
+            final parts = dateStr.split('-');
+            return '${parts[2]}/${parts[1]}';
+          }
+          return dateStr;
+        }).toList();
+
+        return Container(
+          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 10),
+          child: Column(
+            children: [
+              // 3 stat cards
+              Row(
+                children: [
+                  _statCard('Đơn hàng', '$totalOrders', Icons.receipt_long_rounded, theme.colorScheme.primary, c),
+                  const SizedBox(width: 8),
+                  _statCard('Doanh thu', _currFmt.format(totalRevenue), Icons.trending_up_rounded, AppColors.success, c),
+                  const SizedBox(width: 8),
+                  _statCard('Lợi nhuận', _currFmt.format(grossProfit), Icons.account_balance_wallet_rounded, AppColors.info, c),
+                ],
+              ),
+              if (barValues.isNotEmpty && barValues.any((v) => v > 0)) ...[
+                const SizedBox(height: 10),
+                ChartCard(
+                  title: 'Doanh thu 7 ngày gần nhất',
+                  height: 160,
+                  child: MiniBarChart(
+                    values: barValues,
+                    labels: barLabels,
+                    barColor: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _statCard(String label, String value, IconData icon, Color color, AppThemeColors c) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: c.textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                color: c.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
