@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
@@ -321,7 +322,12 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
                   topProductsAsync.when(
                     data: (data) => data.isEmpty 
-                        ? const SizedBox.shrink() 
+                        ? EmptyChartPlaceholder(
+                            message: 'Tạo đơn bán đầu tiên để thấy Top sản phẩm',
+                            icon: Icons.leaderboard_rounded,
+                            actionLabel: 'Tạo đơn bán',
+                            onAction: () => context.push('/pos'),
+                          )
                         : _TopProductsChart(data),
                     loading: () => const ShimmerDashboard(),
                     error: (_, __) => const SizedBox.shrink(),
@@ -332,7 +338,12 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
                   inventoryCatAsync.when(
                     data: (data) => data.isEmpty 
-                        ? const SizedBox.shrink() 
+                        ? EmptyChartPlaceholder(
+                            message: 'Thêm sản phẩm vào kho để thấy biểu đồ tồn kho',
+                            icon: Icons.pie_chart_outline_rounded,
+                            actionLabel: 'Thêm sản phẩm',
+                            onAction: () => context.push('/products/form'),
+                          )
                         : _InventoryDonutChart(data),
                     loading: () => const ShimmerDashboard(),
                     error: (_, __) => const SizedBox.shrink(),

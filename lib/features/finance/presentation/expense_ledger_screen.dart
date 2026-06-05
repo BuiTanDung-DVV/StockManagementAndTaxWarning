@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/chart_widgets.dart';
 import '../providers/finance_provider.dart';
 
 class ExpenseLedgerScreen extends ConsumerWidget {
@@ -42,6 +43,19 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(_fmt(total), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
               ])),
+            const SizedBox(height: 16),
+            ChartCard(
+              title: 'Tỷ trọng chi phí',
+              height: 220,
+              child: MiniDonutChart(
+                segments: categories.asMap().entries.map((e) {
+                  final c = e.value;
+                  final color = catColors[e.key % catColors.length];
+                  final amount = asNum(c['amount']);
+                  return DonutSegment(_categoryLabel(c['category']), amount, color);
+                }).toList(),
+              ),
+            ),
             const SizedBox(height: 16),
             const Text('Theo danh mục', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),

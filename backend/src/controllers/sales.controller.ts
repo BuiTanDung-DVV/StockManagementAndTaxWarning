@@ -37,6 +37,11 @@ export const topProducts = async (req: Request, res: Response) => {
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
+export const paymentSummary = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await salesService.paymentMethodSummary((req as any).shopId, req.query.from as string, req.query.to as string) }); }
+    catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
+};
+
 export const findOne = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await salesService.findById((req as any).shopId, +req.params.id) }); }
     catch (e: any) {
