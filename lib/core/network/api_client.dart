@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 /// Custom App API Exception
 class ApiException implements Exception {
@@ -231,35 +233,49 @@ class ApiClient {
     }
   }
 
-  /// Load token from SharedPreferences on startup
   Future<void> loadToken() async {
-    final prefs = await SharedPreferences.getInstance();
     if (kIsWeb) {
-      await prefs.reload();
+      _token = html.window.localStorage['auth_token'];
+      _refreshToken = html.window.localStorage['refresh_token'];
+      final prefs = await SharedPreferences.getInstance();
+      _shopId = prefs.getString('shop_id');
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      _token = prefs.getString('auth_token');
+      _refreshToken = prefs.getString('refresh_token');
+      _shopId = prefs.getString('shop_id');
     }
-    _token = prefs.getString('auth_token');
-    _refreshToken = prefs.getString('refresh_token');
-    _shopId = prefs.getString('shop_id');
   }
 
   Future<void> saveToken(String token, [String? refreshToken]) async {
     _token = token;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
-    if (refreshToken != null) {
-      _refreshToken = refreshToken;
-      await prefs.setString('refresh_token', refreshToken);
+    _refreshToken = refreshToken ?? _refreshToken;
+    
+    if (kIsWeb) {
+      html.window.localStorage['auth_token'] = token;
+      if (refreshToken != null) {
+        html.window.localStorage['refresh_token'] = refreshToken;
+      }
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', token);
+      if (refreshToken != null) {
+        await prefs.setString('refresh_token', refreshToken);
+      }
     }
   }
 
   Future<void> clearToken() async {
     _token = null;
     _refreshToken = null;
-    _shopId = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
-    await prefs.remove('refresh_token');
-    await prefs.remove('shop_id');
+    if (kIsWeb) {
+      html.window.localStorage.remove('auth_token');
+      html.window.localStorage.remove('refresh_token');
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      await prefs.remove('refresh_token');
+    }
   }
 }
 
