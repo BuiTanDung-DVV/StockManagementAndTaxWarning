@@ -1,8 +1,10 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/inventory_provider.dart';
 
@@ -137,7 +139,53 @@ class InventoryScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
+
+              // ── Chart: Inventory by Category Donut ──
+              Builder(
+                builder: (context) {
+                  final catAsync = ref.watch(inventoryCategoriesSummaryProvider);
+                  return catAsync.when(
+                    data: (items) {
+                      if (items.isEmpty) {
+                        return const EmptyChartPlaceholder(
+                          message: 'Chưa có dữ liệu danh mục tồn kho',
+                          icon: Icons.pie_chart_rounded,
+                        );
+                      }
+                      const donutColors = [
+                        AppColors.success,
+                        AppColors.info,
+                        AppColors.warning,
+                        AppColors.primary,
+                        AppColors.danger,
+                        Colors.purple,
+                        Colors.teal,
+                      ];
+                      final segments = items.asMap().entries.map((e) {
+                        final item = e.value as Map<String, dynamic>;
+                        return DonutSegment(
+                          item['name']?.toString() ?? 'Khác',
+                          (item['value'] ?? item['quantity'] ?? item['count'] ?? 0).toDouble(),
+                          donutColors[e.key % donutColors.length],
+                        );
+                      }).toList();
+                      return ChartCard(
+                        title: 'Tồn kho theo Danh mục',
+                        height: 220,
+                        child: MiniDonutChart(segments: segments),
+                      );
+                    },
+                    loading: () => const SizedBox(
+                      height: 220,
+                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
+                  );
+                },
+              ),
               const SizedBox(height: 24),
+
               
               // Quick Actions section
               Text(

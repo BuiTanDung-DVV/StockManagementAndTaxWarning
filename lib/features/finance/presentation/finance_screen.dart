@@ -6,6 +6,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../providers/finance_provider.dart';
@@ -233,6 +234,127 @@ class FinanceScreen extends ConsumerWidget {
                     style: const TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500)
                   ),
                 ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Chart 1: Cash Flow Area Chart ──
+              summaryAsync.when(
+                data: (data) {
+                  final dailyFlow = (data['dailyFlow'] as List?) ?? [];
+                  if (dailyFlow.isEmpty) {
+                    return const EmptyChartPlaceholder(
+                      message: 'Chưa có dữ liệu dòng tiền',
+                      icon: Icons.show_chart_rounded,
+                    );
+                  }
+                  final incomeData = dailyFlow.map((e) => asDouble(e['income'])).toList();
+                  final expenseData = dailyFlow.map((e) => asDouble(e['expense'])).toList();
+                  final xLabels = dailyFlow.map((e) {
+                    final d = e['date']?.toString() ?? '';
+                    if (d.length >= 10) {
+                      return '${d.substring(8, 10)}/${d.substring(5, 7)}';
+                    }
+                    return d;
+                  }).toList().cast<String>();
+                  return ChartCard(
+                    title: 'Dòng tiền tháng này',
+                    height: 200,
+                    child: MiniAreaChart(
+                      data1: incomeData,
+                      data2: expenseData,
+                      label1: 'Thu',
+                      label2: 'Chi',
+                      color1: AppColors.success,
+                      color2: AppColors.danger,
+                      xLabels: xLabels,
+                    ),
+                  );
+                },
+                loading: () => AppShimmer(
+                  child: Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.grey,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Chart 2: Top Expense Categories ──
+              Builder(
+                builder: (context) {
+                  final expCatAsync = ref.watch(expensesByCategoryProvider);
+                  return expCatAsync.when(
+                    data: (data) {
+                      final categories = (data['categories'] as List?) ?? (data['items'] as List?) ?? [];
+                      if (categories.isEmpty) {
+                        return const EmptyChartPlaceholder(
+                          message: 'Chưa có dữ liệu chi phí theo danh mục',
+                          icon: Icons.category_rounded,
+                        );
+                      }
+                      const catColors = [
+                        AppColors.danger,
+                        AppColors.warning,
+                        AppColors.info,
+                        Colors.purple,
+                        Colors.teal,
+                      ];
+                      final barItems = categories.asMap().entries.map((e) {
+                        final cat = e.value;
+                        return HBarItem(
+                          cat['category']?.toString() ?? cat['name']?.toString() ?? 'Khác',
+                          asDouble(cat['total'] ?? cat['amount'] ?? cat['value']),
+                          catColors[e.key % catColors.length],
+                        );
+                      }).toList();
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.025),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                              spreadRadius: -4,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Top danh mục chi phí',
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            HorizontalBarList(items: barItems),
+                          ],
+                        ),
+                      );
+                    },
+                    loading: () => AppShimmer(
+                      child: Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.grey,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
+                  );
+                },
               ),
               const SizedBox(height: 24),
 

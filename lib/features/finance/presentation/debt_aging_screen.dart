@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/widgets/chart_widgets.dart';
 import '../../customers/providers/customer_provider.dart';
 
 class DebtAgingScreen extends ConsumerWidget {
@@ -132,6 +133,24 @@ class DebtAgingScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                // ── Debt Aging Bar Chart ──
+                ChartCard(
+                  title: 'Phân nhóm tuổi nợ',
+                  height: 200,
+                  child: MiniBarChart(
+                    values: [current.toDouble(), days30.toDouble(), days60.toDouble(), over90.toDouble()],
+                    labels: const ['0-30', '31-60', '61-90', '>90'],
+                    barColors: const [
+                      AppColors.success,
+                      AppColors.info,
+                      AppColors.warning,
+                      AppColors.danger,
+                    ],
+                  ),
+                ),
+
                 const SizedBox(height: 24),
                 
                 Text(
