@@ -44,3 +44,8 @@ final salesSummaryProvider = FutureProvider.family<Map<String, dynamic>, ({Strin
 final topProductsProvider = FutureProvider.family<List<dynamic>, ({String from, String to})>((ref, args) {
   return ref.read(salesRepoProvider).getTopProducts(args.from, args.to);
 });
+
+final recentTransactionsProvider = FutureProvider<List<dynamic>>((ref) async {
+  final res = await ref.read(salesRepoProvider).findAll(page: 1, limit: 5);
+  return res['data'] as List<dynamic>? ?? [];
+});
