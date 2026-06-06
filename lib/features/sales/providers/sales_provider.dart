@@ -46,6 +46,8 @@ final topProductsProvider = FutureProvider.family<List<dynamic>, ({String from, 
 });
 
 final recentTransactionsProvider = FutureProvider<List<dynamic>>((ref) async {
+  final shopState = ref.watch(shopProvider);
+  if (shopState.userShops.isEmpty) return [];
   final res = await ref.read(salesRepoProvider).findAll(page: 1, limit: 5);
   return res['data'] as List<dynamic>? ?? [];
 });
