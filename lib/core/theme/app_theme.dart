@@ -49,16 +49,16 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 
   // ── Taste-Skill: Light Monochrome (Pure White / Zinc 50) ──
   static const light = AppThemeColors(
-    bg: Color(0xFFFAFAFA),       // Zinc 50
-    surface: Color(0xFFF4F4F5),  // Zinc 100
+    bg: Color(0xFFF9FAFB),       // Zinc 50
+    surface: Color(0xFFFFFFFF),  // Pure White
     card: Color(0xFFFFFFFF),     // Pure White
-    cardAlt: Color(0xFFE4E4E7),  // Zinc 200
-    textPrimary: Color(0xFF09090B),   // Zinc 950
-    textSecondary: Color(0xFF52525B), // Zinc 600
-    textMuted: Color(0xFFA1A1AA),     // Zinc 400
-    divider: Color(0xFFE4E4E7),       // Zinc 200
-    inputFill: Color(0xFFFAFAFA),
-    inputBorder: Color(0xFFE4E4E7),
+    cardAlt: Color(0xFFF1F5F9),  // Slate 100
+    textPrimary: Color(0xFF0F172A),   // Slate 900
+    textSecondary: Color(0xFF64748B), // Slate 500
+    textMuted: Color(0xFF94A3B8),     // Slate 400
+    divider: Color(0xFFE2E8F0),       // Slate 200
+    inputFill: Color(0xFFFFFFFF),
+    inputBorder: Color(0xFFE2E8F0),
   );
 
   static AppThemeColors createLight(Color primary) => light;
@@ -138,8 +138,8 @@ class AppColors {
 // ─────────────────────────────────────────────
 
 class AppTheme {
-  // Taste-Skill: SHAPE CONSISTENCY LOCK (12px everywhere)
-  static const double _radius = 12.0;
+  // Taste-Skill: SHAPE CONSISTENCY LOCK (24px everywhere for Bento grid)
+  static const double _radius = 24.0;
 
   static ThemeData darkTheme(Color primaryColor) => _buildTheme(Brightness.dark, AppThemeColors.dark, primaryColor);
   static ThemeData lightTheme(Color primaryColor) => _buildTheme(Brightness.light, AppThemeColors.light, primaryColor);
@@ -152,26 +152,25 @@ class AppTheme {
     final primaryLight = Color.alphaBlend(Colors.white.withValues(alpha: 0.2), primaryColor);
     final primaryDark = Color.alphaBlend(Colors.black.withValues(alpha: 0.2), primaryColor);
 
-    // Taste-Skill: Typography (Outfit for display, Inter for body - tracking tightened)
     final outfitTextTheme = GoogleFonts.outfitTextTheme(base.textTheme);
-    final interTextTheme = GoogleFonts.interTextTheme(base.textTheme);
+    final bodyTextTheme = GoogleFonts.interTextTheme(base.textTheme);
 
     final textTheme = base.textTheme.copyWith(
-      displayLarge: outfitTextTheme.displayLarge?.copyWith(letterSpacing: -1.0, height: 1.1),
-      displayMedium: outfitTextTheme.displayMedium?.copyWith(letterSpacing: -0.5, height: 1.1),
-      displaySmall: outfitTextTheme.displaySmall?.copyWith(letterSpacing: -0.25, height: 1.1),
-      headlineLarge: outfitTextTheme.headlineLarge?.copyWith(letterSpacing: -0.5, height: 1.2),
-      headlineMedium: outfitTextTheme.headlineMedium?.copyWith(letterSpacing: -0.25, height: 1.2),
-      headlineSmall: outfitTextTheme.headlineSmall?.copyWith(letterSpacing: 0, height: 1.2),
-      titleLarge: outfitTextTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-      titleMedium: outfitTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      displayLarge: outfitTextTheme.displayLarge?.copyWith(letterSpacing: -1.5, height: 1.1, fontWeight: FontWeight.w800),
+      displayMedium: outfitTextTheme.displayMedium?.copyWith(letterSpacing: -1.0, height: 1.1, fontWeight: FontWeight.w800),
+      displaySmall: outfitTextTheme.displaySmall?.copyWith(letterSpacing: -0.5, height: 1.1, fontWeight: FontWeight.w700),
+      headlineLarge: outfitTextTheme.headlineLarge?.copyWith(letterSpacing: -0.5, height: 1.2, fontWeight: FontWeight.w700),
+      headlineMedium: outfitTextTheme.headlineMedium?.copyWith(letterSpacing: -0.25, height: 1.2, fontWeight: FontWeight.w700),
+      headlineSmall: outfitTextTheme.headlineSmall?.copyWith(letterSpacing: 0, height: 1.2, fontWeight: FontWeight.w600),
+      titleLarge: outfitTextTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.2),
+      titleMedium: outfitTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.1),
       titleSmall: outfitTextTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-      bodyLarge: interTextTheme.bodyLarge?.copyWith(letterSpacing: -0.01),
-      bodyMedium: interTextTheme.bodyMedium?.copyWith(letterSpacing: -0.01),
-      bodySmall: interTextTheme.bodySmall?.copyWith(letterSpacing: 0),
-      labelLarge: interTextTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500),
-      labelMedium: interTextTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500),
-      labelSmall: interTextTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
+      bodyLarge: bodyTextTheme.bodyLarge?.copyWith(letterSpacing: -0.01),
+      bodyMedium: bodyTextTheme.bodyMedium?.copyWith(letterSpacing: -0.01),
+      bodySmall: bodyTextTheme.bodySmall?.copyWith(letterSpacing: 0),
+      labelLarge: bodyTextTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500),
+      labelMedium: bodyTextTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500),
+      labelSmall: bodyTextTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500),
     ).apply(
       bodyColor: colors.textPrimary,
       displayColor: colors.textPrimary,
@@ -213,10 +212,10 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colors.card,
-        elevation: 0, // Taste-Skill: No shadows unless active elevation
+        elevation: 0, // We use BoxShadow explicitly where needed (Diffusion Shadow)
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_radius),
-          side: BorderSide(color: colors.divider, width: 1), // Taste-Skill: 1px border instead of shadow
+          side: BorderSide(color: colors.divider, width: 1), // 1px border
         ),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
