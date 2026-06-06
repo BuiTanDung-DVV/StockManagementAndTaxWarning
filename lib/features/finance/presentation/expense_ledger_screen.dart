@@ -52,7 +52,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                   final c = e.value;
                   final color = catColors[e.key % catColors.length];
                   final amount = asNum(c['amount']);
-                  return DonutSegment(_categoryLabel(c['category']), amount, color);
+                  return DonutSegment(_categoryLabel(c['category']), amount.toDouble(), color);
                 }).toList(),
               ),
             ),
