@@ -181,7 +181,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.15)),
                     itemBuilder: (_, i) {
                       final p = items[i];
                       final price = TypeParser.asDouble(p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice']);
@@ -417,11 +417,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
           return Container(
             margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: textColor.withValues(alpha: 0.2)),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               t,

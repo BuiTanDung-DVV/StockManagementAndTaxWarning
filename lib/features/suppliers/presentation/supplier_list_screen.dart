@@ -69,7 +69,7 @@ class SupplierListScreen extends ConsumerWidget {
               child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: items.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
+              separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.15)),
               physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
               itemBuilder: (_, i) {
                 final s = items[i];
@@ -214,11 +214,10 @@ class SupplierListScreen extends ConsumerWidget {
 
           return Container(
             margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: textColor.withValues(alpha: 0.2)),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               t,
