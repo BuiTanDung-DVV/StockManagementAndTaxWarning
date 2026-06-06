@@ -153,7 +153,7 @@ class InventoryScreen extends ConsumerWidget {
                           icon: Icons.pie_chart_rounded,
                         );
                       }
-                      const donutColors = [
+                      final donutColors = [
                         AppColors.success,
                         AppColors.info,
                         AppColors.warning,
