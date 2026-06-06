@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../settings/providers/shop_provider.dart';
 import '../../../core/network/api_client.dart';
 
 class SalesRepository {
