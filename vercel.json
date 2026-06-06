@@ -1,0 +1,5 @@
+{
+  "version": 2,
+  "buildCommand": "echo \"Skipping build, using pre-built files in build/web\"",
+  "outputDirectory": "build/web"
+}
