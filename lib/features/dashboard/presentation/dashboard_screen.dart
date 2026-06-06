@@ -77,6 +77,7 @@ class DashboardScreen extends ConsumerWidget {
     
     final lowStockAsync = hasInventory && shopState.userShops.isNotEmpty ? ref.watch(lowStockProvider) : null;
     final inventoryCatAsync = hasInventory && shopState.userShops.isNotEmpty ? ref.watch(inventoryCategoriesSummaryProvider) : null;
+    final recentTransactionsAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(recentTransactionsProvider) : null;
 
     if (shopState.userShops.isEmpty) {
       return Scaffold(

@@ -56,7 +56,6 @@ class FilterBar extends StatelessWidget {
               ),
             ),
           ),
-          ),
           if (onFilterTap != null) ...[
             const SizedBox(width: 12),
             Container(
