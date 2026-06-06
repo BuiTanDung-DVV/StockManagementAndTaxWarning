@@ -82,7 +82,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: items.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: tc.divider.withValues(alpha: 0.5)),
+              separatorBuilder: (_, __) => Divider(height: 1, color: tc.divider.withValues(alpha: 0.15)),
               itemBuilder: (_, i) {
                 final cust = items[i];
                 final debt = asDouble(cust['totalDebt'] ?? cust['balance']);
@@ -255,11 +255,10 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
           return Container(
             margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: textColor.withValues(alpha: 0.2)),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               t,
