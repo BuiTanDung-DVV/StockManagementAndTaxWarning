@@ -570,7 +570,7 @@ class DashboardScreen extends ConsumerWidget {
                       );
                     },
                     loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (e, trace) => Center(child: Text('Lỗi tải GD: $e', style: const TextStyle(color: Colors.red))),
                   ),
                 ],
 
