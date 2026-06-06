@@ -180,6 +180,30 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
 
+                // Quick Actions Bar
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  clipBehavior: Clip.none,
+                  child: Row(
+                    children: [
+                      if (shopState.isOwner || shopState.hasPermission('pos'))
+                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedStore01, 'Bán hàng', () => context.push('/pos'))),
+                      if (shopState.isOwner || shopState.hasPermission('products'))
+                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedPackage, 'Sản phẩm', () => context.push('/products'))),
+                      if (shopState.isOwner || shopState.hasPermission('customers'))
+                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedUserGroup, 'Khách hàng', () => context.push('/customers'))),
+                      if (shopState.isOwner || shopState.hasPermission('finance'))
+                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedInvoice01, 'Đơn hàng', () => context.push('/sales'))),
+                      if (shopState.isOwner || shopState.hasPermission('inventory'))
+                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedTask01, 'Kiểm kê', () => context.push('/stock-take'))),
+                      if (shopState.isOwner || shopState.hasPermission('finance'))
+                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedAnalytics01, 'Lãi/Lỗ', () => context.push('/profit-loss'))),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
                 // Sales summary cards
                 if (hasFinance && salesAsync != null) ...[
                   salesAsync.when(
@@ -476,85 +500,78 @@ class DashboardScreen extends ConsumerWidget {
                   const _TaxObligationReminder(),
                 ],
 
-                const SizedBox(height: 28),
-                Text(
-                  AppStrings.dashboardQuickActions,
-                  style: GoogleFonts.outfit(
-                    fontSize: 18, 
-                    fontWeight: FontWeight.bold,
-                    color: c.textPrimary,
+                if (hasFinance && recentTransactionsAsync != null) ...[
+                  const SizedBox(height: 28),
+                  Text(
+                    'Giao dịch gần đây',
+                    style: GoogleFonts.outfit(
+                      fontSize: 20, 
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                GridView.extent(
-                  maxCrossAxisExtent: 100,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    if (shopState.isOwner || shopState.hasPermission('pos'))
-                      _QuickAction(
-                        HugeIcons.strokeRoundedStore01,
-                        'Tạo đơn',
-                        () => context.push('/pos'),
-                      ),
-                    if (shopState.isOwner || shopState.hasPermission('products'))
-                      _QuickAction(
-                        HugeIcons.strokeRoundedPackage,
-                        'Sản phẩm',
-                        () => context.push('/products'),
-                      ),
-                    if (shopState.isOwner || shopState.hasPermission('customers'))
-                      _QuickAction(
-                        HugeIcons.strokeRoundedUserGroup,
-                        'Khách hàng',
-                        () => context.push('/customers'),
-                      ),
-                    if (shopState.isOwner || shopState.hasPermission('suppliers'))
-                      _QuickAction(
-                        HugeIcons.strokeRoundedTruck,
-                        'NCC',
-                        () => context.push('/suppliers'),
-                      ),
-                    if (shopState.isOwner || shopState.hasPermission('inventory'))
-                      _QuickAction(
-                        HugeIcons.strokeRoundedTask01,
-                        'Kiểm kê',
-                        () => context.push('/stock-take'),
-                      ),
-                    if (shopState.isOwner || shopState.hasPermission('finance'))
-                      _QuickAction(
-                        HugeIcons.strokeRoundedCheckmarkCircle02,
-                        'Chốt sổ',
-                        () => context.push('/daily-closing'),
-                      ),
-                    if (shopState.isOwner || shopState.hasPermission('finance'))
-                      _QuickAction(
-                        HugeIcons.strokeRoundedAnalytics01,
-                        'Lãi/Lỗ',
-                        () => context.push('/profit-loss'),
-                      ),
-                    if (shopState.isOwner || shopState.hasPermission('finance'))
-                      _QuickAction(
-                        HugeIcons.strokeRoundedInvoice01,
-                        'Chứng từ',
-                        () => context.push('/invoices'),
-                      ),
-                    if (shopState.isOwner) ...[
-                      _QuickAction(
-                        HugeIcons.strokeRoundedUserMultiple,
-                        'Nhân viên',
-                        () => context.push('/staff'),
-                      ),
-                      _QuickAction(
-                        HugeIcons.strokeRoundedUserStar02,
-                        'Vai trò',
-                        () => context.push('/roles'),
-                      ),
-                    ],
-                  ],
-                ),
+                  const SizedBox(height: 14),
+                  recentTransactionsAsync.when(
+                    data: (transactions) {
+                      if (transactions.isEmpty) {
+                        return const Center(child: Text('Chưa có giao dịch nào'));
+                      }
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: c.divider, width: 1),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: transactions.length,
+                          separatorBuilder: (_, __) => Divider(color: c.divider),
+                          itemBuilder: (context, index) {
+                            final t = transactions[index];
+                            final id = t['id'];
+                            final total = num.tryParse(t['totalAmount']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                            final dateStr = t['orderDate'] ?? '';
+                            final date = DateTime.tryParse(dateStr);
+                            final formattedDate = date != null ? DateFormat('dd/MM HH:mm').format(date) : '';
+                            final customerName = t['customer']?['name'] ?? 'Khách lẻ';
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              leading: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: HugeIcon(icon: HugeIcons.strokeRoundedInvoice03, size: 20, color: theme.colorScheme.primary),
+                              ),
+                              title: Text(
+                                customerName,
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: c.textPrimary, fontSize: 15),
+                              ),
+                              subtitle: Text(
+                                'HD-$id • $formattedDate',
+                                style: TextStyle(color: c.textSecondary, fontSize: 12),
+                              ),
+                              trailing: Text(
+                                _currFmt.format(total),
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.w700,
+                                  color: c.textPrimary,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              onTap: () => context.push('/sales/$id'),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ],
 
                 const SizedBox(height: 28),
                 // Low stock warnings
@@ -814,22 +831,21 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         border: Border.all(
-          color: c.divider.withValues(alpha: 0.2),
+          color: c.divider,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.05),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-            spreadRadius: -5,
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 40,
+            offset: const Offset(0, 20),
+            spreadRadius: -10,
           ),
         ],
       ),
@@ -840,49 +856,49 @@ class _SummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                child: HugeIcon(icon: icon, size: 20, color: color),
+                child: HugeIcon(icon: icon, size: 24, color: color),
               ),
-              // Tiny graphic dot/glow matching the color
+              // Subtle dot
               Container(
-                width: 6,
-                height: 6,
+                width: 8,
+                height: 8,
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: color.withValues(alpha: 0.6),
-                      blurRadius: 4,
-                      spreadRadius: 1,
+                      color: color.withValues(alpha: 0.4),
+                      blurRadius: 12,
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
           Text(
             value,
-            style: GoogleFonts.inter(
-              fontSize: 26, 
-              fontWeight: FontWeight.w800,
+            style: GoogleFonts.outfit(
+              fontSize: 32, 
+              fontWeight: FontWeight.w900,
               color: c.textPrimary,
-              letterSpacing: -1.0,
+              letterSpacing: -1.5,
+              height: 1.1,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             title, 
-            style: TextStyle(
-              fontSize: 12, 
+            style: GoogleFonts.inter(
+              fontSize: 14, 
               color: c.textSecondary,
               fontWeight: FontWeight.w500,
             ),
@@ -903,56 +919,47 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
     
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        width: 80,
         decoration: BoxDecoration(
-          color: c.card.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: c.divider.withValues(alpha: 0.4),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-              spreadRadius: -5,
-            ),
-          ],
+          color: Colors.transparent,
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
+                color: c.card,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: c.divider, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: HugeIcon(icon: icon, color: theme.colorScheme.primary, size: 22),
+              child: HugeIcon(icon: icon, color: theme.colorScheme.primary, size: 24),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
+              style: GoogleFonts.inter(
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: c.textSecondary,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
-      ),
-      ),
       ),
     );
   }
