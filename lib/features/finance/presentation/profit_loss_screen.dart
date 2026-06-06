@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -416,7 +417,7 @@ class _MetricCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: c.card, 
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
+        border: Border.all(color: c.divider.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
         children: [
@@ -436,10 +437,16 @@ class _MetricCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ), 
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   value, 
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: color)
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w800, 
+                    fontSize: 20, 
+                    color: color,
+                    letterSpacing: -0.5,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  )
                 ),
               ],
             ),

@@ -821,15 +821,15 @@ class _SummaryCard extends StatelessWidget {
         color: c.card,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: c.divider.withValues(alpha: 0.5),
+          color: c.divider.withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-            spreadRadius: -4,
+            color: color.withValues(alpha: 0.05),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+            spreadRadius: -5,
           ),
         ],
       ),
@@ -868,17 +868,17 @@ class _SummaryCard extends StatelessWidget {
           const SizedBox(height: 18),
           Text(
             value,
-            style: GoogleFonts.outfit(
-              fontSize: 22, 
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.inter(
+              fontSize: 26, 
+              fontWeight: FontWeight.w800,
               color: c.textPrimary,
-              letterSpacing: -0.5,
+              letterSpacing: -1.0,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             title, 
             style: TextStyle(
