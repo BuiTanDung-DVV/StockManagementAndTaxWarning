@@ -25,8 +25,8 @@ Thumbs.db
 .packages
 .pub-cache/
 .pub/
-/build/
-build/
+# /build/
+# build/
 /coverage/
 
 # Android specific
@@ -55,7 +55,7 @@ app.*.symbols
 app.*.map.json
 
 # Web specific
-/web/build/
+# /web/build/
 
 # ==========================================
 # BACKEND (NODE.JS / EXPRESS / TYPEORM)
