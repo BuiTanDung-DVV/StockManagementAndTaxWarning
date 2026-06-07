@@ -1038,6 +1038,29 @@ class CashFlowAreaChart extends StatelessWidget {
 
     if (maxY == 0) maxY = 1000000;
 
+    int expectedLen = data.length;
+    final lowerLabel = label.toLowerCase();
+    if (lowerLabel.contains('tháng')) {
+      // Find exact days in month if possible
+      if (data.isNotEmpty) {
+        final firstDate = DateTime.tryParse(data.first['date']?.toString() ?? '');
+        if (firstDate != null) {
+          final nextMonth = DateTime(firstDate.year, firstDate.month + 1, 1);
+          final lastDay = nextMonth.subtract(const Duration(days: 1));
+          expectedLen = lastDay.day;
+        } else {
+          expectedLen = 30; // fallback
+        }
+      } else {
+        expectedLen = 30;
+      }
+    } else if (lowerLabel.contains('tuần')) {
+      expectedLen = 7;
+    }
+
+    double calculatedMaxX = (expectedLen > data.length ? expectedLen : data.length).toDouble() - 1;
+    if (calculatedMaxX < 0) calculatedMaxX = 0;
+
     return Container(
       height: 240,
       padding: const EdgeInsets.only(left: 4, right: 16, top: 16, bottom: 8),
@@ -1128,19 +1151,38 @@ class CashFlowAreaChart extends StatelessWidget {
                       reservedSize: 22,
                       interval: 1,
                       getTitlesWidget: (v, m) {
+                        if (v % 1 != 0) return const SizedBox.shrink(); // Prevent duplicates
+                        
                         final idx = v.toInt();
-                        if (idx < 0 || idx >= data.length)
+                        if (idx < 0 || idx > calculatedMaxX)
                           return const SizedBox.shrink();
-                        if (data.length > 7 &&
-                            idx % (data.length / 5).ceil() != 0 &&
-                            idx != data.length - 1)
+
+                        String displayDate = '';
+                        if (idx < data.length) {
+                          final dateStr = data[idx]['date'] as String? ?? '';
+                          final parts = dateStr.split('-');
+                          displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                        } else if (data.isNotEmpty) {
+                          // Project forward
+                          final firstDateStr = data.first['date'] as String? ?? '';
+                          final firstDate = DateTime.tryParse(firstDateStr);
+                          if (firstDate != null) {
+                            final projectedDate = firstDate.add(Duration(days: idx));
+                            final d = projectedDate.day.toString().padLeft(2, '0');
+                            final m = projectedDate.month.toString().padLeft(2, '0');
+                            displayDate = '$d/$m';
+                          }
+                        }
+
+                        if (displayDate.length < 5) return const SizedBox.shrink();
+
+                        int targetLen = calculatedMaxX.toInt() + 1;
+                        if (targetLen > 7 &&
+                            idx % (targetLen / 5).ceil() != 0 &&
+                            idx != targetLen - 1) {
                           return const SizedBox.shrink();
-                        final dateStr = data[idx]['date'] as String? ?? '';
-                        if (dateStr.length < 5) return const SizedBox.shrink();
-                        final parts = dateStr.split('-');
-                        final displayDate = parts.length >= 3
-                            ? '${parts[2]}/${parts[1]}'
-                            : dateStr;
+                        }
+
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
@@ -1203,7 +1245,7 @@ class CashFlowAreaChart extends StatelessWidget {
                   ),
                 ),
                 minX: 0,
-                maxX: (data.length - 1).toDouble(),
+                maxX: calculatedMaxX,
                 minY: 0,
                 maxY: maxY * 1.2,
                 lineBarsData: [
