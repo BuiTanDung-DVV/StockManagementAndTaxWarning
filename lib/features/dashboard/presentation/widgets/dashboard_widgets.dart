@@ -184,17 +184,16 @@ class SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider, width: 1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-            spreadRadius: -5,
+            color: color.withValues(alpha: 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -202,55 +201,43 @@ class SummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: HugeIcon(icon: icon, size: 20, color: color),
+                child: HugeIcon(icon: icon, size: 16, color: color),
               ),
-              // Subtle dot
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.4),
-                      blurRadius: 8,
-                    ),
-                  ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: c.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             value,
             style: GoogleFonts.outfit(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
               color: c.textPrimary,
-              letterSpacing: -1.0,
+              letterSpacing: -0.5,
               height: 1.1,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: c.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
           ),
         ],
       ),
@@ -272,42 +259,35 @@ class QuickAction extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 80,
-        decoration: BoxDecoration(color: Colors.transparent),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.divider, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: HugeIcon(
-                icon: icon,
-                color: theme.colorScheme.primary,
-                size: 24,
-              ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.primary.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            const SizedBox(height: 8),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            HugeIcon(
+              icon: icon,
+              color: theme.colorScheme.primary,
+              size: 18,
+            ),
+            const SizedBox(width: 8),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: c.textSecondary,
+                color: c.textPrimary,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -328,9 +308,8 @@ class TimeFilterBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: c.card,
+        color: c.cardAlt.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.divider.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -357,16 +336,25 @@ class TimeFilterBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: active
-              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+              ? c.card
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            fontWeight: active ? FontWeight.bold : FontWeight.w500,
-            color: active ? theme.colorScheme.primary : c.textSecondary,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+            color: active ? c.textPrimary : c.textSecondary,
           ),
         ),
       ),
@@ -378,12 +366,14 @@ class ComparisonBarChart extends StatelessWidget {
   final List<dynamic> currentData;
   final List<dynamic> previousData;
   final String label1, label2;
+  final Widget? filterWidget;
   const ComparisonBarChart(
     this.currentData,
     this.previousData,
     this.label1,
-    this.label2,
-  );
+    this.label2, {
+    this.filterWidget,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -519,16 +509,26 @@ class ComparisonBarChart extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'So sánh doanh thu',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: c.textSecondary,
-                    letterSpacing: -0.2,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'So sánh doanh thu',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: c.textSecondary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    if (filterWidget != null) ...[
+                      const SizedBox(width: 16),
+                      filterWidget!,
+                    ],
+                  ],
                 ),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildLegendItem(
                       label2,
