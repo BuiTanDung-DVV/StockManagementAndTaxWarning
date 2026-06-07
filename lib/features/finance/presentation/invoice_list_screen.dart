@@ -305,17 +305,38 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                                       color: c.textMuted,
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.redAccent,
-                                      size: 20,
-                                    ),
-                                    onPressed: () =>
-                                        _confirmDelete(context, ref, inv['id']),
-                                    tooltip: 'Xóa hóa đơn',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.edit_outlined,
+                                          color: theme.colorScheme.primary,
+                                          size: 20,
+                                        ),
+                                        onPressed: () =>
+                                            _showEditDialog(context, ref, inv),
+                                        tooltip: 'Sửa hóa đơn',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                          color: Colors.redAccent,
+                                          size: 20,
+                                        ),
+                                        onPressed: () => _confirmDelete(
+                                          context,
+                                          ref,
+                                          inv['id'],
+                                        ),
+                                        tooltip: 'Xóa hóa đơn',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -465,6 +486,96 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
               if (ctx.mounted) Navigator.pop(ctx);
             },
             child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, WidgetRef ref, dynamic inv) {
+    final invId = inv['id'] is int
+        ? inv['id']
+        : int.tryParse(inv['id']?.toString() ?? '0') ?? 0;
+    final numC = TextEditingController(text: inv['invoiceNumber']?.toString());
+    final partnerC = TextEditingController(text: inv['partnerName']?.toString());
+    final amountC = TextEditingController(text: inv['subtotal']?.toString());
+    final vatC = TextEditingController(text: inv['taxAmount']?.toString());
+    String type = inv['invoiceType']?.toString() ?? 'IN';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sửa hóa đơn'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: type,
+                items: const [
+                  DropdownMenuItem(value: 'IN', child: Text('Đầu vào')),
+                  DropdownMenuItem(value: 'OUT', child: Text('Đầu ra')),
+                ],
+                onChanged: (v) => type = v ?? 'IN',
+                decoration: const InputDecoration(labelText: 'Loại'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: numC,
+                decoration: const InputDecoration(labelText: 'Số hóa đơn'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: partnerC,
+                decoration: const InputDecoration(labelText: 'Đối tác'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountC,
+                decoration: const InputDecoration(
+                  labelText: 'Số tiền trước thuế',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: vatC,
+                decoration: const InputDecoration(labelText: 'Tiền VAT'),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final partnerName = partnerC.text.trim();
+              final subtotal = double.tryParse(amountC.text) ?? 0;
+              final taxAmount = double.tryParse(vatC.text) ?? 0;
+              if (partnerName.isEmpty || subtotal <= 0 || taxAmount < 0) {
+                ToastService.showError(
+                  'Vui lòng nhập đối tác, số tiền > 0 và VAT hợp lệ',
+                );
+                return;
+              }
+              await ref.read(financeRepoProvider).updateInvoice(invId, {
+                'invoiceType': type,
+                'invoiceNumber': numC.text.trim().isEmpty
+                    ? null
+                    : numC.text.trim(),
+                'partnerName': partnerName,
+                'subtotal': subtotal,
+                'taxAmount': taxAmount,
+                'totalAmount': subtotal + taxAmount,
+              });
+              ref.invalidate(invoiceListProvider);
+              ref.invalidate(invoiceSummaryProvider);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Cập nhật'),
           ),
         ],
       ),

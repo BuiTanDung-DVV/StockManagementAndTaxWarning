@@ -65,6 +65,11 @@ class TransactionDetailScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
+            tooltip: 'Sửa giao dịch',
+            onPressed: () => _showEditDialog(context, ref, transaction),
+          ),
+          IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             tooltip: 'Xóa giao dịch',
             onPressed: () => _confirmDelete(context, ref),
@@ -182,6 +187,102 @@ class TransactionDetailScreen extends ConsumerWidget {
               maxLines: isMultiLine ? null : 1,
               overflow: isMultiLine ? null : TextOverflow.ellipsis,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Map<dynamic, dynamic> trans,
+  ) {
+    final transId = trans['id'] is int
+        ? trans['id']
+        : int.tryParse(trans['id']?.toString() ?? '0') ?? 0;
+    
+    final isIncome = trans['type'] == 'INCOME' || trans['type'] == 'income';
+    String type = isIncome ? 'INCOME' : 'EXPENSE';
+    final amountC = TextEditingController(text: trans['amount']?.toString());
+    final cpartyC = TextEditingController(text: trans['counterparty']?.toString());
+    final descC = TextEditingController(text: (trans['description'] ?? trans['note'])?.toString());
+    String payMethod = trans['paymentMethod']?.toString() ?? 'CASH';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sửa giao dịch'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: type,
+                items: const [
+                  DropdownMenuItem(value: 'INCOME', child: Text('Thu tiền')),
+                  DropdownMenuItem(value: 'EXPENSE', child: Text('Chi tiền')),
+                ],
+                onChanged: (v) => type = v ?? 'INCOME',
+                decoration: const InputDecoration(labelText: 'Loại'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountC,
+                decoration: const InputDecoration(labelText: 'Số tiền'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: payMethod == 'Chuyển khoản' ? 'TRANSFER' : (payMethod == 'Tiền mặt' ? 'CASH' : payMethod),
+                items: const [
+                  DropdownMenuItem(value: 'CASH', child: Text('Tiền mặt')),
+                  DropdownMenuItem(value: 'TRANSFER', child: Text('Chuyển khoản')),
+                ],
+                onChanged: (v) => payMethod = v ?? 'CASH',
+                decoration: const InputDecoration(labelText: 'Phương thức'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: cpartyC,
+                decoration: const InputDecoration(labelText: 'Đối tác'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descC,
+                decoration: const InputDecoration(labelText: 'Ghi chú'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final amt = double.tryParse(amountC.text) ?? 0;
+              if (amt <= 0) {
+                ToastService.showError('Số tiền phải > 0');
+                return;
+              }
+              await ref.read(financeRepoProvider).updateTransaction(transId, {
+                'type': type,
+                'amount': amt,
+                'paymentMethod': payMethod,
+                'counterparty': cpartyC.text.trim(),
+                'description': descC.text.trim(),
+              });
+              ref.invalidate(transactionsProvider);
+              ref.invalidate(cashSummaryProvider);
+              if (ctx.mounted) {
+                Navigator.pop(ctx); // close dialog
+                Navigator.pop(context); // close screen
+                ToastService.showSuccess('Cập nhật thành công');
+              }
+            },
+            child: const Text('Cập nhật'),
           ),
         ],
       ),

@@ -80,6 +80,14 @@ class InventoryRepository {
     Map<String, dynamic> dto,
   ) async => await _api.post('/stock-takes', data: dto);
 
+  Future<Map<String, dynamic>> findStockTakes({
+    int page = 1,
+    int limit = 20,
+  }) async => await _api.get(
+    '/stock-takes',
+    params: {'page': '$page', 'limit': '$limit'},
+  );
+
   Future<void> deleteStockTake(int id) async =>
       await _api.delete('/stock-takes/$id');
 }
@@ -145,3 +153,9 @@ final purchaseOrdersProvider = FutureProvider.family<Map<String, dynamic>, int>(
 final inventoryCategoriesSummaryProvider = FutureProvider<List<dynamic>>((ref) {
   return ref.read(inventoryRepoProvider).getCategoriesSummary();
 });
+
+final stockTakesProvider = FutureProvider.family<Map<String, dynamic>, int>(
+  (ref, page) {
+    return ref.read(inventoryRepoProvider).findStockTakes(page: page);
+  },
+);
