@@ -367,6 +367,7 @@ class DashboardScreen extends ConsumerWidget {
                                       _currFmt.format(revenue),
                                       HugeIcons.strokeRoundedChartIncrease,
                                       theme.colorScheme.primary,
+                                      isHero: true,
                                     ),
                                   ),
                                   SizedBox(
