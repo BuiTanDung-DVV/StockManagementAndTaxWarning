@@ -1,5 +1,6 @@
 #!/bin/bash
-
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
 echo "🚀 Bắt đầu cài đặt Flutter trên Vercel..."
 # Tải Flutter bản stable mới nhất (chỉ lấy commit cuối cùng để tiết kiệm dung lượng và thời gian)
 if [ ! -d "flutter" ]; then
