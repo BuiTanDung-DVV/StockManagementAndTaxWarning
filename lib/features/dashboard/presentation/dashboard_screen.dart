@@ -22,6 +22,7 @@ import '../../settings/providers/tax_config_provider.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/presentation/widgets/join_shop_dialog.dart';
 import 'widgets/dashboard_widgets.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -39,11 +40,23 @@ class _DashboardTimeFilter extends Notifier<String> {
 final _dashboardTimeFilterProvider =
     NotifierProvider<_DashboardTimeFilter, String>(_DashboardTimeFilter.new);
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  void _showJoinShopDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => const JoinShopDialog(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final shopState = ref.watch(shopProvider);
@@ -69,26 +82,28 @@ class DashboardScreen extends ConsumerWidget {
           .split('T')[0];
       label1 = 'Tuần này';
       label2 = 'Tuần trước';
-    } else {
-      // month
-      from1 = DateTime(
-        today.year,
-        today.month,
-        1,
-      ).toIso8601String().split('T')[0];
+    } else if (filter == 'month') {
+      from1 = DateTime(today.year, today.month, 1).toIso8601String().split('T')[0];
       to1 = today.toIso8601String().split('T')[0];
-      from2 = DateTime(
-        today.year,
-        today.month - 1,
-        1,
-      ).toIso8601String().split('T')[0];
-      to2 = DateTime(
-        today.year,
-        today.month,
-        0,
-      ).toIso8601String().split('T')[0];
+      from2 = DateTime(today.year, today.month - 1, 1).toIso8601String().split('T')[0];
+      to2 = DateTime(today.year, today.month, 0).toIso8601String().split('T')[0];
       label1 = 'Tháng này';
       label2 = 'Tháng trước';
+    } else if (filter == '6_months') {
+      from1 = DateTime(today.year, today.month - 5, 1).toIso8601String().split('T')[0];
+      to1 = today.toIso8601String().split('T')[0];
+      from2 = DateTime(today.year, today.month - 11, 1).toIso8601String().split('T')[0];
+      to2 = DateTime(today.year, today.month - 5, 0).toIso8601String().split('T')[0];
+      label1 = '6 tháng qua';
+      label2 = '6 tháng trước';
+    } else {
+      // year
+      from1 = DateTime(today.year, 1, 1).toIso8601String().split('T')[0];
+      to1 = today.toIso8601String().split('T')[0];
+      from2 = DateTime(today.year - 1, 1, 1).toIso8601String().split('T')[0];
+      to2 = DateTime(today.year - 1, 12, 31).toIso8601String().split('T')[0];
+      label1 = 'Năm nay';
+      label2 = 'Năm trước';
     }
 
     final salesAsync = hasFinance && shopState.userShops.isNotEmpty
@@ -138,11 +153,22 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Bạn cần tạo cửa hàng hoặc chờ chủ shop duyệt yêu cầu tham gia.',
+                  'Bạn cần tạo cửa hàng hoặc xin gia nhập vào một cửa hàng.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: c.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => _showJoinShopDialog(context),
+                  icon: const Icon(Icons.search_rounded),
+                  label: const Text('Tìm kiếm & Xin gia nhập'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
                 ),
                 const SizedBox(height: 24),

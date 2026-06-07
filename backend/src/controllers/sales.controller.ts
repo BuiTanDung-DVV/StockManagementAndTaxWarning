@@ -27,18 +27,20 @@ export const findAll = async (req: Request, res: Response) => {
     catch (e: any) { sendServiceError(res, e); }
 };
 
+const getShopId = (req: any) => req.isAllShops ? req.shopIds : req.shopId;
+
 export const summary = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.summary((req as any).shopId, req.query.from as string, req.query.to as string) }); }
+    try { res.json({ success: true, data: await salesService.summary(getShopId(req), req.query.from as string, req.query.to as string) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
 export const topProducts = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.getTopProducts((req as any).shopId, req.query.from as string, req.query.to as string) }); }
+    try { res.json({ success: true, data: await salesService.getTopProducts(getShopId(req), req.query.from as string, req.query.to as string) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
 export const paymentSummary = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.paymentMethodSummary((req as any).shopId, req.query.from as string, req.query.to as string) }); }
+    try { res.json({ success: true, data: await salesService.paymentMethodSummary(getShopId(req), req.query.from as string, req.query.to as string) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 

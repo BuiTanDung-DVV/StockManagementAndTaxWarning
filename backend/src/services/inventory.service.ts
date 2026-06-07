@@ -27,9 +27,13 @@ export class InventoryService {
         });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async getLowStock(shopId: number, threshold?: number) {
+    async getLowStock(shopId: number | number[], threshold?: number) {
+        const isArray = Array.isArray(shopId);
+        const shopCondition = isArray ? 's.shop_id IN (:...shopIds)' : 's.shop_id = :shopId';
+        const shopParams = isArray ? { shopIds: shopId } : { shopId };
+
         const query = this.stockRepo.createQueryBuilder('s')
-            .where('s.shop_id = :shopId', { shopId });
+            .where(shopCondition, shopParams);
             
         if (threshold !== undefined && !isNaN(threshold)) {
             query.andWhere('s.quantity <= :threshold', { threshold });
@@ -50,7 +54,10 @@ export class InventoryService {
     async getWarehouses(shopId: number) { return this.warehouseRepo.find({ where: { shopId } }); }
     async createWarehouse(shopId: number, dto: Partial<Warehouse>) { return this.warehouseRepo.save(this.warehouseRepo.create({ ...dto, shopId })); }
 
-    async getCategoriesSummary(shopId: number) {
+    async getCategoriesSummary(shopId: number | number[]) {
+        const isArray = Array.isArray(shopId);
+        const shopCondition = isArray ? 's.shop_id = ANY($1)' : 's.shop_id = $1';
+
         const query = `
             SELECT 
                 COALESCE(c.name, 'Chưa phân loại') as name, 
@@ -58,11 +65,11 @@ export class InventoryService {
             FROM inventory_stocks s
             JOIN products p ON s.product_id = p.id
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE s.shop_id = $1 AND s.quantity > 0
+            WHERE ${shopCondition} AND s.quantity > 0
             GROUP BY c.id, c.name
             ORDER BY value DESC
         `;
-        const result = await AppDataSource.query(query, [shopId]);
+        const result = await AppDataSource.query(query, [isArray ? shopId : shopId]);
         return result.map((r: any) => ({
             name: r.name,
             value: Number(r.value)

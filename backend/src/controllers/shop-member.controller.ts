@@ -52,3 +52,23 @@ export const getMyShops = async (req: AuthRequest, res: Response) => {
     }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
+
+export const searchShops = async (req: Request, res: Response) => {
+    try {
+        const q = req.query.q as string;
+        res.json({ success: true, data: await svc.searchShops(q) });
+    } catch (e: any) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+export const requestJoin = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.sub;
+        const shopId = req.body.shopId;
+        if (!shopId) return res.status(400).json({ success: false, message: 'Thiếu shopId' });
+        res.json({ success: true, data: await svc.requestJoin(userId, shopId) });
+    } catch (e: any) {
+        res.status(400).json({ success: false, message: e.message });
+    }
+};
