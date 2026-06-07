@@ -348,82 +348,86 @@ class DashboardScreen extends ConsumerWidget {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: SummaryCard(
-                                  'Doanh thu',
-                                  _currFmt.format(revenue),
-                                  HugeIcons.strokeRoundedChartIncrease,
-                                  theme.colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: SummaryCard(
-                                  'Đơn hàng',
-                                  '$orders',
-                                  HugeIcons.strokeRoundedInvoice03,
-                                  AppColors.success,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: SummaryCard(
-                                  'Lợi nhuận gộp',
-                                  _currFmt.format(grossProfit),
-                                  HugeIcons.strokeRoundedMoney04,
-                                  Colors.purple,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: SummaryCard(
-                                  AppStrings.dashboardAvgOrder,
-                                  _currFmt.format(avgOrder),
-                                  HugeIcons.strokeRoundedAnalytics01,
-                                  AppColors.info,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (hasInventory && lowStockAsync != null) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: lowStockAsync.when(
-                                    data: (items) => SummaryCard(
-                                      AppStrings.dashboardLowStock,
-                                      '${items.length}',
-                                      HugeIcons.strokeRoundedAlert02,
-                                      items.isEmpty
-                                          ? AppColors.success
-                                          : AppColors.danger,
-                                    ),
-                                    loading: () => SummaryCard(
-                                      AppStrings.dashboardLowStock,
-                                      '...',
-                                      HugeIcons.strokeRoundedAlert02,
-                                      AppColors.warning,
-                                    ),
-                                    error: (_, _) => SummaryCard(
-                                      AppStrings.dashboardLowStock,
-                                      '?',
-                                      HugeIcons.strokeRoundedAlert02,
-                                      AppColors.danger,
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final w = constraints.maxWidth;
+                              // Determine number of columns based on width
+                              int crossAxisCount = w > 1100 ? 5 : (w > 800 ? 3 : (w > 500 ? 2 : 1));
+                              // If there are only 4 cards (no inventory), and we have 5 columns, reduce to 4
+                              if (!hasInventory && crossAxisCount == 5) crossAxisCount = 4;
+                              
+                              final cardWidth = (w - (crossAxisCount - 1) * 12) / crossAxisCount;
+
+                              return Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: [
+                                  SizedBox(
+                                    width: cardWidth,
+                                    child: SummaryCard(
+                                      'Doanh thu',
+                                      _currFmt.format(revenue),
+                                      HugeIcons.strokeRoundedChartIncrease,
+                                      theme.colorScheme.primary,
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Expanded(child: SizedBox.shrink()),
-                              ],
-                            ),
-                          ],
+                                  SizedBox(
+                                    width: cardWidth,
+                                    child: SummaryCard(
+                                      'Đơn hàng',
+                                      '$orders',
+                                      HugeIcons.strokeRoundedInvoice03,
+                                      AppColors.success,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: cardWidth,
+                                    child: SummaryCard(
+                                      'Lợi nhuận gộp',
+                                      _currFmt.format(grossProfit),
+                                      HugeIcons.strokeRoundedMoney04,
+                                      Colors.purple,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: cardWidth,
+                                    child: SummaryCard(
+                                      AppStrings.dashboardAvgOrder,
+                                      _currFmt.format(avgOrder),
+                                      HugeIcons.strokeRoundedAnalytics01,
+                                      AppColors.info,
+                                    ),
+                                  ),
+                                  if (hasInventory && lowStockAsync != null)
+                                    SizedBox(
+                                      width: cardWidth,
+                                      child: lowStockAsync.when(
+                                        data: (items) => SummaryCard(
+                                          AppStrings.dashboardLowStock,
+                                          '${items.length}',
+                                          HugeIcons.strokeRoundedAlert02,
+                                          items.isEmpty
+                                              ? AppColors.success
+                                              : AppColors.danger,
+                                        ),
+                                        loading: () => SummaryCard(
+                                          AppStrings.dashboardLowStock,
+                                          '...',
+                                          HugeIcons.strokeRoundedAlert02,
+                                          AppColors.warning,
+                                        ),
+                                        error: (_, _) => SummaryCard(
+                                          AppStrings.dashboardLowStock,
+                                          '?',
+                                          HugeIcons.strokeRoundedAlert02,
+                                          AppColors.danger,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
                           const SizedBox(height: 16),
                           TimeFilterBar(
                             filter,
