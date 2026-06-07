@@ -350,11 +350,16 @@ class DashboardScreen extends ConsumerWidget {
                             builder: (context, constraints) {
                               final w = constraints.maxWidth;
                               // Determine number of columns based on width
-                              int crossAxisCount = w > 1100 ? 5 : (w > 800 ? 3 : (w > 500 ? 2 : 1));
+                              int crossAxisCount = w > 1100
+                                  ? 5
+                                  : (w > 800 ? 3 : (w > 500 ? 2 : 1));
                               // If there are only 4 cards (no inventory), and we have 5 columns, reduce to 4
-                              if (!hasInventory && crossAxisCount == 5) crossAxisCount = 4;
-                              
-                              final cardWidth = (w - (crossAxisCount - 1) * 16) / crossAxisCount;
+                              if (!hasInventory && crossAxisCount == 5)
+                                crossAxisCount = 4;
+
+                              final cardWidth =
+                                  (w - (crossAxisCount - 1) * 16) /
+                                  crossAxisCount;
 
                               return Wrap(
                                 spacing: 16,
@@ -437,7 +442,9 @@ class DashboardScreen extends ConsumerWidget {
                                   filterWidget: TimeFilterBar(
                                     filter,
                                     (v) => ref
-                                        .read(_dashboardTimeFilterProvider.notifier)
+                                        .read(
+                                          _dashboardTimeFilterProvider.notifier,
+                                        )
                                         .update(v),
                                   ),
                                 ),
@@ -542,7 +549,8 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     error: (e, _) => AppError(
                       message: 'Không thể tải phân bổ tồn kho\n$e',
-                      onRetry: () => ref.invalidate(inventoryCategoriesSummaryProvider),
+                      onRetry: () =>
+                          ref.invalidate(inventoryCategoriesSummaryProvider),
                     ),
                   ),
                 ],
@@ -650,19 +658,35 @@ class DashboardScreen extends ConsumerWidget {
                                         borderRadius: BorderRadius.circular(6),
                                         child: Stack(
                                           children: [
-                                            Container(height: 8, width: double.infinity, color: c.surface),
-                                            AnimatedContainer(
-                                              duration: const Duration(milliseconds: 500),
+                                            Container(
                                               height: 8,
-                                              width: constraints.maxWidth * progress,
+                                              width: double.infinity,
+                                              color: c.surface,
+                                            ),
+                                            AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 500,
+                                              ),
+                                              height: 8,
+                                              width:
+                                                  constraints.maxWidth *
+                                                  progress,
                                               decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(6),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
                                                 gradient: LinearGradient(
-                                                  colors: [color, color.withValues(alpha: 0.7)],
+                                                  colors: [
+                                                    color,
+                                                    color.withValues(
+                                                      alpha: 0.7,
+                                                    ),
+                                                  ],
                                                 ),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: color.withValues(alpha: 0.35),
+                                                    color: color.withValues(
+                                                      alpha: 0.35,
+                                                    ),
                                                     blurRadius: 6,
                                                     offset: const Offset(0, 2),
                                                   ),

@@ -30,10 +30,7 @@ class GlobalSearchDelegate extends SearchDelegate<String> {
   List<Widget>? buildActions(BuildContext context) {
     return [
       if (query.isNotEmpty)
-        IconButton(
-          icon: const Icon(Icons.clear),
-          onPressed: () => query = '',
-        ),
+        IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
     ];
   }
 
@@ -84,7 +81,7 @@ class GlobalSearchDelegate extends SearchDelegate<String> {
         ),
       );
     }
-    
+
     return Container(
       color: c.bg,
       child: ListView(

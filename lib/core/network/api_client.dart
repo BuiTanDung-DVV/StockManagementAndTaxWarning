@@ -31,9 +31,9 @@ class ApiClient {
     // Provide a fallback for production (Vercel) if not passed via build args
     if (kIsWeb) {
       // Default to the provided production backend
-      return 'https://stock-management-and-tax-warning.vercel.app/api/'; 
+      return 'https://stock-management-and-tax-warning.vercel.app/api/';
     }
-    
+
     // Default fallback for mobile
     return 'http://10.0.2.2:3000/api/';
   }
@@ -204,7 +204,8 @@ class ApiClient {
     return body;
   }
 
-  String _cleanPath(String path) => path.startsWith('/') ? path.substring(1) : path;
+  String _cleanPath(String path) =>
+      path.startsWith('/') ? path.substring(1) : path;
 
   Future<dynamic> get(String path, {Map<String, dynamic>? params}) async {
     try {

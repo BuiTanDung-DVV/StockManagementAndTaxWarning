@@ -497,7 +497,9 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
         ? inv['id']
         : int.tryParse(inv['id']?.toString() ?? '0') ?? 0;
     final numC = TextEditingController(text: inv['invoiceNumber']?.toString());
-    final partnerC = TextEditingController(text: inv['partnerName']?.toString());
+    final partnerC = TextEditingController(
+      text: inv['partnerName']?.toString(),
+    );
     final amountC = TextEditingController(text: inv['subtotal']?.toString());
     final vatC = TextEditingController(text: inv['taxAmount']?.toString());
     String type = inv['invoiceType']?.toString() ?? 'IN';

@@ -98,13 +98,18 @@ class StockTakeHistoryScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: (isCompleted ? AppColors.success : AppColors.warning)
-                              .withValues(alpha: 0.08),
+                          color:
+                              (isCompleted
+                                      ? AppColors.success
+                                      : AppColors.warning)
+                                  .withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
                           Icons.fact_check_rounded,
-                          color: isCompleted ? AppColors.success : AppColors.warning,
+                          color: isCompleted
+                              ? AppColors.success
+                              : AppColors.warning,
                           size: 20,
                         ),
                       ),
@@ -146,13 +151,18 @@ class StockTakeHistoryScreen extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
                         tooltip: 'Xóa phiếu kiểm',
                         onPressed: () {
                           AppConfirmModal.show(
                             context,
                             title: 'Xóa phiếu kiểm',
-                            message: 'Bạn có chắc chắn muốn xóa phiếu kiểm kê này?',
+                            message:
+                                'Bạn có chắc chắn muốn xóa phiếu kiểm kê này?',
                             confirmText: 'Xóa',
                             cancelText: 'Hủy',
                           ).then((confirm) async {
@@ -160,9 +170,16 @@ class StockTakeHistoryScreen extends ConsumerWidget {
                               try {
                                 final id = st['id'] is int
                                     ? st['id']
-                                    : int.tryParse(st['id']?.toString() ?? '0') ?? 0;
-                                await ref.read(inventoryRepoProvider).deleteStockTake(id);
-                                ToastService.showSuccess('Xóa phiếu kiểm thành công');
+                                    : int.tryParse(
+                                            st['id']?.toString() ?? '0',
+                                          ) ??
+                                          0;
+                                await ref
+                                    .read(inventoryRepoProvider)
+                                    .deleteStockTake(id);
+                                ToastService.showSuccess(
+                                  'Xóa phiếu kiểm thành công',
+                                );
                                 ref.invalidate(stockTakesProvider);
                                 ref.invalidate(stockProvider);
                               } catch (e) {

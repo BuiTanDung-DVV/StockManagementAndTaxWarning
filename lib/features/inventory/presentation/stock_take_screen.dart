@@ -39,7 +39,9 @@ class StockTakeScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const StockTakeHistoryScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const StockTakeHistoryScreen(),
+                ),
               );
             },
           ),

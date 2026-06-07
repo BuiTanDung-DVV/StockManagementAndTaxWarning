@@ -29,7 +29,7 @@ class InventoryRepository {
 
   Future<List<dynamic>> getCategoriesSummary() async {
     final res = await _api.get('/inventory/categories-summary');
-    return res['data'] as List<dynamic>? ?? [];
+    return res as List<dynamic>? ?? [];
   }
 
   Future<Map<String, dynamic>> getXNTReport(
@@ -154,8 +154,9 @@ final inventoryCategoriesSummaryProvider = FutureProvider<List<dynamic>>((ref) {
   return ref.read(inventoryRepoProvider).getCategoriesSummary();
 });
 
-final stockTakesProvider = FutureProvider.family<Map<String, dynamic>, int>(
-  (ref, page) {
-    return ref.read(inventoryRepoProvider).findStockTakes(page: page);
-  },
-);
+final stockTakesProvider = FutureProvider.family<Map<String, dynamic>, int>((
+  ref,
+  page,
+) {
+  return ref.read(inventoryRepoProvider).findStockTakes(page: page);
+});

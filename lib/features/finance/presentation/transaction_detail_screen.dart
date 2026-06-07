@@ -201,12 +201,16 @@ class TransactionDetailScreen extends ConsumerWidget {
     final transId = trans['id'] is int
         ? trans['id']
         : int.tryParse(trans['id']?.toString() ?? '0') ?? 0;
-    
+
     final isIncome = trans['type'] == 'INCOME' || trans['type'] == 'income';
     String type = isIncome ? 'INCOME' : 'EXPENSE';
     final amountC = TextEditingController(text: trans['amount']?.toString());
-    final cpartyC = TextEditingController(text: trans['counterparty']?.toString());
-    final descC = TextEditingController(text: (trans['description'] ?? trans['note'])?.toString());
+    final cpartyC = TextEditingController(
+      text: trans['counterparty']?.toString(),
+    );
+    final descC = TextEditingController(
+      text: (trans['description'] ?? trans['note'])?.toString(),
+    );
     String payMethod = trans['paymentMethod']?.toString() ?? 'CASH';
 
     showDialog(
@@ -234,10 +238,15 @@ class TransactionDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                initialValue: payMethod == 'Chuyển khoản' ? 'TRANSFER' : (payMethod == 'Tiền mặt' ? 'CASH' : payMethod),
+                initialValue: payMethod == 'Chuyển khoản'
+                    ? 'TRANSFER'
+                    : (payMethod == 'Tiền mặt' ? 'CASH' : payMethod),
                 items: const [
                   DropdownMenuItem(value: 'CASH', child: Text('Tiền mặt')),
-                  DropdownMenuItem(value: 'TRANSFER', child: Text('Chuyển khoản')),
+                  DropdownMenuItem(
+                    value: 'TRANSFER',
+                    child: Text('Chuyển khoản'),
+                  ),
                 ],
                 onChanged: (v) => payMethod = v ?? 'CASH',
                 decoration: const InputDecoration(labelText: 'Phương thức'),
