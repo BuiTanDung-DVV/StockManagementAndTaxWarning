@@ -3,7 +3,8 @@ import 'package:bot_toast/bot_toast.dart';
 import '../theme/app_theme.dart';
 
 class ToastService {
-  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   static void showSuccess(String message) {
     _showSnackBar(message, AppColors.success, Icons.check_circle_rounded);
@@ -21,14 +22,20 @@ class ToastService {
     _showSnackBar(message, AppColors.warning, Icons.warning_rounded);
   }
 
-  static void _showSnackBar(String message, Color backgroundColor, IconData icon) {
+  static void _showSnackBar(
+    String message,
+    Color backgroundColor,
+    IconData icon,
+  ) {
     BotToast.showCustomNotification(
       toastBuilder: (cancelFunc) {
         return Card(
           color: backgroundColor,
           elevation: 8,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
@@ -39,7 +46,11 @@ class ToastService {
                 Flexible(
                   child: Text(
                     message,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],

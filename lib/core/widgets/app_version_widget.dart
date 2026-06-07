@@ -18,14 +18,16 @@ class AppVersionWidget extends StatelessWidget {
         final packageInfo = snapshot.data!;
         final version = packageInfo.version;
         final c = AppThemeColors.of(context);
-        
+
         return Text(
           'Phiên bản $version',
-          style: style ?? TextStyle(
-            color: c.textMuted,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+          style:
+              style ??
+              TextStyle(
+                color: c.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
           textAlign: TextAlign.center,
         );
       },

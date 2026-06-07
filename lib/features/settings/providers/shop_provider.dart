@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 
@@ -26,7 +27,8 @@ class ShopState {
   bool get isOwner => memberType == 'OWNER' || userShops.isEmpty;
   bool get isPending => status == 'PENDING';
   bool get isRejected => status == 'REJECTED';
-  bool get isActive => status == 'ACTIVE' || status == null; // legacy compatibility
+  bool get isActive =>
+      status == 'ACTIVE' || status == null; // legacy compatibility
 
   /// Check if user has permission. Owners and users with no shop config always return true.
   bool hasPermission(String key, [String level = 'view']) {
@@ -69,7 +71,9 @@ class ShopNotifier extends Notifier<ShopState> {
 
   /// Initialize from login response shops array
   void initFromLogin(List<dynamic> shops) {
-    final parsed = shops.map((s) => Map<String, dynamic>.from(s as Map)).toList();
+    final parsed = shops
+        .map((s) => Map<String, dynamic>.from(s as Map))
+        .toList();
     if (parsed.isEmpty) return;
 
     // Default to first shop
@@ -81,20 +85,25 @@ class ShopNotifier extends Notifier<ShopState> {
     state = state.copyWith(isLoading: true);
     try {
       final data = await _api.get('/my-shops');
-      final shops = (data as List).map((s) => Map<String, dynamic>.from(s as Map)).toList();
+      final shops = (data as List)
+          .map((s) => Map<String, dynamic>.from(s as Map))
+          .toList();
       if (shops.isEmpty) {
         state = state.copyWith(userShops: [], isLoading: false);
         return;
       }
       // Keep current shop if still valid, else default to first
-      final savedShopId = _api.shopId != null ? int.tryParse(_api.shopId!) : null;
+      final savedShopId = _api.shopId != null
+          ? int.tryParse(_api.shopId!)
+          : null;
       final currentId = state.currentShopId ?? savedShopId;
       final current = shops.firstWhere(
         (s) => s['shopId'] == currentId,
         orElse: () => shops.first,
       );
       _selectShop(shops, current);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('ShopProvider.loadUserShops error: $e');
       state = state.copyWith(isLoading: false);
     }
   }
@@ -108,7 +117,10 @@ class ShopNotifier extends Notifier<ShopState> {
     _selectShop(state.userShops, shop);
   }
 
-  void _selectShop(List<Map<String, dynamic>> shops, Map<String, dynamic> current) {
+  void _selectShop(
+    List<Map<String, dynamic>> shops,
+    Map<String, dynamic> current,
+  ) {
     final perms = <String, String>{};
     final rawPerms = current['permissions'];
     if (rawPerms is Map) {
@@ -135,4 +147,6 @@ class ShopNotifier extends Notifier<ShopState> {
   }
 }
 
-final shopProvider = NotifierProvider<ShopNotifier, ShopState>(ShopNotifier.new);
+final shopProvider = NotifierProvider<ShopNotifier, ShopState>(
+  ShopNotifier.new,
+);

@@ -9,9 +9,11 @@ import '../../inventory/providers/inventory_provider.dart';
 import '../../../core/utils/type_parser.dart';
 import 'product_form_screen.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
-
-
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 
 class ProductDetailScreen extends ConsumerWidget {
   final int id;
@@ -22,7 +24,9 @@ class ProductDetailScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final detailAsync = ref.watch(productDetailProvider(id));
-    final movementsAsync = ref.watch(inventoryMovementsProvider((productId: id, page: 1)));
+    final movementsAsync = ref.watch(
+      inventoryMovementsProvider((productId: id, page: 1)),
+    );
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -70,7 +74,9 @@ class ProductDetailScreen extends ConsumerWidget {
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Thử lại'),
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -87,13 +93,22 @@ class ProductDetailScreen extends ConsumerWidget {
           final description = rawDesc.isEmpty ? 'Không có mô tả' : rawDesc;
           final descIsMissing = rawDesc.isEmpty;
           final costPrice = TypeParser.asDouble(p['costPrice']);
-          final sellingPrice = TypeParser.asDouble(p['sellingPrice'] ?? p['sellPrice']);
+          final sellingPrice = TypeParser.asDouble(
+            p['sellingPrice'] ?? p['sellPrice'],
+          );
           final wholesalePrice = TypeParser.asDouble(p['wholesalePrice']);
           final taxRate = p['taxRate'] ?? p['tax'] ?? '';
           final currentStock = (p['currentStock'] ?? p['quantity'] ?? 0);
           final minStock = (p['minStock'] ?? p['minimumStock'] ?? 0);
-          final stockStatus = (currentStock is num && minStock is num && currentStock <= minStock) ? 'Sắp hết hàng' : 'Đang an toàn';
-          final statusColor = stockStatus == 'Sắp hết hàng' ? AppColors.danger : AppColors.success;
+          final stockStatus =
+              (currentStock is num &&
+                  minStock is num &&
+                  currentStock <= minStock)
+              ? 'Sắp hết hàng'
+              : 'Đang an toàn';
+          final statusColor = stockStatus == 'Sắp hết hàng'
+              ? AppColors.danger
+              : AppColors.success;
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -109,7 +124,12 @@ class ProductDetailScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15), width: 1.5),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
+                        width: 1.5,
+                      ),
                     ),
                     child: Icon(
                       Icons.inventory_2_rounded,
@@ -145,14 +165,31 @@ class ProductDetailScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Mô tả sản phẩm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                        Text(
+                          'Mô tả sản phẩm',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
                         const SizedBox(height: 8),
-                        Text(description, style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary, height: 1.5)),
+                        Text(
+                          description,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: c.textPrimary,
+                            height: 1.5,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -162,7 +199,8 @@ class ProductDetailScreen extends ConsumerWidget {
                 // Info Section 1: General Info
                 _Section('Thông tin chung', [
                   if (sku.isNotEmpty) _InfoTile('Mã SKU', sku),
-                  if (category.isNotEmpty) _InfoTile('Danh mục phân loại', category),
+                  if (category.isNotEmpty)
+                    _InfoTile('Danh mục phân loại', category),
                   if (unit.isNotEmpty) _InfoTile('Đơn vị tính', unit),
                   if (barcode.isNotEmpty) _InfoTile('Mã vạch barcode', barcode),
                 ]),
@@ -171,8 +209,10 @@ class ProductDetailScreen extends ConsumerWidget {
                 _Section('Chính sách giá bán', [
                   _InfoTile('Giá vốn nhập', _currFmt.format(costPrice)),
                   _InfoTile('Giá bán lẻ', _currFmt.format(sellingPrice)),
-                  if (wholesalePrice > 0) _InfoTile('Giá bán sỉ', _currFmt.format(wholesalePrice)),
-                  if (taxRate.toString().isNotEmpty) _InfoTile('Thuế suất áp dụng', '$taxRate%'),
+                  if (wholesalePrice > 0)
+                    _InfoTile('Giá bán sỉ', _currFmt.format(wholesalePrice)),
+                  if (taxRate.toString().isNotEmpty)
+                    _InfoTile('Thuế suất áp dụng', '$taxRate%'),
                 ]),
 
                 // Info Section 3: Stock parameters
@@ -185,14 +225,23 @@ class ProductDetailScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Trạng thái kho hàng',
-                        style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+                        style: GoogleFonts.inter(
+                          color: c.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: statusColor.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: Text(
                           stockStatus,
@@ -210,28 +259,77 @@ class ProductDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.only(left: 4, bottom: 8),
-                  child: Text('Lịch sử xuất nhập', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: c.textPrimary)),
+                  child: Text(
+                    'Lịch sử xuất nhập',
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                    ),
+                  ),
                 ),
                 movementsAsync.when(
-                  loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
-                  error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('Lỗi tải lịch sử: $e')),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('Lỗi tải lịch sử: $e'),
+                  ),
                   data: (data) {
                     final items = (data['data']?['items'] as List?) ?? [];
-                    if (items.isEmpty) return const Padding(padding: EdgeInsets.all(16), child: Text('Chưa có phát sinh tồn kho.', style: TextStyle(color: Colors.grey, fontSize: 13)));
+                    if (items.isEmpty)
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'Chưa có phát sinh tồn kho.',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      );
                     return ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => Divider(color: c.divider.withValues(alpha: 0.3)),
+                      separatorBuilder: (_, __) =>
+                          Divider(color: c.divider.withValues(alpha: 0.3)),
                       itemBuilder: (_, i) {
                         final m = items[i];
                         final isOut = m['movementType'] == 'OUT';
-                        final qty = NumberFormat('#,###').format(num.tryParse(m['quantity']?.toString() ?? '0') ?? 0);
+                        final qty = NumberFormat('#,###').format(
+                          num.tryParse(m['quantity']?.toString() ?? '0') ?? 0,
+                        );
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text(m['notes'] ?? m['referenceType'] ?? 'Không rõ', style: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13, color: c.textPrimary)),
-                          subtitle: Text(m['createdAt']?.toString().substring(0, 16).replaceFirst('T', ' ') ?? '', style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary)),
-                          trailing: Text('${isOut ? '-' : '+'}$qty', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: isOut ? AppColors.danger : AppColors.success)),
+                          title: Text(
+                            m['notes'] ?? m['referenceType'] ?? 'Không rõ',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13,
+                              color: c.textPrimary,
+                            ),
+                          ),
+                          subtitle: Text(
+                            m['createdAt']
+                                    ?.toString()
+                                    .substring(0, 16)
+                                    .replaceFirst('T', ' ') ??
+                                '',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: c.textSecondary,
+                            ),
+                          ),
+                          trailing: Text(
+                            '${isOut ? '-' : '+'}$qty',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: isOut
+                                  ? AppColors.danger
+                                  : AppColors.success,
+                            ),
+                          ),
                         );
                       },
                     );
@@ -243,19 +341,27 @@ class ProductDetailScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: detailAsync.hasValue ? FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => ProductFormScreen(product: detailAsync.value!)),
-          );
-          ref.invalidate(productDetailProvider(id));
-        },
-        icon: const Icon(Icons.edit_rounded),
-        label: const Text('Chỉnh sửa', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-      ) : null,
+      floatingActionButton: detailAsync.hasValue
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ProductFormScreen(product: detailAsync.value!),
+                  ),
+                );
+                ref.invalidate(productDetailProvider(id));
+              },
+              icon: const Icon(Icons.edit_rounded),
+              label: const Text(
+                'Chỉnh sửa',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+            )
+          : null,
     );
   }
 
@@ -272,17 +378,25 @@ class ProductDetailScreen extends ConsumerWidget {
       alignment: WrapAlignment.center,
       spacing: 6,
       runSpacing: 6,
-      children: tags.map((t) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          t,
-          style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-        ),
-      )).toList(),
+      children: tags
+          .map(
+            (t) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                t,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -316,9 +430,7 @@ class _Section extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: c.divider.withValues(alpha: 0.5)),
           ),
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
         const SizedBox(height: 20),
       ],

@@ -326,9 +326,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.primary,
-                                  side: BorderSide(
-                                    color: AppColors.primary,
-                                  ),
+                                  side: BorderSide(color: AppColors.primary),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 8,
                                   ),
@@ -405,7 +403,9 @@ class TaxDeclarationScreen extends ConsumerWidget {
         Future.delayed(const Duration(seconds: 2), () {
           if (ctx.mounted) {
             Navigator.pop(ctx);
-            ToastService.showSuccess('Đã kết xuất XML mẫu $formName thành công!');
+            ToastService.showSuccess(
+              'Đã kết xuất XML mẫu $formName thành công!',
+            );
           }
         });
         return AlertDialog(

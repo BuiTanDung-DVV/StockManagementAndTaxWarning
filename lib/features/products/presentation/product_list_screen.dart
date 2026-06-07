@@ -20,9 +20,11 @@ import '../providers/product_provider.dart';
 import '../../sales/providers/sales_provider.dart';
 import '../../sales/providers/sales_provider.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
-
-
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 
 class _SearchQueryNotifier extends Notifier<String> {
   @override
@@ -36,8 +38,11 @@ class _TagFilterNotifier extends Notifier<String> {
   void set(String v) => state = v;
 }
 
-final _productSearchQueryProvider = NotifierProvider<_SearchQueryNotifier, String>(_SearchQueryNotifier.new);
-final _productTagFilterProvider = NotifierProvider<_TagFilterNotifier, String>(_TagFilterNotifier.new);
+final _productSearchQueryProvider =
+    NotifierProvider<_SearchQueryNotifier, String>(_SearchQueryNotifier.new);
+final _productTagFilterProvider = NotifierProvider<_TagFilterNotifier, String>(
+  _TagFilterNotifier.new,
+);
 
 class ProductListScreen extends ConsumerStatefulWidget {
   const ProductListScreen({super.key});
@@ -68,17 +73,26 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     final theme = Theme.of(context);
     final searchQuery = ref.watch(_productSearchQueryProvider);
     final tagQuery = ref.watch(_productTagFilterProvider);
-    final listAsync = ref.watch(productListProvider((page: 1, search: searchQuery.isEmpty ? null : searchQuery, tag: tagQuery.isEmpty ? null : tagQuery)));
-    
+    final listAsync = ref.watch(
+      productListProvider((
+        page: 1,
+        search: searchQuery.isEmpty ? null : searchQuery,
+        tag: tagQuery.isEmpty ? null : tagQuery,
+      )),
+    );
+
     // Get Top Products for "Bán chạy" Smart Tag
     final now = DateTime.now();
     final firstDayOfMonth = DateTime(now.year, now.month, 1);
-    final topProductsAsync = ref.watch(topProductsProvider((
-      from: firstDayOfMonth.toIso8601String(), 
-      to: now.toIso8601String()
-    )));
-    final topProductNames = topProductsAsync.value?.map((e) => e['name'].toString()).toList() ?? [];
-    
+    final topProductsAsync = ref.watch(
+      topProductsProvider((
+        from: firstDayOfMonth.toIso8601String(),
+        to: now.toIso8601String(),
+      )),
+    );
+    final topProductNames =
+        topProductsAsync.value?.map((e) => e['name'].toString()).toList() ?? [];
+
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
@@ -99,7 +113,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         actions: [
           if (ref.watch(authProvider).isShopOwner)
             IconButton(
-              icon: HugeIcon(icon: HugeIcons.strokeRoundedTag01, color: c.textPrimary, size: 22),
+              icon: HugeIcon(
+                icon: HugeIcons.strokeRoundedTag01,
+                color: c.textPrimary,
+                size: 22,
+              ),
               onPressed: () => context.push('/products/tags'),
               tooltip: 'Quản lý Nhãn',
             ),
@@ -109,7 +127,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/products/form'),
         icon: const Icon(Icons.add_box_rounded),
-        label: Text('Thêm sản phẩm', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        label: Text(
+          'Thêm sản phẩm',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
       ),
@@ -140,17 +161,29 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           padding: const EdgeInsets.only(right: 8),
                           child: Semantics(
                             button: true,
-                            label: isSelected ? 'Bỏ lọc nhãn ${t.name}' : 'Lọc theo nhãn ${t.name}',
+                            label: isSelected
+                                ? 'Bỏ lọc nhãn ${t.name}'
+                                : 'Lọc theo nhãn ${t.name}',
                             selected: isSelected,
                             child: ChoiceChip(
-                              label: Text(t.name, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : t.uiColor)),
+                              label: Text(
+                                t.name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSelected ? Colors.white : t.uiColor,
+                                ),
+                              ),
                               selected: isSelected,
                               onSelected: (selected) {
-                                ref.read(_productTagFilterProvider.notifier).set(selected ? t.name : '');
+                                ref
+                                    .read(_productTagFilterProvider.notifier)
+                                    .set(selected ? t.name : '');
                               },
                               selectedColor: t.uiColor,
                               backgroundColor: t.uiColor.withValues(alpha: 0.1),
-                              side: BorderSide(color: t.uiColor.withValues(alpha: 0.3)),
+                              side: BorderSide(
+                                color: t.uiColor.withValues(alpha: 0.3),
+                              ),
                             ),
                           ),
                         );
@@ -170,8 +203,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                 final items = (data['items'] as List?) ?? [];
                 if (items.isEmpty) {
                   return const AppEmpty(
-                    message: 'Chưa có sản phẩm', 
-                    subtitle: 'Hãy thêm sản phẩm đầu tiên hoặc thử từ khóa tìm kiếm khác'
+                    message: 'Chưa có sản phẩm',
+                    subtitle:
+                        'Hãy thêm sản phẩm đầu tiên hoặc thử từ khóa tìm kiếm khác',
                   );
                 }
                 return RefreshIndicator(
@@ -179,27 +213,35 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                   onRefresh: () async => ref.invalidate(productListProvider),
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.15)),
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: c.divider.withValues(alpha: 0.15),
+                    ),
                     itemBuilder: (_, i) {
                       final p = items[i];
-                      final price = TypeParser.asDouble(p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice']);
+                      final price = TypeParser.asDouble(
+                        p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice'],
+                      );
                       final stock = p['currentStock'] ?? p['stock'] ?? 0;
                       final imageUrl = p['imageUrl']?.toString() ?? '';
                       final isOutOfStock = stock <= 0;
 
                       return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                        ),
+                        decoration: BoxDecoration(color: Colors.transparent),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(8),
                             onTap: () {
                               final rawId = p['id'];
-                              final id = rawId is int ? rawId : int.tryParse('${rawId ?? ''}');
+                              final id = rawId is int
+                                  ? rawId
+                                  : int.tryParse('${rawId ?? ''}');
                               if (id != null) {
                                 context.push('/products/$id');
                               }
@@ -230,16 +272,22 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                               width: 70,
                                               height: 70,
                                               fit: BoxFit.cover,
-                                              placeholder: (context, url) => Container(color: c.surface),
-                                              errorWidget: (context, url, error) => _buildImageFallback(theme),
+                                              placeholder: (context, url) =>
+                                                  Container(color: c.surface),
+                                              errorWidget:
+                                                  (context, url, error) =>
+                                                      _buildImageFallback(
+                                                        theme,
+                                                      ),
                                             )
                                           else
                                             _buildImageFallback(theme),
-                                          
+
                                           // Out of stock glassy red tag overlay
                                           if (isOutOfStock)
                                             Container(
-                                              color: AppColors.danger.withValues(alpha: 0.35),
+                                              color: AppColors.danger
+                                                  .withValues(alpha: 0.35),
                                               alignment: Alignment.center,
                                               child: Text(
                                                 'HẾT HÀNG',
@@ -256,35 +304,41 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 14),
-                                  
+
                                   // Info layout
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start, 
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          p['name'] ?? '', 
+                                          p['name'] ?? '',
                                           style: GoogleFonts.outfit(
-                                            fontWeight: FontWeight.bold, 
+                                            fontWeight: FontWeight.bold,
                                             fontSize: 14,
-                                            color: c.textPrimary
-                                          ), 
-                                          maxLines: 1, 
-                                          overflow: TextOverflow.ellipsis
+                                            color: c.textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'SKU: ${p['sku'] ?? 'N/A'}', 
+                                          'SKU: ${p['sku'] ?? 'N/A'}',
                                           style: TextStyle(
-                                            fontSize: 11, 
+                                            fontSize: 11,
                                             color: c.textSecondary,
-                                            fontWeight: FontWeight.w500
-                                          ), 
-                                          maxLines: 1, 
-                                          overflow: TextOverflow.ellipsis
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        if (p['description'] != null && p['description'].toString().trim().isNotEmpty) ...[
+                                        if (p['description'] != null &&
+                                            p['description']
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty) ...[
                                           const SizedBox(height: 2),
                                           Text(
                                             p['description'].toString().trim(),
@@ -298,24 +352,35 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                           ),
                                         ],
                                         const SizedBox(height: 4),
-                                        _buildTagsRow(p['tags'], stock, p, topProductNames, c, theme),
+                                        _buildTagsRow(
+                                          p['tags'],
+                                          stock,
+                                          p,
+                                          topProductNames,
+                                          c,
+                                          theme,
+                                        ),
                                         const SizedBox(height: 6),
                                         AppBadge(
-                                          label: isOutOfStock ? 'Hết hàng' : 'Còn tồn: $stock',
-                                          color: isOutOfStock 
+                                          label: isOutOfStock
+                                              ? 'Hết hàng'
+                                              : 'Còn tồn: $stock',
+                                          color: isOutOfStock
                                               ? AppColors.danger
-                                              : (stock < 10 ? AppColors.warning : AppColors.success),
+                                              : (stock < 10
+                                                    ? AppColors.warning
+                                                    : AppColors.success),
                                         ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  
+
                                   // Price tag Outfit bold
                                   Text(
                                     _currFmt.format(price),
                                     style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.w800, 
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 14,
                                       color: c.textPrimary,
                                     ),
@@ -326,14 +391,14 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           ),
                         ),
                       );
-                    }
+                    },
                   ),
                 );
               },
               loading: () => const ShimmerList(),
               error: (e, _) => AppError(
-                message: 'Lỗi tải dữ liệu: $e', 
-                onRetry: () => ref.invalidate(productListProvider)
+                message: 'Lỗi tải dữ liệu: $e',
+                onRetry: () => ref.invalidate(productListProvider),
               ),
             ),
           ),
@@ -356,21 +421,28 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       ),
       alignment: Alignment.center,
       child: Icon(
-        Icons.inventory_2_outlined, 
+        Icons.inventory_2_outlined,
         color: theme.colorScheme.primary.withValues(alpha: 0.6),
         size: 24,
       ),
     );
   }
 
-  Widget _buildTagsRow(dynamic tagsRaw, num stock, Map<String, dynamic> p, List<String> topProductNames, AppThemeColors c, ThemeData theme) {
+  Widget _buildTagsRow(
+    dynamic tagsRaw,
+    num stock,
+    Map<String, dynamic> p,
+    List<String> topProductNames,
+    AppThemeColors c,
+    ThemeData theme,
+  ) {
     List<String> tags = [];
     if (tagsRaw is List) {
       tags = tagsRaw.map((e) => e.toString()).toList();
     } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
       tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
     }
-    
+
     // Auto Tags Mechanism
     if (stock <= 0) {
       if (!tags.contains('Hết hàng')) tags.insert(0, 'Hết hàng');
@@ -386,7 +458,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     final createdAtStr = p['createdAt'] ?? p['created_at'];
     if (createdAtStr != null) {
       final createdAt = DateTime.tryParse(createdAtStr.toString());
-      if (createdAt != null && DateTime.now().difference(createdAt).inDays <= 7) {
+      if (createdAt != null &&
+          DateTime.now().difference(createdAt).inDays <= 7) {
         if (!tags.contains('Mới')) tags.insert(0, 'Mới');
       }
     }
@@ -400,7 +473,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           // Special colors for auto tags
           Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
           Color textColor = theme.colorScheme.primary;
-          
+
           if (t == 'Hết hàng') {
             bgColor = AppColors.danger.withValues(alpha: 0.1);
             textColor = AppColors.danger;
@@ -424,7 +497,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             ),
             child: Text(
               t,
-              style: GoogleFonts.inter(fontSize: 9, color: textColor, fontWeight: FontWeight.bold),
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           );
         }).toList(),
@@ -435,19 +512,35 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   void _showFilterSheet() {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final ctrl = TextEditingController(text: ref.read(_productTagFilterProvider));
-    
+    final ctrl = TextEditingController(
+      text: ref.read(_productTagFilterProvider),
+    );
+
     showModalBottomSheet(
       context: context,
       backgroundColor: c.bg,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Lọc sản phẩm', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: c.textPrimary)),
+            Text(
+              'Lọc sản phẩm',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
+            ),
             const SizedBox(height: 16),
             TextFormField(
               controller: ctrl,
@@ -457,7 +550,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                 hintText: 'Nhập thẻ để lọc...',
                 filled: true,
                 fillColor: c.card,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.divider)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: c.divider),
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -465,11 +561,22 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  ref.read(_productTagFilterProvider.notifier).set(ctrl.text.trim());
+                  ref
+                      .read(_productTagFilterProvider.notifier)
+                      .set(ctrl.text.trim());
                   Navigator.pop(ctx);
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.primary, padding: const EdgeInsets.symmetric(vertical: 14)),
-                child: Text('Áp dụng bộ lọc', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: Text(
+                  'Áp dụng bộ lọc',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),

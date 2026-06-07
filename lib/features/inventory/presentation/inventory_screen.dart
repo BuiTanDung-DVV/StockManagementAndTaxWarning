@@ -144,7 +144,9 @@ class InventoryScreen extends ConsumerWidget {
               // ── Chart: Inventory by Category Donut ──
               Builder(
                 builder: (context) {
-                  final catAsync = ref.watch(inventoryCategoriesSummaryProvider);
+                  final catAsync = ref.watch(
+                    inventoryCategoriesSummaryProvider,
+                  );
                   return catAsync.when(
                     data: (items) {
                       if (items.isEmpty) {
@@ -166,7 +168,11 @@ class InventoryScreen extends ConsumerWidget {
                         final item = e.value as Map<String, dynamic>;
                         return DonutSegment(
                           item['name']?.toString() ?? 'Khác',
-                          (item['value'] ?? item['quantity'] ?? item['count'] ?? 0).toDouble(),
+                          (item['value'] ??
+                                  item['quantity'] ??
+                                  item['count'] ??
+                                  0)
+                              .toDouble(),
                           donutColors[e.key % donutColors.length],
                         );
                       }).toList();
@@ -178,7 +184,9 @@ class InventoryScreen extends ConsumerWidget {
                     },
                     loading: () => const SizedBox(
                       height: 220,
-                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
                     error: (_, __) => const SizedBox.shrink(),
                   );
@@ -186,7 +194,6 @@ class InventoryScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              
               // Quick Actions section
               Text(
                 'Thao tác nhanh',
@@ -212,7 +219,7 @@ class InventoryScreen extends ConsumerWidget {
                 Icons.analytics_rounded,
                 () => context.push('/xnt-report'),
               ),
-              
+
               // Low stock dynamic alerts list
               lowAsync.when(
                 data: (items) {
@@ -243,15 +250,24 @@ class InventoryScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       ...items.take(5).map((item) {
-                        final prodName = item['product']?['name'] ?? item['productName'] ?? 'Sản phẩm không tên';
-                        final qty = item['currentQuantity'] ?? item['quantity'] ?? 0;
+                        final prodName =
+                            item['product']?['name'] ??
+                            item['productName'] ??
+                            'Sản phẩm không tên';
+                        final qty =
+                            item['currentQuantity'] ?? item['quantity'] ?? 0;
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: c.card,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: c.divider.withValues(alpha: 0.6)),
+                            border: Border.all(
+                              color: c.divider.withValues(alpha: 0.6),
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -269,9 +285,14 @@ class InventoryScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 12),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.danger.withValues(alpha: 0.1),
+                                  color: AppColors.danger.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -293,7 +314,7 @@ class InventoryScreen extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (e, s) => const SizedBox.shrink(),
               ),
-              
+
               // Slow moving list
               slowAsync.when(
                 data: (items) {
@@ -324,11 +345,18 @@ class InventoryScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       ...items.take(5).map((item) {
-                        final prodName = item['product']?['name'] ?? item['productName'] ?? 'Sản phẩm không tên';
-                        final qty = item['currentQuantity'] ?? item['quantity'] ?? 0;
+                        final prodName =
+                            item['product']?['name'] ??
+                            item['productName'] ??
+                            'Sản phẩm không tên';
+                        final qty =
+                            item['currentQuantity'] ?? item['quantity'] ?? 0;
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: c.card,
                             borderRadius: BorderRadius.circular(16),
@@ -352,9 +380,14 @@ class InventoryScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 12),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.warning.withValues(alpha: 0.1),
+                                  color: AppColors.warning.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(

@@ -11,7 +11,11 @@ import '../../../core/widgets/app_animations.dart';
 import '../../../core/utils/toast_service.dart';
 import 'purchase_order_form_screen.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 
 class PurchaseOrderScreen extends ConsumerWidget {
   const PurchaseOrderScreen({super.key});
@@ -52,7 +56,11 @@ class PurchaseOrderScreen extends ConsumerWidget {
         },
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 3,
-        icon: const Icon(Icons.shopping_cart_checkout_rounded, color: Colors.white, size: 20),
+        icon: const Icon(
+          Icons.shopping_cart_checkout_rounded,
+          color: Colors.white,
+          size: 20,
+        ),
         label: Text(
           'Tạo Đơn Nhập',
           style: GoogleFonts.outfit(
@@ -88,7 +96,9 @@ class PurchaseOrderScreen extends ConsumerWidget {
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Thử lại'),
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -98,9 +108,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
         data: (data) {
           final items = (data['items'] as List?) ?? [];
           if (items.isEmpty) {
-            return const AppEmpty(
-              message: 'Chưa có đơn mua hàng nào được tạo',
-            );
+            return const AppEmpty(message: 'Chưa có đơn mua hàng nào được tạo');
           }
           return Container(
             color: c.card,
@@ -108,129 +116,141 @@ class PurchaseOrderScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               physics: const BouncingScrollPhysics(),
               itemCount: items.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
-              final po = items[i] as Map;
-              final code = po['orderCode'] ?? po['code'] ?? 'PO-${po['id'] ?? i}';
-              final supplierName = po['supplier']?['name'] ?? po['supplierName'] ?? 'Không rõ nhà cung cấp';
-              final totalAmount = asDouble(po['totalAmount']);
-              final createdAt = po['createdAt']?.toString().split('T').first ?? '';
-              final invoiceNumber = po['invoiceNumber'] ?? '';
-              final status = (po['status'] ?? '').toString().toUpperCase();
+                final po = items[i] as Map;
+                final code =
+                    po['orderCode'] ?? po['code'] ?? 'PO-${po['id'] ?? i}';
+                final supplierName =
+                    po['supplier']?['name'] ??
+                    po['supplierName'] ??
+                    'Không rõ nhà cung cấp';
+                final totalAmount = asDouble(po['totalAmount']);
+                final createdAt =
+                    po['createdAt']?.toString().split('T').first ?? '';
+                final invoiceNumber = po['invoiceNumber'] ?? '';
+                final status = (po['status'] ?? '').toString().toUpperCase();
 
-              Color statusColor;
-              String statusLabel;
-              switch (status) {
-                case 'COMPLETED':
-                  statusColor = AppColors.success;
-                  statusLabel = 'Hoàn thành';
-                  break;
-                case 'CANCELLED':
-                  statusColor = AppColors.danger;
-                  statusLabel = 'Đã hủy';
-                  break;
-                case 'PENDING':
-                  statusColor = AppColors.warning;
-                  statusLabel = 'Chờ xử lý';
-                  break;
-                default:
-                  statusColor = AppColors.info;
-                  statusLabel = status.isNotEmpty ? status : 'N/A';
-              }
+                Color statusColor;
+                String statusLabel;
+                switch (status) {
+                  case 'COMPLETED':
+                    statusColor = AppColors.success;
+                    statusLabel = 'Hoàn thành';
+                    break;
+                  case 'CANCELLED':
+                    statusColor = AppColors.danger;
+                    statusLabel = 'Đã hủy';
+                    break;
+                  case 'PENDING':
+                    statusColor = AppColors.warning;
+                    statusLabel = 'Chờ xử lý';
+                    break;
+                  default:
+                    statusColor = AppColors.info;
+                    statusLabel = status.isNotEmpty ? status : 'N/A';
+                }
 
-              return GestureDetector(
-                onTap: () => context.push('/purchase-orders/detail', extra: po),
-                child: Container(
-                  color: Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.info.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.move_to_inbox_rounded,
-                        color: AppColors.info,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                return GestureDetector(
+                  onTap: () =>
+                      context.push('/purchase-orders/detail', extra: po),
+                  child: Container(
+                    color: Colors.transparent,
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                code.toString(),
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: c.textPrimary,
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.info.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.move_to_inbox_rounded,
+                              color: AppColors.info,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      code.toString(),
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: c.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        statusLabel,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: statusColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  statusLabel,
+                                const SizedBox(height: 2),
+                                Text(
+                                  'NCC: $supplierName',
                                   style: GoogleFonts.inter(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: statusColor,
+                                    fontSize: 11,
+                                    color: c.textSecondary,
+                                    fontWeight: FontWeight.w500,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'NCC: $supplierName',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: c.textSecondary,
-                              fontWeight: FontWeight.w500,
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${createdAt.isNotEmpty ? createdAt : ''}${invoiceNumber.isNotEmpty ? ' • HĐ: $invoiceNumber' : ''}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    color: c.textMuted,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(width: 12),
                           Text(
-                            '${createdAt.isNotEmpty ? createdAt : ''}${invoiceNumber.isNotEmpty ? ' • HĐ: $invoiceNumber' : ''}',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              color: c.textMuted,
-                              fontWeight: FontWeight.w400,
+                            _currFmt.format(totalAmount),
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.primary,
+                              fontSize: 14,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      _currFmt.format(totalAmount),
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.primary,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+                  ),
+                );
               },
             ),
           );

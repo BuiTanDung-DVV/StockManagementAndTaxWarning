@@ -6,20 +6,37 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
 import '../providers/finance_provider.dart';
 
-class InvoiceListScreen extends ConsumerWidget {
+class InvoiceListScreen extends ConsumerStatefulWidget {
   const InvoiceListScreen({super.key});
 
-  String _fmt(num v) => NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(v);
+  @override
+  ConsumerState<InvoiceListScreen> createState() => _InvoiceListScreenState();
+}
+
+class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
+  String _fmt(num v) => NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+    decimalDigits: 0,
+  ).format(v);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final invAsync = ref.watch(invoiceListProvider((page: 1, type: null)));
     final now = DateTime.now();
-    final from = DateTime(now.year, now.month, 1).toIso8601String().split('T').first;
+    final from = DateTime(
+      now.year,
+      now.month,
+      1,
+    ).toIso8601String().split('T').first;
     final to = now.toIso8601String().split('T').first;
-    final summaryAsync = ref.watch(invoiceSummaryProvider((from: from, to: to)));
+    final summaryAsync = ref.watch(
+      invoiceSummaryProvider((from: from, to: to)),
+    );
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
 
@@ -48,12 +65,20 @@ class InvoiceListScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline_rounded, color: theme.colorScheme.primary, size: 20),
+                        Icon(
+                          Icons.info_outline_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -81,7 +106,7 @@ class InvoiceListScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 summaryAsync.when(
                   loading: () => const LinearProgressIndicator(),
                   error: (_, __) => const SizedBox(),
@@ -89,35 +114,40 @@ class InvoiceListScreen extends ConsumerWidget {
                     final vatIn = asNum(summary['vatIn']);
                     final vatOut = asNum(summary['vatOut']);
                     final vatOwed = asNum(summary['vatOwed']);
-                    
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: [
                           Expanded(
                             child: _buildMetricItem(
-                              'VAT đầu vào', 
-                              _fmt(vatIn), 
-                              AppColors.success, 
-                              c, theme
+                              'VAT đầu vào',
+                              _fmt(vatIn),
+                              AppColors.success,
+                              c,
+                              theme,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildMetricItem(
-                              'VAT đầu ra', 
-                              _fmt(vatOut), 
-                              AppColors.danger, 
-                              c, theme
+                              'VAT đầu ra',
+                              _fmt(vatOut),
+                              AppColors.danger,
+                              c,
+                              theme,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildMetricItem(
-                              'Phải nộp', 
-                              _fmt(vatOwed), 
-                              vatOwed > 0 ? AppColors.danger : AppColors.success, 
-                              c, theme
+                              'Phải nộp',
+                              _fmt(vatOwed),
+                              vatOwed > 0
+                                  ? AppColors.danger
+                                  : AppColors.success,
+                              c,
+                              theme,
                             ),
                           ),
                         ],
@@ -144,7 +174,9 @@ class InvoiceListScreen extends ConsumerWidget {
                       ),
                       Text(
                         '${items.length} bản ghi',
-                        style: theme.textTheme.bodySmall?.copyWith(color: c.textMuted),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: c.textMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -155,9 +187,9 @@ class InvoiceListScreen extends ConsumerWidget {
                   AppEmpty(
                     message: 'Chưa có hóa đơn nào',
                     action: ElevatedButton.icon(
-                      icon: const Icon(Icons.receipt), 
-                      label: const Text('Thêm hóa đơn'), 
-                      onPressed: () => _showAddDialog(context, ref)
+                      icon: const Icon(Icons.receipt),
+                      label: const Text('Thêm hóa đơn'),
+                      onPressed: () => _showAddDialog(context, ref),
                     ),
                   )
                 else
@@ -166,8 +198,12 @@ class InvoiceListScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: c.card,
                       border: Border(
-                        top: BorderSide(color: c.divider.withValues(alpha: 0.5)),
-                        bottom: BorderSide(color: c.divider.withValues(alpha: 0.5)),
+                        top: BorderSide(
+                          color: c.divider.withValues(alpha: 0.5),
+                        ),
+                        bottom: BorderSide(
+                          color: c.divider.withValues(alpha: 0.5),
+                        ),
                       ),
                     ),
                     child: ListView.separated(
@@ -175,25 +211,37 @@ class InvoiceListScreen extends ConsumerWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => Divider(height: 1, color: c.divider),
+                      separatorBuilder: (_, __) =>
+                          Divider(height: 1, color: c.divider),
                       itemBuilder: (_, i) {
                         final inv = items[i];
                         final isOut = inv['invoiceType'] == 'OUT';
-                        
+
                         return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           child: Row(
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: (isOut ? AppColors.danger : AppColors.success).withValues(alpha: 0.1),
+                                  color:
+                                      (isOut
+                                              ? AppColors.danger
+                                              : AppColors.success)
+                                          .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
-                                  isOut ? Icons.arrow_upward : Icons.arrow_downward, 
-                                  color: isOut ? AppColors.danger : AppColors.success, 
-                                  size: 16
+                                  isOut
+                                      ? Icons.arrow_upward
+                                      : Icons.arrow_downward,
+                                  color: isOut
+                                      ? AppColors.danger
+                                      : AppColors.success,
+                                  size: 16,
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -202,18 +250,18 @@ class InvoiceListScreen extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      inv['invoiceNumber'] ?? 'Chưa cấp số', 
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: c.textPrimary,
-                                      )
+                                      inv['invoiceNumber'] ?? 'Chưa cấp số',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: c.textPrimary,
+                                          ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      inv['partnerName'] ?? '', 
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: c.textSecondary,
-                                      )
+                                      inv['partnerName'] ?? '',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(color: c.textSecondary),
                                     ),
                                   ],
                                 ),
@@ -222,29 +270,54 @@ class InvoiceListScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    _fmt(asNum(inv['totalAmount'])), 
+                                    _fmt(asNum(inv['totalAmount'])),
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: c.textPrimary,
-                                      fontFeatures: const [FontFeature.tabularFigures()],
-                                    )
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'VAT: ${_fmt(asNum(inv['taxAmount']))}', 
+                                    'VAT: ${_fmt(asNum(inv['taxAmount']))}',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: c.textMuted,
-                                      fontFeatures: const [FontFeature.tabularFigures()],
-                                    )
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(width: 16),
-                              Text(
-                                inv['invoiceDate']?.toString().split('T').first ?? '', 
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: c.textMuted,
-                                )
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    inv['invoiceDate']
+                                            ?.toString()
+                                            .split('T')
+                                            .first ??
+                                        '',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: c.textMuted,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
+                                      size: 20,
+                                    ),
+                                    onPressed: () =>
+                                        _confirmDelete(context, ref, inv['id']),
+                                    tooltip: 'Xóa hóa đơn',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -260,14 +333,23 @@ class InvoiceListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('Thêm Hóa Đơn', style: TextStyle(fontWeight: FontWeight.w600)),
+        label: const Text(
+          'Thêm Hóa Đơn',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
       ),
     );
   }
-  
-  Widget _buildMetricItem(String label, String value, Color valueColor, AppThemeColors c, ThemeData theme) {
+
+  Widget _buildMetricItem(
+    String label,
+    String value,
+    Color valueColor,
+    AppThemeColors c,
+    ThemeData theme,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -304,43 +386,111 @@ class InvoiceListScreen extends ConsumerWidget {
     final amountC = TextEditingController();
     final vatC = TextEditingController();
     String type = 'IN';
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Thêm hóa đơn'),
-      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        DropdownButtonFormField<String>(initialValue: type, items: const [
-          DropdownMenuItem(value: 'IN', child: Text('Đầu vào')),
-          DropdownMenuItem(value: 'OUT', child: Text('Đầu ra')),
-        ], onChanged: (v) => type = v ?? 'IN', decoration: const InputDecoration(labelText: 'Loại')),
-        const SizedBox(height: 16),
-        TextField(controller: numC, decoration: const InputDecoration(labelText: 'Số hóa đơn')),
-        const SizedBox(height: 16),
-        TextField(controller: partnerC, decoration: const InputDecoration(labelText: 'Đối tác')),
-        const SizedBox(height: 16),
-        TextField(controller: amountC, decoration: const InputDecoration(labelText: 'Số tiền trước thuế'), keyboardType: TextInputType.number),
-        const SizedBox(height: 16),
-        TextField(controller: vatC, decoration: const InputDecoration(labelText: 'Tiền VAT'), keyboardType: TextInputType.number),
-      ])),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-        ElevatedButton(onPressed: () async {
-          final partnerName = partnerC.text.trim();
-          final subtotal = double.tryParse(amountC.text) ?? 0;
-          final taxAmount = double.tryParse(vatC.text) ?? 0;
-          if (partnerName.isEmpty || subtotal <= 0 || taxAmount < 0) {
-            ToastService.showError('Vui lòng nhập đối tác, số tiền > 0 và VAT hợp lệ');
-            return;
-          }
-          await ref.read(financeRepoProvider).createInvoice({
-            'invoiceType': type, 'invoiceNumber': numC.text.trim().isEmpty ? null : numC.text.trim(), 'partnerName': partnerName,
-            'subtotal': subtotal, 'taxAmount': taxAmount,
-            'totalAmount': subtotal + taxAmount,
-            'invoiceDate': DateTime.now().toIso8601String().split('T').first,
-          });
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Thêm hóa đơn'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: type,
+                items: const [
+                  DropdownMenuItem(value: 'IN', child: Text('Đầu vào')),
+                  DropdownMenuItem(value: 'OUT', child: Text('Đầu ra')),
+                ],
+                onChanged: (v) => type = v ?? 'IN',
+                decoration: const InputDecoration(labelText: 'Loại'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: numC,
+                decoration: const InputDecoration(labelText: 'Số hóa đơn'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: partnerC,
+                decoration: const InputDecoration(labelText: 'Đối tác'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountC,
+                decoration: const InputDecoration(
+                  labelText: 'Số tiền trước thuế',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: vatC,
+                decoration: const InputDecoration(labelText: 'Tiền VAT'),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final partnerName = partnerC.text.trim();
+              final subtotal = double.tryParse(amountC.text) ?? 0;
+              final taxAmount = double.tryParse(vatC.text) ?? 0;
+              if (partnerName.isEmpty || subtotal <= 0 || taxAmount < 0) {
+                ToastService.showError(
+                  'Vui lòng nhập đối tác, số tiền > 0 và VAT hợp lệ',
+                );
+                return;
+              }
+              await ref.read(financeRepoProvider).createInvoice({
+                'invoiceType': type,
+                'invoiceNumber': numC.text.trim().isEmpty
+                    ? null
+                    : numC.text.trim(),
+                'partnerName': partnerName,
+                'subtotal': subtotal,
+                'taxAmount': taxAmount,
+                'totalAmount': subtotal + taxAmount,
+                'invoiceDate': DateTime.now()
+                    .toIso8601String()
+                    .split('T')
+                    .first,
+              });
+              ref.invalidate(invoiceListProvider);
+              ref.invalidate(invoiceSummaryProvider);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, dynamic id) {
+    final invId = id is int ? id : int.tryParse(id?.toString() ?? '0') ?? 0;
+    AppConfirmModal.show(
+      context,
+      title: 'Xóa hóa đơn',
+      message:
+          'Bạn có chắc chắn muốn xóa hóa đơn này? Mọi dữ liệu liên quan sẽ không thể khôi phục.',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy',
+    ).then((confirm) async {
+      if (confirm == true) {
+        try {
+          await ref.read(financeRepoProvider).deleteInvoice(invId);
+          ToastService.showSuccess('Xóa hóa đơn thành công');
           ref.invalidate(invoiceListProvider);
           ref.invalidate(invoiceSummaryProvider);
-          if (ctx.mounted) Navigator.pop(ctx);
-        }, child: const Text('Lưu')),
-      ],
-    ));
+        } catch (e) {
+          ToastService.showError('Lỗi: $e');
+        }
+      }
+    });
   }
 }

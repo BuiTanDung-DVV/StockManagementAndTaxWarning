@@ -10,7 +10,11 @@ import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../providers/sales_provider.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 
 class SalesListScreen extends ConsumerStatefulWidget {
   const SalesListScreen({super.key});
@@ -34,7 +38,9 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final listAsync = ref.watch(salesListProvider((page: _page, status: _status, customerId: null)));
+    final listAsync = ref.watch(
+      salesListProvider((page: _page, status: _status, customerId: null)),
+    );
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -51,7 +57,10 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         actions: [
           featureGuideButton(context, 'sales_list'),
           IconButton(
-            icon: Icon(_searching ? Icons.close_rounded : Icons.search_rounded, color: c.textSecondary),
+            icon: Icon(
+              _searching ? Icons.close_rounded : Icons.search_rounded,
+              color: c.textSecondary,
+            ),
             onPressed: () => setState(() {
               _searching = !_searching;
               if (!_searching) _searchCtrl.clear();
@@ -71,10 +80,17 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 style: GoogleFonts.inter(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Tìm theo mã đơn, khách hàng...',
-                  prefixIcon: Icon(Icons.search_rounded, color: c.textMuted, size: 20),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: c.textMuted,
+                    size: 20,
+                  ),
                   filled: true,
                   fillColor: c.card,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide(color: c.divider),
@@ -85,12 +101,15 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                    borderSide: BorderSide(
+                      color: theme.colorScheme.primary,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
             ),
-          
+
           // Stepper Chips for filtering states
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -98,7 +117,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [null, 'PENDING', 'COMPLETED', 'CANCELLED'].map((s) {
-                final label = s == null ? 'Tất cả' : s == 'PENDING' ? 'Chờ xử lý' : s == 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy';
+                final label = s == null
+                    ? 'Tất cả'
+                    : s == 'PENDING'
+                    ? 'Chờ xử lý'
+                    : s == 'COMPLETED'
+                    ? 'Hoàn thành'
+                    : 'Đã hủy';
                 final selected = _status == s;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -109,16 +134,24 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                       _status = s;
                       _page = 1;
                     }),
-                    selectedColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    selectedColor: theme.colorScheme.primary.withValues(
+                      alpha: 0.1,
+                    ),
                     checkmarkColor: theme.colorScheme.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     labelStyle: GoogleFonts.outfit(
-                      color: selected ? theme.colorScheme.primary : c.textSecondary,
+                      color: selected
+                          ? theme.colorScheme.primary
+                          : c.textSecondary,
                       fontSize: 12,
                       fontWeight: selected ? FontWeight.bold : FontWeight.w500,
                     ),
                     side: BorderSide(
-                      color: selected ? theme.colorScheme.primary : c.divider.withValues(alpha: 0.8),
+                      color: selected
+                          ? theme.colorScheme.primary
+                          : c.divider.withValues(alpha: 0.8),
                       width: selected ? 1.5 : 1,
                     ),
                   ),
@@ -138,20 +171,29 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 if (items.isEmpty) {
                   return const AppEmpty(
                     message: 'Không tìm thấy đơn hàng nào.',
-                    subtitle: 'Hãy bắt đầu tạo đơn hàng mới từ màn hình máy POS bán hàng.',
+                    subtitle:
+                        'Hãy bắt đầu tạo đơn hàng mới từ màn hình máy POS bán hàng.',
                   );
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(salesListProvider),
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.15)),
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: c.divider.withValues(alpha: 0.15),
+                    ),
                     itemBuilder: (_, i) {
                       final order = items[i];
                       final orderStatus = order['status'] ?? 'PENDING';
-                      
+
                       Color statusColor;
                       String statusLabel;
                       switch (orderStatus) {
@@ -171,9 +213,20 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                           break;
                       }
 
-                      final total = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
-                      final paid = double.tryParse(order['amountPaid']?.toString() ?? order['paidAmount']?.toString() ?? '0') ?? 0.0;
-                      final customerName = order['customer']?['name'] ?? 'Khách mua lẻ';
+                      final total =
+                          double.tryParse(
+                            order['totalAmount']?.toString() ?? '0',
+                          ) ??
+                          0.0;
+                      final paid =
+                          double.tryParse(
+                            order['amountPaid']?.toString() ??
+                                order['paidAmount']?.toString() ??
+                                '0',
+                          ) ??
+                          0.0;
+                      final customerName =
+                          order['customer']?['name'] ?? 'Khách mua lẻ';
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 0),
@@ -193,7 +246,8 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: Icon(
@@ -205,8 +259,10 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                   const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           'Mã: ${order['orderCode'] ?? 'DH-${order['id']}'}',
@@ -228,7 +284,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 4),
-                                        _buildTagsRow(order, paid, total, c, theme),
+                                        _buildTagsRow(
+                                          order,
+                                          paid,
+                                          total,
+                                          c,
+                                          theme,
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -247,10 +309,17 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: statusColor.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(6),
+                                          color: statusColor.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           statusLabel,
@@ -286,7 +355,11 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         onPressed: () => context.push('/pos'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 3,
-        icon: const Icon(Icons.point_of_sale_rounded, color: Colors.white, size: 20),
+        icon: const Icon(
+          Icons.point_of_sale_rounded,
+          color: Colors.white,
+          size: 20,
+        ),
         label: Text(
           'Màn POS Bán Hàng',
           style: GoogleFonts.outfit(
@@ -300,11 +373,21 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     );
   }
 
-  Widget _buildSalesSummarySection(WidgetRef ref, AppThemeColors c, ThemeData theme) {
+  Widget _buildSalesSummarySection(
+    WidgetRef ref,
+    AppThemeColors c,
+    ThemeData theme,
+  ) {
     final now = DateTime.now();
-    final monthFrom = DateTime(now.year, now.month, 1).toIso8601String().split('T')[0];
+    final monthFrom = DateTime(
+      now.year,
+      now.month,
+      1,
+    ).toIso8601String().split('T')[0];
     final monthTo = now.toIso8601String().split('T')[0];
-    final summaryAsync = ref.watch(salesSummaryProvider((from: monthFrom, to: monthTo)));
+    final summaryAsync = ref.watch(
+      salesSummaryProvider((from: monthFrom, to: monthTo)),
+    );
 
     return summaryAsync.when(
       loading: () => Padding(
@@ -315,19 +398,49 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             color: c.card,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+          child: const Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
         ),
       ),
       error: (_, __) => const SizedBox.shrink(),
       data: (data) {
         final totalOrders = (data['totalOrders'] ?? data['count'] ?? 0) as num;
-        final totalRevenue = double.tryParse(data['totalRevenue']?.toString() ?? data['revenue']?.toString() ?? '0') ?? 0.0;
-        final grossProfit = double.tryParse(data['grossProfit']?.toString() ?? data['profit']?.toString() ?? '0') ?? 0.0;
+        final totalRevenue =
+            double.tryParse(
+              data['totalRevenue']?.toString() ??
+                  data['revenue']?.toString() ??
+                  '0',
+            ) ??
+            0.0;
+        final grossProfit =
+            double.tryParse(
+              data['grossProfit']?.toString() ??
+                  data['profit']?.toString() ??
+                  '0',
+            ) ??
+            0.0;
         final daily = (data['daily'] as List?) ?? [];
 
         // Last 7 entries for bar chart
-        final last7 = daily.length > 7 ? daily.sublist(daily.length - 7) : daily;
-        final barValues = last7.map<double>((d) => double.tryParse(d['revenue']?.toString() ?? d['totalRevenue']?.toString() ?? '0') ?? 0.0).toList();
+        final last7 = daily.length > 7
+            ? daily.sublist(daily.length - 7)
+            : daily;
+        final barValues = last7
+            .map<double>(
+              (d) =>
+                  double.tryParse(
+                    d['revenue']?.toString() ??
+                        d['totalRevenue']?.toString() ??
+                        '0',
+                  ) ??
+                  0.0,
+            )
+            .toList();
         final barLabels = last7.map<String>((d) {
           final dateStr = d['date']?.toString() ?? '';
           if (dateStr.length >= 10) {
@@ -344,11 +457,29 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
               // 3 stat cards
               Row(
                 children: [
-                  _statCard('Đơn hàng', '$totalOrders', Icons.receipt_long_rounded, theme.colorScheme.primary, c),
+                  _statCard(
+                    'Đơn hàng',
+                    '$totalOrders',
+                    Icons.receipt_long_rounded,
+                    theme.colorScheme.primary,
+                    c,
+                  ),
                   const SizedBox(width: 8),
-                  _statCard('Doanh thu', _currFmt.format(totalRevenue), Icons.trending_up_rounded, AppColors.success, c),
+                  _statCard(
+                    'Doanh thu',
+                    _currFmt.format(totalRevenue),
+                    Icons.trending_up_rounded,
+                    AppColors.success,
+                    c,
+                  ),
                   const SizedBox(width: 8),
-                  _statCard('Lợi nhuận', _currFmt.format(grossProfit), Icons.account_balance_wallet_rounded, AppColors.info, c),
+                  _statCard(
+                    'Lợi nhuận',
+                    _currFmt.format(grossProfit),
+                    Icons.account_balance_wallet_rounded,
+                    AppColors.info,
+                    c,
+                  ),
                 ],
               ),
               if (barValues.isNotEmpty && barValues.any((v) => v > 0)) ...[
@@ -370,7 +501,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     );
   }
 
-  Widget _statCard(String label, String value, IconData icon, Color color, AppThemeColors c) {
+  Widget _statCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    AppThemeColors c,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -409,7 +546,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     );
   }
 
-  Widget _buildTagsRow(Map<String, dynamic> order, double paid, double total, AppThemeColors c, ThemeData theme) {
+  Widget _buildTagsRow(
+    Map<String, dynamic> order,
+    double paid,
+    double total,
+    AppThemeColors c,
+    ThemeData theme,
+  ) {
     List<String> tags = [];
     final tagsRaw = order['tags'];
     if (tagsRaw is List) {
@@ -426,7 +569,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         if (!tags.contains('Đã TT')) tags.insert(0, 'Đã TT');
       }
     }
-    
+
     if (order['customer'] == null) {
       if (!tags.contains('Khách lẻ')) tags.insert(0, 'Khách lẻ');
     }
@@ -460,7 +603,11 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             ),
             child: Text(
               t,
-              style: GoogleFonts.inter(fontSize: 9, color: textColor, fontWeight: FontWeight.bold),
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           );
         }).toList(),

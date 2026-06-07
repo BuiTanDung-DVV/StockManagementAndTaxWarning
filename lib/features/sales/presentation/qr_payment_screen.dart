@@ -97,7 +97,8 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     final confirm = await AppConfirmModal.show(
       context,
       title: 'Hủy đơn hàng?',
-      message: 'Bạn có chắc chắn muốn hủy đơn hàng này không? Dữ liệu không thể khôi phục.',
+      message:
+          'Bạn có chắc chắn muốn hủy đơn hàng này không? Dữ liệu không thể khôi phục.',
       confirmText: 'Hủy đơn',
       cancelText: 'Không',
       isDestructive: true,
@@ -133,7 +134,11 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const Icon(
+              Icons.check_circle_outline,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Text('Đã sao chép $label thành công!'),
           ],
@@ -141,9 +146,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
         backgroundColor: AppColors.success,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -158,10 +161,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
         body: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                AppColors.success.withValues(alpha: 0.05),
-                c.bg,
-              ],
+              colors: [AppColors.success.withValues(alpha: 0.05), c.bg],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -288,8 +288,15 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: Icon(Icons.copy_rounded, size: 20, color: theme.colorScheme.primary),
-                        onPressed: () => _copyToClipboard('số tiền', widget.totalAmount.toInt().toString()),
+                        icon: Icon(
+                          Icons.copy_rounded,
+                          size: 20,
+                          color: theme.colorScheme.primary,
+                        ),
+                        onPressed: () => _copyToClipboard(
+                          'số tiền',
+                          widget.totalAmount.toInt().toString(),
+                        ),
                         tooltip: 'Sao chép số tiền',
                         splashRadius: 24,
                       ),
@@ -309,9 +316,9 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.receipt_long_rounded, 
-                          size: 14, 
-                          color: theme.colorScheme.primary
+                          Icons.receipt_long_rounded,
+                          size: 14,
+                          color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -336,10 +343,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.grey.shade200,
-                  width: 1,
-                ),
+                border: Border.all(color: Colors.grey.shade200, width: 1),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
@@ -364,7 +368,9 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
                         width: 2,
                       ),
                     ),
@@ -380,7 +386,9 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                                 width: 240,
                                 height: 240,
                                 child: Center(
-                                  child: CircularProgressIndicator(strokeWidth: 3),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                  ),
                                 ),
                               ),
                         errorBuilder: (_, e, s) => SizedBox(
@@ -414,19 +422,29 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                   ),
                   const SizedBox(height: 16),
                   InkWell(
-                    onTap: () => _copyToClipboard('nội dung chuyển khoản', widget.orderCode),
+                    onTap: () => _copyToClipboard(
+                      'nội dung chuyển khoản',
+                      widget.orderCode,
+                    ),
                     borderRadius: BorderRadius.circular(8),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0,
+                        vertical: 4.0,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.copy_rounded, size: 14, color: c.textSecondary),
+                          Icon(
+                            Icons.copy_rounded,
+                            size: 14,
+                            color: c.textSecondary,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Nội dung CK: ${widget.orderCode}',
                             style: TextStyle(
-                              fontSize: 12, 
+                              fontSize: 12,
                               color: c.textSecondary,
                               fontWeight: FontWeight.w600,
                             ),
@@ -502,7 +520,11 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
 
             OutlinedButton.icon(
               onPressed: _cancelOrder,
-              icon: const Icon(Icons.cancel_outlined, size: 20, color: AppColors.danger),
+              icon: const Icon(
+                Icons.cancel_outlined,
+                size: 20,
+                color: AppColors.danger,
+              ),
               label: Text(
                 'Hủy đơn hàng này',
                 style: GoogleFonts.outfit(
@@ -524,17 +546,23 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     );
   }
 
-  Widget _infoRow(String label, String value, AppThemeColors c, {bool canCopy = false, bool isBold = false}) {
+  Widget _infoRow(
+    String label,
+    String value,
+    AppThemeColors c, {
+    bool canCopy = false,
+    bool isBold = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          label, 
+          label,
           style: TextStyle(
-            fontSize: 13, 
+            fontSize: 13,
             color: c.textSecondary,
             fontWeight: FontWeight.w500,
-          )
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -546,7 +574,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                   value,
                   textAlign: TextAlign.end,
                   style: TextStyle(
-                    fontSize: 13, 
+                    fontSize: 13,
                     fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
                     color: c.textPrimary,
                   ),
@@ -560,9 +588,9 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(4.0),
                     child: Icon(
-                      Icons.copy_rounded, 
-                      size: 16, 
-                      color: Theme.of(context).colorScheme.primary
+                      Icons.copy_rounded,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -574,4 +602,3 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     );
   }
 }
-

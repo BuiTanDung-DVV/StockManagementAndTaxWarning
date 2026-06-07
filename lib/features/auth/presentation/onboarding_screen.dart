@@ -51,7 +51,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _needsPhone = false;
   bool _needsShop = true;
   String _accountType = 'PERSONAL';
-  
+
   Map<String, dynamic>? _selectedShop;
   List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
@@ -65,14 +65,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    _usernameFocus.addListener(() => setState(() => _usernameHasFocus = _usernameFocus.hasFocus));
-    _phoneFocus.addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
-    _fullNameFocus.addListener(() => setState(() => _fullNameHasFocus = _fullNameFocus.hasFocus));
-    _shopNameFocus.addListener(() => setState(() => _shopNameHasFocus = _shopNameFocus.hasFocus));
-    _ownerNameFocus.addListener(() => setState(() => _ownerNameHasFocus = _ownerNameFocus.hasFocus));
-    _addressFocus.addListener(() => setState(() => _addressHasFocus = _addressFocus.hasFocus));
-    _shopCodeFocus.addListener(() => setState(() => _shopCodeHasFocus = _shopCodeFocus.hasFocus));
-    _shopSearchFocus.addListener(() => setState(() => _shopSearchHasFocus = _shopSearchFocus.hasFocus));
+    _usernameFocus.addListener(
+      () => setState(() => _usernameHasFocus = _usernameFocus.hasFocus),
+    );
+    _phoneFocus.addListener(
+      () => setState(() => _phoneHasFocus = _phoneFocus.hasFocus),
+    );
+    _fullNameFocus.addListener(
+      () => setState(() => _fullNameHasFocus = _fullNameFocus.hasFocus),
+    );
+    _shopNameFocus.addListener(
+      () => setState(() => _shopNameHasFocus = _shopNameFocus.hasFocus),
+    );
+    _ownerNameFocus.addListener(
+      () => setState(() => _ownerNameHasFocus = _ownerNameFocus.hasFocus),
+    );
+    _addressFocus.addListener(
+      () => setState(() => _addressHasFocus = _addressFocus.hasFocus),
+    );
+    _shopCodeFocus.addListener(
+      () => setState(() => _shopCodeHasFocus = _shopCodeFocus.hasFocus),
+    );
+    _shopSearchFocus.addListener(
+      () => setState(() => _shopSearchHasFocus = _shopSearchFocus.hasFocus),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = ref.read(authProvider).user;
@@ -82,7 +98,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _accountType = user['accountType'] ?? 'PERSONAL';
         final username = user['username'] as String?;
         final phone = user['phone'] as String?;
-        
+
         setState(() {
           if (username != null && phone != null && username == phone) {
             _needsUsername = true;
@@ -126,12 +142,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       return;
     }
     setState(() => _isSearchingAddress = true);
-    
+
     const String googleMapsApiKey = String.fromEnvironment('MAPS_API_KEY');
 
     try {
       final dio = Dio();
-      
+
       if (googleMapsApiKey.isNotEmpty) {
         // Use Google Maps Places Autocomplete
         final res = await dio.get(
@@ -143,16 +159,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             'components': 'country:vn',
           },
         );
-        
+
         if (res.data != null && res.data['status'] == 'OK') {
           final predictions = res.data['predictions'] as List;
-          final list = predictions.map((p) => {
-            'display_name': p['description'],
-            'place_id': p['place_id'],
-            'lat': null,
-            'lon': null, 
-          }).toList();
-          
+          final list = predictions
+              .map(
+                (p) => {
+                  'display_name': p['description'],
+                  'place_id': p['place_id'],
+                  'lat': null,
+                  'lon': null,
+                },
+              )
+              .toList();
+
           if (mounted) setState(() => _addressSuggestions = list);
           return;
         }
@@ -167,11 +187,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           'limit': 5,
           'countrycodes': 'vn',
         },
-        options: Options(
-          headers: {
-            'User-Agent': 'SmartStockTaxApp/1.0',
-          }
-        )
+        options: Options(headers: {'User-Agent': 'SmartStockTaxApp/1.0'}),
       );
       if (res.data is List) {
         final list = List<Map<String, dynamic>>.from(res.data);
@@ -204,7 +220,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final address = _addressCtrl.text.trim();
     final shopCode = _shopCodeCtrl.text.trim();
 
-    if (fullName.isEmpty || (_needsUsername && username.isEmpty) || (_needsPhone && phone.isEmpty)) {
+    if (fullName.isEmpty ||
+        (_needsUsername && username.isEmpty) ||
+        (_needsPhone && phone.isEmpty)) {
       ToastService.showError('Vui lòng điền đầy đủ thông tin');
       return;
     }
@@ -218,10 +236,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ToastService.showError('Vui lòng nhập Mã cửa hàng muốn tham gia');
       return;
     }
-    
+
     if (_needsUsername) {
       if (username.contains(' ') || username.length < 4) {
-        ToastService.showError('Tên đăng nhập không được có khoảng trắng và phải dài từ 4 ký tự.');
+        ToastService.showError(
+          'Tên đăng nhập không được có khoảng trắng và phải dài từ 4 ký tự.',
+        );
         return;
       }
     }
@@ -233,16 +253,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       }
     }
 
-    final success = await ref.read(authProvider.notifier).completeOnboarding(
-      username: _needsUsername ? username : null,
-      phone: _needsPhone ? phone : null,
-      fullName: fullName,
-      shopName: _accountType == 'SHOP' ? shopName : null,
-      ownerName: _accountType == 'SHOP' ? ownerName : null,
-      address: _accountType == 'SHOP' ? address : null,
-      shopCode: (_accountType == 'PERSONAL' && _needsShop) ? shopCode : null,
-      shopId: (_accountType == 'PERSONAL' && _needsShop && _selectedShop != null) ? _selectedShop!['id'].toString() : null,
-    );
+    final success = await ref
+        .read(authProvider.notifier)
+        .completeOnboarding(
+          username: _needsUsername ? username : null,
+          phone: _needsPhone ? phone : null,
+          fullName: fullName,
+          shopName: _accountType == 'SHOP' ? shopName : null,
+          ownerName: _accountType == 'SHOP' ? ownerName : null,
+          address: _accountType == 'SHOP' ? address : null,
+          shopCode: (_accountType == 'PERSONAL' && _needsShop)
+              ? shopCode
+              : null,
+          shopId:
+              (_accountType == 'PERSONAL' &&
+                  _needsShop &&
+                  _selectedShop != null)
+              ? _selectedShop!['id'].toString()
+              : null,
+        );
     if (success && mounted) {
       context.go('/');
     }
@@ -274,16 +303,26 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.15,
+                          ),
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.1,
+                            ),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                      child: Icon(Icons.person_pin_rounded, size: 48, color: theme.colorScheme.primary),
+                      child: Icon(
+                        Icons.person_pin_rounded,
+                        size: 48,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -308,7 +347,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
-                  
+
                   if (_needsUsername) ...[
                     _buildGlowingField(
                       controller: _usernameCtrl,
@@ -345,7 +384,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     c: c,
                     theme: theme,
                   ),
-                  
+
                   if (_accountType == 'SHOP') ...[
                     const SizedBox(height: 16),
                     _buildGlowingField(
@@ -377,14 +416,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       c: c,
                       theme: theme,
                       onChanged: _onAddressChanged,
-                      suffixIcon: _isSearchingAddress ? Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
-                        ),
-                      ) : null,
+                      suffixIcon: _isSearchingAddress
+                          ? Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            )
+                          : null,
                     ),
                     if (_addressSuggestions.isNotEmpty)
                       Container(
@@ -408,22 +452,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             shrinkWrap: true,
                             physics: const BouncingScrollPhysics(),
                             itemCount: _addressSuggestions.length,
-                            separatorBuilder: (context, index) => Divider(height: 1, color: c.divider),
+                            separatorBuilder: (context, index) =>
+                                Divider(height: 1, color: c.divider),
                             itemBuilder: (context, index) {
                               final suggestion = _addressSuggestions[index];
                               return ListTile(
-                                leading: Icon(Icons.location_on_rounded, color: theme.colorScheme.primary, size: 20),
+                                leading: Icon(
+                                  Icons.location_on_rounded,
+                                  color: theme.colorScheme.primary,
+                                  size: 20,
+                                ),
                                 title: Text(
                                   suggestion['display_name'] ?? '',
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: c.textPrimary,
+                                  ),
                                 ),
                                 onTap: () {
                                   setState(() {
-                                    _addressCtrl.text = suggestion['display_name'] ?? '';
-                                    _selectedLat = suggestion['lat'] != null ? double.tryParse(suggestion['lat'].toString()) : 10.762622;
-                                    _selectedLon = suggestion['lon'] != null ? double.tryParse(suggestion['lon'].toString()) : 106.660172;
+                                    _addressCtrl.text =
+                                        suggestion['display_name'] ?? '';
+                                    _selectedLat = suggestion['lat'] != null
+                                        ? double.tryParse(
+                                            suggestion['lat'].toString(),
+                                          )
+                                        : 10.762622;
+                                    _selectedLon = suggestion['lon'] != null
+                                        ? double.tryParse(
+                                            suggestion['lon'].toString(),
+                                          )
+                                        : 106.660172;
                                     _addressSuggestions = [];
                                   });
                                   FocusScope.of(context).unfocus();
@@ -437,8 +498,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       const SizedBox(height: 12),
                       Container(
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.04),
-                          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.04,
+                          ),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.15,
+                            ),
+                          ),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         padding: const EdgeInsets.all(12),
@@ -447,11 +514,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.map_rounded, color: theme.colorScheme.primary, size: 20),
+                                Icon(
+                                  Icons.map_rounded,
+                                  color: theme.colorScheme.primary,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Bản đồ vị trí',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: c.textPrimary),
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: c.textPrimary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -469,7 +544,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                       child: Container(
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(
-                                            colors: [c.card, theme.colorScheme.primary.withValues(alpha: 0.08)],
+                                            colors: [
+                                              c.card,
+                                              theme.colorScheme.primary
+                                                  .withValues(alpha: 0.08),
+                                            ],
                                             begin: Alignment.topLeft,
                                             end: Alignment.bottomRight,
                                           ),
@@ -478,21 +557,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                     ),
                                     FlutterMap(
                                       options: MapOptions(
-                                        initialCenter: latlong.LatLng(_selectedLat!, _selectedLon!),
-                                        initialZoom: 15.0,
-                                        interactionOptions: const InteractionOptions(
-                                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                                        initialCenter: latlong.LatLng(
+                                          _selectedLat!,
+                                          _selectedLon!,
                                         ),
+                                        initialZoom: 15.0,
+                                        interactionOptions:
+                                            const InteractionOptions(
+                                              flags:
+                                                  InteractiveFlag.all &
+                                                  ~InteractiveFlag.rotate,
+                                            ),
                                       ),
                                       children: [
                                         TileLayer(
-                                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                          userAgentPackageName: 'com.sales_stock_management.app',
+                                          urlTemplate:
+                                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                          userAgentPackageName:
+                                              'com.sales_stock_management.app',
                                         ),
                                         MarkerLayer(
                                           markers: [
                                             Marker(
-                                              point: latlong.LatLng(_selectedLat!, _selectedLon!),
+                                              point: latlong.LatLng(
+                                                _selectedLat!,
+                                                _selectedLon!,
+                                              ),
                                               width: 40,
                                               height: 40,
                                               child: const Icon(
@@ -528,20 +618,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         onChanged: (val) async {
                           if (val.trim().length > 2) {
                             setState(() => _isSearching = true);
-                            final results = await ref.read(authProvider.notifier).searchShops(val);
-                            if (mounted) setState(() { _searchResults = results; _isSearching = false; });
+                            final results = await ref
+                                .read(authProvider.notifier)
+                                .searchShops(val);
+                            if (mounted)
+                              setState(() {
+                                _searchResults = results;
+                                _isSearching = false;
+                              });
                           } else {
-                            if (mounted) setState(() { _searchResults = []; });
+                            if (mounted)
+                              setState(() {
+                                _searchResults = [];
+                              });
                           }
                         },
-                        suffixIcon: _isSearching ? Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
-                          ),
-                        ) : null,
+                        suffixIcon: _isSearching
+                            ? Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              )
+                            : null,
                       ),
                       if (_searchResults.isNotEmpty)
                         Container(
@@ -565,36 +669,65 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                               shrinkWrap: true,
                               physics: const BouncingScrollPhysics(),
                               itemCount: _searchResults.length,
-                              separatorBuilder: (context, index) => Divider(height: 1, color: c.divider),
+                              separatorBuilder: (context, index) =>
+                                  Divider(height: 1, color: c.divider),
                               itemBuilder: (context, index) {
                                 final shop = _searchResults[index];
                                 return ListTile(
-                                  leading: shop['logoUrl'] != null 
+                                  leading: shop['logoUrl'] != null
                                       ? Container(
                                           width: 36,
                                           height: 36,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            image: DecorationImage(image: NetworkImage(shop['logoUrl']), fit: BoxFit.cover),
+                                            image: DecorationImage(
+                                              image: NetworkImage(
+                                                shop['logoUrl'],
+                                              ),
+                                              fit: BoxFit.cover,
+                                            ),
                                           ),
                                         )
                                       : Container(
                                           width: 36,
                                           height: 36,
                                           decoration: BoxDecoration(
-                                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                            color: theme.colorScheme.primary
+                                                .withValues(alpha: 0.1),
                                             shape: BoxShape.circle,
                                           ),
                                           alignment: Alignment.center,
-                                          child: Text(shop['shopName']?[0] ?? 'S', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                                          child: Text(
+                                            shop['shopName']?[0] ?? 'S',
+                                            style: TextStyle(
+                                              color: theme.colorScheme.primary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ),
-                                  title: Text(shop['shopName'] ?? '', style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14, color: c.textPrimary)),
-                                  subtitle: Text(shop['address'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary)),
+                                  title: Text(
+                                    shop['shopName'] ?? '',
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: c.textPrimary,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    shop['address'] ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: c.textSecondary,
+                                    ),
+                                  ),
                                   onTap: () {
                                     setState(() {
                                       _selectedShop = shop;
                                       _searchResults = [];
-                                      _shopSearchCtrl.text = shop['shopName'] ?? '';
+                                      _shopSearchCtrl.text =
+                                          shop['shopName'] ?? '';
                                     });
                                   },
                                 );
@@ -608,7 +741,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           Expanded(child: Divider(color: c.divider)),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('Hoặc', style: GoogleFonts.inter(fontSize: 13, color: c.textMuted, fontWeight: FontWeight.w500)),
+                            child: Text(
+                              'Hoặc',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: c.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                           Expanded(child: Divider(color: c.divider)),
                         ],
@@ -630,45 +770,82 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       // Shop Selected UI
                       Container(
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.05,
+                          ),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.15,
+                            ),
+                          ),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         padding: const EdgeInsets.all(12),
                         child: Row(
                           children: [
-                            _selectedShop!['logoUrl'] != null 
+                            _selectedShop!['logoUrl'] != null
                                 ? Container(
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(12),
-                                      image: DecorationImage(image: NetworkImage(_selectedShop!['logoUrl']), fit: BoxFit.cover),
+                                      image: DecorationImage(
+                                        image: NetworkImage(
+                                          _selectedShop!['logoUrl'],
+                                        ),
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
                                   )
                                 : Container(
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     alignment: Alignment.center,
-                                    child: Text(_selectedShop!['shopName']?[0] ?? 'S', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 18)),
+                                    child: Text(
+                                      _selectedShop!['shopName']?[0] ?? 'S',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
                                   ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(_selectedShop!['shopName'] ?? '', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15, color: c.textPrimary)),
+                                  Text(
+                                    _selectedShop!['shopName'] ?? '',
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: c.textPrimary,
+                                    ),
+                                  ),
                                   const SizedBox(height: 2),
-                                  Text(_selectedShop!['address'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary)),
+                                  Text(
+                                    _selectedShop!['address'] ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: c.textSecondary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             IconButton(
-                              icon: Icon(Icons.close_rounded, color: c.textMuted),
+                              icon: Icon(
+                                Icons.close_rounded,
+                                color: c.textMuted,
+                              ),
                               onPressed: () => setState(() {
                                 _selectedShop = null;
                                 _shopCodeCtrl.clear();
@@ -693,7 +870,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                     ],
                   ],
-                  
+
                   if (state.error != null) ...[
                     const SizedBox(height: 20),
                     Container(
@@ -701,23 +878,33 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.danger.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.danger.withValues(alpha: 0.15)),
+                        border: Border.all(
+                          color: AppColors.danger.withValues(alpha: 0.15),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: AppColors.danger,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               state.error!,
-                              style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500),
+                              style: GoogleFonts.inter(
+                                color: AppColors.danger,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
                   ],
-                  
+
                   const SizedBox(height: 36),
                   ElevatedButton(
                     onPressed: state.isLoading ? null : _submit,
@@ -726,21 +913,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                     child: state.isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : Text(
                             _accountType == 'SHOP'
                                 ? 'Tạo cửa hàng & Bắt đầu'
                                 : !_needsShop
-                                    ? 'Hoàn tất & Bắt đầu'
-                                    : 'Gửi yêu cầu tham gia',
-                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                                ? 'Hoàn tất & Bắt đầu'
+                                : 'Gửi yêu cầu tham gia',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                   ),
                 ],
@@ -805,9 +1000,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+            borderSide: BorderSide(
+              color: theme.colorScheme.primary,
+              width: 1.5,
+            ),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );

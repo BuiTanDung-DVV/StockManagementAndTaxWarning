@@ -57,9 +57,15 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-        'address': _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
-        'taxCode': _taxCodeCtrl.text.trim().isEmpty ? null : _taxCodeCtrl.text.trim(),
-        'contactPerson': _contactPersonCtrl.text.trim().isEmpty ? null : _contactPersonCtrl.text.trim(),
+        'address': _addressCtrl.text.trim().isEmpty
+            ? null
+            : _addressCtrl.text.trim(),
+        'taxCode': _taxCodeCtrl.text.trim().isEmpty
+            ? null
+            : _taxCodeCtrl.text.trim(),
+        'contactPerson': _contactPersonCtrl.text.trim().isEmpty
+            ? null
+            : _contactPersonCtrl.text.trim(),
         'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
         'tags': _tags,
       };
@@ -70,7 +76,11 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
       }
       ref.invalidate(supplierListProvider);
       if (mounted) {
-        ToastService.showSuccess(_isEdit ? 'Cập nhật nhà cung cấp thành công!' : 'Thêm nhà cung cấp thành công!');
+        ToastService.showSuccess(
+          _isEdit
+              ? 'Cập nhật nhà cung cấp thành công!'
+              : 'Thêm nhà cung cấp thành công!',
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -118,7 +128,9 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                   HugeIcons.strokeRoundedTruck,
                   c,
                   theme,
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên nhà cung cấp' : null,
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? 'Vui lòng nhập tên nhà cung cấp'
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 _field(
@@ -171,7 +183,14 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 12),
-                Text('Nhãn phân loại', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary)),
+                Text(
+                  'Nhãn phân loại',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: c.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 _buildTagEditor(c),
               ],
@@ -192,11 +211,26 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
             runSpacing: 8,
             children: _tags.map((tag) {
               return Chip(
-                label: Text(tag, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500)),
-                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
-                deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                label: Text(
+                  tag,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.8),
+                deleteIcon: const Icon(
+                  Icons.close,
+                  size: 14,
+                  color: Colors.white,
+                ),
                 onDeleted: () => setState(() => _tags.remove(tag)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 side: BorderSide.none,
               );
             }).toList(),
@@ -208,7 +242,9 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
               context: context,
               isScrollControlled: true,
               backgroundColor: c.bg,
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
               builder: (ctx) {
                 return InlineTagPicker(
                   type: 'supplier',
@@ -222,15 +258,29 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
+              ),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add, size: 16, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.add,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 4),
-                Text('Chọn/Thêm nhãn', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500)),
+                Text(
+                  'Chọn/Thêm nhãn',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -263,7 +313,11 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
         hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: HugeIcon(icon: icon, size: 18, color: theme.colorScheme.primary),
+          child: HugeIcon(
+            icon: icon,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
         ),
         filled: true,
         fillColor: c.card,
@@ -287,9 +341,11 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.danger, width: 1.8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }
 }
-

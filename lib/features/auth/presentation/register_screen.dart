@@ -21,7 +21,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _otpCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
-  
+
   final _fullNameFocus = FocusNode();
   final _phoneFocus = FocusNode();
   final _otpFocus = FocusNode();
@@ -46,15 +46,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    _fullNameFocus.addListener(() => setState(() => _fullNameHasFocus = _fullNameFocus.hasFocus));
-    _phoneFocus.addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
-    _otpFocus.addListener(() => setState(() => _otpHasFocus = _otpFocus.hasFocus));
-    _passwordFocus.addListener(() => setState(() => _passwordHasFocus = _passwordFocus.hasFocus));
-    _confirmPasswordFocus.addListener(() => setState(() => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus));
-    
+    _fullNameFocus.addListener(
+      () => setState(() => _fullNameHasFocus = _fullNameFocus.hasFocus),
+    );
+    _phoneFocus.addListener(
+      () => setState(() => _phoneHasFocus = _phoneFocus.hasFocus),
+    );
+    _otpFocus.addListener(
+      () => setState(() => _otpHasFocus = _otpFocus.hasFocus),
+    );
+    _passwordFocus.addListener(
+      () => setState(() => _passwordHasFocus = _passwordFocus.hasFocus),
+    );
+    _confirmPasswordFocus.addListener(
+      () => setState(
+        () => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus,
+      ),
+    );
+
     void clearError() {
       if (_error != null) setState(() => _error = null);
     }
+
     _fullNameCtrl.addListener(clearError);
     _phoneCtrl.addListener(clearError);
     _otpCtrl.addListener(clearError);
@@ -70,7 +83,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _otpCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
-    
+
     _fullNameFocus.dispose();
     _phoneFocus.dispose();
     _otpFocus.dispose();
@@ -94,10 +107,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _sendOtp() async {
     final identifier = _phoneCtrl.text.trim();
     if (identifier.isEmpty) {
-      ToastService.showError('Vui lòng nhập Số điện thoại hoặc Email để nhận mã OTP');
+      ToastService.showError(
+        'Vui lòng nhập Số điện thoại hoặc Email để nhận mã OTP',
+      );
       return;
     }
-    
+
     final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
     final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
     if (!phoneRegex.hasMatch(identifier) && !emailRegex.hasMatch(identifier)) {
@@ -113,8 +128,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     try {
       final api = ref.read(apiClientProvider);
       await api.post('/auth/send-otp', data: {'identifier': identifier});
-      
-      ToastService.showSuccess('Đã gửi mã OTP thành công về số điện thoại của bạn!');
+
+      ToastService.showSuccess(
+        'Đã gửi mã OTP thành công về số điện thoại của bạn!',
+      );
       _startTimer();
     } catch (e) {
       String msg = 'Không thể gửi OTP. Vui lòng kiểm tra kết nối mạng';
@@ -141,7 +158,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final pass = _passwordCtrl.text;
     final confirmPass = _confirmPasswordCtrl.text;
 
-    if (fullName.isEmpty || identifier.isEmpty || pass.isEmpty || otpCode.isEmpty) {
+    if (fullName.isEmpty ||
+        identifier.isEmpty ||
+        pass.isEmpty ||
+        otpCode.isEmpty) {
       setState(() {
         _error = 'Vui lòng điền đầy đủ thông tin và mã OTP';
         _isLoading = false;
@@ -172,7 +192,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ToastService.showSuccess('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
+      ToastService.showSuccess(
+        'Đăng ký tài khoản thành công! Vui lòng đăng nhập.',
+      );
       context.pop();
     } catch (e) {
       if (!mounted) return;
@@ -183,9 +205,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         errorMessage = (e.error as ApiException).message;
       }
       final lowerMsg = errorMessage.toLowerCase();
-      if (lowerMsg.contains('already exists') || lowerMsg.contains('đã tồn tại')) {
-        errorMessage = 'Tên đăng nhập, số điện thoại hoặc email này đã được sử dụng. Vui lòng thử lại.';
-      } else if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
+      if (lowerMsg.contains('already exists') ||
+          lowerMsg.contains('đã tồn tại')) {
+        errorMessage =
+            'Tên đăng nhập, số điện thoại hoặc email này đã được sử dụng. Vui lòng thử lại.';
+      } else if (lowerMsg.contains('network') ||
+          lowerMsg.contains('connection') ||
+          lowerMsg.contains('socket')) {
         errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
       }
       setState(() {
@@ -226,7 +252,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               builder: (context, viewportConstraints) {
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minHeight: viewportConstraints.maxHeight - 32,
@@ -257,19 +286,34 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Elegant Segmented Select Button
                           SegmentedButton<String>(
                             segments: [
                               ButtonSegment<String>(
                                 value: 'SHOP',
-                                label: Text('Chủ cửa hàng', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
+                                label: Text(
+                                  'Chủ cửa hàng',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 icon: const Icon(Icons.store_rounded, size: 18),
                               ),
                               ButtonSegment<String>(
                                 value: 'PERSONAL',
-                                label: Text('Nhân viên', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold)),
-                                icon: const Icon(Icons.person_rounded, size: 18),
+                                label: Text(
+                                  'Nhân viên',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.person_rounded,
+                                  size: 18,
+                                ),
                               ),
                             ],
                             selected: {_accountType},
@@ -279,7 +323,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               });
                             },
                             style: SegmentedButton.styleFrom(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
                           ),
@@ -315,23 +361,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               SizedBox(
                                 height: 50,
                                 child: ElevatedButton(
-                                  onPressed: _countdownSeconds > 0 || _isSendingOtp ? null : _sendOtp,
+                                  onPressed:
+                                      _countdownSeconds > 0 || _isSendingOtp
+                                      ? null
+                                      : _sendOtp,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: theme.colorScheme.primary,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
                                   ),
                                   child: _isSendingOtp
                                       ? const SizedBox(
                                           height: 18,
                                           width: 18,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
                                         )
                                       : Text(
-                                          _countdownSeconds > 0 ? '${_countdownSeconds}s' : 'Gửi mã',
-                                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                                          _countdownSeconds > 0
+                                              ? '${_countdownSeconds}s'
+                                              : 'Gửi mã',
+                                          style: GoogleFonts.outfit(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
                                         ),
                                 ),
                               ),
@@ -363,11 +424,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             obscureText: _obscure,
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                _obscure
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
                                 color: c.textMuted,
                                 size: 20,
                               ),
-                              onPressed: () => setState(() => _obscure = !_obscure),
+                              onPressed: () =>
+                                  setState(() => _obscure = !_obscure),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -384,11 +448,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             obscureText: _obscureConfirm,
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscureConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                _obscureConfirm
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
                                 color: c.textMuted,
                                 size: 20,
                               ),
-                              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                              onPressed: () => setState(
+                                () => _obscureConfirm = !_obscureConfirm,
+                              ),
                             ),
                           ),
 
@@ -402,12 +470,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+                                  const Icon(
+                                    Icons.error_outline_rounded,
+                                    color: AppColors.danger,
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       _error!,
-                                      style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500),
+                                      style: GoogleFonts.inter(
+                                        color: AppColors.danger,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -424,18 +500,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                               ),
                               child: _isLoading
                                   ? const SizedBox(
                                       height: 20,
                                       width: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white,
+                                      ),
                                     )
                                   : Text(
                                       'Đăng Ký Thành Viên',
-                                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15),
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                      ),
                                     ),
                             ),
                           ),
@@ -498,9 +585,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+            borderSide: BorderSide(
+              color: theme.colorScheme.primary,
+              width: 1.5,
+            ),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );

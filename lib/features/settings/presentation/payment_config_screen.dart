@@ -40,7 +40,8 @@ const _vietqrBanks = <Map<String, String>>[
 class PaymentConfigScreen extends ConsumerStatefulWidget {
   const PaymentConfigScreen({super.key});
   @override
-  ConsumerState<PaymentConfigScreen> createState() => _PaymentConfigScreenState();
+  ConsumerState<PaymentConfigScreen> createState() =>
+      _PaymentConfigScreenState();
 }
 
 class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
@@ -48,7 +49,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
   String? _bankId;
   final _accountNoCtrl = TextEditingController();
   final _accountNameCtrl = TextEditingController();
-  
+
   final _accountNoFocus = FocusNode();
   final _accountNameFocus = FocusNode();
 
@@ -61,8 +62,12 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
   @override
   void initState() {
     super.initState();
-    _accountNoFocus.addListener(() => setState(() => _accountNoHasFocus = _accountNoFocus.hasFocus));
-    _accountNameFocus.addListener(() => setState(() => _accountNameHasFocus = _accountNameFocus.hasFocus));
+    _accountNoFocus.addListener(
+      () => setState(() => _accountNoHasFocus = _accountNoFocus.hasFocus),
+    );
+    _accountNameFocus.addListener(
+      () => setState(() => _accountNameHasFocus = _accountNameFocus.hasFocus),
+    );
   }
 
   @override
@@ -92,13 +97,23 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      final bankName = _vietqrBanks.firstWhere((b) => b['id'] == _bankId, orElse: () => {})['name'] ?? '';
-      await ref.read(apiClientProvider).post('/shop-profile', data: {
-        'bankId': _bankId,
-        'bankAccount': _accountNoCtrl.text,
-        'bankName': bankName,
-        'accountHolder': _accountNameCtrl.text,
-      });
+      final bankName =
+          _vietqrBanks.firstWhere(
+            (b) => b['id'] == _bankId,
+            orElse: () => {},
+          )['name'] ??
+          '';
+      await ref
+          .read(apiClientProvider)
+          .post(
+            '/shop-profile',
+            data: {
+              'bankId': _bankId,
+              'bankAccount': _accountNoCtrl.text,
+              'bankName': bankName,
+              'accountHolder': _accountNameCtrl.text,
+            },
+          );
       ref.invalidate(shopProfileProvider);
       if (mounted) {
         ToastService.showSuccess('Đã lưu cấu hình thanh toán thành công');
@@ -123,7 +138,11 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
       appBar: AppBar(
         title: Text(
           'Cấu hình thanh toán',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: c.textPrimary),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -133,7 +152,12 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
       ),
       body: shopAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e', style: GoogleFonts.inter(color: AppColors.danger))),
+        error: (e, _) => Center(
+          child: Text(
+            'Lỗi: $e',
+            style: GoogleFonts.inter(color: AppColors.danger),
+          ),
+        ),
         data: (shop) {
           _initFromProfile(shop);
           final qrUrl = _buildQrUrl();
@@ -159,17 +183,27 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
+                      ),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.1,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.qr_code_2_rounded, size: 32, color: theme.colorScheme.primary),
+                          child: Icon(
+                            Icons.qr_code_2_rounded,
+                            size: 32,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -178,12 +212,20 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                             children: [
                               Text(
                                 'VietQR - Thanh toán QR tự động',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: c.textPrimary),
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: c.textPrimary,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 'Khách hàng có thể quét mã QR ngân hàng để tự động điền thông tin chuyển khoản tại quầy.',
-                                style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, height: 1.35),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: c.textSecondary,
+                                  height: 1.35,
+                                ),
                               ),
                             ],
                           ),
@@ -196,14 +238,22 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                   // Bank selector label
                   Text(
                     'Ngân hàng thụ hưởng *',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: c.textPrimary),
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: c.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: _bankId,
                     decoration: InputDecoration(
                       hintText: 'Chọn ngân hàng',
-                      prefixIcon: Icon(Icons.account_balance_rounded, color: c.textMuted, size: 20),
+                      prefixIcon: Icon(
+                        Icons.account_balance_rounded,
+                        color: c.textMuted,
+                        size: 20,
+                      ),
                       filled: true,
                       fillColor: c.card,
                       border: OutlineInputBorder(
@@ -216,22 +266,44 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 1.5,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
                     items: _vietqrBanks
-                        .map((b) => DropdownMenuItem(value: b['id'], child: Text(b['name']!, style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary))))
+                        .map(
+                          (b) => DropdownMenuItem(
+                            value: b['id'],
+                            child: Text(
+                              b['name']!,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: c.textPrimary,
+                              ),
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) => setState(() => _bankId = v),
-                    validator: (v) => v == null ? 'Vui lòng chọn ngân hàng' : null,
+                    validator: (v) =>
+                        v == null ? 'Vui lòng chọn ngân hàng' : null,
                   ),
                   const SizedBox(height: 20),
 
                   // Account number
                   Text(
                     'Số tài khoản ngân hàng *',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: c.textPrimary),
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: c.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   _buildGlowingField(
@@ -244,14 +316,20 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                     c: c,
                     theme: theme,
                     onChanged: (_) => setState(() {}),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập số tài khoản' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Vui lòng nhập số tài khoản'
+                        : null,
                   ),
                   const SizedBox(height: 20),
 
                   // Account name
                   Text(
                     'Tên chủ tài khoản *',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: c.textPrimary),
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: c.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   _buildGlowingField(
@@ -264,7 +342,9 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                     theme: theme,
                     textCapitalization: TextCapitalization.characters,
                     onChanged: (_) => setState(() {}),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập tên chủ tài khoản' : null,
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Vui lòng nhập tên chủ tài khoản'
+                        : null,
                   ),
                   const SizedBox(height: 36),
 
@@ -272,7 +352,11 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                   if (qrUrl.isNotEmpty) ...[
                     Text(
                       'Bản xem trước mã QR chuyển khoản',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: c.textPrimary),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: c.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Center(
@@ -304,9 +388,19 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.broken_image_rounded, size: 40, color: c.textMuted),
+                                    Icon(
+                                      Icons.broken_image_rounded,
+                                      size: 40,
+                                      color: c.textMuted,
+                                    ),
                                     const SizedBox(height: 8),
-                                    Text('Không tải được QR', style: GoogleFonts.inter(color: c.textMuted, fontSize: 12)),
+                                    Text(
+                                      'Không tải được QR',
+                                      style: GoogleFonts.inter(
+                                        color: c.textMuted,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -319,7 +413,11 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                     Center(
                       child: Text(
                         'VietQR mẫu (quét để kiểm tra thông tin tài khoản)',
-                        style: GoogleFonts.inter(fontSize: 12, color: c.textMuted, fontWeight: FontWeight.w500),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: c.textMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 36),
@@ -331,15 +429,33 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _loading ? null : _save,
                       icon: _loading
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.check_circle_outline_rounded, size: 20),
-                      label: Text(_loading ? 'Đang lưu...' : 'Lưu cấu hình thanh toán', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.check_circle_outline_rounded,
+                              size: 20,
+                            ),
+                      label: Text(
+                        _loading ? 'Đang lưu...' : 'Lưu cấu hình thanh toán',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
@@ -401,12 +517,17 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+            borderSide: BorderSide(
+              color: theme.colorScheme.primary,
+              width: 1.5,
+            ),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );
   }
 }
-

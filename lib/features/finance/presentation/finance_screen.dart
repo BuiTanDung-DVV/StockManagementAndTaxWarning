@@ -11,9 +11,17 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../providers/finance_provider.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 final _today = DateTime.now();
-final _from = DateTime(_today.year, _today.month, 1).toIso8601String().split('T')[0];
+final _from = DateTime(
+  _today.year,
+  _today.month,
+  1,
+).toIso8601String().split('T')[0];
 final _to = _today.toIso8601String().split('T')[0];
 
 class FinanceScreen extends ConsumerWidget {
@@ -24,7 +32,9 @@ class FinanceScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final summaryAsync = ref.watch(cashSummaryProvider((from: _from, to: _to)));
-    final txAsync = ref.watch(transactionsProvider((page: 1, type: null, from: _from, to: _to)));
+    final txAsync = ref.watch(
+      transactionsProvider((page: 1, type: null, from: _from, to: _to)),
+    );
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -60,9 +70,15 @@ class FinanceScreen extends ConsumerWidget {
               // Balance Card (Luxury Gradient)
               summaryAsync.when(
                 data: (data) {
-                  final balance = asDouble(data['balance'] ?? data['currentBalance']);
-                  final income = asDouble(data['totalIncome'] ?? data['income']);
-                  final expense = asDouble(data['totalExpense'] ?? data['expense']);
+                  final balance = asDouble(
+                    data['balance'] ?? data['currentBalance'],
+                  );
+                  final income = asDouble(
+                    data['totalIncome'] ?? data['income'],
+                  );
+                  final expense = asDouble(
+                    data['totalExpense'] ?? data['expense'],
+                  );
                   return Container(
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
@@ -70,7 +86,9 @@ class FinanceScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.2,
+                          ),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -81,7 +99,7 @@ class FinanceScreen extends ConsumerWidget {
                         Text(
                           'Số dư quỹ tiền mặt',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8), 
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0.5,
@@ -100,10 +118,13 @@ class FinanceScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        
+
                         // Thu / Chi panel inside gradient card
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(16),
@@ -121,25 +142,35 @@ class FinanceScreen extends ConsumerWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.all(3),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF6BE8A0).withValues(alpha: 0.25),
-                                              borderRadius: BorderRadius.circular(6),
+                                              color: const Color(
+                                                0xFF6BE8A0,
+                                              ).withValues(alpha: 0.25),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                             ),
-                                            child: const Icon(Icons.arrow_downward_rounded, size: 12, color: Color(0xFFA5F3C4)),
+                                            child: const Icon(
+                                              Icons.arrow_downward_rounded,
+                                              size: 12,
+                                              color: Color(0xFFA5F3C4),
+                                            ),
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            'Tổng thu', 
+                                            'Tổng thu',
                                             style: TextStyle(
-                                              color: Colors.white.withValues(alpha: 0.85), 
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
+                                              ),
                                               fontSize: 12,
-                                              fontWeight: FontWeight.w500
-                                            )
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -158,35 +189,48 @@ class FinanceScreen extends ConsumerWidget {
                                     ],
                                   ),
                                 ),
-                                
+
                                 // Elegant vertical divider line
-                                Container(width: 1, color: Colors.white.withValues(alpha: 0.2)),
-                                
+                                Container(
+                                  width: 1,
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+
                                 // Expense Flow
                                 Expanded(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.all(3),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFFF8A80).withValues(alpha: 0.25),
-                                              borderRadius: BorderRadius.circular(6),
+                                              color: const Color(
+                                                0xFFFF8A80,
+                                              ).withValues(alpha: 0.25),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                             ),
-                                            child: const Icon(Icons.arrow_upward_rounded, size: 12, color: Color(0xFFFFB4AB)),
+                                            child: const Icon(
+                                              Icons.arrow_upward_rounded,
+                                              size: 12,
+                                              color: Color(0xFFFFB4AB),
+                                            ),
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
-                                            'Tổng chi', 
+                                            'Tổng chi',
                                             style: TextStyle(
-                                              color: Colors.white.withValues(alpha: 0.85), 
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
+                                              ),
                                               fontSize: 12,
-                                              fontWeight: FontWeight.w500
-                                            )
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -227,11 +271,17 @@ class FinanceScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: AppColors.danger.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: AppColors.danger.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Text(
-                    'Lỗi tải sổ quỹ: $e', 
-                    style: const TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500)
+                    'Lỗi tải sổ quỹ: $e',
+                    style: const TextStyle(
+                      color: AppColors.danger,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
@@ -247,15 +297,22 @@ class FinanceScreen extends ConsumerWidget {
                       icon: Icons.show_chart_rounded,
                     );
                   }
-                  final incomeData = dailyFlow.map((e) => asDouble(e['income'])).toList();
-                  final expenseData = dailyFlow.map((e) => asDouble(e['expense'])).toList();
-                  final xLabels = dailyFlow.map((e) {
-                    final d = e['date']?.toString() ?? '';
-                    if (d.length >= 10) {
-                      return '${d.substring(8, 10)}/${d.substring(5, 7)}';
-                    }
-                    return d;
-                  }).toList().cast<String>();
+                  final incomeData = dailyFlow
+                      .map((e) => asDouble(e['income']))
+                      .toList();
+                  final expenseData = dailyFlow
+                      .map((e) => asDouble(e['expense']))
+                      .toList();
+                  final xLabels = dailyFlow
+                      .map((e) {
+                        final d = e['date']?.toString() ?? '';
+                        if (d.length >= 10) {
+                          return '${d.substring(8, 10)}/${d.substring(5, 7)}';
+                        }
+                        return d;
+                      })
+                      .toList()
+                      .cast<String>();
                   return ChartCard(
                     title: 'Dòng tiền tháng này',
                     height: 200,
@@ -289,7 +346,10 @@ class FinanceScreen extends ConsumerWidget {
                   final expCatAsync = ref.watch(expensesByCategoryProvider);
                   return expCatAsync.when(
                     data: (data) {
-                      final categories = (data['categories'] as List?) ?? (data['items'] as List?) ?? [];
+                      final categories =
+                          (data['categories'] as List?) ??
+                          (data['items'] as List?) ??
+                          [];
                       if (categories.isEmpty) {
                         return const EmptyChartPlaceholder(
                           message: 'Chưa có dữ liệu chi phí theo danh mục',
@@ -306,8 +366,12 @@ class FinanceScreen extends ConsumerWidget {
                       final barItems = categories.asMap().entries.map((e) {
                         final cat = e.value;
                         return HBarItem(
-                          cat['category']?.toString() ?? cat['name']?.toString() ?? 'Khác',
-                          asDouble(cat['total'] ?? cat['amount'] ?? cat['value']),
+                          cat['category']?.toString() ??
+                              cat['name']?.toString() ??
+                              'Khác',
+                          asDouble(
+                            cat['total'] ?? cat['amount'] ?? cat['value'],
+                          ),
                           catColors[e.key % catColors.length],
                         );
                       }).toList();
@@ -316,7 +380,9 @@ class FinanceScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: c.card,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+                          border: Border.all(
+                            color: c.divider.withValues(alpha: 0.4),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.025),
@@ -362,26 +428,74 @@ class FinanceScreen extends ConsumerWidget {
               Text(
                 'Báo cáo & Công cụ tài chính',
                 style: GoogleFonts.outfit(
-                  fontSize: 16, 
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: c.textPrimary,
                 ),
               ),
               const SizedBox(height: 12),
-              
-              _NavCard('Báo cáo KQKD (Lãi/Lỗ)', HugeIcons.strokeRoundedAnalytics01, () => context.push('/profit-loss')),
-              _NavCard('Phân tích Tuổi nợ', HugeIcons.strokeRoundedChartIncrease, () => context.push('/debt-aging')),
-              _NavCard('Quản lý Chứng từ', HugeIcons.strokeRoundedInvoice01, () => context.push('/invoices')),
-              _NavCard('Bảng kê mua không HĐ', HugeIcons.strokeRoundedInvoice03, () => context.push('/purchases-no-invoice')),
-              _NavCard('Dự báo dòng tiền', HugeIcons.strokeRoundedChartIncrease, () => context.push('/cashflow-forecast')),
-              _NavCard('Chốt sổ cuối ngày', HugeIcons.strokeRoundedCheckmarkCircle02, () => context.push('/daily-closing')),
-              _NavCard('Tính thuế HKD', HugeIcons.strokeRoundedCalculator01, () => context.push('/tax-calculator')),
-              _NavCard('Sổ chi phí SXKD', HugeIcons.strokeRoundedCoinsDollar, () => context.push('/expense-ledger')),
-              _NavCard('Theo dõi nghĩa vụ thuế', HugeIcons.strokeRoundedFlag01, () => context.push('/tax-obligations')),
-              _NavCard('Sổ lương nhân viên', HugeIcons.strokeRoundedUserMultiple, () => context.push('/salary-ledger')),
-              _NavCard('Ước Tính & Xuất Thuế HTKK', HugeIcons.strokeRoundedCalculator01, () => context.push('/tax-estimate')),
-              _NavCard('Kê khai thuế', HugeIcons.strokeRoundedInvoice01, () => context.push('/tax-declaration')),
-              
+
+              _NavCard(
+                'Báo cáo KQKD (Lãi/Lỗ)',
+                HugeIcons.strokeRoundedAnalytics01,
+                () => context.push('/profit-loss'),
+              ),
+              _NavCard(
+                'Phân tích Tuổi nợ',
+                HugeIcons.strokeRoundedChartIncrease,
+                () => context.push('/debt-aging'),
+              ),
+              _NavCard(
+                'Quản lý Chứng từ',
+                HugeIcons.strokeRoundedInvoice01,
+                () => context.push('/invoices'),
+              ),
+              _NavCard(
+                'Bảng kê mua không HĐ',
+                HugeIcons.strokeRoundedInvoice03,
+                () => context.push('/purchases-no-invoice'),
+              ),
+              _NavCard(
+                'Dự báo dòng tiền',
+                HugeIcons.strokeRoundedChartIncrease,
+                () => context.push('/cashflow-forecast'),
+              ),
+              _NavCard(
+                'Chốt sổ cuối ngày',
+                HugeIcons.strokeRoundedCheckmarkCircle02,
+                () => context.push('/daily-closing'),
+              ),
+              _NavCard(
+                'Tính thuế HKD',
+                HugeIcons.strokeRoundedCalculator01,
+                () => context.push('/tax-calculator'),
+              ),
+              _NavCard(
+                'Sổ chi phí SXKD',
+                HugeIcons.strokeRoundedCoinsDollar,
+                () => context.push('/expense-ledger'),
+              ),
+              _NavCard(
+                'Theo dõi nghĩa vụ thuế',
+                HugeIcons.strokeRoundedFlag01,
+                () => context.push('/tax-obligations'),
+              ),
+              _NavCard(
+                'Sổ lương nhân viên',
+                HugeIcons.strokeRoundedUserMultiple,
+                () => context.push('/salary-ledger'),
+              ),
+              _NavCard(
+                'Ước Tính & Xuất Thuế HTKK',
+                HugeIcons.strokeRoundedCalculator01,
+                () => context.push('/tax-estimate'),
+              ),
+              _NavCard(
+                'Kê khai thuế',
+                HugeIcons.strokeRoundedInvoice01,
+                () => context.push('/tax-declaration'),
+              ),
+
               const SizedBox(height: 24),
 
               // Recent transactions section
@@ -389,18 +503,25 @@ class FinanceScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Giao dịch gần đây', 
-                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary)
+                    'Giao dịch gần đây',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                    ),
                   ),
                   TextButton.icon(
-                    onPressed: () => context.push('/transactions'), 
+                    onPressed: () => context.push('/transactions'),
                     icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                    label: const Text('Xem tất cả', style: TextStyle(fontSize: 12)),
+                    label: const Text(
+                      'Xem tất cả',
+                      style: TextStyle(fontSize: 12),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              
+
               txAsync.when(
                 data: (data) {
                   final items = (data['items'] as List?) ?? [];
@@ -417,7 +538,8 @@ class FinanceScreen extends ConsumerWidget {
                   }
                   return Column(
                     children: items.take(5).map((tx) {
-                      final isIncome = tx['type'] == 'INCOME' || tx['type'] == 'income';
+                      final isIncome =
+                          tx['type'] == 'INCOME' || tx['type'] == 'income';
                       final amount = asDouble(tx['amount']);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -442,13 +564,21 @@ class FinanceScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: (isIncome ? AppColors.success : AppColors.danger).withValues(alpha: 0.1),
+                                color:
+                                    (isIncome
+                                            ? AppColors.success
+                                            : AppColors.danger)
+                                        .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                isIncome
+                                    ? Icons.arrow_downward_rounded
+                                    : Icons.arrow_upward_rounded,
                                 size: 18,
-                                color: isIncome ? AppColors.success : AppColors.danger,
+                                color: isIncome
+                                    ? AppColors.success
+                                    : AppColors.danger,
                               ),
                             ),
                             const SizedBox(width: 14),
@@ -457,15 +587,29 @@ class FinanceScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    tx['description'] ?? tx['note'] ?? (isIncome ? 'Giao dịch thu' : 'Giao dịch chi'),
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: c.textPrimary),
+                                    tx['description'] ??
+                                        tx['note'] ??
+                                        (isIncome
+                                            ? 'Giao dịch thu'
+                                            : 'Giao dịch chi'),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: c.textPrimary,
+                                    ),
                                     maxLines: 1,
-                                    overflow: TextOverflow.ellipsis, // Prevention of text overflow
+                                    overflow: TextOverflow
+                                        .ellipsis, // Prevention of text overflow
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    tx['paymentMethod']?.toString() ?? 'Tiền mặt',
-                                    style: TextStyle(fontSize: 11, color: c.textSecondary, fontWeight: FontWeight.w500),
+                                    tx['paymentMethod']?.toString() ??
+                                        'Tiền mặt',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: c.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -476,7 +620,9 @@ class FinanceScreen extends ConsumerWidget {
                               style: GoogleFonts.outfit(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 14,
-                                color: isIncome ? AppColors.success : AppColors.danger,
+                                color: isIncome
+                                    ? AppColors.success
+                                    : AppColors.danger,
                               ),
                             ),
                           ],
@@ -515,10 +661,7 @@ class _NavCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: c.card,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: c.divider.withValues(alpha: 0.5),
-            width: 1,
-          ),
+          border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.015),
@@ -535,17 +678,21 @@ class _NavCard extends StatelessWidget {
                 color: theme.colorScheme.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: HugeIcon(icon: icon, color: theme.colorScheme.primary, size: 20),
+              child: HugeIcon(
+                icon: icon,
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                title, 
+                title,
                 style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold, 
+                  fontWeight: FontWeight.bold,
                   fontSize: 13,
                   color: c.textPrimary,
-                )
+                ),
               ),
             ),
             const SizedBox(width: 8),

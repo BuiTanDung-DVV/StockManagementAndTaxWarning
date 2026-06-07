@@ -104,13 +104,22 @@ class MainShell extends ConsumerWidget {
                   colors: Theme.of(context).brightness == Brightness.dark
                       ? [
                           c.bg,
-                          Color.alphaBlend(primaryColor.withValues(alpha: 0.08), c.bg),
+                          Color.alphaBlend(
+                            primaryColor.withValues(alpha: 0.08),
+                            c.bg,
+                          ),
                           c.bg,
                         ]
                       : [
-                          Color.alphaBlend(primaryColor.withValues(alpha: 0.06), c.bg),
+                          Color.alphaBlend(
+                            primaryColor.withValues(alpha: 0.06),
+                            c.bg,
+                          ),
                           c.bg,
-                          Color.alphaBlend(primaryColor.withValues(alpha: 0.04), c.bg),
+                          Color.alphaBlend(
+                            primaryColor.withValues(alpha: 0.04),
+                            c.bg,
+                          ),
                         ],
                 ),
               ),
@@ -127,8 +136,11 @@ class MainShell extends ConsumerWidget {
                 shape: BoxShape.circle,
                 color: primaryColor.withValues(alpha: 0.15),
                 boxShadow: [
-                  BoxShadow(color: primaryColor.withValues(alpha: 0.15), blurRadius: 100),
-                ]
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.15),
+                    blurRadius: 100,
+                  ),
+                ],
               ),
             ),
           ),
@@ -142,12 +154,15 @@ class MainShell extends ConsumerWidget {
                 shape: BoxShape.circle,
                 color: primaryColor.withValues(alpha: 0.06),
                 boxShadow: [
-                  BoxShadow(color: primaryColor.withValues(alpha: 0.06), blurRadius: 100),
-                ]
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.06),
+                    blurRadius: 100,
+                  ),
+                ],
               ),
             ),
           ),
-          
+
           Positioned.fill(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -163,93 +178,109 @@ class MainShell extends ConsumerWidget {
                             width: 260,
                             decoration: BoxDecoration(
                               color: c.surface.withValues(alpha: 0.6),
-                              border: Border(right: BorderSide(color: c.divider.withValues(alpha: 0.3))),
-                            ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: primaryColor.withValues(
-                                  alpha: 0.15,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: HugeIcon(
-                                icon: HugeIcons.strokeRoundedStore01,
-                                color: primaryColor,
-                                size: 26,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                'SmartStock',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: primaryColor,
+                              border: Border(
+                                right: BorderSide(
+                                  color: c.divider.withValues(alpha: 0.3),
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: allTabs.length,
-                          itemBuilder: (context, i) {
-                            final isActive = i == idx;
-                            final color = isActive
-                                ? AppColors.primary
-                                : c.textSecondary;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: ListTile(
-                                leading: HugeIcon(
-                                  icon: allTabs[i].icon,
-                                  color: color,
-                                  size: 24,
-                                ),
-                                title: Text(
-                                  allTabs[i].label,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: isActive
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                    color: color,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    32,
+                                    24,
+                                    24,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: primaryColor.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: HugeIcon(
+                                          icon: HugeIcons.strokeRoundedStore01,
+                                          color: primaryColor,
+                                          size: 26,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Text(
+                                          'SmartStock',
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                selected: isActive,
-                                selectedTileColor: AppColors.primary.withValues(
-                                  alpha: 0.1,
+                                const SizedBox(height: 8),
+                                Expanded(
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    itemCount: allTabs.length,
+                                    itemBuilder: (context, i) {
+                                      final isActive = i == idx;
+                                      final color = isActive
+                                          ? AppColors.primary
+                                          : c.textSecondary;
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8.0,
+                                        ),
+                                        child: ListTile(
+                                          leading: HugeIcon(
+                                            icon: allTabs[i].icon,
+                                            color: color,
+                                            size: 24,
+                                          ),
+                                          title: Text(
+                                            allTabs[i].label,
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: isActive
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w500,
+                                              color: color,
+                                            ),
+                                          ),
+                                          selected: isActive,
+                                          selectedTileColor: AppColors.primary
+                                              .withValues(alpha: 0.1),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          hoverColor: AppColors.primary
+                                              .withValues(alpha: 0.05),
+                                          onTap: () =>
+                                              context.go(allTabs[i].route),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                hoverColor: AppColors.primary.withValues(
-                                  alpha: 0.05,
-                                ),
-                                onTap: () => context.go(allTabs[i].route),
-                              ),
-                            );
-                          },
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
+                      Expanded(
                         child: ClipRRect(
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -262,7 +293,7 @@ class MainShell extends ConsumerWidget {
                       ),
                     ],
                   );
-        }
+                }
 
                 return Stack(
                   children: [
@@ -274,7 +305,9 @@ class MainShell extends ConsumerWidget {
                             color: c.bg.withValues(alpha: 0.4),
                             child: Center(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 480),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 480,
+                                ),
                                 child: child,
                               ),
                             ),
@@ -294,28 +327,37 @@ class MainShell extends ConsumerWidget {
                             child: BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color: c.card.withValues(alpha: 0.7),
                                   borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                                  border: Border.all(
+                                    color: c.divider.withValues(alpha: 0.5),
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: primaryColor.withValues(alpha: 0.05),
+                                      color: primaryColor.withValues(
+                                        alpha: 0.05,
+                                      ),
                                       blurRadius: 20,
                                       offset: const Offset(0, 10),
                                     ),
                                   ],
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
                                   children: [
                                     for (int i = 0; i < allTabs.length; i++)
                                       _NavItem(
                                         icon: allTabs[i].icon,
                                         label: allTabs[i].label,
                                         isActive: i == idx,
-                                        onTap: () => context.go(allTabs[i].route),
+                                        onTap: () =>
+                                            context.go(allTabs[i].route),
                                       ),
                                   ],
                                 ),

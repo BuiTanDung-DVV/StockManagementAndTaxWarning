@@ -4,27 +4,38 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
+import '../providers/finance_provider.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 
 class TransactionDetailScreen extends ConsumerWidget {
   final Map<dynamic, dynamic> transaction;
 
-  const TransactionDetailScreen({
-    super.key,
-    required this.transaction,
-  });
+  const TransactionDetailScreen({super.key, required this.transaction});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
 
-    final isIncome = transaction['type'] == 'INCOME' || transaction['type'] == 'income';
+    final isIncome =
+        transaction['type'] == 'INCOME' || transaction['type'] == 'income';
     final amount = asDouble(transaction['amount']);
     final paymentMethod = transaction['paymentMethod'] ?? 'Tiền mặt';
-    final description = transaction['description'] ?? transaction['note'] ?? (isIncome ? 'Thu' : 'Chi');
-    final createdAt = transaction['createdAt']?.toString() ?? transaction['date']?.toString() ?? '';
+    final description =
+        transaction['description'] ??
+        transaction['note'] ??
+        (isIncome ? 'Thu' : 'Chi');
+    final createdAt =
+        transaction['createdAt']?.toString() ??
+        transaction['date']?.toString() ??
+        '';
     final counterparty = transaction['counterparty'] ?? '';
 
     // Lấy ngày tháng format đẹp
@@ -52,6 +63,13 @@ class TransactionDetailScreen extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            tooltip: 'Xóa giao dịch',
+            onPressed: () => _confirmDelete(context, ref),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -67,7 +85,9 @@ class TransactionDetailScreen extends ConsumerWidget {
                 border: Border.all(color: c.divider.withValues(alpha: 0.5)),
               ),
               child: Icon(
-                isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                isIncome
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_upward_rounded,
                 size: 40,
                 color: isIncome ? AppColors.success : AppColors.danger,
               ),
@@ -102,10 +122,17 @@ class TransactionDetailScreen extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  _buildInfoRow('Loại giao dịch', isIncome ? 'Thu' : 'Chi', c, valueColor: isIncome ? AppColors.success : AppColors.danger),
+                  _buildInfoRow(
+                    'Loại giao dịch',
+                    isIncome ? 'Thu' : 'Chi',
+                    c,
+                    valueColor: isIncome ? AppColors.success : AppColors.danger,
+                  ),
                   _buildInfoRow('Phương thức', paymentMethod, c),
-                  if (dateLabel.isNotEmpty) _buildInfoRow('Thời gian', dateLabel, c),
-                  if (counterparty.isNotEmpty) _buildInfoRow('Đối tác', counterparty, c),
+                  if (dateLabel.isNotEmpty)
+                    _buildInfoRow('Thời gian', dateLabel, c),
+                  if (counterparty.isNotEmpty)
+                    _buildInfoRow('Đối tác', counterparty, c),
                   const Divider(height: 24),
                   _buildInfoRow('Ghi chú', description, c, isMultiLine: true),
                 ],
@@ -117,17 +144,29 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, AppThemeColors c, {Color? valueColor, bool isMultiLine = false}) {
+  Widget _buildInfoRow(
+    String label,
+    String value,
+    AppThemeColors c, {
+    Color? valueColor,
+    bool isMultiLine = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
-        crossAxisAlignment: isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment: isMultiLine
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Expanded(
             flex: 2,
             child: Text(
               label,
-              style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(
+                color: c.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           Expanded(
@@ -147,5 +186,32 @@ class TransactionDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
+    final transId = transaction['id'] is int
+        ? transaction['id']
+        : int.tryParse(transaction['id']?.toString() ?? '0') ?? 0;
+
+    AppConfirmModal.show(
+      context,
+      title: 'Xóa giao dịch',
+      message:
+          'Bạn có chắc chắn muốn xóa giao dịch này? Số dư sẽ được cập nhật lại.',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy',
+    ).then((confirm) async {
+      if (confirm == true) {
+        try {
+          await ref.read(financeRepoProvider).deleteTransaction(transId);
+          ToastService.showSuccess('Xóa giao dịch thành công');
+          ref.invalidate(transactionsProvider);
+          ref.invalidate(cashSummaryProvider);
+          if (context.mounted) Navigator.pop(context);
+        } catch (e) {
+          ToastService.showError('Lỗi: $e');
+        }
+      }
+    });
   }
 }

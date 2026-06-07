@@ -6,14 +6,18 @@ import '../providers/notification_provider.dart';
 class NotificationListScreen extends ConsumerStatefulWidget {
   const NotificationListScreen({super.key});
   @override
-  ConsumerState<NotificationListScreen> createState() => _NotificationListScreenState();
+  ConsumerState<NotificationListScreen> createState() =>
+      _NotificationListScreenState();
 }
 
-class _NotificationListScreenState extends ConsumerState<NotificationListScreen> {
+class _NotificationListScreenState
+    extends ConsumerState<NotificationListScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(notificationProvider.notifier).loadNotifications());
+    Future.microtask(
+      () => ref.read(notificationProvider.notifier).loadNotifications(),
+    );
   }
 
   @override
@@ -27,17 +31,26 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
         actions: [
           if (notif.items.any((n) => n['isRead'] != true))
             TextButton(
-              onPressed: () => ref.read(notificationProvider.notifier).markAllRead(),
+              onPressed: () =>
+                  ref.read(notificationProvider.notifier).markAllRead(),
               child: const Text('Đọc tất cả'),
             ),
         ],
       ),
       body: notif.items.isEmpty
-          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.notifications_none, size: 64, color: c.textMuted),
-              const SizedBox(height: 12),
-              Text('Không có thông báo', style: TextStyle(color: c.textSecondary, fontSize: 16)),
-            ]))
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.notifications_none, size: 64, color: c.textMuted),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Không có thông báo',
+                    style: TextStyle(color: c.textSecondary, fontSize: 16),
+                  ),
+                ],
+              ),
+            )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: notif.items.length,
@@ -75,27 +88,62 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
         decoration: BoxDecoration(
           color: isRead ? c.card : AppColors.primary.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
-          border: isRead ? null : Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+          border: isRead
+              ? null
+              : Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
         ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: iconColor.withValues(alpha: 0.12),
-            child: Icon(icon, size: 18, color: iconColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(child: Text(n['title'] ?? '', style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.w600, fontSize: 13))),
-              if (!isRead)
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
-            ]),
-            const SizedBox(height: 4),
-            Text(n['message'] ?? '', style: TextStyle(fontSize: 12, color: c.textSecondary)),
-            const SizedBox(height: 4),
-            Text(_formatDate(n['createdAt']), style: TextStyle(fontSize: 10, color: c.textMuted)),
-          ])),
-        ]),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: iconColor.withValues(alpha: 0.12),
+              child: Icon(icon, size: 18, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          n['title'] ?? '',
+                          style: TextStyle(
+                            fontWeight: isRead
+                                ? FontWeight.normal
+                                : FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      if (!isRead)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    n['message'] ?? '',
+                    style: TextStyle(fontSize: 12, color: c.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatDate(n['createdAt']),
+                    style: TextStyle(fontSize: 10, color: c.textMuted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

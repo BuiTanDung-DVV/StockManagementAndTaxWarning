@@ -25,7 +25,7 @@ class SectionedFormDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    
+
     return Dialog(
       backgroundColor: c.card,
       shape: RoundedRectangleBorder(
@@ -37,7 +37,9 @@ class SectionedFormDialog extends StatelessWidget {
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
         width: MediaQuery.of(context).size.width > 600 ? 500 : double.infinity,
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,12 +51,12 @@ class SectionedFormDialog extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    title, 
+                    title,
                     style: GoogleFonts.outfit(
-                      fontSize: 20, 
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
-                    )
+                    ),
                   ),
                   IconButton(
                     icon: Icon(Icons.close, color: c.textSecondary),
@@ -84,26 +86,47 @@ class SectionedFormDialog extends StatelessWidget {
                     onPressed: isSaving ? null : onCancel,
                     style: TextButton.styleFrom(
                       foregroundColor: c.textSecondary,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: Text(cancelText, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                    child: Text(
+                      cancelText,
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: isSaving ? null : onSave,
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 0,
                     ),
                     child: isSaving
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : Text(saveText, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                        : Text(
+                            saveText,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ],
               ),

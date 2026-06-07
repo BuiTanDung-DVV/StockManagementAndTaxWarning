@@ -80,25 +80,34 @@ class _PurchaseOrderFormScreenState
 
   void _nextStep() {
     if (_currentStep == 0) {
-      final suppliersAsync = ref.read(supplierListProvider((page: 1, search: null)));
-      final hasSuppliers = ((suppliersAsync.value?['items'] as List?)?.isNotEmpty ?? false);
+      final suppliersAsync = ref.read(
+        supplierListProvider((page: 1, search: null)),
+      );
+      final hasSuppliers =
+          ((suppliersAsync.value?['items'] as List?)?.isNotEmpty ?? false);
       if (_supplierId == null && hasSuppliers) {
         ToastService.showSuccess('Vui lòng chọn Nhà cung cấp!');
         return;
       }
       if (!hasSuppliers) {
-         ToastService.showSuccess('Chưa có Nhà cung cấp nào. Vui lòng tạo Nhà cung cấp trước!');
+        ToastService.showSuccess(
+          'Chưa có Nhà cung cấp nào. Vui lòng tạo Nhà cung cấp trước!',
+        );
         return;
       }
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
       if (_items.isEmpty) {
-        ToastService.showSuccess('Vui lòng thêm ít nhất 1 sản phẩm để nhập hàng!');
+        ToastService.showSuccess(
+          'Vui lòng thêm ít nhất 1 sản phẩm để nhập hàng!',
+        );
         return;
       }
       for (var i in _items) {
         if (i.productId == null) {
-          ToastService.showSuccess('Vui lòng chọn sản phẩm cho tất cả các dòng!');
+          ToastService.showSuccess(
+            'Vui lòng chọn sản phẩm cho tất cả các dòng!',
+          );
           return;
         }
         if (i.quantity <= 0) {
@@ -189,11 +198,14 @@ class _PurchaseOrderFormScreenState
           children: [
             // Elegant Steps Indicator
             _buildStepsHeader(c, theme),
-            
+
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   child: _buildCurrentStepView(
@@ -206,7 +218,7 @@ class _PurchaseOrderFormScreenState
                 ),
               ),
             ),
-            
+
             // Bottom Buttons Bar
             _buildBottomActionBar(c, theme),
           ],
@@ -237,10 +249,15 @@ class _PurchaseOrderFormScreenState
     );
   }
 
-  Widget _buildStepIndicatorNode(int index, String label, AppThemeColors c, ThemeData theme) {
+  Widget _buildStepIndicatorNode(
+    int index,
+    String label,
+    AppThemeColors c,
+    ThemeData theme,
+  ) {
     final isActive = _currentStep == index;
     final isCompleted = _currentStep > index;
-    
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -250,12 +267,12 @@ class _PurchaseOrderFormScreenState
           height: 28,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isActive 
-                ? theme.colorScheme.primary 
+            color: isActive
+                ? theme.colorScheme.primary
                 : (isCompleted ? AppColors.success : c.surface),
             border: Border.all(
-              color: isActive 
-                  ? theme.colorScheme.primary 
+              color: isActive
+                  ? theme.colorScheme.primary
                   : (isCompleted ? AppColors.success : c.divider),
               width: 1.5,
             ),
@@ -292,7 +309,9 @@ class _PurchaseOrderFormScreenState
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
         height: 2,
-        color: isCompleted ? AppColors.success : c.divider.withValues(alpha: 0.5),
+        color: isCompleted
+            ? AppColors.success
+            : c.divider.withValues(alpha: 0.5),
       ),
     );
   }
@@ -383,7 +402,10 @@ class _PurchaseOrderFormScreenState
                   return DropdownButtonFormField<int>(
                     initialValue: _supplierId,
                     dropdownColor: c.card,
-                    style: GoogleFonts.inter(color: c.textPrimary, fontSize: 14),
+                    style: GoogleFonts.inter(
+                      color: c.textPrimary,
+                      fontSize: 14,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Nhà cung cấp *',
                       labelStyle: TextStyle(color: c.textSecondary),
@@ -399,7 +421,9 @@ class _PurchaseOrderFormScreenState
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: theme.colorScheme.primary),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                     items: items.map((e) {
@@ -411,7 +435,10 @@ class _PurchaseOrderFormScreenState
                     onChanged: (v) {
                       setState(() {
                         _supplierId = v;
-                        final matched = items.firstWhere((e) => e['id'] == v, orElse: () => null);
+                        final matched = items.firstWhere(
+                          (e) => e['id'] == v,
+                          orElse: () => null,
+                        );
                         if (matched != null) {
                           _supplierName = matched['name'] ?? '';
                         }
@@ -436,11 +463,14 @@ class _PurchaseOrderFormScreenState
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
                         'Chưa có kho hàng nào được tạo. (Sẽ dùng kho mặc định)',
-                        style: TextStyle(color: c.textSecondary, fontStyle: FontStyle.italic),
+                        style: TextStyle(
+                          color: c.textSecondary,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     );
                   }
-                  
+
                   // Auto-select first warehouse if none selected
                   if (_warehouseId == null && data.isNotEmpty) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -454,7 +484,10 @@ class _PurchaseOrderFormScreenState
                   return DropdownButtonFormField<int>(
                     initialValue: _warehouseId,
                     dropdownColor: c.card,
-                    style: GoogleFonts.inter(color: c.textPrimary, fontSize: 14),
+                    style: GoogleFonts.inter(
+                      color: c.textPrimary,
+                      fontSize: 14,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Kho lưu trữ sản phẩm',
                       labelStyle: TextStyle(color: c.textSecondary),
@@ -470,7 +503,9 @@ class _PurchaseOrderFormScreenState
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: theme.colorScheme.primary),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                     items: data.map((e) {
@@ -482,7 +517,10 @@ class _PurchaseOrderFormScreenState
                     onChanged: (v) {
                       setState(() {
                         _warehouseId = v;
-                        final matched = data.firstWhere((e) => e['id'] == v, orElse: () => null);
+                        final matched = data.firstWhere(
+                          (e) => e['id'] == v,
+                          orElse: () => null,
+                        );
                         if (matched != null) {
                           _warehouseName = matched['name'] ?? '';
                         }
@@ -585,7 +623,9 @@ class _PurchaseOrderFormScreenState
                   children: [
                     CircleAvatar(
                       radius: 12,
-                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      backgroundColor: theme.colorScheme.primary.withValues(
+                        alpha: 0.1,
+                      ),
                       child: Text(
                         '${idx + 1}',
                         style: GoogleFonts.outfit(
@@ -604,11 +644,17 @@ class _PurchaseOrderFormScreenState
                             initialValue: item.productId,
                             isExpanded: true,
                             dropdownColor: c.card,
-                            style: GoogleFonts.inter(color: c.textPrimary, fontSize: 13),
+                            style: GoogleFonts.inter(
+                              color: c.textPrimary,
+                              fontSize: 13,
+                            ),
                             decoration: const InputDecoration(
                               labelText: 'Chọn sản phẩm *',
                               isDense: true,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
                               border: OutlineInputBorder(),
                             ),
                             items: prods.map((e) {
@@ -623,12 +669,16 @@ class _PurchaseOrderFormScreenState
                             onChanged: (v) {
                               setState(() {
                                 item.productId = v;
-                                final matched = prods.firstWhere((e) => e['id'] == v, orElse: () => null);
+                                final matched = prods.firstWhere(
+                                  (e) => e['id'] == v,
+                                  orElse: () => null,
+                                );
                                 if (matched != null) {
                                   item.productName = matched['name'];
                                   item.productSku = matched['sku'];
                                   if (item.priceCtrl.text.isEmpty) {
-                                    item.priceCtrl.text = (matched['costPrice'] ?? 0).toString();
+                                    item.priceCtrl.text =
+                                        (matched['costPrice'] ?? 0).toString();
                                   }
                                 }
                               });
@@ -665,7 +715,10 @@ class _PurchaseOrderFormScreenState
                         decoration: const InputDecoration(
                           labelText: 'Số lượng',
                           isDense: true,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 12,
+                          ),
                           border: OutlineInputBorder(),
                         ),
                         onChanged: (v) => setState(() {
@@ -683,7 +736,10 @@ class _PurchaseOrderFormScreenState
                         decoration: const InputDecoration(
                           labelText: 'Đơn giá nhập',
                           isDense: true,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 12,
+                          ),
                           border: OutlineInputBorder(),
                         ),
                         onChanged: (v) => setState(() {}),
@@ -740,9 +796,17 @@ class _PurchaseOrderFormScreenState
               const SizedBox(height: 12),
               _buildDetailTextRow('Nhà cung cấp:', _supplierName, c),
               const SizedBox(height: 6),
-              _buildDetailTextRow('Kho nhập:', _warehouseName.isNotEmpty ? _warehouseName : 'Chưa thiết lập', c),
+              _buildDetailTextRow(
+                'Kho nhập:',
+                _warehouseName.isNotEmpty ? _warehouseName : 'Chưa thiết lập',
+                c,
+              ),
               const SizedBox(height: 6),
-              _buildDetailTextRow('Ngày đặt:', DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()), c),
+              _buildDetailTextRow(
+                'Ngày đặt:',
+                DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
+                c,
+              ),
               if (_notesCtrl.text.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 _buildDetailTextRow('Ghi chú:', _notesCtrl.text, c),
@@ -933,7 +997,9 @@ class _PurchaseOrderFormScreenState
             Expanded(
               flex: 3,
               child: ElevatedButton.icon(
-                onPressed: _saving ? null : (_currentStep == 2 ? _save : _nextStep),
+                onPressed: _saving
+                    ? null
+                    : (_currentStep == 2 ? _save : _nextStep),
                 icon: _saving
                     ? const SizedBox(
                         width: 18,
@@ -951,8 +1017,8 @@ class _PurchaseOrderFormScreenState
                         size: 18,
                       ),
                 label: Text(
-                  _saving 
-                      ? 'Đang tạo...' 
+                  _saving
+                      ? 'Đang tạo...'
                       : (_currentStep == 2 ? 'Lưu Đơn Nhập' : 'Tiếp tục'),
                   style: GoogleFonts.outfit(
                     fontWeight: FontWeight.bold,
