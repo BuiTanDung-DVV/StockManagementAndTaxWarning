@@ -26,7 +26,7 @@ import 'widgets/dashboard_widgets.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
-  symbol: 'â‚«',
+  symbol: '₫',
   decimalDigits: 0,
 );
 
@@ -67,8 +67,8 @@ class DashboardScreen extends ConsumerWidget {
           .subtract(const Duration(days: 1))
           .toIso8601String()
           .split('T')[0];
-      label1 = 'Tuáº§n nÃ y';
-      label2 = 'Tuáº§n trÆ°á»›c';
+      label1 = 'Tuần này';
+      label2 = 'Tuần trước';
     } else {
       // month
       from1 = DateTime(
@@ -87,8 +87,8 @@ class DashboardScreen extends ConsumerWidget {
         today.month,
         0,
       ).toIso8601String().split('T')[0];
-      label1 = 'ThÃ¡ng nÃ y';
-      label2 = 'ThÃ¡ng trÆ°á»›c';
+      label1 = 'Tháng này';
+      label2 = 'Tháng trước';
     }
 
     final salesAsync = hasFinance && shopState.userShops.isNotEmpty
@@ -129,7 +129,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'ChÆ°a cÃ³ cá»­a hÃ ng nÃ o',
+                  'Chưa có cửa hàng nào',
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -138,7 +138,7 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Báº¡n cáº§n táº¡o cá»­a hÃ ng hoáº·c chá» chá»§ shop duyá»‡t yÃªu cáº§u tham gia.',
+                  'Bạn cần tạo cửa hàng hoặc chờ chủ shop duyệt yêu cầu tham gia.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 14,
@@ -153,7 +153,7 @@ class DashboardScreen extends ConsumerWidget {
                     color: Colors.white,
                     size: 20,
                   ),
-                  label: const Text('Táº£i láº¡i tráº¡ng thÃ¡i'),
+                  label: const Text('Tải lại trạng thái'),
                 ),
               ],
             ),
@@ -195,7 +195,7 @@ class DashboardScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Xin chÃ o, ${ref.watch(authProvider).user?['fullName'] ?? 'Chá»§ shop'}',
+                              'Xin chào, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'}',
                               style: theme.textTheme.headlineLarge?.copyWith(
                                 color: c.textPrimary,
                                 fontWeight: FontWeight.w700,
@@ -204,7 +204,7 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Tá»•ng quan hÃ´m nay',
+                              'Tổng quan hôm nay',
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: c.textSecondary,
                               ),
@@ -269,7 +269,7 @@ class DashboardScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(right: 12),
                           child: QuickAction(
                             HugeIcons.strokeRoundedStore01,
-                            'BÃ¡n hÃ ng',
+                            'Bán hàng',
                             () => context.push('/pos'),
                           ),
                         ),
@@ -279,7 +279,7 @@ class DashboardScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(right: 12),
                           child: QuickAction(
                             HugeIcons.strokeRoundedPackage,
-                            'Sáº£n pháº©m',
+                            'Sản phẩm',
                             () => context.push('/products'),
                           ),
                         ),
@@ -289,7 +289,7 @@ class DashboardScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(right: 12),
                           child: QuickAction(
                             HugeIcons.strokeRoundedUserGroup,
-                            'KhÃ¡ch hÃ ng',
+                            'Khách hàng',
                             () => context.push('/customers'),
                           ),
                         ),
@@ -299,7 +299,7 @@ class DashboardScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(right: 12),
                           child: QuickAction(
                             HugeIcons.strokeRoundedInvoice01,
-                            'ÄÆ¡n hÃ ng',
+                            'Đơn hàng',
                             () => context.push('/sales'),
                           ),
                         ),
@@ -309,7 +309,7 @@ class DashboardScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(right: 12),
                           child: QuickAction(
                             HugeIcons.strokeRoundedTask01,
-                            'Kiá»ƒm kÃª',
+                            'Kiểm kê',
                             () => context.push('/stock-take'),
                           ),
                         ),
@@ -319,7 +319,7 @@ class DashboardScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(right: 12),
                           child: QuickAction(
                             HugeIcons.strokeRoundedAnalytics01,
-                            'LÃ£i/Lá»—',
+                            'Lãi/Lỗ',
                             () => context.push('/profit-loss'),
                           ),
                         ),
@@ -361,7 +361,7 @@ class DashboardScreen extends ConsumerWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: SummaryCard(
-                                  'ÄÆ¡n hÃ ng',
+                                  'Đơn hàng',
                                   '$orders',
                                   HugeIcons.strokeRoundedInvoice03,
                                   AppColors.success,
@@ -374,7 +374,7 @@ class DashboardScreen extends ConsumerWidget {
                             children: [
                               Expanded(
                                 child: SummaryCard(
-                                  'Lá»£i nhuáº­n gá»™p',
+                                  'Lợi nhuận gộp',
                                   _currFmt.format(grossProfit),
                                   HugeIcons.strokeRoundedMoney04,
                                   Colors.purple,
@@ -445,7 +445,7 @@ class DashboardScreen extends ConsumerWidget {
                     },
                     loading: () => const ShimmerDashboard(),
                     error: (e, _) => AppError(
-                      message: 'KhÃ´ng thá»ƒ káº¿t ná»‘i server\n$e',
+                      message: 'Không thể kết nối server\n$e',
                       onRetry: () {
                         ref.invalidate(salesSummaryProvider);
                         if (hasInventory) ref.invalidate(lowStockProvider);
@@ -492,9 +492,9 @@ class DashboardScreen extends ConsumerWidget {
                     data: (data) => data.isEmpty
                         ? EmptyChartPlaceholder(
                             message:
-                                'Táº¡o Ä‘Æ¡n bÃ¡n Ä‘áº§u tiÃªn Ä‘á»ƒ tháº¥y Top sáº£n pháº©m',
+                                'Tạo đơn bán đầu tiên để thấy Top sản phẩm',
                             icon: Icons.leaderboard_rounded,
-                            actionLabel: 'Táº¡o Ä‘Æ¡n bÃ¡n',
+                            actionLabel: 'Tạo đơn bán',
                             onAction: () => context.push('/pos'),
                           )
                         : TopProductsChart(data),
@@ -509,9 +509,9 @@ class DashboardScreen extends ConsumerWidget {
                     data: (data) => data.isEmpty
                         ? EmptyChartPlaceholder(
                             message:
-                                'ThÃªm sáº£n pháº©m vÃ o kho Ä‘á»ƒ tháº¥y biá»ƒu Ä‘á»“ tá»“n kho',
+                                'Thêm sản phẩm vào kho để thấy biểu đồ tồn kho',
                             icon: Icons.pie_chart_outline_rounded,
-                            actionLabel: 'ThÃªm sáº£n pháº©m',
+                            actionLabel: 'Thêm sản phẩm',
                             onAction: () => context.push('/products/form'),
                           )
                         : InventoryDonutChart(data),
@@ -592,7 +592,7 @@ class DashboardScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'NgÆ°á»¡ng DT: ${thresholds.getTierLabel(revenue)}',
+                                        'Ngưỡng DT: ${thresholds.getTierLabel(revenue)}',
                                         style: GoogleFonts.outfit(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
@@ -650,7 +650,7 @@ class DashboardScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    '${thresholds.getObligation(revenue)} â€¢ NgÆ°á»¡ng tiáº¿p: ${_currFmt.format(nextThreshold)}',
+                                    '${thresholds.getObligation(revenue)} • Ngưỡng tiếp: ${_currFmt.format(nextThreshold)}',
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500,
@@ -672,7 +672,7 @@ class DashboardScreen extends ConsumerWidget {
                 if (hasFinance && recentTransactionsAsync != null) ...[
                   const SizedBox(height: 28),
                   Text(
-                    'Giao dá»‹ch gáº§n Ä‘Ã¢y',
+                    'Giao dịch gần đây',
                     style: GoogleFonts.outfit(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -684,7 +684,7 @@ class DashboardScreen extends ConsumerWidget {
                     data: (transactions) {
                       if (transactions.isEmpty) {
                         return const Center(
-                          child: Text('ChÆ°a cÃ³ giao dá»‹ch nÃ o'),
+                          child: Text('Chưa có giao dịch nào'),
                         );
                       }
                       return Container(
@@ -713,7 +713,7 @@ class DashboardScreen extends ConsumerWidget {
                                 ? DateFormat('dd/MM HH:mm').format(date)
                                 : '';
                             final customerName =
-                                t['customer']?['name'] ?? 'KhÃ¡ch láº»';
+                                t['customer']?['name'] ?? 'Khách lẻ';
 
                             return ListTile(
                               contentPadding: const EdgeInsets.symmetric(
@@ -743,7 +743,7 @@ class DashboardScreen extends ConsumerWidget {
                                 ),
                               ),
                               subtitle: Text(
-                                'HD-$id â€¢ $formattedDate',
+                                'HD-$id • $formattedDate',
                                 style: TextStyle(
                                   color: c.textSecondary,
                                   fontSize: 12,
@@ -767,7 +767,7 @@ class DashboardScreen extends ConsumerWidget {
                         const Center(child: CircularProgressIndicator()),
                     error: (e, trace) => Center(
                       child: Text(
-                        'Lá»—i táº£i GD: $e',
+                        'Lỗi tải GD: $e',
                         style: const TextStyle(color: Colors.red),
                       ),
                     ),
@@ -797,7 +797,7 @@ class DashboardScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'DÆ°á»›i Ä‘á»‹nh má»©c tá»‘i thiá»ƒu',
+                                    'Dưới định mức tối thiểu',
                                     style: GoogleFonts.outfit(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -841,7 +841,7 @@ class DashboardScreen extends ConsumerWidget {
                                     child: Text(
                                       item['product']?['name'] ??
                                           item['productName'] ??
-                                          'Sáº£n pháº©m',
+                                          'Sản phẩm',
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
