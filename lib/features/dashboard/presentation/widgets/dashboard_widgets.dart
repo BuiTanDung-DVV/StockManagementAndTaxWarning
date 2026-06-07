@@ -186,7 +186,7 @@ class SummaryCard extends StatelessWidget {
     final c = AppThemeColors.of(context);
     final bgGradient = isHero
         ? LinearGradient(
-            colors: [color, color.withValues(alpha: 0.7)],
+            colors: [color, color.withAlpha(200)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           )
@@ -199,7 +199,6 @@ class SummaryCard extends StatelessWidget {
     final iconColor = isHero ? Colors.white : color;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         color: bgColor,
         gradient: bgGradient,
@@ -213,49 +212,69 @@ class SummaryCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            if (isHero)
+              Positioned(
+                right: -20,
+                bottom: -20,
+                child: HugeIcon(
+                  icon: icon,
+                  size: 100,
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
-                child: HugeIcon(icon: icon, size: 16, color: iconColor),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: subTextColor,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: iconBg,
+                          shape: BoxShape.circle,
+                        ),
+                        child: HugeIcon(icon: icon, size: 16, color: iconColor),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: subTextColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(height: 12),
+                  Text(
+                    value,
+                    style: GoogleFonts.outfit(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                      letterSpacing: -0.5,
+                      height: 1.1,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: textColor,
-              letterSpacing: -0.5,
-              height: 1.1,
-              fontFeatures: const [FontFeature.tabularFigures()],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -272,40 +291,50 @@ class QuickAction extends StatelessWidget {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(100),
-          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(100),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          hoverColor: theme.colorScheme.primary.withValues(alpha: 0.05),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 0.5),
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            HugeIcon(
-              icon: icon,
-              color: theme.colorScheme.primary,
-              size: 18,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                HugeIcon(
+                  icon: icon,
+                  color: theme.colorScheme.primary,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: c.textPrimary,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: c.textPrimary,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -438,11 +467,11 @@ class ComparisonBarChart extends StatelessWidget {
     double barWidth;
     double bSpace;
     if (maxLen <= 7) {
-      barWidth = isMobile ? 12.0 : 24.0;
-      bSpace = isMobile ? 4.0 : 8.0;
+      barWidth = isMobile ? 8.0 : 16.0;
+      bSpace = isMobile ? 6.0 : 12.0;
     } else {
-      barWidth = isMobile ? 4.0 : 12.0;
-      bSpace = isMobile ? 1.0 : 3.0;
+      barWidth = isMobile ? 3.0 : 8.0;
+      bSpace = isMobile ? 2.0 : 4.0;
     }
 
     final pastColor = theme.colorScheme.primary.withValues(alpha: 0.25);
@@ -483,10 +512,7 @@ class ComparisonBarChart extends StatelessWidget {
                 end: Alignment.bottomCenter,
               ),
               width: barWidth,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(4),
-              ),
+              borderRadius: BorderRadius.circular(100),
             ),
             BarChartRodData(
               toY: rev1,
@@ -499,10 +525,7 @@ class ComparisonBarChart extends StatelessWidget {
                 end: Alignment.bottomCenter,
               ),
               width: barWidth,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(4),
-              ),
+              borderRadius: BorderRadius.circular(100),
             ),
           ],
           barsSpace: bSpace,
@@ -585,7 +608,7 @@ class ComparisonBarChart extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (v) => FlLine(
-                    color: c.divider.withValues(alpha: 0.3),
+                    color: c.divider.withValues(alpha: 0.15),
                     strokeWidth: 1,
                     dashArray: [5, 5],
                   ),
@@ -604,8 +627,8 @@ class ComparisonBarChart extends StatelessWidget {
                 ),
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (group) => c.surface,
-                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    getTooltipColor: (group) => const Color(0xFF1E293B).withValues(alpha: 0.9),
+                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     tooltipMargin: 8,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final val = NumberFormat.compact(
@@ -613,13 +636,13 @@ class ComparisonBarChart extends StatelessWidget {
                       ).format(rod.toY);
                       final label = rodIndex == 0 ? label2 : label1;
                       return BarTooltipItem(
-                        '$label\n$val',
+                        '$label\n$val đ',
                         GoogleFonts.outfit(
                           color: rodIndex == 0
-                              ? c.textSecondary
-                              : theme.colorScheme.primary,
+                              ? const Color(0xFF94A3B8)
+                              : const Color(0xFF60A5FA),
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       );
                     },
@@ -690,7 +713,7 @@ class ComparisonBarChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
+                      reservedSize: 52,
                       getTitlesWidget: (value, meta) {
                         if (value == meta.max || value == meta.min)
                           return const SizedBox.shrink();
@@ -1188,7 +1211,7 @@ class CashFlowAreaChart extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (v) => FlLine(
-                    color: c.divider.withValues(alpha: 0.3),
+                    color: c.divider.withValues(alpha: 0.15),
                     strokeWidth: 1,
                     dashArray: [5, 5],
                   ),
@@ -1254,7 +1277,7 @@ class CashFlowAreaChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
+                      reservedSize: 52,
                       getTitlesWidget: (v, m) {
                         if (v == m.max || v == m.min)
                           return const SizedBox.shrink();
@@ -1292,8 +1315,8 @@ class CashFlowAreaChart extends StatelessWidget {
                   touchSpotThreshold: 40,
                   handleBuiltInTouches: true,
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => c.surface,
-                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    getTooltipColor: (_) => const Color(0xFF1E293B).withValues(alpha: 0.9),
+                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     tooltipMargin: 8,
                     getTooltipItems: (touchedSpots) {
                       return touchedSpots.map((spot) {
@@ -1302,9 +1325,9 @@ class CashFlowAreaChart extends StatelessWidget {
                         return LineTooltipItem(
                           '${isIncome ? "Thu" : "Chi"}: $val đ',
                           GoogleFonts.outfit(
-                            color: isIncome ? theme.colorScheme.primary : AppColors.danger,
+                            color: isIncome ? const Color(0xFF60A5FA) : const Color(0xFFF87171),
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 13,
                           ),
                         );
                       }).toList();
@@ -1321,7 +1344,7 @@ class CashFlowAreaChart extends StatelessWidget {
                     isCurved: true,
                     curveSmoothness: 0.35,
                     color: theme.colorScheme.primary,
-                    barWidth: 3,
+                    barWidth: 2,
                     isStrokeCapRound: true,
                     shadow: Shadow(
                       color: theme.colorScheme.primary.withValues(alpha: 0.5),
@@ -1346,7 +1369,7 @@ class CashFlowAreaChart extends StatelessWidget {
                     isCurved: true,
                     curveSmoothness: 0.35,
                     color: AppColors.danger,
-                    barWidth: 3,
+                    barWidth: 2,
                     isStrokeCapRound: true,
                     shadow: Shadow(
                       color: AppColors.danger.withValues(alpha: 0.5),
