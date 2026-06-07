@@ -912,30 +912,40 @@ class TopProductsChart extends StatelessWidget {
                 ),
                 gridData: FlGridData(
                   show: true,
-                  drawVerticalLine: true,
-                  drawHorizontalLine: false,
-                  getDrawingVerticalLine: (value) => FlLine(
+                  drawVerticalLine: false,
+                  drawHorizontalLine: true,
+                  getDrawingHorizontalLine: (value) => FlLine(
                     color: c.divider.withValues(alpha: 0.15),
                     strokeWidth: 1,
                     dashArray: [4, 4],
                   ),
                 ),
                 borderData: FlBorderData(show: false),
-                barGroups: data.asMap().entries.map((entry) {
-                  final val = num.tryParse(entry.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                  return BarChartGroupData(
+                barGroups: (() {
+                  final maxVal = data.fold<double>(0.0, (m, e) {
+                    final v = num.tryParse(e['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                    return v > m ? v : m;
+                  });
+                  return data.asMap().entries.map((entry) {
+                    final val = num.tryParse(entry.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                    return BarChartGroupData(
                     x: entry.key,
                     barRods: [
                       BarChartRodData(
                         toY: val,
                         color: theme.colorScheme.primary,
-                        width: 20,
+                        width: 32,
                         borderRadius: const BorderRadius.all(Radius.circular(6)),
+                        backDrawRodData: BackgroundBarChartRodData(
+                          show: true,
+                          toY: maxVal * 1.1 == 0 ? 100 : maxVal * 1.1,
+                          color: c.divider.withValues(alpha: 0.15),
+                        ),
                       ),
                     ],
                   );
-                }).toList(),
-              ),
+                }).toList();
+              })(),
               duration: const Duration(milliseconds: 300),
             ),
           ),
