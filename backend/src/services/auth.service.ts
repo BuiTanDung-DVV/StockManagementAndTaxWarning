@@ -344,26 +344,27 @@ export class AuthService {
                 if (existingMember) {
                     status = existingMember.status;
                 } else {
-                    status = 'PENDING';
                     const submittedShopCode = dto.shopCode?.toString().trim();
-                    const submittedShopId = dto.shopId ? parseInt(dto.shopId, 10) : null;
+                    if (submittedShopCode) {
+                        const submittedShopId = dto.shopId ? parseInt(dto.shopId, 10) : null;
+                        const whereClause: any = { shopCode: submittedShopCode };
+                        if (submittedShopId) whereClause.id = submittedShopId;
 
-                    if (!submittedShopCode) throw new Error('Yêu cầu bắt buộc phải có mã cửa hàng.');
+                        const targetShop = await manager.findOne(ShopProfile, { where: whereClause });
+                        if (!targetShop) throw new Error('Không tìm thấy Cửa hàng khớp với yêu cầu của bạn.');
 
-                    const whereClause: any = { shopCode: submittedShopCode };
-                    if (submittedShopId) whereClause.id = submittedShopId;
-
-                    const targetShop = await manager.findOne(ShopProfile, { where: whereClause });
-                    if (!targetShop) throw new Error('Không tìm thấy Cửa hàng khớp với yêu cầu của bạn.');
-
-                    const member = manager.create(ShopMember, {
-                        shopId: targetShop.id,
-                        userId: user.id,
-                        memberType: 'EMPLOYEE',
-                        status: 'PENDING',
-                        isActive: true, // They technically exist, but status blocks features
-                    });
-                    await manager.save(member);
+                        const member = manager.create(ShopMember, {
+                            shopId: targetShop.id,
+                            userId: user.id,
+                            memberType: 'EMPLOYEE',
+                            status: 'PENDING',
+                            isActive: true,
+                        });
+                        await manager.save(member);
+                        status = 'PENDING';
+                    } else {
+                        status = 'ACTIVE';
+                    }
                 }
             }
         });
