@@ -178,20 +178,36 @@ class SummaryCard extends StatelessWidget {
   final String title, value;
   final dynamic icon;
   final Color color;
-  const SummaryCard(this.title, this.value, this.icon, this.color);
+  final bool isHero;
+  const SummaryCard(this.title, this.value, this.icon, this.color, {this.isHero = false});
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final bgGradient = isHero
+        ? LinearGradient(
+            colors: [color, color.withValues(alpha: 0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : null;
+
+    final bgColor = isHero ? null : c.card;
+    final textColor = isHero ? Colors.white : c.textPrimary;
+    final subTextColor = isHero ? Colors.white.withValues(alpha: 0.9) : c.textSecondary;
+    final iconBg = isHero ? Colors.white.withValues(alpha: 0.2) : color.withValues(alpha: 0.1);
+    final iconColor = isHero ? Colors.white : color;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: c.card,
+        color: bgColor,
+        gradient: bgGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
+        border: isHero ? null : Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.04),
+            color: color.withValues(alpha: isHero ? 0.3 : 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -205,10 +221,10 @@ class SummaryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: iconBg,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: HugeIcon(icon: icon, size: 16, color: color),
+                child: HugeIcon(icon: icon, size: 16, color: iconColor),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -217,7 +233,7 @@ class SummaryCard extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: c.textSecondary,
+                    color: subTextColor,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -231,7 +247,7 @@ class SummaryCard extends StatelessWidget {
             style: GoogleFonts.outfit(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: c.textPrimary,
+              color: textColor,
               letterSpacing: -0.5,
               height: 1.1,
               fontFeatures: const [FontFeature.tabularFigures()],
@@ -261,12 +277,12 @@ class QuickAction extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: c.card,
+          color: theme.colorScheme.primary.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(100),
-          border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
+          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1), width: 1),
           boxShadow: [
             BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.04),
+              color: theme.colorScheme.primary.withValues(alpha: 0.02),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -458,7 +474,14 @@ class ComparisonBarChart extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: rev2,
-              color: pastColor,
+              gradient: LinearGradient(
+                colors: [
+                  pastColor,
+                  pastColor.withValues(alpha: 0.1),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
               width: barWidth,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(4),
@@ -467,7 +490,14 @@ class ComparisonBarChart extends StatelessWidget {
             ),
             BarChartRodData(
               toY: rev1,
-              color: presentColor,
+              gradient: LinearGradient(
+                colors: [
+                  presentColor,
+                  presentColor.withValues(alpha: 0.5),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
               width: barWidth,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(4),
@@ -1293,12 +1323,17 @@ class CashFlowAreaChart extends StatelessWidget {
                     color: theme.colorScheme.primary,
                     barWidth: 3,
                     isStrokeCapRound: true,
+                    shadow: Shadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
                     dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(
                       show: true,
                       gradient: LinearGradient(
                         colors: [
-                          theme.colorScheme.primary.withValues(alpha: 0.25),
+                          theme.colorScheme.primary.withValues(alpha: 0.35),
                           theme.colorScheme.primary.withValues(alpha: 0.0),
                         ],
                         begin: Alignment.topCenter,
@@ -1313,12 +1348,17 @@ class CashFlowAreaChart extends StatelessWidget {
                     color: AppColors.danger,
                     barWidth: 3,
                     isStrokeCapRound: true,
+                    shadow: Shadow(
+                      color: AppColors.danger.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
                     dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(
                       show: true,
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.danger.withValues(alpha: 0.25),
+                          AppColors.danger.withValues(alpha: 0.35),
                           AppColors.danger.withValues(alpha: 0.0),
                         ],
                         begin: Alignment.topCenter,
