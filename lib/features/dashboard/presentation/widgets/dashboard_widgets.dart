@@ -1540,7 +1540,7 @@ class LowStockTableWidget extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(HugeIcons.strokeRoundedAlert02, color: AppColors.danger, size: 20),
+              const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Cảnh báo tồn kho',
