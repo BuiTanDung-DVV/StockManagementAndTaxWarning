@@ -1,5 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "echo \"Skipping build, using pre-built files in build/web\"",
-  "outputDirectory": "build/web"
+  "buildCommand": "bash build_vercel.sh",
+  "outputDirectory": "build/web",
+  "installCommand": "echo 'Skipping default install'",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

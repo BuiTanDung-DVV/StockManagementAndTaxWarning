@@ -28,10 +28,14 @@ class ApiClient {
       return envUrl;
     }
 
-    // Yêu cầu bắt buộc phải truyền cấu hình môi trường lúc build
-    throw Exception(
-      'API_URL is not set. Please build the app with --dart-define-from-file=env/dev.json or env/prod.json',
-    );
+    // Provide a fallback for production (Vercel) if not passed via build args
+    if (kIsWeb) {
+      // Default to the provided production backend
+      return 'https://stock-management-and-tax-warning.vercel.app/api'; 
+    }
+    
+    // Default fallback for mobile
+    return 'http://10.0.2.2:3000/api';
   }
 
   late final Dio _dio;
