@@ -1063,26 +1063,16 @@ class CashFlowAreaChart extends StatelessWidget {
     if (maxY == 0) maxY = 1000000;
 
     int expectedLen = data.length;
-    final lowerLabel = label.toLowerCase();
-    if (lowerLabel.contains('tháng')) {
-      // Find exact days in month if possible
-      if (data.isNotEmpty) {
-        final firstDate = DateTime.tryParse(data.first['date']?.toString() ?? '');
-        if (firstDate != null) {
-          final nextMonth = DateTime(firstDate.year, firstDate.month + 1, 1);
-          final lastDay = nextMonth.subtract(const Duration(days: 1));
-          expectedLen = lastDay.day;
-        } else {
-          expectedLen = 30; // fallback
-        }
-      } else {
-        expectedLen = 30;
-      }
-    } else if (lowerLabel.contains('tuần')) {
-      expectedLen = 7;
+    if (expectedLen == 0) expectedLen = 1;
+
+    // Pad with at least 1 point if there's only 1 day of data so the chart can draw a line
+    if (data.length == 1) {
+      spotsIncome.add(FlSpot(1.0, 0.0));
+      spotsExpense.add(FlSpot(1.0, 0.0));
+      expectedLen = 2;
     }
 
-    double calculatedMaxX = (expectedLen > data.length ? expectedLen : data.length).toDouble() - 1;
+    double calculatedMaxX = (expectedLen - 1).toDouble();
     return Container(
       height: 260,
       margin: const EdgeInsets.only(top: 14),
