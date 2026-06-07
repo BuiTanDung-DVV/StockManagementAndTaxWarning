@@ -101,7 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // If logged in and loaded:
-      if (!isOnboarded || shopState.userShops.isEmpty) {
+      if (!isOnboarded) {
         if (state.matchedLocation != '/onboarding') return '/onboarding';
         return null;
       }
@@ -115,9 +115,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // If ACTIVE and logged in, accessing Auth/Onboarding routes should redirect to '/'
       if (isLoginRoute ||
-          (state.matchedLocation == '/onboarding' &&
-              isOnboarded &&
-              shopState.userShops.isNotEmpty) ||
+          (state.matchedLocation == '/onboarding' && isOnboarded) ||
           (state.matchedLocation == '/waiting-approval' &&
               !isPending &&
               !isRejected)) {

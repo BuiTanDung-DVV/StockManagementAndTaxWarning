@@ -3,6 +3,8 @@ import { InventoryService } from '../services/inventory.service';
 
 const inventoryService = new InventoryService();
 
+const getShopId = (req: any) => req.isAllShops ? req.shopIds : req.shopId;
+
 export const getStock = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await inventoryService.getStock((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20)) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
@@ -10,7 +12,7 @@ export const getStock = async (req: Request, res: Response) => {
 export const getLowStock = async (req: Request, res: Response) => {
     try { 
         const threshold = req.query.threshold ? +(req.query.threshold) : undefined;
-        res.json({ success: true, data: await inventoryService.getLowStock((req as any).shopId, threshold) }); 
+        res.json({ success: true, data: await inventoryService.getLowStock(getShopId(req), threshold) }); 
     }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
@@ -31,7 +33,7 @@ export const createWarehouse = async (req: Request, res: Response) => {
 };
 
 export const getCategoriesSummary = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await inventoryService.getCategoriesSummary((req as any).shopId) }); }
+    try { res.json({ success: true, data: await inventoryService.getCategoriesSummary(getShopId(req)) }); }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 

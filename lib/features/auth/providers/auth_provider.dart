@@ -296,7 +296,7 @@ class AuthNotifier extends Notifier<AuthState> {
     if (query.trim().isEmpty) return [];
     try {
       final response = await _api.get(
-        '/auth/search-shops',
+        '/shops/search',
         params: {'q': query},
       );
       if (response is List) {
@@ -307,6 +307,21 @@ class AuthNotifier extends Notifier<AuthState> {
       return [];
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<bool> requestJoinShop(int shopId) async {
+    try {
+      await _api.post('/shop-members/request-join', data: {'shopId': shopId});
+      await ref.read(shopProvider.notifier).loadUserShops();
+      return true;
+    } catch (e) {
+      String msg = 'Không thể gửi yêu cầu gia nhập.';
+      if (e is DioException && e.error is ApiException) {
+        msg = (e.error as ApiException).message;
+      }
+      state = state.copyWith(error: msg);
+      return false;
     }
   }
 }

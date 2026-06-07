@@ -99,6 +99,62 @@ export class ShopMemberService {
         return saved;
     }
 
+    /** Search shops by code or name */
+    async searchShops(query: string) {
+        if (!query || query.length < 2) return [];
+        return this.shopRepo.createQueryBuilder('s')
+            .select(['s.id', 's.shopName', 's.shopCode', 's.businessSector'])
+            .where('LOWER(s.shopName) LIKE LOWER(:q) OR LOWER(s.shopCode) LIKE LOWER(:q)', { q: `%${query}%` })
+            .limit(10)
+            .getMany();
+    }
+
+    /** Employee requests to join a shop */
+    async requestJoin(userId: number, shopId: number) {
+        // 1. Check if user is already a member or pending in ANY shop
+        const existingAnywhere = await this.memberRepo.findOne({
+            where: { userId }
+        });
+        if (existingAnywhere) {
+            if (existingAnywhere.status === 'PENDING') {
+                throw new Error('Bạn đã gửi yêu cầu gia nhập một cửa hàng khác và đang chờ duyệt.');
+            }
+            if (existingAnywhere.isActive) {
+                throw new Error('Bạn đã là nhân viên của một cửa hàng. Mỗi nhân viên chỉ thuộc 1 cửa hàng.');
+            }
+        }
+
+        const shop = await this.shopRepo.findOne({ where: { id: shopId } });
+        if (!shop) throw new Error('Cửa hàng không tồn tại');
+
+        // Create pending request
+        const member = this.memberRepo.create({
+            shopId,
+            userId,
+            memberType: 'EMPLOYEE',
+            status: 'PENDING',
+            isActive: false,
+        });
+        const saved = await this.memberRepo.save(member);
+
+        // Notify OWNER(s) of this shop
+        const owners = await this.memberRepo.find({ where: { shopId, memberType: 'OWNER', isActive: true } });
+        const user = await this.userRepo.findOne({ where: { id: userId } });
+        
+        for (const owner of owners) {
+            const notif = this.notifRepo.create({
+                userId: owner.userId,
+                type: 'JOIN_REQUEST',
+                title: 'Yêu cầu gia nhập cửa hàng',
+                message: `Tài khoản ${user?.fullName || user?.username} xin gia nhập cửa hàng.`,
+                data: JSON.stringify({ shopId, memberId: saved.id, userId }),
+            });
+            await this.notifRepo.save(notif);
+        }
+
+        return saved;
+    }
+
     /** Change a member's role */
     async updateRole(shopId: number, memberId: number, roleId: number) {
         const member = await this.memberRepo.findOneByOrFail({ id: memberId, shopId });

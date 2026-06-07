@@ -127,27 +127,39 @@ export class FinanceService {
         return { success: true };
     }
 
-    async getCashFlowSummary(shopId: number, period?: string) {
+    async getCashFlowSummary(shopId: number | number[], period?: string, from?: string, to?: string) {
         const now = new Date();
         let fromDate: Date;
-        switch (period) {
-            case 'today': fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
-            case 'week': fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
-            case 'year': fromDate = new Date(now.getFullYear(), 0, 1); break;
-            default: fromDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+        let toDate: Date = new Date();
+        if (from && to) {
+            fromDate = new Date(from);
+            toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+        } else {
+            switch (period) {
+                case 'today': fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
+                case 'week': fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+                case 'year': fromDate = new Date(now.getFullYear(), 0, 1); break;
+                case '6_months': fromDate = new Date(now.getFullYear(), now.getMonth() - 5, 1); break;
+                default: fromDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+            }
+            toDate.setHours(23, 59, 59, 999);
         }
+
+        const shopCondition = Array.isArray(shopId) ? 't.shop_id IN (:...shopIds)' : 't.shop_id = :shopId';
+        const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
 
         const result = await this.cashTxRepo.createQueryBuilder('t')
             .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate', { shopId, fromDate })
+            .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
             .getRawOne();
 
         const dailyFlowRaw = await this.cashTxRepo.createQueryBuilder('t')
             .select("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')", 'date')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate', { shopId, fromDate })
+            .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
             .groupBy("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')")
             .orderBy("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')", 'ASC')
             .getRawMany();

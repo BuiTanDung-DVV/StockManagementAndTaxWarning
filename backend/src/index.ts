@@ -62,6 +62,8 @@ apiRouter.use('/profile', profileRoutes);
 // my-shops needs to be accessible before we know the shopId
 import * as shopMemberCtrl from './controllers/shop-member.controller';
 apiRouter.get('/my-shops', shopMemberCtrl.getMyShops);
+apiRouter.get('/shops/search', shopMemberCtrl.searchShops);
+apiRouter.post('/shop-members/request-join', shopMemberCtrl.requestJoin);
 
 // Shop-scoped routes (shopId REQUIRED)
 apiRouter.use(requireShopId);

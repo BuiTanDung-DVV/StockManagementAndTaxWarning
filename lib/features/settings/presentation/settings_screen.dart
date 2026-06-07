@@ -503,8 +503,47 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              if (shopState.userShops.any((s) => s['memberType'] == 'OWNER')) ...[
+                ListTile(
+                  leading: HugeIcon(
+                    icon: HugeIcons.strokeRoundedFolder01,
+                    color: shopState.isAllShops ? primaryColor : c.textMuted,
+                    size: 22,
+                  ),
+                  title: Text(
+                    'Tất cả cửa hàng (Tổng quát)',
+                    style: GoogleFonts.outfit(
+                      fontWeight: shopState.isAllShops ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Xem dữ liệu tổng hợp',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: c.textSecondary,
+                    ),
+                  ),
+                  trailing: shopState.isAllShops
+                      ? HugeIcon(
+                          icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                          color: primaryColor,
+                          size: 20,
+                        )
+                      : null,
+                  onTap: () {
+                    ref.read(shopProvider.notifier).switchShop(-1);
+                    Navigator.pop(ctx);
+                  },
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  tileColor: shopState.isAllShops ? primaryColor.withValues(alpha: 0.08) : null,
+                ),
+                const SizedBox(height: 8),
+              ],
               ...shopState.userShops.map((shop) {
-                final isActive = shop['shopId'] == shopState.currentShopId;
+                final isActive = shop['shopId'] == shopState.currentShopId && !shopState.isAllShops;
                 return ListTile(
                   leading: HugeIcon(
                     icon: HugeIcons.strokeRoundedStore01,
