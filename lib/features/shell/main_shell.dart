@@ -92,8 +92,30 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: c.bg,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
+      body: Stack(
+        children: [
+          Positioned(
+            top: -150,
+            left: -150,
+            child: Container(
+              width: 500,
+              height: 500,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: primaryColor.withValues(alpha: 0.05),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.05),
+                    blurRadius: 150,
+                    spreadRadius: 50,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
           final isDesktop = constraints.maxWidth >= 800;
 
           if (isDesktop) {
@@ -159,27 +181,42 @@ class MainShell extends ConsumerWidget {
                             final color = isActive ? Colors.white : c.textSecondary;
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),
-                              child: ListTile(
-                                leading: HugeIcon(
-                                  icon: allTabs[i].icon,
-                                  color: color,
-                                  size: 24,
-                                ),
-                                title: Text(
-                                  allTabs[i].label,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                                    color: color,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () => context.go(allTabs[i].route),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isActive ? primaryColor : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: isActive ? [
+                                      BoxShadow(
+                                        color: primaryColor.withValues(alpha: 0.3),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      )
+                                    ] : null,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      HugeIcon(
+                                        icon: allTabs[i].icon,
+                                        color: color,
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Text(
+                                        allTabs[i].label,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                                          color: color,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                selected: isActive,
-                                selectedTileColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                hoverColor: AppColors.primary.withValues(alpha: 0.05),
-                                onTap: () => context.go(allTabs[i].route),
                               ),
                             );
                           },
@@ -274,6 +311,9 @@ class MainShell extends ConsumerWidget {
                 );
               },
             ),
+          ),
+        ],
+      ),
     );
   }
 }
