@@ -514,7 +514,10 @@ class DashboardScreen extends ConsumerWidget {
                         radius: 24,
                       ),
                     ),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (e, _) => AppError(
+                      message: 'Không thể tải Top sản phẩm\n$e',
+                      onRetry: () => ref.invalidate(topProductsProvider),
+                    ),
                   ),
                 ],
 
@@ -537,7 +540,10 @@ class DashboardScreen extends ConsumerWidget {
                         radius: 24,
                       ),
                     ),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (e, _) => AppError(
+                      message: 'Không thể tải phân bổ tồn kho\n$e',
+                      onRetry: () => ref.invalidate(inventoryCategoriesSummaryProvider),
+                    ),
                   ),
                 ],
 
@@ -555,7 +561,10 @@ class DashboardScreen extends ConsumerWidget {
                         radius: 24,
                       ),
                     ),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (e, _) => AppError(
+                      message: 'Không thể tải biểu đồ dòng tiền\n$e',
+                      onRetry: () => ref.invalidate(cashSummaryProvider),
+                    ),
                   ),
                 ],
 
