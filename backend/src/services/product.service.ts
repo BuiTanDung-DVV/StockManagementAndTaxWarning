@@ -53,12 +53,13 @@ export class ProductService {
     }
 
     async createProduct(shopId: number, dto: any) {
-        dto.barcode = dto.barcode?.trim() || null;
+        const rawBarcode = dto.barcode !== null && dto.barcode !== undefined ? String(dto.barcode).trim() : '';
+        dto.barcode = rawBarcode === '' ? null : rawBarcode;
         const sku = String(dto.sku || '').trim() || `SKU${Date.now().toString().slice(-8)}`;
-        const existsSku = await this.productRepo.findOne({ where: { sku, shopId } });
+        const existsSku = await this.productRepo.findOne({ where: { sku, shopId, isActive: true } });
         if (existsSku) throw new Error('Mã SKU này đã tồn tại trong hệ thống');
         if (dto.barcode) {
-            const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId } });
+            const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId, isActive: true } });
             if (existsBarcode) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
         }
         const openingQty = Number(dto.currentStock ?? dto.openingStock ?? 0);
@@ -94,14 +95,15 @@ export class ProductService {
     }
 
     async updateProduct(shopId: number, id: number, dto: any) {
-        dto.barcode = dto.barcode?.trim() || null;
+        const rawBarcode = dto.barcode !== null && dto.barcode !== undefined ? String(dto.barcode).trim() : '';
+        dto.barcode = rawBarcode === '' ? null : rawBarcode;
         const product = await this.loadProductEntity(shopId, id);
-        if (dto.sku && dto.sku !== product.sku) {
-            const existsSku = await this.productRepo.findOne({ where: { sku: dto.sku, shopId } });
+        if (dto.sku && String(dto.sku).trim() !== product.sku) {
+            const existsSku = await this.productRepo.findOne({ where: { sku: String(dto.sku).trim(), shopId, isActive: true } });
             if (existsSku) throw new Error('Mã SKU này đã tồn tại trong hệ thống');
         }
         if (dto.barcode && dto.barcode !== product.barcode) {
-            const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId } });
+            const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId, isActive: true } });
             if (existsBarcode) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
         }
 
