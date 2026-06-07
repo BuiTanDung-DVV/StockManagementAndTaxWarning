@@ -28,8 +28,6 @@ final _currFmt = NumberFormat.currency(
 );
 final _tts = FlutterTts();
 
-
-
 /// Cart item model
 class CartItem {
   final int productId;
@@ -57,11 +55,7 @@ class CartState {
   final int? customerId;
   final String? customerName;
 
-  const CartState({
-    this.items = const [],
-    this.customerId,
-    this.customerName,
-  });
+  const CartState({this.items = const [], this.customerId, this.customerName});
 
   double get total => items.fold(0.0, (sum, i) => sum + i.subtotal);
   int get itemCount => items.fold(0, (sum, i) => sum + i.quantity);
@@ -104,7 +98,7 @@ class CartNotifier extends Notifier<CartState> {
         items: [
           ...state.items,
           CartItem(productId: productId, name: name, price: price),
-        ]
+        ],
       );
     }
   }
@@ -184,7 +178,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final c = AppThemeColors.of(context);
     final cart = ref.watch(_cartProvider);
     final productsAsync = ref.watch(
-      productListProvider((page: 1, search: _search.isEmpty ? null : _search, tag: _tag.isEmpty ? null : _tag)),
+      productListProvider((
+        page: 1,
+        search: _search.isEmpty ? null : _search,
+        tag: _tag.isEmpty ? null : _tag,
+      )),
     );
 
     return Scaffold(
@@ -214,7 +212,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 prefixIcon: Icon(Icons.search, color: c.textMuted),
                 suffixIcon: _search.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear, size: 18, color: c.textSecondary),
+                        icon: Icon(
+                          Icons.clear,
+                          size: 18,
+                          color: c.textSecondary,
+                        ),
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() => _search = '');
@@ -246,17 +248,27 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           padding: const EdgeInsets.only(right: 8),
                           child: Semantics(
                             button: true,
-                            label: isSelected ? 'Bỏ lọc nhãn ${t.name}' : 'Lọc theo nhãn ${t.name}',
+                            label: isSelected
+                                ? 'Bỏ lọc nhãn ${t.name}'
+                                : 'Lọc theo nhãn ${t.name}',
                             selected: isSelected,
                             child: ChoiceChip(
-                              label: Text(t.name, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : t.uiColor)),
+                              label: Text(
+                                t.name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSelected ? Colors.white : t.uiColor,
+                                ),
+                              ),
                               selected: isSelected,
                               onSelected: (selected) {
                                 setState(() => _tag = selected ? t.name : '');
                               },
                               selectedColor: t.uiColor,
                               backgroundColor: t.uiColor.withValues(alpha: 0.1),
-                              side: BorderSide(color: t.uiColor.withValues(alpha: 0.3)),
+                              side: BorderSide(
+                                color: t.uiColor.withValues(alpha: 0.3),
+                              ),
                             ),
                           ),
                         );
@@ -299,7 +311,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     bottom: cart.items.isNotEmpty ? 120 : 24,
                   ),
                   itemCount: products.length,
-                  separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: c.divider.withValues(alpha: 0.5),
+                  ),
                   itemBuilder: (_, i) {
                     final p = products[i];
                     final id = p['id'] as int;
@@ -308,13 +323,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       p['sellingPrice'] ?? p['selling_price'] ?? 0,
                     );
                     final stock =
-                        p['currentStock'] ?? p['stockQuantity'] ?? p['stock_quantity'] ?? '—';
+                        p['currentStock'] ??
+                        p['stockQuantity'] ??
+                        p['stock_quantity'] ??
+                        '—';
                     final cartItem = cart.items
                         .where((ci) => ci.productId == id)
                         .firstOrNull;
 
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: const BoxDecoration(
                         color: Colors.transparent,
                       ),
@@ -363,7 +384,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                     const SizedBox(width: 10),
                                     AppBadge(
                                       label: 'Kho: $stock',
-                                      color: (stock is num && stock <= 0) ? AppColors.danger : AppColors.success,
+                                      color: (stock is num && stock <= 0)
+                                          ? AppColors.danger
+                                          : AppColors.success,
                                     ),
                                   ],
                                 ),
@@ -447,9 +470,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
                 color: c.card,
-                border: Border(
-                  top: BorderSide(color: c.textPrimary, width: 3),
-                ),
+                border: Border(top: BorderSide(color: c.textPrimary, width: 3)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -468,12 +489,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            cart.customerName != null 
-                                ? '${cart.itemCount} sp • Khách: ${cart.customerName}' 
+                            cart.customerName != null
+                                ? '${cart.itemCount} sp • Khách: ${cart.customerName}'
                                 : '${cart.itemCount} sản phẩm',
                             style: TextStyle(
                               fontSize: 12,
-                              color: cart.customerName != null ? AppColors.info : c.textSecondary,
+                              color: cart.customerName != null
+                                  ? AppColors.info
+                                  : c.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
@@ -496,15 +519,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       onPressed: _creating
                           ? null
                           : () => _showCheckout(context),
-                      icon: const Icon(Icons.payment, size: 24, color: Colors.white),
+                      icon: const Icon(
+                        Icons.payment,
+                        size: 24,
+                        color: Colors.white,
+                      ),
                       label: Text(
-                        'THANH TOÁN', 
+                        'THANH TOÁN',
                         style: GoogleFonts.inter(
                           fontWeight: FontWeight.w900,
                           fontSize: 16,
                           letterSpacing: 1.0,
-                          color: Colors.white
-                        )
+                          color: Colors.white,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: c.textPrimary,
@@ -538,7 +565,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         icon: Icon(icon, size: 20, color: AppColors.primary),
         style: IconButton.styleFrom(
           backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         padding: EdgeInsets.zero,
       ),
@@ -547,7 +576,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   void _showCart(BuildContext context) {
     final c = AppThemeColors.of(context);
-    showModalBottomSheet(useSafeArea: true,
+    showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: c.surface,
       isScrollControlled: true,
@@ -580,7 +610,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           final confirm = await AppConfirmModal.show(
                             context,
                             title: 'Xóa giỏ hàng',
-                            message: 'Bạn có chắc chắn muốn xóa toàn bộ sản phẩm trong giỏ?',
+                            message:
+                                'Bạn có chắc chắn muốn xóa toàn bộ sản phẩm trong giỏ?',
                             confirmText: 'Xóa tất cả',
                             cancelText: 'Hủy',
                             isDestructive: true,
@@ -632,7 +663,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               ref
                                   .read(_cartProvider.notifier)
                                   .remove(item.productId);
-                              ToastService.showSuccess('Đã xóa ${item.name} khỏi giỏ hàng');
+                              ToastService.showSuccess(
+                                'Đã xóa ${item.name} khỏi giỏ hàng',
+                              );
                             }
                           },
                         ),
@@ -668,7 +701,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   void _showCheckout(BuildContext context) {
     final c = AppThemeColors.of(context);
     final cart = ref.read(_cartProvider);
-    showModalBottomSheet(useSafeArea: true,
+    showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       backgroundColor: c.surface,
       isScrollControlled: true,
@@ -680,136 +714,202 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           final cart = ref.watch(_cartProvider);
           return SafeArea(
             child: Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.9),
-              child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-              Text(
-                'Xác nhận thanh toán',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
               ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${cart.itemCount} sản phẩm',
-                    style: TextStyle(fontSize: 14, color: c.textSecondary),
-                  ),
-                  Text(
-                    _currFmt.format(cart.total),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.9,
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Xác nhận thanh toán',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${cart.itemCount} sản phẩm',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                            Text(
+                              _currFmt.format(cart.total),
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Phương thức thanh toán:',
+                          style: TextStyle(
+                            color: c.textSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              height: 64,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _showCashConfirm(context);
+                                },
+                                icon: Icon(
+                                  Icons.money,
+                                  size: 28,
+                                  color: c.textPrimary,
+                                ),
+                                label: Text(
+                                  'TIỀN MẶT',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 18,
+                                    color: c.textPrimary,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: c.textPrimary,
+                                    width: 3,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.zero,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 64,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _processPayment('BANK_TRANSFER');
+                                },
+                                icon: Icon(
+                                  Icons.qr_code_2,
+                                  size: 28,
+                                  color: c.textPrimary,
+                                ),
+                                label: Text(
+                                  'CHUYỂN KHOẢN (QR)',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 18,
+                                    color: c.textPrimary,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: c.textPrimary,
+                                    width: 3,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.zero,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 64,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  if (cart.customerId == null) {
+                                    ToastService.showError(
+                                      'Vui lòng chọn khách hàng để thực hiện bán nợ',
+                                    );
+                                    return;
+                                  }
+                                  Navigator.pop(ctx);
+                                  _processPayment('DEBT');
+                                },
+                                icon: const Icon(
+                                  Icons.credit_score,
+                                  size: 28,
+                                  color: Colors.white,
+                                ),
+                                label: Text(
+                                  'GHI NỢ',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 18,
+                                    color: Colors.white,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: c.textPrimary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.zero,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: () => _showCustomerPicker(context),
+                          icon: const Icon(Icons.person_search),
+                          label: Text(
+                            cart.customerName == null
+                                ? 'Chọn khách hàng (mua chịu)'
+                                : 'Khách: ${cart.customerName}',
+                          ),
+                        ),
+                        if (cart.customerName != null)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                ref
+                                    .read(_cartProvider.notifier)
+                                    .setCustomer(null, null);
+                              },
+                              child: const Text('Bỏ chọn khách'),
+                            ),
+                          ),
+                        const SizedBox(height: 16),
+                      ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Phương thức thanh toán:',
-                style: TextStyle(color: c.textSecondary, fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    height: 64,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _showCashConfirm(context);
-                      },
-                      icon: Icon(Icons.money, size: 28, color: c.textPrimary),
-                      label: Text('TIỀN MẶT', style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 18, color: c.textPrimary, letterSpacing: 1.0)),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: c.textPrimary, width: 3),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 64,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _processPayment('BANK_TRANSFER');
-                      },
-                      icon: Icon(Icons.qr_code_2, size: 28, color: c.textPrimary),
-                      label: Text('CHUYỂN KHOẢN (QR)', style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 18, color: c.textPrimary, letterSpacing: 1.0)),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: c.textPrimary, width: 3),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 64,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        if (cart.customerId == null) {
-                          ToastService.showError('Vui lòng chọn khách hàng để thực hiện bán nợ');
-                          return;
-                        }
-                        Navigator.pop(ctx);
-                        _processPayment('DEBT');
-                      },
-                      icon: const Icon(Icons.credit_score, size: 28, color: Colors.white),
-                      label: Text('GHI NỢ', style: GoogleFonts.inter(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white, letterSpacing: 1.0)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: c.textPrimary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () => _showCustomerPicker(context),
-                icon: const Icon(Icons.person_search),
-                label: Text(
-                  cart.customerName == null
-                      ? 'Chọn khách hàng (mua chịu)'
-                      : 'Khách: ${cart.customerName}',
                 ),
               ),
-              if (cart.customerName != null)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      ref.read(_cartProvider.notifier).setCustomer(null, null);
-                    },
-                    child: const Text('Bỏ chọn khách'),
-                  ),
-                ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-      ),
-      ),
-      );
-      },
+            ),
+          );
+        },
       ),
     );
   }
 
   void _showCustomerPicker(BuildContext context) {
-    showModalBottomSheet(useSafeArea: true,
+    showModalBottomSheet(
+      useSafeArea: true,
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
@@ -876,11 +976,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               subtitle: Text(c['phone']?.toString() ?? ''),
                               onTap: () {
                                 final newId = TypeParser.asInt(c['id']);
-                                final newName = c['name']?.toString() ?? 'Khách hàng';
-                                ref.read(_cartProvider.notifier).setCustomer(newId == 0 ? null : newId, newName);
+                                final newName =
+                                    c['name']?.toString() ?? 'Khách hàng';
+                                ref
+                                    .read(_cartProvider.notifier)
+                                    .setCustomer(
+                                      newId == 0 ? null : newId,
+                                      newName,
+                                    );
                                 Navigator.pop(ctx);
                                 if (newId != 0) {
-                                  ToastService.showSuccess('Đã chọn khách hàng: $newName');
+                                  ToastService.showSuccess(
+                                    'Đã chọn khách hàng: $newName',
+                                  );
                                 }
                               },
                             );
@@ -941,7 +1049,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       'phone': phoneCtrl.text.trim(),
                   });
                   final newId = TypeParser.asInt(result['id']);
-                  ref.read(_cartProvider.notifier).setCustomer(newId == 0 ? null : newId, name);
+                  ref
+                      .read(_cartProvider.notifier)
+                      .setCustomer(newId == 0 ? null : newId, name);
                   ref.invalidate(customerListProvider);
                   if (context.mounted) {
                     Navigator.pop(ctx);
@@ -996,7 +1106,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     'phone': phoneCtrl.text.trim(),
                 });
                 final newId = TypeParser.asInt(result['id']);
-                ref.read(_cartProvider.notifier).setCustomer(newId == 0 ? null : newId, name);
+                ref
+                    .read(_cartProvider.notifier)
+                    .setCustomer(newId == 0 ? null : newId, name);
                 ref.invalidate(customerListProvider);
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (context.mounted) {
@@ -1090,10 +1202,12 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
         await _tts.setLanguage('vi-VN');
         await _tts.setSpeechRate(0.45);
-        
-        final msg = method == 'CASH' ? 'Thanh toán tiền mặt thành công' : 'Đã ghi nợ thành công';
+
+        final msg = method == 'CASH'
+            ? 'Thanh toán tiền mặt thành công'
+            : 'Đã ghi nợ thành công';
         await _tts.speak(msg);
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1101,7 +1215,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 children: [
                   const Icon(Icons.check_circle, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
-                  Text(method == 'CASH' ? 'Thanh toán tiền mặt thành công!' : 'Tạo đơn hàng ghi nợ thành công!'),
+                  Text(
+                    method == 'CASH'
+                        ? 'Thanh toán tiền mặt thành công!'
+                        : 'Tạo đơn hàng ghi nợ thành công!',
+                  ),
                 ],
               ),
               backgroundColor: AppColors.success,
@@ -1239,4 +1357,3 @@ class _CashConfirmDialogState extends State<_CashConfirmDialog> {
     );
   }
 }
-

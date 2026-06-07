@@ -47,8 +47,10 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
       _emailCtrl.text = d['email'] ?? '';
       _websiteCtrl.text = d['website'] ?? '';
       _ownerNameCtrl.text = d['ownerName'] ?? d['owner_name'] ?? '';
-      _ownerIdCtrl.text = d['ownerIdentityNumber'] ?? d['owner_identity_number'] ?? '';
-      _bizLicenseCtrl.text = d['businessLicenseNumber'] ?? d['business_license_number'] ?? '';
+      _ownerIdCtrl.text =
+          d['ownerIdentityNumber'] ?? d['owner_identity_number'] ?? '';
+      _bizLicenseCtrl.text =
+          d['businessLicenseNumber'] ?? d['business_license_number'] ?? '';
       _receiptFooterCtrl.text = d['receiptFooter'] ?? d['receipt_footer'] ?? '';
     } catch (_) {}
     if (mounted) setState(() => _loading = false);
@@ -116,69 +118,142 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
               padding: const EdgeInsets.all(16),
               child: Form(
                 key: _formKey,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // ── Thông tin cửa hàng ──
-                  _SectionHeader(icon: HugeIcons.strokeRoundedStore01, title: 'Thông tin cơ bản'),
-                  const SizedBox(height: 12),
-                  _buildField('Tên cửa hàng *', _shopNameCtrl, HugeIcons.strokeRoundedStore01, c,
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên shop' : null),
-                  const SizedBox(height: 12),
-                  _buildField('Số điện thoại', _phoneCtrl, HugeIcons.strokeRoundedCall02, c,
-                      keyboardType: TextInputType.phone),
-                  const SizedBox(height: 12),
-                  AddressInputField(
-                    label: 'Địa chỉ',
-                    initialValue: _addressCtrl.text,
-                    colors: c,
-                    onChanged: (v) => _addressCtrl.text = v,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildField('Email', _emailCtrl, HugeIcons.strokeRoundedMail01, c,
-                      keyboardType: TextInputType.emailAddress),
-                  const SizedBox(height: 12),
-                  _buildField('Website', _websiteCtrl, HugeIcons.strokeRoundedGlobe02, c,
-                      keyboardType: TextInputType.url),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Thông tin cửa hàng ──
+                    _SectionHeader(
+                      icon: HugeIcons.strokeRoundedStore01,
+                      title: 'Thông tin cơ bản',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'Tên cửa hàng *',
+                      _shopNameCtrl,
+                      HugeIcons.strokeRoundedStore01,
+                      c,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Vui lòng nhập tên shop'
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'Số điện thoại',
+                      _phoneCtrl,
+                      HugeIcons.strokeRoundedCall02,
+                      c,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 12),
+                    AddressInputField(
+                      label: 'Địa chỉ',
+                      initialValue: _addressCtrl.text,
+                      colors: c,
+                      onChanged: (v) => _addressCtrl.text = v,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'Email',
+                      _emailCtrl,
+                      HugeIcons.strokeRoundedMail01,
+                      c,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'Website',
+                      _websiteCtrl,
+                      HugeIcons.strokeRoundedGlobe02,
+                      c,
+                      keyboardType: TextInputType.url,
+                    ),
 
-                  const SizedBox(height: 24),
-                  // ── Thông tin pháp lý ──
-                  _SectionHeader(icon: HugeIcons.strokeRoundedLicenseDraft, title: 'Thông tin pháp lý (HKD)'),
-                  const SizedBox(height: 12),
-                  _buildField('Mã số thuế', _taxCodeCtrl, HugeIcons.strokeRoundedInvoice01, c),
-                  const SizedBox(height: 12),
-                  _buildField('Tên chủ hộ kinh doanh', _ownerNameCtrl, HugeIcons.strokeRoundedUser, c),
-                  const SizedBox(height: 12),
-                  _buildField('CCCD / CMND chủ hộ', _ownerIdCtrl, HugeIcons.strokeRoundedId, c,
-                      keyboardType: TextInputType.number),
-                  const SizedBox(height: 12),
-                  _buildField('Số GPKD', _bizLicenseCtrl, HugeIcons.strokeRoundedLicenseDraft, c),
+                    const SizedBox(height: 24),
+                    // ── Thông tin pháp lý ──
+                    _SectionHeader(
+                      icon: HugeIcons.strokeRoundedLicenseDraft,
+                      title: 'Thông tin pháp lý (HKD)',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'Mã số thuế',
+                      _taxCodeCtrl,
+                      HugeIcons.strokeRoundedInvoice01,
+                      c,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'Tên chủ hộ kinh doanh',
+                      _ownerNameCtrl,
+                      HugeIcons.strokeRoundedUser,
+                      c,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'CCCD / CMND chủ hộ',
+                      _ownerIdCtrl,
+                      HugeIcons.strokeRoundedId,
+                      c,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'Số GPKD',
+                      _bizLicenseCtrl,
+                      HugeIcons.strokeRoundedLicenseDraft,
+                      c,
+                    ),
 
-                  const SizedBox(height: 24),
-                  // ── Khác ──
-                  _SectionHeader(icon: HugeIcons.strokeRoundedInvoice03, title: 'Chứng từ'),
-                  const SizedBox(height: 12),
-                  _buildField('Chân hóa đơn', _receiptFooterCtrl, HugeIcons.strokeRoundedTextFootnote, c,
-                      maxLines: 3, hint: 'VD: Cảm ơn quý khách! Hẹn gặp lại.'),
+                    const SizedBox(height: 24),
+                    // ── Khác ──
+                    _SectionHeader(
+                      icon: HugeIcons.strokeRoundedInvoice03,
+                      title: 'Chứng từ',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      'Chân hóa đơn',
+                      _receiptFooterCtrl,
+                      HugeIcons.strokeRoundedTextFootnote,
+                      c,
+                      maxLines: 3,
+                      hint: 'VD: Cảm ơn quý khách! Hẹn gặp lại.',
+                    ),
 
-                  const SizedBox(height: 32),
-                  // ── Save button ──
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _saving ? null : _save,
-                      icon: _saving
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: Colors.white, size: 18),
-                      label: Text(_saving ? 'Đang lưu...' : 'Lưu thay đổi'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    const SizedBox(height: 32),
+                    // ── Save button ──
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _saving ? null : _save,
+                        icon: _saving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const HugeIcon(
+                                icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                        label: Text(_saving ? 'Đang lưu...' : 'Lưu thay đổi'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                ]),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
     );
@@ -220,7 +295,10 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.danger),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }
@@ -234,11 +312,15 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      HugeIcon(icon: icon, size: 18, color: AppColors.primary),
-      const SizedBox(width: 8),
-      Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-    ]);
+    return Row(
+      children: [
+        HugeIcon(icon: icon, size: 18, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
   }
 }
-

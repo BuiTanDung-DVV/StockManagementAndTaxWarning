@@ -50,7 +50,9 @@ class WaitingApprovalScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: AppColors.warning.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: AppColors.warning.withValues(alpha: 0.2),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.warning.withValues(alpha: 0.1),
@@ -98,7 +100,9 @@ class WaitingApprovalScreen extends ConsumerWidget {
                           if (shopState.isActive) {
                             context.go('/');
                           } else if (shopState.isRejected) {
-                            ToastService.showSuccess('Yêu cầu của bạn đã bị từ chối.');
+                            ToastService.showSuccess(
+                              'Yêu cầu của bạn đã bị từ chối.',
+                            );
                           }
                         }
                       },
@@ -107,7 +111,9 @@ class WaitingApprovalScreen extends ConsumerWidget {
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -118,7 +124,8 @@ class WaitingApprovalScreen extends ConsumerWidget {
                         final confirm = await AppConfirmModal.show(
                           context,
                           title: 'Đăng xuất',
-                          message: 'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này?',
+                          message:
+                              'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này?',
                           confirmText: 'Đăng xuất',
                           cancelText: 'Hủy',
                           isDestructive: true,
@@ -131,8 +138,13 @@ class WaitingApprovalScreen extends ConsumerWidget {
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.danger,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        textStyle: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ],

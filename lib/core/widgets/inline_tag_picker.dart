@@ -28,9 +28,20 @@ class InlineTagPicker extends ConsumerStatefulWidget {
 class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
   bool _isCreating = false;
   final _nameCtrl = TextEditingController();
-  final List<String> _predefinedColors = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#64748B', '#000000'];
+  final List<String> _predefinedColors = [
+    '#EF4444',
+    '#F97316',
+    '#F59E0B',
+    '#10B981',
+    '#3B82F6',
+    '#6366F1',
+    '#8B5CF6',
+    '#EC4899',
+    '#64748B',
+    '#000000',
+  ];
   String _selectedColor = '#3B82F6';
-  
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -44,7 +55,12 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
     final tagsAsync = ref.watch(tagListProvider(widget.type));
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 16),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 16,
+        right: 16,
+        top: 16,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,8 +68,18 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(_isCreating ? 'Tạo nhãn mới' : 'Chọn nhãn', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: c.textPrimary)),
-              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+              Text(
+                _isCreating ? 'Tạo nhãn mới' : 'Chọn nhãn',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: c.textPrimary,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -63,7 +89,10 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
                 if (tags.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text('Chưa có nhãn nào. Hãy tạo mới.', style: GoogleFonts.inter(color: c.textSecondary)),
+                    child: Text(
+                      'Chưa có nhãn nào. Hãy tạo mới.',
+                      style: GoogleFonts.inter(color: c.textSecondary),
+                    ),
                   );
                 }
                 return Wrap(
@@ -72,7 +101,13 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
                   children: tags.map((t) {
                     final isSelected = widget.selectedTags.contains(t.name);
                     return FilterChip(
-                      label: Text(t.name, style: TextStyle(color: isSelected ? Colors.white : t.uiColor, fontWeight: FontWeight.w500)),
+                      label: Text(
+                        t.name,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : t.uiColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       selected: isSelected,
                       onSelected: (selected) {
                         final newTags = List<String>.from(widget.selectedTags);
@@ -110,17 +145,27 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        context.push('/products/tags', extra: {'type': widget.type});
+                        context.push(
+                          '/products/tags',
+                          extra: {'type': widget.type},
+                        );
                       },
-                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedSettings01, color: Colors.blue, size: 20),
+                      icon: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedSettings01,
+                        color: Colors.blue,
+                        size: 20,
+                      ),
                       label: const Text('Quản lý nâng cao'),
                     ),
                   ),
-                ]
+                ],
               ],
             ),
           ] else ...[
-            Text('Tên nhãn', style: GoogleFonts.inter(fontSize: 13, color: c.textSecondary)),
+            Text(
+              'Tên nhãn',
+              style: GoogleFonts.inter(fontSize: 13, color: c.textSecondary),
+            ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _nameCtrl,
@@ -129,28 +174,44 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
                 hintText: 'Nhập tên...',
                 filled: true,
                 fillColor: c.surface,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            Text('Màu sắc', style: GoogleFonts.inter(fontSize: 13, color: c.textSecondary)),
+            Text(
+              'Màu sắc',
+              style: GoogleFonts.inter(fontSize: 13, color: c.textSecondary),
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: _predefinedColors.map((hex) {
                 final isSelected = _selectedColor == hex;
-                final colorVal = Color(int.parse('FF${hex.substring(1)}', radix: 16));
+                final colorVal = Color(
+                  int.parse('FF${hex.substring(1)}', radix: 16),
+                );
                 return GestureDetector(
                   onTap: () => setState(() => _selectedColor = hex),
                   child: Container(
-                    width: 32, height: 32,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       color: colorVal,
                       shape: BoxShape.circle,
-                      border: isSelected ? Border.all(color: theme.colorScheme.primary, width: 2) : null,
+                      border: isSelected
+                          ? Border.all(
+                              color: theme.colorScheme.primary,
+                              width: 2,
+                            )
+                          : null,
                     ),
-                    child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 16)
+                        : null,
                   ),
                 );
               }).toList(),
@@ -170,23 +231,33 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
                       final name = _nameCtrl.text.trim();
                       if (name.isEmpty) return;
                       try {
-                        final tag = await ref.read(tagRepoProvider).create(name, _selectedColor, type: widget.type);
+                        final tag = await ref
+                            .read(tagRepoProvider)
+                            .create(name, _selectedColor, type: widget.type);
                         if (!mounted) return;
-                        
-                        final newTags = List<String>.from(widget.selectedTags)..add(tag.name);
+
+                        final newTags = List<String>.from(widget.selectedTags)
+                          ..add(tag.name);
                         widget.onTagsChanged(newTags);
-                        
+
                         ref.invalidate(tagListProvider(widget.type));
                         setState(() => _isCreating = false);
                       } catch (e) {
-                        ToastService.showError('Tên nhãn đã tồn tại hoặc có lỗi');
+                        ToastService.showError(
+                          'Tên nhãn đã tồn tại hoặc có lỗi',
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: const Text('Lưu & Chọn', style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      'Lưu & Chọn',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
               ],

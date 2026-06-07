@@ -16,7 +16,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  
+
   final _nameFocus = FocusNode();
   final _emailFocus = FocusNode();
   final _phoneFocus = FocusNode();
@@ -31,9 +31,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameFocus.addListener(() => setState(() => _nameHasFocus = _nameFocus.hasFocus));
-    _emailFocus.addListener(() => setState(() => _emailHasFocus = _emailFocus.hasFocus));
-    _phoneFocus.addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
+    _nameFocus.addListener(
+      () => setState(() => _nameHasFocus = _nameFocus.hasFocus),
+    );
+    _emailFocus.addListener(
+      () => setState(() => _emailHasFocus = _emailFocus.hasFocus),
+    );
+    _phoneFocus.addListener(
+      () => setState(() => _phoneHasFocus = _phoneFocus.hasFocus),
+    );
     _loadProfile();
   }
 
@@ -59,15 +65,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _saving = true);
     try {
       final api = ref.read(apiClientProvider);
-      final res = await api.put('/profile', data: {
-        'fullName': _nameCtrl.text.trim(),
-        'email': _emailCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
-      });
+      final res = await api.put(
+        '/profile',
+        data: {
+          'fullName': _nameCtrl.text.trim(),
+          'email': _emailCtrl.text.trim(),
+          'phone': _phoneCtrl.text.trim(),
+        },
+      );
       final updatedUser = res['data'] ?? res;
       // Update auth state with new user info
       final currentAuth = ref.read(authProvider);
-      final merged = Map<String, dynamic>.from({...?currentAuth.user, ...updatedUser});
+      final merged = Map<String, dynamic>.from({
+        ...?currentAuth.user,
+        ...updatedUser,
+      });
       ref.read(authProvider.notifier).updateUser(merged);
       if (mounted) {
         ToastService.showSuccess('Cập nhật thành công!');
@@ -103,7 +115,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(
         title: Text(
           'Thông tin cá nhân',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: c.textPrimary),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -126,12 +142,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           width: 96,
                           height: 96,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.1,
+                            ),
                             borderRadius: BorderRadius.circular(28),
-                            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2), width: 2),
+                            border: Border.all(
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.2,
+                              ),
+                              width: 2,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.1,
+                                ),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6),
                               ),
@@ -139,7 +164,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?').toUpperCase(),
+                            (_nameCtrl.text.isNotEmpty
+                                    ? _nameCtrl.text[0]
+                                    : '?')
+                                .toUpperCase(),
                             style: GoogleFonts.outfit(
                               fontSize: 36,
                               fontWeight: FontWeight.bold,
@@ -157,7 +185,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               shape: BoxShape.circle,
                               border: Border.all(color: c.card, width: 2.5),
                             ),
-                            child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],
@@ -166,12 +198,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 16),
                   Text(
                     auth.user?['username'] ?? '',
-                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary),
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    auth.accountType == 'SHOP' ? 'Tài khoản chủ doanh nghiệp' : 'Tài khoản nhân viên',
-                    style: GoogleFonts.inter(fontSize: 12, color: c.textMuted, fontWeight: FontWeight.w500),
+                    auth.accountType == 'SHOP'
+                        ? 'Tài khoản chủ doanh nghiệp'
+                        : 'Tài khoản nhân viên',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: c.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 32),
 
@@ -214,15 +256,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: _saving ? null : _save,
-                      icon: _saving 
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                           : const Icon(Icons.save_rounded, size: 20),
-                      label: Text(_saving ? 'Đang lưu...' : 'Lưu thay đổi', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                      label: Text(
+                        _saving ? 'Đang lưu...' : 'Lưu thay đổi',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         elevation: 0,
                       ),
                     ),
@@ -235,12 +292,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => _showChangePasswordDialog(context),
                       icon: const Icon(Icons.lock_reset_rounded, size: 20),
-                      label: Text('Đổi mật khẩu bảo mật', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16)),
+                      label: Text(
+                        'Đổi mật khẩu bảo mật',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: c.textPrimary,
                         side: BorderSide(color: c.divider),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
@@ -293,9 +358,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+            borderSide: BorderSide(
+              color: theme.colorScheme.primary,
+              width: 1.5,
+            ),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );
@@ -315,7 +386,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           'Đổi mật khẩu',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18, color: c.textPrimary),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: c.textPrimary,
+          ),
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -327,7 +402,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
                 decoration: InputDecoration(
                   labelText: 'Mật khẩu hiện tại',
-                  prefixIcon: Icon(Icons.lock_outline_rounded, color: c.textMuted, size: 20),
+                  prefixIcon: Icon(
+                    Icons.lock_outline_rounded,
+                    color: c.textMuted,
+                    size: 20,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -337,7 +416,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
                 decoration: InputDecoration(
                   labelText: 'Mật khẩu mới',
-                  prefixIcon: Icon(Icons.lock_open_rounded, color: c.textMuted, size: 20),
+                  prefixIcon: Icon(
+                    Icons.lock_open_rounded,
+                    color: c.textMuted,
+                    size: 20,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -347,7 +430,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
                 decoration: InputDecoration(
                   labelText: 'Xác nhận mật khẩu mới',
-                  prefixIcon: Icon(Icons.lock_clock_outlined, color: c.textMuted, size: 20),
+                  prefixIcon: Icon(
+                    Icons.lock_clock_outlined,
+                    color: c.textMuted,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -356,7 +443,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Hủy', style: GoogleFonts.outfit(color: c.textMuted, fontWeight: FontWeight.w600)),
+            child: Text(
+              'Hủy',
+              style: GoogleFonts.outfit(
+                color: c.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -372,10 +465,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               }
               try {
                 final api = ref.read(apiClientProvider);
-                await api.put('/profile/password', data: {
-                  'currentPassword': currentCtrl.text,
-                  'newPassword': newCtrl.text,
-                });
+                await api.put(
+                  '/profile/password',
+                  data: {
+                    'currentPassword': currentCtrl.text,
+                    'newPassword': newCtrl.text,
+                  },
+                );
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(ctx).showSnackBar(
@@ -403,13 +499,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: Text('Xác nhận', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            child: Text(
+              'Xác nhận',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
     );
   }
 }
-

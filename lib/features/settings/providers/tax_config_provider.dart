@@ -18,20 +18,27 @@ enum BusinessType {
 }
 
 /// Ngưỡng doanh thu theo Sổ tay HKD
-class RevenueThreshold {
-  static double tier1 = 100000000;   // 100 triệu
-  static double tier2 = 300000000;   // 300 triệu
-  static double tier3 = 500000000;   // 500 triệu
-  static double tier4 = 1000000000;  // 1 tỷ
+class RevenueThresholds {
+  final double tier1;
+  final double tier2;
+  final double tier3;
+  final double tier4;
 
-  static String getObligation(double revenue) {
+  const RevenueThresholds({
+    this.tier1 = 100000000,
+    this.tier2 = 300000000,
+    this.tier3 = 500000000,
+    this.tier4 = 1000000000,
+  });
+
+  String getObligation(double revenue) {
     if (revenue <= tier1) return 'Không phải nộp thuế GTGT, TNCN';
     if (revenue <= tier2) return 'Nộp thuế theo phương pháp khoán';
     if (revenue <= tier3) return 'Kê khai thuế theo quý/năm';
     return 'Bắt buộc dùng HĐĐT, kê khai đầy đủ';
   }
 
-  static String getTierLabel(double revenue) {
+  String getTierLabel(double revenue) {
     if (revenue <= tier1) return '≤ 100 triệu';
     if (revenue <= tier2) return '100 - 300 triệu';
     if (revenue <= tier3) return '300 triệu - 500 triệu';
@@ -39,7 +46,7 @@ class RevenueThreshold {
     return '> 1 tỷ';
   }
 
-  static double getNextThreshold(double revenue) {
+  double getNextThreshold(double revenue) {
     if (revenue < tier1) return tier1;
     if (revenue < tier2) return tier2;
     if (revenue < tier3) return tier3;
@@ -47,7 +54,7 @@ class RevenueThreshold {
     return tier4;
   }
 
-  static double getProgress(double revenue) {
+  double getProgress(double revenue) {
     final next = getNextThreshold(revenue);
     if (next <= tier1) return revenue / tier1;
     if (next <= tier2) return (revenue - tier1) / (tier2 - tier1);
@@ -56,25 +63,41 @@ class RevenueThreshold {
     return 1.0;
   }
 
-  static Color getColor(double revenue) {
+  Color getColor(double revenue) {
     final progress = getProgress(revenue);
     if (progress >= 0.9) return const Color(0xFFEF4444); // danger
     if (progress >= 0.7) return const Color(0xFFF59E0B); // warning
     return const Color(0xFF10B981); // success
   }
 
-  static bool canUseInvoice(double revenue) => revenue >= tier3;
-  static bool mustUseEInvoice(double revenue) => revenue >= tier4;
+  bool canUseInvoice(double revenue) => revenue >= tier3;
+  bool mustUseEInvoice(double revenue) => revenue >= tier4;
+
+  factory RevenueThresholds.fromJson(Map<String, dynamic> json) =>
+      RevenueThresholds(
+        tier1: (json['tier1'] as num?)?.toDouble() ?? 100000000,
+        tier2: (json['tier2'] as num?)?.toDouble() ?? 300000000,
+        tier3: (json['tier3'] as num?)?.toDouble() ?? 500000000,
+        tier4: (json['tier4'] as num?)?.toDouble() ?? 1000000000,
+      );
+  Map<String, dynamic> toJson() => {
+    'tier1': tier1,
+    'tier2': tier2,
+    'tier3': tier3,
+    'tier4': tier4,
+  };
 }
 
 /// Tax configuration state
 class TaxConfig {
   final BusinessType businessType;
   final bool vatReduction20; // Giảm 20% GTGT theo NQ 204/2025
+  final RevenueThresholds thresholds;
 
   const TaxConfig({
     this.businessType = BusinessType.distribution,
     this.vatReduction20 = false,
+    this.thresholds = const RevenueThresholds(),
   });
 
   double get effectiveVatRate =>
@@ -88,18 +111,26 @@ class TaxConfig {
   Map<String, dynamic> toJson() => {
     'businessType': businessType.index,
     'vatReduction20': vatReduction20,
+    'thresholds': thresholds.toJson(),
   };
 
   factory TaxConfig.fromJson(Map<String, dynamic> json) => TaxConfig(
     businessType: BusinessType.values[json['businessType'] ?? 0],
     vatReduction20: json['vatReduction20'] ?? false,
+    thresholds: json['thresholds'] != null
+        ? RevenueThresholds.fromJson(json['thresholds'])
+        : const RevenueThresholds(),
   );
 
-  TaxConfig copyWith({BusinessType? businessType, bool? vatReduction20}) =>
-      TaxConfig(
-        businessType: businessType ?? this.businessType,
-        vatReduction20: vatReduction20 ?? this.vatReduction20,
-      );
+  TaxConfig copyWith({
+    BusinessType? businessType,
+    bool? vatReduction20,
+    RevenueThresholds? thresholds,
+  }) => TaxConfig(
+    businessType: businessType ?? this.businessType,
+    vatReduction20: vatReduction20 ?? this.vatReduction20,
+    thresholds: thresholds ?? this.thresholds,
+  );
 }
 
 /// Notifier for tax config with SharedPreferences persistence
@@ -118,15 +149,14 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
     if (json != null) {
       state = TaxConfig.fromJson(jsonDecode(json));
     }
-    
-    // Load cached thresholds
-    final thresholdsJson = prefs.getString('tax_thresholds');
-    if (thresholdsJson != null) {
-      final th = jsonDecode(thresholdsJson);
-      RevenueThreshold.tier1 = (th['tier1'] as num?)?.toDouble() ?? RevenueThreshold.tier1;
-      RevenueThreshold.tier2 = (th['tier2'] as num?)?.toDouble() ?? RevenueThreshold.tier2;
-      RevenueThreshold.tier3 = (th['tier3'] as num?)?.toDouble() ?? RevenueThreshold.tier3;
-      RevenueThreshold.tier4 = (th['tier4'] as num?)?.toDouble() ?? RevenueThreshold.tier4;
+
+    // Migrate old cached thresholds if exist and no current thresholds in JSON
+    if (json == null) {
+      final thresholdsJson = prefs.getString('tax_thresholds');
+      if (thresholdsJson != null) {
+        final th = jsonDecode(thresholdsJson);
+        state = state.copyWith(thresholds: RevenueThresholds.fromJson(th));
+      }
     }
 
     // Fetch dynamic config from backend
@@ -139,43 +169,43 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
       final res = await api.get('/tax/config');
       if (res['success'] == true && res['data'] != null) {
         final data = res['data'];
-        
+
         if (data['thresholds'] != null) {
           final th = data['thresholds'] as Map<String, dynamic>;
-          RevenueThreshold.tier1 = (th['tier1'] as num?)?.toDouble() ?? RevenueThreshold.tier1;
-          RevenueThreshold.tier2 = (th['tier2'] as num?)?.toDouble() ?? RevenueThreshold.tier2;
-          RevenueThreshold.tier3 = (th['tier3'] as num?)?.toDouble() ?? RevenueThreshold.tier3;
-          RevenueThreshold.tier4 = (th['tier4'] as num?)?.toDouble() ?? RevenueThreshold.tier4;
-
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('tax_thresholds', jsonEncode(th));
+          state = state.copyWith(thresholds: RevenueThresholds.fromJson(th));
         }
-        
+
         if (data['currentPolicies'] != null) {
-           final policies = data['currentPolicies'];
-           if (policies['vatReductionActive'] != null) {
-             setVatReduction20(policies['vatReductionActive']);
-           }
+          final policies = data['currentPolicies'];
+          if (policies['vatReductionActive'] != null) {
+            setVatReduction20(policies['vatReductionActive']);
+          }
         }
 
         if (data['shopConfig'] != null) {
-            final shopConf = data['shopConfig'];
-            if (shopConf['businessSector'] != null) {
-                final sectorStr = shopConf['businessSector'];
-                final type = BusinessType.values.firstWhere(
-                    (e) => e.name.toUpperCase() == sectorStr || e.name == sectorStr || 
-                        (e == BusinessType.distribution && sectorStr == 'TRADE') ||
-                        (e == BusinessType.manufacturing && sectorStr == 'PRODUCTION') ||
-                        (e == BusinessType.services && sectorStr == 'SERVICE') ||
-                        (e == BusinessType.other && sectorStr == 'OTHER'),
-                    orElse: () => BusinessType.distribution);
-                state = state.copyWith(businessType: type);
-            }
-            if (shopConf['applyVatReduction'] != null) {
-                state = state.copyWith(vatReduction20: shopConf['applyVatReduction']);
-            }
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString(_key, jsonEncode(state.toJson()));
+          final shopConf = data['shopConfig'];
+          if (shopConf['businessSector'] != null) {
+            final sectorStr = shopConf['businessSector'];
+            final type = BusinessType.values.firstWhere(
+              (e) =>
+                  e.name.toUpperCase() == sectorStr ||
+                  e.name == sectorStr ||
+                  (e == BusinessType.distribution && sectorStr == 'TRADE') ||
+                  (e == BusinessType.manufacturing &&
+                      sectorStr == 'PRODUCTION') ||
+                  (e == BusinessType.services && sectorStr == 'SERVICE') ||
+                  (e == BusinessType.other && sectorStr == 'OTHER'),
+              orElse: () => BusinessType.distribution,
+            );
+            state = state.copyWith(businessType: type);
+          }
+          if (shopConf['applyVatReduction'] != null) {
+            state = state.copyWith(
+              vatReduction20: shopConf['applyVatReduction'],
+            );
+          }
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_key, jsonEncode(state.toJson()));
         }
       }
     } catch (e) {
@@ -186,20 +216,24 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
   Future<void> saveConfig() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, jsonEncode(state.toJson()));
-    
+
     // Sync to backend
     final api = ref.read(apiClientProvider);
-    
+
     String sectorStr = 'TRADE';
-    if (state.businessType == BusinessType.manufacturing) sectorStr = 'PRODUCTION';
+    if (state.businessType == BusinessType.manufacturing)
+      sectorStr = 'PRODUCTION';
     if (state.businessType == BusinessType.services) sectorStr = 'SERVICE';
     if (state.businessType == BusinessType.other) sectorStr = 'OTHER';
 
     try {
-      await api.put('/tax/config', data: {
+      await api.put(
+        '/tax/config',
+        data: {
           'businessSector': sectorStr,
           'applyVatReduction': state.vatReduction20,
-      });
+        },
+      );
     } catch (e) {
       debugPrint('Lưu cấu hình thuế lên server thất bại, đã lưu cục bộ: $e');
     }
@@ -214,7 +248,6 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
   }
 }
 
-final taxConfigProvider =
-    NotifierProvider<TaxConfigNotifier, TaxConfig>(
-        TaxConfigNotifier.new);
-
+final taxConfigProvider = NotifierProvider<TaxConfigNotifier, TaxConfig>(
+  TaxConfigNotifier.new,
+);

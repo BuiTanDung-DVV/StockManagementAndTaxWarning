@@ -12,7 +12,8 @@ Future<DateTimeRange?> showCustomDateRangePicker(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (context) => _CustomDateRangePickerContent(initialRange: initialRange),
+    builder: (context) =>
+        _CustomDateRangePickerContent(initialRange: initialRange),
   );
 }
 
@@ -21,10 +22,12 @@ class _CustomDateRangePickerContent extends StatefulWidget {
   const _CustomDateRangePickerContent({required this.initialRange});
 
   @override
-  State<_CustomDateRangePickerContent> createState() => _CustomDateRangePickerContentState();
+  State<_CustomDateRangePickerContent> createState() =>
+      _CustomDateRangePickerContentState();
 }
 
-class _CustomDateRangePickerContentState extends State<_CustomDateRangePickerContent> {
+class _CustomDateRangePickerContentState
+    extends State<_CustomDateRangePickerContent> {
   late DateTime _start;
   late DateTime _end;
 
@@ -131,7 +134,9 @@ class _CustomDateRangePickerContentState extends State<_CustomDateRangePickerCon
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop(DateTimeRange(start: _start, end: _end));
+                Navigator.of(
+                  context,
+                ).pop(DateTimeRange(start: _start, end: _end));
               },
               child: const Text('Xác nhận'),
             ),
@@ -147,7 +152,11 @@ class _DateBox extends StatelessWidget {
   final String date;
   final VoidCallback onTap;
 
-  const _DateBox({required this.label, required this.date, required this.onTap});
+  const _DateBox({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -169,9 +178,19 @@ class _DateBox extends StatelessWidget {
             SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 16, color: AppColors.primaryLight),
+                Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: AppColors.primaryLight,
+                ),
                 const SizedBox(width: 8),
-                Text(date, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                Text(
+                  date,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
               ],
             ),
           ],

@@ -72,7 +72,7 @@ class AuthNotifier extends Notifier<AuthState> {
     if (_api.token != null) {
       // Prevent fetching if already populated (e.g. from login)
       if (state.user != null) return;
-      
+
       try {
         final profile = await _api.get('/profile');
         if (profile is Map) {
@@ -105,7 +105,7 @@ class AuthNotifier extends Notifier<AuthState> {
           await logout();
           return;
         }
-        
+
         // For network errors or 500s, keep them logged in but without profile data
         // They can still navigate, and API calls might recover if backend wakes up
         state = AuthState(isLoggedIn: true, token: _api.token);
@@ -151,12 +151,25 @@ class AuthNotifier extends Notifier<AuthState> {
         msg = (e.error as ApiException).message;
       }
       final lowerMsg = msg.toLowerCase();
-      if (lowerMsg.contains('inactive') || lowerMsg.contains('vô hiệu hóa') || lowerMsg.contains('bị khóa')) {
-        msg = 'Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa. Vui lòng liên hệ quản trị viên.';
-      } else if (lowerMsg.contains('sai') || lowerMsg.contains('không đúng') || lowerMsg.contains('invalid') || lowerMsg.contains('incorrect') || lowerMsg.contains('not found') || lowerMsg.contains('không tồn tại') || lowerMsg.contains('unauthorized')) {
-        msg = 'Sai số điện thoại/tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.';
-      } else if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
-        msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra đường truyền mạng.';
+      if (lowerMsg.contains('inactive') ||
+          lowerMsg.contains('vô hiệu hóa') ||
+          lowerMsg.contains('bị khóa')) {
+        msg =
+            'Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa. Vui lòng liên hệ quản trị viên.';
+      } else if (lowerMsg.contains('sai') ||
+          lowerMsg.contains('không đúng') ||
+          lowerMsg.contains('invalid') ||
+          lowerMsg.contains('incorrect') ||
+          lowerMsg.contains('not found') ||
+          lowerMsg.contains('không tồn tại') ||
+          lowerMsg.contains('unauthorized')) {
+        msg =
+            'Sai số điện thoại/tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.';
+      } else if (lowerMsg.contains('network') ||
+          lowerMsg.contains('connection') ||
+          lowerMsg.contains('socket')) {
+        msg =
+            'Không thể kết nối đến máy chủ. Vui lòng kiểm tra đường truyền mạng.';
       }
       state = state.copyWith(isLoading: false, error: msg);
       return false;
@@ -180,13 +193,27 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final Map<String, dynamic> data = {'fullName': fullName};
-      if (username != null && username.isNotEmpty) { data['username'] = username; }
-      if (phone != null && phone.isNotEmpty) { data['phone'] = phone; }
-      if (shopName != null && shopName.isNotEmpty) { data['shopName'] = shopName; }
-      if (ownerName != null && ownerName.isNotEmpty) { data['ownerName'] = ownerName; }
-      if (address != null && address.isNotEmpty) { data['address'] = address; }
-      if (shopCode != null && shopCode.isNotEmpty) { data['shopCode'] = shopCode; }
-      if (shopId != null && shopId.isNotEmpty) { data['shopId'] = shopId; }
+      if (username != null && username.isNotEmpty) {
+        data['username'] = username;
+      }
+      if (phone != null && phone.isNotEmpty) {
+        data['phone'] = phone;
+      }
+      if (shopName != null && shopName.isNotEmpty) {
+        data['shopName'] = shopName;
+      }
+      if (ownerName != null && ownerName.isNotEmpty) {
+        data['ownerName'] = ownerName;
+      }
+      if (address != null && address.isNotEmpty) {
+        data['address'] = address;
+      }
+      if (shopCode != null && shopCode.isNotEmpty) {
+        data['shopCode'] = shopCode;
+      }
+      if (shopId != null && shopId.isNotEmpty) {
+        data['shopId'] = shopId;
+      }
 
       final response = await _api.post('/auth/complete-onboarding', data: data);
       final updatedUser = response['user'] is Map

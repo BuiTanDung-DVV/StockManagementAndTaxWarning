@@ -11,16 +11,14 @@ import 'package:bot_toast/bot_toast.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load auth token from storage before app starts
   final apiClient = ApiClient();
   await apiClient.loadToken();
-  
+
   runApp(
     ProviderScope(
-      overrides: [
-        apiClientProvider.overrideWithValue(apiClient),
-      ],
+      overrides: [apiClientProvider.overrideWithValue(apiClient)],
       child: const MyApp(),
     ),
   );
@@ -36,10 +34,10 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
     final brandColor = ref.watch(brandColorProvider);
     final router = ref.watch(routerProvider);
-    
+
     // Đồng bộ hóa AppColors động toàn cục trước khi dựng widget tree
     AppColors.updateColors(brandColor.color, brandColor.isDark);
-    
+
     return MaterialApp.router(
       title: 'Quản lý Bán hàng & Kho hàng',
       scaffoldMessengerKey: ToastService.scaffoldMessengerKey,
@@ -53,10 +51,7 @@ class MyApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('vi', 'VN'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
       routerConfig: router,
     );
   }

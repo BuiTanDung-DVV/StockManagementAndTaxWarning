@@ -14,7 +14,7 @@ class TaxEstimateScreen extends ConsumerStatefulWidget {
 class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
   String _selectedPeriod = '01'; // Default month 01
   String _selectedYear = DateTime.now().year.toString();
-  
+
   bool _isLoading = false;
   Map<String, dynamic>? _reportData;
 
@@ -33,7 +33,10 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
 
     try {
       final taxService = ref.read(taxServiceProvider);
-      final data = await taxService.getTaxEstimate(_selectedPeriod, _selectedYear);
+      final data = await taxService.getTaxEstimate(
+        _selectedPeriod,
+        _selectedYear,
+      );
       setState(() {
         _reportData = data;
       });
@@ -67,9 +70,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ước Tính & Xuất Thuế (HTKK)'),
-      ),
+      appBar: AppBar(title: const Text('Ước Tính & Xuất Thuế (HTKK)')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -79,7 +80,9 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _selectedPeriod,
-                    decoration: const InputDecoration(labelText: 'Kỳ (Tháng/Quý)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Kỳ (Tháng/Quý)',
+                    ),
                     items: [
                       for (int i = 1; i <= 12; i++)
                         DropdownMenuItem(
@@ -107,7 +110,11 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                     initialValue: _selectedYear,
                     decoration: const InputDecoration(labelText: 'Năm'),
                     items: [
-                      for (int i = DateTime.now().year - 2; i <= DateTime.now().year; i++)
+                      for (
+                        int i = DateTime.now().year - 2;
+                        i <= DateTime.now().year;
+                        i++
+                      )
                         DropdownMenuItem(
                           value: i.toString(),
                           child: Text(i.toString()),
@@ -129,31 +136,45 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _reportData != null
-                    ? Column(
-                        children: [
-                          TaxWarningWidget(
-                            totalRevenue: double.tryParse(_reportData!['totalRevenue'].toString()) ?? 0,
-                            vatOwed: double.tryParse(_reportData!['vatOwed'].toString()) ?? 0,
-                            pitOwed: double.tryParse(_reportData!['pitOwed'].toString()) ?? 0,
+                ? Column(
+                    children: [
+                      TaxWarningWidget(
+                        totalRevenue:
+                            double.tryParse(
+                              _reportData!['totalRevenue'].toString(),
+                            ) ??
+                            0,
+                        vatOwed:
+                            double.tryParse(
+                              _reportData!['vatOwed'].toString(),
+                            ) ??
+                            0,
+                        pitOwed:
+                            double.tryParse(
+                              _reportData!['pitOwed'].toString(),
+                            ) ??
+                            0,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _exportHTKK,
+                        icon: const Icon(Icons.download),
+                        label: const Text('Xuất XML HTKK (Mẫu 01/CNKD)'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
                           ),
-                          const SizedBox(height: 24),
-                          ElevatedButton.icon(
-                            onPressed: _exportHTKK,
-                            icon: const Icon(Icons.download),
-                            label: const Text('Xuất XML HTKK (Mẫu 01/CNKD)'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            ),
-                          ),
-                        ],
-                      )
-                    : const Text('Chưa có dữ liệu'),
+                        ),
+                      ),
+                    ],
+                  )
+                : const Text('Chưa có dữ liệu'),
           ],
         ),
       ),
     );
   }
 }
-

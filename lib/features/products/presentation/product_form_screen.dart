@@ -47,12 +47,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _barcodeCtrl.text = p['barcode'] ?? '';
       _unitCtrl.text = p['unit'] ?? '';
       _costPriceCtrl.text = '${p['costPrice'] ?? p['cost_price'] ?? ''}';
-      _sellPriceCtrl.text = '${p['sellingPrice'] ?? p['sellPrice'] ?? p['selling_price'] ?? p['sell_price'] ?? ''}';
-      _wholesalePriceCtrl.text = '${p['wholesalePrice'] ?? p['wholesale_price'] ?? ''}';
+      _sellPriceCtrl.text =
+          '${p['sellingPrice'] ?? p['sellPrice'] ?? p['selling_price'] ?? p['sell_price'] ?? ''}';
+      _wholesalePriceCtrl.text =
+          '${p['wholesalePrice'] ?? p['wholesale_price'] ?? ''}';
       _currentStockCtrl.text = '${p['currentStock'] ?? p['stock'] ?? ''}';
       _minStockCtrl.text = '${p['minStock'] ?? p['min_stock'] ?? ''}';
       _descCtrl.text = p['description'] ?? '';
-      
+
       final tagsRaw = p['tags'];
       if (tagsRaw is List) {
         _tags = tagsRaw.map((e) => e.toString()).toList();
@@ -84,7 +86,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       final data = {
         'name': name,
         'sku': _skuCtrl.text.trim().isEmpty ? null : _skuCtrl.text.trim(),
-        'barcode': _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
+        'barcode': _barcodeCtrl.text.trim().isEmpty
+            ? null
+            : _barcodeCtrl.text.trim(),
         'unit': _unitCtrl.text.trim().isEmpty ? 'Cái' : _unitCtrl.text.trim(),
         'costPrice': double.tryParse(_costPriceCtrl.text.trim()) ?? 0,
         'sellingPrice': sellingPrice,
@@ -101,7 +105,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       }
       if (!mounted) return;
       ref.invalidate(productListProvider((page: 1, search: null, tag: null)));
-      ToastService.showSuccess(_isEdit ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!');
+      ToastService.showSuccess(
+        _isEdit ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!',
+      );
       Navigator.of(context).pop(true);
       return;
     } catch (e) {
@@ -181,7 +187,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: () {
-                        ToastService.showSuccess('Tính năng tải ảnh sản phẩm sẽ khả dụng ở bản cập nhật tiếp theo!');
+                        ToastService.showSuccess(
+                          'Tính năng tải ảnh sản phẩm sẽ khả dụng ở bản cập nhật tiếp theo!',
+                        );
                       },
                       borderRadius: BorderRadius.circular(20),
                       child: Column(
@@ -224,7 +232,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 HugeIcons.strokeRoundedPackage,
                 c,
                 theme,
-                validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên sản phẩm' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Vui lòng nhập tên sản phẩm'
+                    : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -282,7 +292,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       c,
                       theme,
                       keyboardType: TextInputType.number,
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Bắt buộc' : null,
+                      validator: (v) =>
+                          v == null || v.trim().isEmpty ? 'Bắt buộc' : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -359,8 +370,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                           size: 18,
                         ),
                   label: Text(
-                    _saving 
-                        ? 'Đang lưu lại...' 
+                    _saving
+                        ? 'Đang lưu lại...'
                         : (_isEdit ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm Mới'),
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
@@ -429,7 +440,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: HugeIcon(icon: icon, size: 18, color: theme.colorScheme.primary),
+          child: HugeIcon(
+            icon: icon,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
         ),
         filled: true,
         fillColor: c.card,
@@ -453,7 +468,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.danger, width: 1.8),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }
@@ -465,7 +483,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Nhãn (Tags)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: c.textSecondary)),
+            Text(
+              'Nhãn (Tags)',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: c.textSecondary,
+              ),
+            ),
             TextButton.icon(
               onPressed: () => _showTagPicker(c, theme),
               icon: const Icon(Icons.add, size: 16),
@@ -489,7 +514,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: c.divider, style: BorderStyle.solid),
             ),
-            child: Text('Chưa có nhãn nào được chọn', style: GoogleFonts.inter(color: c.textMuted, fontSize: 13, fontStyle: FontStyle.italic)),
+            child: Text(
+              'Chưa có nhãn nào được chọn',
+              style: GoogleFonts.inter(
+                color: c.textMuted,
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           )
         else
           Wrap(
@@ -497,11 +529,26 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             runSpacing: 8,
             children: _tags.map((tag) {
               return Chip(
-                label: Text(tag, style: GoogleFonts.inter(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500)),
-                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.8),
-                deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                label: Text(
+                  tag,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.8,
+                ),
+                deleteIcon: const Icon(
+                  Icons.close,
+                  size: 14,
+                  color: Colors.white,
+                ),
                 onDeleted: () => setState(() => _tags.remove(tag)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 side: BorderSide.none,
               );
             }).toList(),
@@ -515,7 +562,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: c.bg,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) {
         return InlineTagPicker(
           type: 'product',
@@ -526,4 +575,3 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     );
   }
 }
-

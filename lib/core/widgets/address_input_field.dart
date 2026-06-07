@@ -49,7 +49,10 @@ class _AddressInputFieldState extends State<AddressInputField> {
     if (_selectedProvince == null) return widget.initialValue;
     final suffix = ', $_selectedProvince';
     if (widget.initialValue.endsWith(suffix)) {
-      return widget.initialValue.substring(0, widget.initialValue.length - suffix.length);
+      return widget.initialValue.substring(
+        0,
+        widget.initialValue.length - suffix.length,
+      );
     }
     return widget.initialValue;
   }
@@ -86,15 +89,30 @@ class _AddressInputFieldState extends State<AddressInputField> {
             labelText: 'Tỉnh/Thành phố',
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
-              child: HugeIcon(icon: HugeIcons.strokeRoundedLocation01, size: 20, color: AppColors.primary),
+              child: HugeIcon(
+                icon: HugeIcons.strokeRoundedLocation01,
+                size: 20,
+                color: AppColors.primary,
+              ),
             ),
             filled: true,
             fillColor: c.card,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
-          items: vietnamProvinces.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+          items: vietnamProvinces
+              .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+              .toList(),
           onChanged: (v) {
             setState(() => _selectedProvince = v);
             _emitChange();
@@ -108,13 +126,26 @@ class _AddressInputFieldState extends State<AddressInputField> {
             labelText: 'Chi tiết địa chỉ (Số nhà, đường, phường/xã)',
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
-              child: HugeIcon(icon: HugeIcons.strokeRoundedLocation01, size: 20, color: AppColors.primary),
+              child: HugeIcon(
+                icon: HugeIcons.strokeRoundedLocation01,
+                size: 20,
+                color: AppColors.primary,
+              ),
             ),
             filled: true,
             fillColor: c.card,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
       ],

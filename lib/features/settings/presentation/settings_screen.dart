@@ -47,7 +47,11 @@ class SettingsScreen extends ConsumerWidget {
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: HugeIcon(icon: HugeIcons.strokeRoundedNotification03, color: c.textSecondary, size: 22),
+                icon: HugeIcon(
+                  icon: HugeIcons.strokeRoundedNotification03,
+                  color: c.textSecondary,
+                  size: 22,
+                ),
                 onPressed: () => context.push('/notifications'),
               ),
               if (notifState.unreadCount > 0)
@@ -56,10 +60,17 @@ class SettingsScreen extends ConsumerWidget {
                   top: 8,
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: AppColors.danger,
+                      shape: BoxShape.circle,
+                    ),
                     child: Text(
                       '${notifState.unreadCount}',
-                      style: GoogleFonts.outfit(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.outfit(
+                        fontSize: 8,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -92,15 +103,23 @@ class SettingsScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: primaryColor.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: primaryColor.withValues(alpha: 0.15), width: 1.5),
+                          border: Border.all(
+                            color: primaryColor.withValues(alpha: 0.15),
+                            width: 1.5,
+                          ),
                         ),
                         child: Center(
                           child: Text(
-                            ((auth.user?['fullName'] as String?)?.isNotEmpty == true
+                            ((auth.user?['fullName'] as String?)?.isNotEmpty ==
+                                        true
                                     ? (auth.user!['fullName'] as String)[0]
                                     : '?')
                                 .toUpperCase(),
-                            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor),
+                            style: GoogleFonts.outfit(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
                           ),
                         ),
                       ),
@@ -111,35 +130,59 @@ class SettingsScreen extends ConsumerWidget {
                           children: [
                             Text(
                               auth.user?['fullName'] ?? 'Người dùng SmartStock',
-                              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary),
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: c.textPrimary,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              shop['shopName'] ?? shop['name'] ?? 'Cửa hàng của tôi',
-                              style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500),
+                              shop['shopName'] ??
+                                  shop['name'] ??
+                                  'Cửa hàng của tôi',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: c.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'MST: ${shop['taxCode'] ?? 'N/A'}',
-                              style: GoogleFonts.inter(fontSize: 11, color: c.textMuted, fontWeight: FontWeight.w500),
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: c.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                            if (shopState.isOwner && shopState.shopCode != null) ...[
+                            if (shopState.isOwner &&
+                                shopState.shopCode != null) ...[
                               const SizedBox(height: 4),
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: primaryColor.withValues(alpha: 0.1),
+                                      color: primaryColor.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       'Mã CH: ${shopState.shopCode}',
-                                      style: GoogleFonts.outfit(fontSize: 10, color: primaryColor, fontWeight: FontWeight.bold),
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 10,
+                                        color: primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -149,7 +192,11 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: c.textMuted, size: 20),
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedArrowRight01,
+                        color: c.textMuted,
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),
@@ -172,11 +219,16 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                         child: Center(
                           child: Text(
-                            ((auth.user?['fullName'] as String?)?.isNotEmpty == true
+                            ((auth.user?['fullName'] as String?)?.isNotEmpty ==
+                                        true
                                     ? (auth.user!['fullName'] as String)[0]
                                     : '?')
                                 .toUpperCase(),
-                            style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor),
+                            style: GoogleFonts.outfit(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
                           ),
                         ),
                       ),
@@ -187,18 +239,29 @@ class SettingsScreen extends ConsumerWidget {
                           children: [
                             Text(
                               auth.user?['fullName'] ?? 'Người dùng SmartStock',
-                              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary),
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: c.textPrimary,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'Nhấn để xem thông tin cá nhân',
-                              style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary),
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: c.textSecondary,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: c.textMuted, size: 20),
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedArrowRight01,
+                        color: c.textMuted,
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),
@@ -208,96 +271,140 @@ class SettingsScreen extends ConsumerWidget {
 
             // Shop switcher (multiple shops)
             if (shopState.userShops.length > 1)
-              _SettingGroup(
-                'Cửa hàng hiện tại',
-                [
-                  _SettingItem(
-                    HugeIcons.strokeRoundedExchange01,
-                    'Chuyển shop (${shopState.currentShopName ?? ""})',
-                    () => _showShopSwitcher(context, ref, shopState),
-                    c,
-                  ),
-                ],
-                c,
-              ),
+              _SettingGroup('Cửa hàng hiện tại', [
+                _SettingItem(
+                  HugeIcons.strokeRoundedExchange01,
+                  'Chuyển shop (${shopState.currentShopName ?? ""})',
+                  () => _showShopSwitcher(context, ref, shopState),
+                  c,
+                ),
+              ], c),
 
             // Appearance theme toggles
-            _SettingGroup(
-              'Giao diện ứng dụng',
-              [
-                _BrandColorTile(c: c),
-              ],
-              c,
-            ),
+            _SettingGroup('Giao diện ứng dụng', [_BrandColorTile(c: c)], c),
 
             // Staff & roles (Owners only)
             if (shopState.isOwner || auth.isShopOwner)
-              _SettingGroup(
-                'Nhân viên & Phân quyền',
-                [
-                  _SettingItem(HugeIcons.strokeRoundedUserMultiple, 'Quản lý danh sách nhân viên', () => context.push('/staff'), c),
-                  _SettingItem(HugeIcons.strokeRoundedUserStar02, 'Thiết lập vai trò phân quyền', () => context.push('/roles'), c),
-                ],
+              _SettingGroup('Nhân viên & Phân quyền', [
+                _SettingItem(
+                  HugeIcons.strokeRoundedUserMultiple,
+                  'Quản lý danh sách nhân viên',
+                  () => context.push('/staff'),
+                  c,
+                ),
+                _SettingItem(
+                  HugeIcons.strokeRoundedUserStar02,
+                  'Thiết lập vai trò phân quyền',
+                  () => context.push('/roles'),
+                  c,
+                ),
+              ], c),
+
+            _SettingGroup('Hàng hóa & Kho vận', [
+              _SettingItem(
+                HugeIcons.strokeRoundedDashboardSquare01,
+                'Quản lý danh mục sản phẩm',
+                () {
+                  ToastService.showSuccess(
+                    'Tính năng quản lý danh mục sẽ sớm khả dụng ở bản cập nhật kế tiếp!',
+                  );
+                },
                 c,
               ),
-
-            _SettingGroup(
-              'Hàng hóa & Kho vận',
-              [
-                _SettingItem(HugeIcons.strokeRoundedDashboardSquare01, 'Quản lý danh mục sản phẩm', () {
-                  ToastService.showSuccess('Tính năng quản lý danh mục sẽ sớm khả dụng ở bản cập nhật kế tiếp!');
-                }, c),
-                if (shopState.isOwner || shopState.hasPermission('settings'))
-                  _SettingItem(HugeIcons.strokeRoundedClock04, 'Nhật ký hoạt động hệ thống', () => context.push('/activity-logs'), c),
-              ],
-              c,
-            ),
+              if (shopState.isOwner || shopState.hasPermission('settings'))
+                _SettingItem(
+                  HugeIcons.strokeRoundedClock04,
+                  'Nhật ký hoạt động hệ thống',
+                  () => context.push('/activity-logs'),
+                  c,
+                ),
+            ], c),
 
             if (shopState.isOwner || shopState.hasPermission('settings'))
               _CostingMethodTile(c: c),
 
-            _SettingGroup(
-              'Cửa hàng & Thanh toán',
-              [
-                if (shopState.isOwner || shopState.hasPermission('settings'))
-                  _SettingItem(HugeIcons.strokeRoundedStore01, 'Thông tin cấu hình cửa hàng', () => context.push('/shop-profile'), c),
-                _SettingItem(HugeIcons.strokeRoundedInvoice01, 'Tùy biến mẫu hóa đơn in ấn', () {
-                  ToastService.showSuccess('Tính năng tùy biến mẫu hóa đơn sẽ sớm khả dụng ở bản cập nhật kế tiếp!');
-                }, c),
-                if (shopState.isOwner || shopState.hasPermission('settings'))
-                  _SettingItem(HugeIcons.strokeRoundedCreditCard, 'Thiết lập VietQR & TK nhận tiền', () => context.push('/payment-config'), c),
-                _SettingItem(HugeIcons.strokeRoundedTruck, 'Đơn vị vận chuyển đối tác', () {
-                  ToastService.showSuccess('Tính năng quản lý vận chuyển đối tác sẽ sớm khả dụng ở bản cập nhật kế tiếp!');
-                }, c),
-              ],
-              c,
-            ),
+            _SettingGroup('Cửa hàng & Thanh toán', [
+              if (shopState.isOwner || shopState.hasPermission('settings'))
+                _SettingItem(
+                  HugeIcons.strokeRoundedStore01,
+                  'Thông tin cấu hình cửa hàng',
+                  () => context.push('/shop-profile'),
+                  c,
+                ),
+              _SettingItem(
+                HugeIcons.strokeRoundedInvoice01,
+                'Tùy biến mẫu hóa đơn in ấn',
+                () {
+                  ToastService.showSuccess(
+                    'Tính năng tùy biến mẫu hóa đơn sẽ sớm khả dụng ở bản cập nhật kế tiếp!',
+                  );
+                },
+                c,
+              ),
+              if (shopState.isOwner || shopState.hasPermission('settings'))
+                _SettingItem(
+                  HugeIcons.strokeRoundedCreditCard,
+                  'Thiết lập VietQR & TK nhận tiền',
+                  () => context.push('/payment-config'),
+                  c,
+                ),
+              _SettingItem(
+                HugeIcons.strokeRoundedTruck,
+                'Đơn vị vận chuyển đối tác',
+                () {
+                  ToastService.showSuccess(
+                    'Tính năng quản lý vận chuyển đối tác sẽ sớm khả dụng ở bản cập nhật kế tiếp!',
+                  );
+                },
+                c,
+              ),
+            ], c),
 
-            _SettingGroup(
-              'Thuế & Nghĩa vụ kê khai',
-              [
-                if (shopState.isOwner || shopState.hasPermission('settings'))
-                  _SettingItem(HugeIcons.strokeRoundedCalculator01, 'Cấu hình sắc thuế mặc định', () => context.push('/tax-config'), c),
-                _SettingItem(HugeIcons.strokeRoundedCustomerSupport, 'Kênh hỗ trợ giải đáp luật thuế', () => context.push('/tax-support'), c),
-              ],
-              c,
-            ),
+            _SettingGroup('Thuế & Nghĩa vụ kê khai', [
+              if (shopState.isOwner || shopState.hasPermission('settings'))
+                _SettingItem(
+                  HugeIcons.strokeRoundedCalculator01,
+                  'Cấu hình sắc thuế mặc định',
+                  () => context.push('/tax-config'),
+                  c,
+                ),
+              _SettingItem(
+                HugeIcons.strokeRoundedCustomerSupport,
+                'Kênh hỗ trợ giải đáp luật thuế',
+                () => context.push('/tax-support'),
+                c,
+              ),
+            ], c),
 
-            _SettingGroup(
-              'Hệ thống & Trợ giúp',
-              [
-                _SettingItem(HugeIcons.strokeRoundedNotification03, 'Trung tâm quản lý thông báo', () => context.push('/notifications'), c),
-                _SettingItem(HugeIcons.strokeRoundedCloudSavingDone01, 'Sao lưu & khôi phục dữ liệu', () {
-                  ToastService.showSuccess('Sao lưu và khôi phục dữ liệu sẽ sớm khả dụng ở bản cập nhật kế tiếp!');
-                }, c),
-                _SettingItem(HugeIcons.strokeRoundedHelpCircle, 'Thông tin phần mềm hỗ trợ', () async {
+            _SettingGroup('Hệ thống & Trợ giúp', [
+              _SettingItem(
+                HugeIcons.strokeRoundedNotification03,
+                'Trung tâm quản lý thông báo',
+                () => context.push('/notifications'),
+                c,
+              ),
+              _SettingItem(
+                HugeIcons.strokeRoundedCloudSavingDone01,
+                'Sao lưu & khôi phục dữ liệu',
+                () {
+                  ToastService.showSuccess(
+                    'Sao lưu và khôi phục dữ liệu sẽ sớm khả dụng ở bản cập nhật kế tiếp!',
+                  );
+                },
+                c,
+              ),
+              _SettingItem(
+                HugeIcons.strokeRoundedHelpCircle,
+                'Thông tin phần mềm hỗ trợ',
+                () async {
                   final pkg = await PackageInfo.fromPlatform();
                   if (!context.mounted) return;
                   showAboutDialog(
                     context: context,
                     applicationName: 'SmartStock FinTech',
                     applicationVersion: pkg.version,
-                    applicationLegalese: '© 2026 SmartStock Inc. Bảo lưu mọi quyền.',
+                    applicationLegalese:
+                        '© 2026 SmartStock Inc. Bảo lưu mọi quyền.',
                     children: [
                       const SizedBox(height: 12),
                       Text(
@@ -306,10 +413,10 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     ],
                   );
-                }, c),
-              ],
-              c,
-            ),
+                },
+                c,
+              ),
+            ], c),
             const SizedBox(height: 16),
 
             // Redundant outlined Log Out button
@@ -320,7 +427,8 @@ class SettingsScreen extends ConsumerWidget {
                   final confirmed = await AppConfirmModal.show(
                     context,
                     title: 'Xác nhận Đăng xuất',
-                    message: 'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không? Các giao dịch chưa đồng bộ có thể bị mất.',
+                    message:
+                        'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không? Các giao dịch chưa đồng bộ có thể bị mất.',
                     confirmText: 'Đăng xuất',
                     cancelText: 'Hủy bỏ',
                     isDestructive: true,
@@ -330,15 +438,24 @@ class SettingsScreen extends ConsumerWidget {
                     if (context.mounted) context.go('/login');
                   }
                 },
-                icon: HugeIcon(icon: HugeIcons.strokeRoundedLogout03, color: AppColors.danger, size: 20),
+                icon: HugeIcon(
+                  icon: HugeIcons.strokeRoundedLogout03,
+                  color: AppColors.danger,
+                  size: 20,
+                ),
                 label: Text(
                   'Đăng Xuất Tài Khoản',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.danger),
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.danger,
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppColors.danger, width: 1.5),
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ),
@@ -349,10 +466,16 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showShopSwitcher(BuildContext context, WidgetRef ref, ShopState shopState) {
+  void _showShopSwitcher(
+    BuildContext context,
+    WidgetRef ref,
+    ShopState shopState,
+  ) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         final c = AppThemeColors.of(ctx);
         final theme = Theme.of(context);
@@ -362,32 +485,69 @@ class SettingsScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 44, height: 4, decoration: BoxDecoration(color: c.divider, borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(height: 16),
               Text(
                 'Chuyển đổi cửa hàng liên kết',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: c.textPrimary,
+                ),
               ),
               const SizedBox(height: 12),
               ...shopState.userShops.map((shop) {
                 final isActive = shop['shopId'] == shopState.currentShopId;
                 return ListTile(
-                  leading: HugeIcon(icon: HugeIcons.strokeRoundedStore01, color: isActive ? primaryColor : c.textMuted, size: 22),
+                  leading: HugeIcon(
+                    icon: HugeIcons.strokeRoundedStore01,
+                    color: isActive ? primaryColor : c.textMuted,
+                    size: 22,
+                  ),
                   title: Text(
                     shop['shopName'] ?? 'Shop #${shop['shopId']}',
-                    style: GoogleFonts.outfit(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, fontSize: 14),
+                    style: GoogleFonts.outfit(
+                      fontWeight: isActive
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      fontSize: 14,
+                    ),
                   ),
                   subtitle: Text(
-                    shop['memberType'] == 'OWNER' ? 'Chủ sở hữu' : (shop['role']?['name'] ?? 'Nhân viên'),
-                    style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary),
+                    shop['memberType'] == 'OWNER'
+                        ? 'Chủ sở hữu'
+                        : (shop['role']?['name'] ?? 'Nhân viên'),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: c.textSecondary,
+                    ),
                   ),
-                  trailing: isActive ? HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: primaryColor, size: 20) : null,
+                  trailing: isActive
+                      ? HugeIcon(
+                          icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                          color: primaryColor,
+                          size: 20,
+                        )
+                      : null,
                   onTap: () {
-                    ref.read(shopProvider.notifier).switchShop(shop['shopId'] as int);
+                    ref
+                        .read(shopProvider.notifier)
+                        .switchShop(shop['shopId'] as int);
                     Navigator.pop(ctx);
                   },
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  tileColor: isActive ? primaryColor.withValues(alpha: 0.08) : null,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  tileColor: isActive
+                      ? primaryColor.withValues(alpha: 0.08)
+                      : null,
                 );
               }),
               const SizedBox(height: 12),
@@ -427,12 +587,20 @@ class _BrandColorTile extends ConsumerWidget {
                 children: [
                   Text(
                     'Tông màu chủ đạo ứng dụng',
-                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary),
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: c.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     brandColor.label,
-                    style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: c.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -494,12 +662,20 @@ class _BrandColorTile extends ConsumerWidget {
               const SizedBox(height: 18),
               Text(
                 'Chọn tông màu thương hiệu',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: c.textPrimary,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Tùy chỉnh sắc thái giao diện phù hợp với gu thẩm mỹ của bạn',
-                style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: c.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 20),
               // Horizontal list of colors
@@ -515,7 +691,9 @@ class _BrandColorTile extends ConsumerWidget {
                     final isSelected = item == current;
                     return GestureDetector(
                       onTap: () {
-                        ref.read(brandColorProvider.notifier).setBrandColor(item);
+                        ref
+                            .read(brandColorProvider.notifier)
+                            .setBrandColor(item);
                         Navigator.pop(ctx);
                       },
                       child: Container(
@@ -531,7 +709,9 @@ class _BrandColorTile extends ConsumerWidget {
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isSelected
-                                      ? (isDark ? Colors.white : AppColors.primary)
+                                      ? (isDark
+                                            ? Colors.white
+                                            : AppColors.primary)
                                       : Colors.transparent,
                                   width: 3,
                                 ),
@@ -557,8 +737,12 @@ class _BrandColorTile extends ConsumerWidget {
                               item.label,
                               style: GoogleFonts.outfit(
                                 fontSize: 10,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? Theme.of(context).colorScheme.primary : c.textSecondary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : c.textSecondary,
                               ),
                             ),
                           ],
@@ -605,9 +789,7 @@ class _SettingGroup extends StatelessWidget {
             border: Border.all(color: c.divider.withValues(alpha: 0.5)),
           ),
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: items,
-          ),
+          child: Column(children: items),
         ),
         const SizedBox(height: 18),
       ],
@@ -632,7 +814,11 @@ class _SettingItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(
             children: [
-              HugeIcon(icon: icon, size: 20, color: Theme.of(context).colorScheme.primary),
+              HugeIcon(
+                icon: icon,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
@@ -646,7 +832,11 @@ class _SettingItem extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: c.textMuted),
+              HugeIcon(
+                icon: HugeIcons.strokeRoundedArrowRight01,
+                size: 18,
+                color: c.textMuted,
+              ),
             ],
           ),
         ),
@@ -667,7 +857,9 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(costingProvider.notifier).loadCostingMethod());
+    Future.microtask(
+      () => ref.read(costingProvider.notifier).loadCostingMethod(),
+    );
   }
 
   @override
@@ -675,53 +867,73 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
     final costing = ref.watch(costingProvider);
     final c = widget.c;
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final methodLabel = costing.method == 'FIFO' ? 'Nhập trước - Xuất trước (FIFO)' : 'Bình quân gia quyền (AVG)';
+    final methodLabel = costing.method == 'FIFO'
+        ? 'Nhập trước - Xuất trước (FIFO)'
+        : 'Bình quân gia quyền (AVG)';
 
-    return _SettingGroup(
-      'Phương pháp tính giá vốn',
-      [
-        InkWell(
-          onTap: () => _showCostingMethodPicker(context),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
-              children: [
-                HugeIcon(icon: HugeIcons.strokeRoundedCalculator01, size: 20, color: primaryColor),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Công thức tính giá vốn',
-                        style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary),
+    return _SettingGroup('Phương pháp tính giá vốn', [
+      InkWell(
+        onTap: () => _showCostingMethodPicker(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              HugeIcon(
+                icon: HugeIcons.strokeRoundedCalculator01,
+                size: 20,
+                color: primaryColor,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Công thức tính giá vốn',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: c.textPrimary,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        methodLabel,
-                        style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      methodLabel,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: c.textSecondary,
+                        fontWeight: FontWeight.w500,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                if (costing.isLoading)
-                  const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                else
-                  HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 18, color: c.textMuted),
-              ],
-            ),
+              ),
+              if (costing.isLoading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedArrowRight01,
+                  size: 18,
+                  color: c.textMuted,
+                ),
+            ],
           ),
         ),
-      ],
-      c,
-    );
+      ),
+    ], c);
   }
 
   void _showCostingMethodPicker(BuildContext context) {
     final costing = ref.read(costingProvider);
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         final c = AppThemeColors.of(ctx);
         final primaryColor = Theme.of(context).colorScheme.primary;
@@ -730,16 +942,31 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 44, height: 4, decoration: BoxDecoration(color: c.divider, borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(height: 16),
               Text(
                 'Công thức tính giá vốn hàng bán',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: c.textPrimary,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Áp dụng chung làm cơ sở tính lợi nhuận cho toàn bộ sản phẩm',
-                style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary, fontWeight: FontWeight.w500),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: c.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 20),
               _costingOption(
@@ -816,13 +1043,22 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
                   const SizedBox(height: 4),
                   Text(
                     desc,
-                    style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary, height: 1.4),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: c.textSecondary,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            if (isActive) HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, color: primaryColor, size: 20),
+            if (isActive)
+              HugeIcon(
+                icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                color: primaryColor,
+                size: 20,
+              ),
           ],
         ),
       ),
