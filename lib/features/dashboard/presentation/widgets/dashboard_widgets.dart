@@ -179,7 +179,13 @@ class SummaryCard extends StatelessWidget {
   final dynamic icon;
   final Color color;
   final bool isHero;
-  const SummaryCard(this.title, this.value, this.icon, this.color, {this.isHero = false});
+  const SummaryCard(
+    this.title,
+    this.value,
+    this.icon,
+    this.color, {
+    this.isHero = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -194,8 +200,12 @@ class SummaryCard extends StatelessWidget {
 
     final bgColor = isHero ? null : c.card;
     final textColor = isHero ? Colors.white : c.textPrimary;
-    final subTextColor = isHero ? Colors.white.withValues(alpha: 0.9) : c.textSecondary;
-    final iconBg = isHero ? Colors.white.withValues(alpha: 0.2) : color.withValues(alpha: 0.1);
+    final subTextColor = isHero
+        ? Colors.white.withValues(alpha: 0.9)
+        : c.textSecondary;
+    final iconBg = isHero
+        ? Colors.white.withValues(alpha: 0.2)
+        : color.withValues(alpha: 0.1);
     final iconColor = isHero ? Colors.white : color;
 
     return Container(
@@ -203,7 +213,9 @@ class SummaryCard extends StatelessWidget {
         color: bgColor,
         gradient: bgGradient,
         borderRadius: BorderRadius.circular(20),
-        border: isHero ? null : Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
+        border: isHero
+            ? null
+            : Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: isHero ? 0.3 : 0.04),
@@ -313,7 +325,10 @@ class QuickAction extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(100),
-              border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 0.5),
+              border: Border.all(
+                color: c.divider.withValues(alpha: 0.5),
+                width: 0.5,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -380,9 +395,7 @@ class TimeFilterBar extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: active
-              ? c.card
-              : Colors.transparent,
+          color: active ? c.card : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           boxShadow: active
               ? [
@@ -504,10 +517,7 @@ class ComparisonBarChart extends StatelessWidget {
             BarChartRodData(
               toY: rev2,
               gradient: LinearGradient(
-                colors: [
-                  pastColor,
-                  pastColor.withValues(alpha: 0.1),
-                ],
+                colors: [pastColor, pastColor.withValues(alpha: 0.1)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -517,10 +527,7 @@ class ComparisonBarChart extends StatelessWidget {
             BarChartRodData(
               toY: rev1,
               gradient: LinearGradient(
-                colors: [
-                  presentColor,
-                  presentColor.withValues(alpha: 0.5),
-                ],
+                colors: [presentColor, presentColor.withValues(alpha: 0.5)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -583,17 +590,9 @@ class ComparisonBarChart extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildLegendItem(
-                      label2,
-                      pastColor,
-                      c.textSecondary,
-                    ),
+                    _buildLegendItem(label2, pastColor, c.textSecondary),
                     const SizedBox(width: 16),
-                    _buildLegendItem(
-                      label1,
-                      presentColor,
-                      c.textSecondary,
-                    ),
+                    _buildLegendItem(label1, presentColor, c.textSecondary),
                   ],
                 ),
               ],
@@ -627,8 +626,12 @@ class ComparisonBarChart extends StatelessWidget {
                 ),
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (group) => const Color(0xFF1E293B).withValues(alpha: 0.9),
-                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    getTooltipColor: (group) =>
+                        const Color(0xFF1E293B).withValues(alpha: 0.9),
+                    tooltipPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     tooltipMargin: 8,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final val = NumberFormat.compact(
@@ -668,26 +671,42 @@ class ComparisonBarChart extends StatelessWidget {
 
                         String displayDate = '';
                         if (idx < currentData.length) {
-                          final dateStr = currentData[idx]['date'] as String? ?? '';
+                          final dateStr =
+                              currentData[idx]['date'] as String? ?? '';
                           final parts = dateStr.split('-');
-                          displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                          displayDate = parts.length >= 3
+                              ? '${parts[2]}/${parts[1]}'
+                              : dateStr;
                         } else if (currentData.isNotEmpty) {
                           // Project forward from the first day
-                          final firstDateStr = currentData.first['date'] as String? ?? '';
+                          final firstDateStr =
+                              currentData.first['date'] as String? ?? '';
                           final firstDate = DateTime.tryParse(firstDateStr);
                           if (firstDate != null) {
-                            final projectedDate = firstDate.add(Duration(days: idx));
-                            final d = projectedDate.day.toString().padLeft(2, '0');
-                            final m = projectedDate.month.toString().padLeft(2, '0');
+                            final projectedDate = firstDate.add(
+                              Duration(days: idx),
+                            );
+                            final d = projectedDate.day.toString().padLeft(
+                              2,
+                              '0',
+                            );
+                            final m = projectedDate.month.toString().padLeft(
+                              2,
+                              '0',
+                            );
                             displayDate = '$d/$m';
                           }
                         } else if (idx < previousData.length) {
-                           final dateStr = previousData[idx]['date'] as String? ?? '';
-                           final parts = dateStr.split('-');
-                           displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                          final dateStr =
+                              previousData[idx]['date'] as String? ?? '';
+                          final parts = dateStr.split('-');
+                          displayDate = parts.length >= 3
+                              ? '${parts[2]}/${parts[1]}'
+                              : dateStr;
                         }
 
-                        if (displayDate.length < 5) return const SizedBox.shrink();
+                        if (displayDate.length < 5)
+                          return const SizedBox.shrink();
 
                         // Limit labels if too many
                         if (maxLen > 7 &&
@@ -1230,7 +1249,7 @@ class CashFlowAreaChart extends StatelessWidget {
                       interval: 1,
                       getTitlesWidget: (v, m) {
                         if (v % 1 != 0) return const SizedBox.shrink();
-                        
+
                         final idx = v.toInt();
                         if (idx < 0 || idx > calculatedMaxX)
                           return const SizedBox.shrink();
@@ -1239,19 +1258,31 @@ class CashFlowAreaChart extends StatelessWidget {
                         if (idx < data.length) {
                           final dateStr = data[idx]['date'] as String? ?? '';
                           final parts = dateStr.split('-');
-                          displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                          displayDate = parts.length >= 3
+                              ? '${parts[2]}/${parts[1]}'
+                              : dateStr;
                         } else if (data.isNotEmpty) {
-                          final firstDateStr = data.first['date'] as String? ?? '';
+                          final firstDateStr =
+                              data.first['date'] as String? ?? '';
                           final firstDate = DateTime.tryParse(firstDateStr);
                           if (firstDate != null) {
-                            final projectedDate = firstDate.add(Duration(days: idx));
-                            final d = projectedDate.day.toString().padLeft(2, '0');
-                            final m = projectedDate.month.toString().padLeft(2, '0');
+                            final projectedDate = firstDate.add(
+                              Duration(days: idx),
+                            );
+                            final d = projectedDate.day.toString().padLeft(
+                              2,
+                              '0',
+                            );
+                            final m = projectedDate.month.toString().padLeft(
+                              2,
+                              '0',
+                            );
                             displayDate = '$d/$m';
                           }
                         }
 
-                        if (displayDate.length < 5) return const SizedBox.shrink();
+                        if (displayDate.length < 5)
+                          return const SizedBox.shrink();
 
                         int targetLen = calculatedMaxX.toInt() + 1;
                         if (targetLen > 7 &&
@@ -1315,17 +1346,25 @@ class CashFlowAreaChart extends StatelessWidget {
                   touchSpotThreshold: 40,
                   handleBuiltInTouches: true,
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => const Color(0xFF1E293B).withValues(alpha: 0.9),
-                    tooltipPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    getTooltipColor: (_) =>
+                        const Color(0xFF1E293B).withValues(alpha: 0.9),
+                    tooltipPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     tooltipMargin: 8,
                     getTooltipItems: (touchedSpots) {
                       return touchedSpots.map((spot) {
-                        final val = NumberFormat.compact(locale: 'vi_VN').format(spot.y);
+                        final val = NumberFormat.compact(
+                          locale: 'vi_VN',
+                        ).format(spot.y);
                         final isIncome = spot.barIndex == 0;
                         return LineTooltipItem(
                           '${isIncome ? "Thu" : "Chi"}: $val đ',
                           GoogleFonts.outfit(
-                            color: isIncome ? const Color(0xFF60A5FA) : const Color(0xFFF87171),
+                            color: isIncome
+                                ? const Color(0xFF60A5FA)
+                                : const Color(0xFFF87171),
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),

@@ -116,121 +116,136 @@ class MainShell extends ConsumerWidget {
           Positioned.fill(
             child: LayoutBuilder(
               builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth >= 800;
+                final isDesktop = constraints.maxWidth >= 800;
 
-          if (isDesktop) {
-            return Row(
-              children: [
-                Container(
-                  width: 260,
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    border: Border(
-                      right: BorderSide(
-                        color: c.divider.withValues(alpha: 0.3),
-                      ),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (isDesktop) {
+                  return Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          24,
-                          32,
-                          24,
-                          24,
+                      Container(
+                        width: 260,
+                        decoration: BoxDecoration(
+                          color: c.surface,
+                          border: Border(
+                            right: BorderSide(
+                              color: c.divider.withValues(alpha: 0.3),
+                            ),
+                          ),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: primaryColor,
-                                borderRadius: BorderRadius.circular(12),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                32,
+                                24,
+                                24,
                               ),
-                              child: const HugeIcon(
-                                icon: HugeIcons.strokeRoundedStore01,
-                                color: Colors.white,
-                                size: 26,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: primaryColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const HugeIcon(
+                                      icon: HugeIcons.strokeRoundedStore01,
+                                      color: Colors.white,
+                                      size: 26,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      'SmartStock',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: c.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(height: 8),
                             Expanded(
-                              child: Text(
-                                'SmartStock',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: c.textPrimary,
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
                                 ),
+                                itemCount: allTabs.length,
+                                itemBuilder: (context, i) {
+                                  final isActive = i == idx;
+                                  final color = isActive
+                                      ? primaryColor
+                                      : c.textSecondary;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: () =>
+                                            context.go(allTabs[i].route),
+                                        hoverColor: c.divider.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        child: AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isActive
+                                                ? primaryColor.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              HugeIcon(
+                                                icon: allTabs[i].icon,
+                                                color: color,
+                                                size: 24,
+                                              ),
+                                              const SizedBox(width: 14),
+                                              Text(
+                                                allTabs[i].label,
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: isActive
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w500,
+                                                  color: color,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
                       Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                          ),
-                          itemCount: allTabs.length,
-                          itemBuilder: (context, i) {
-                            final isActive = i == idx;
-                            final color = isActive ? primaryColor : c.textSecondary;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: () => context.go(allTabs[i].route),
-                                  hoverColor: c.divider.withValues(alpha: 0.1),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: isActive ? primaryColor.withValues(alpha: 0.1) : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        HugeIcon(
-                                          icon: allTabs[i].icon,
-                                          color: color,
-                                          size: 24,
-                                        ),
-                                        const SizedBox(width: 14),
-                                        Text(
-                                          allTabs[i].label,
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                                            color: color,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                        child: Container(color: c.bg, child: child),
                       ),
                     ],
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    color: c.bg,
-                    child: child,
-                  ),
-                ),
-              ],
-            );
-          }
+                  );
+                }
 
                 return Stack(
                   children: [

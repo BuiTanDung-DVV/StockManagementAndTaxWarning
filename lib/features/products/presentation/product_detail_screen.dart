@@ -278,7 +278,7 @@ class ProductDetailScreen extends ConsumerWidget {
                     child: Text('Lỗi tải lịch sử: $e'),
                   ),
                   data: (data) {
-                    final items = (data['data']?['items'] as List?) ?? [];
+                    final items = (data['items'] as List?) ?? [];
                     if (items.isEmpty)
                       return const Padding(
                         padding: EdgeInsets.all(16),
