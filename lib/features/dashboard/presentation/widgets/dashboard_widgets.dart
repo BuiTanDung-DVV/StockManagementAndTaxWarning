@@ -184,17 +184,17 @@ class SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: c.divider, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 40,
-            offset: const Offset(0, 20),
-            spreadRadius: -10,
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+            spreadRadius: -5,
           ),
         ],
       ),
@@ -205,49 +205,49 @@ class SummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: HugeIcon(icon: icon, size: 24, color: color),
+                child: HugeIcon(icon: icon, size: 20, color: color),
               ),
               // Subtle dot
               Container(
-                width: 8,
-                height: 8,
+                width: 6,
+                height: 6,
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: color.withValues(alpha: 0.4),
-                      blurRadius: 12,
+                      blurRadius: 8,
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Text(
             value,
             style: GoogleFonts.outfit(
-              fontSize: 32,
+              fontSize: 24,
               fontWeight: FontWeight.w900,
               color: c.textPrimary,
-              letterSpacing: -1.5,
+              letterSpacing: -1.0,
               height: 1.1,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             title,
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 13,
               color: c.textSecondary,
               fontWeight: FontWeight.w500,
             ),
@@ -1150,6 +1150,27 @@ class CashFlowAreaChart extends StatelessWidget {
                   ),
                 ),
                 borderData: FlBorderData(show: false),
+                lineTouchData: LineTouchData(
+                  touchSpotThreshold: 40,
+                  handleBuiltInTouches: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => c.surface,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final val = NumberFormat.compact(locale: 'vi_VN').format(spot.y);
+                        final isIncome = spot.barIndex == 0;
+                        return LineTooltipItem(
+                          '${isIncome ? "Thu" : "Chi"}: $val đ',
+                          TextStyle(
+                            color: isIncome ? theme.colorScheme.primary : AppColors.danger,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
                 minX: 0,
                 maxX: (data.length - 1).toDouble(),
                 minY: 0,
