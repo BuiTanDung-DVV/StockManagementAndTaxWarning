@@ -946,7 +946,6 @@ class TopProductsChart extends StatelessWidget {
                   );
                 }).toList();
               })(),
-              swapAnimationDuration: const Duration(milliseconds: 300),
             ),
           ),
         ],
