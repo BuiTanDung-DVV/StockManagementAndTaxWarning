@@ -366,12 +366,17 @@ class TimeFilterBar extends StatelessWidget {
         color: c.cardAlt.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildBtn(context, 'week', 'Tuần này', theme, c),
-          _buildBtn(context, 'month', 'Tháng này', theme, c),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildBtn(context, 'week', 'Tuần này', theme, c),
+            _buildBtn(context, 'month', 'Tháng này', theme, c),
+            _buildBtn(context, '6_months', '6 Tháng', theme, c),
+            _buildBtn(context, 'year', 'Năm nay', theme, c),
+          ],
+        ),
       ),
     );
   }

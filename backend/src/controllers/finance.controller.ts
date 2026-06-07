@@ -22,8 +22,10 @@ export const deleteCashTransaction = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.deleteCashTransaction((req as any).shopId, +req.params.id) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
+const getShopId = (req: any) => req.isAllShops ? req.shopIds : req.shopId;
+
 export const getCashFlowSummary = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.getCashFlowSummary((req as any).shopId, req.query.period as string) }); }
+    try { res.json({ success: true, data: await financeService.getCashFlowSummary(getShopId(req), req.query.period as string, req.query.from as string, req.query.to as string) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 export const getProfitLoss = async (req: Request, res: Response) => {

@@ -12,6 +12,7 @@ class ShopState {
   final Map<String, String> permissions; // { "pos": "full", ... }
   final List<Map<String, dynamic>> userShops;
   final bool isLoading;
+  final bool isAllShops;
 
   const ShopState({
     this.currentShopId,
@@ -22,9 +23,10 @@ class ShopState {
     this.permissions = const {},
     this.userShops = const [],
     this.isLoading = true,
+    this.isAllShops = false,
   });
 
-  bool get isOwner => memberType == 'OWNER' || userShops.isEmpty;
+  bool get isOwner => isAllShops || memberType == 'OWNER' || userShops.isEmpty;
   bool get isPending => status == 'PENDING';
   bool get isRejected => status == 'REJECTED';
   bool get isActive =>
@@ -32,6 +34,7 @@ class ShopState {
 
   /// Check if user has permission. Owners and users with no shop config always return true.
   bool hasPermission(String key, [String level = 'view']) {
+    if (isAllShops) return true;
     // No RBAC configured yet → full access (legacy/admin mode)
     if (userShops.isEmpty) return true;
     if (memberType == 'OWNER') return true;
@@ -50,6 +53,7 @@ class ShopState {
     Map<String, String>? permissions,
     List<Map<String, dynamic>>? userShops,
     bool? isLoading,
+    bool? isAllShops,
   }) => ShopState(
     currentShopId: currentShopId ?? this.currentShopId,
     currentShopName: currentShopName ?? this.currentShopName,
@@ -59,6 +63,7 @@ class ShopState {
     permissions: permissions ?? this.permissions,
     userShops: userShops ?? this.userShops,
     isLoading: isLoading ?? this.isLoading,
+    isAllShops: isAllShops ?? this.isAllShops,
   );
 }
 
@@ -92,6 +97,10 @@ class ShopNotifier extends Notifier<ShopState> {
         state = state.copyWith(userShops: [], isLoading: false);
         return;
       }
+      if (_api.shopId == 'all') {
+        _selectAllShops(shops);
+        return;
+      }
       // Keep current shop if still valid, else default to first
       final savedShopId = _api.shopId != null
           ? int.tryParse(_api.shopId!)
@@ -110,11 +119,30 @@ class ShopNotifier extends Notifier<ShopState> {
 
   /// Switch to a different shop
   void switchShop(int shopId) {
+    if (shopId == -1) {
+      _selectAllShops(state.userShops);
+      return;
+    }
     final shop = state.userShops.firstWhere(
       (s) => s['shopId'] == shopId,
       orElse: () => state.userShops.first,
     );
     _selectShop(state.userShops, shop);
+  }
+
+  void _selectAllShops(List<Map<String, dynamic>> shops) {
+    _api.setShopId('all');
+    state = ShopState(
+      currentShopId: null,
+      currentShopName: 'Tất cả cửa hàng (Tổng quát)',
+      shopCode: null,
+      memberType: 'OWNER',
+      status: 'ACTIVE',
+      permissions: const {},
+      userShops: shops,
+      isLoading: false,
+      isAllShops: true,
+    );
   }
 
   void _selectShop(
@@ -138,6 +166,7 @@ class ShopNotifier extends Notifier<ShopState> {
       permissions: perms,
       userShops: shops,
       isLoading: false,
+      isAllShops: false,
     );
   }
 
