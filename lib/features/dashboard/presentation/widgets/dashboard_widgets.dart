@@ -653,10 +653,9 @@ class ComparisonBarChart extends StatelessWidget {
                           displayDate = '${parts[1]}/${parts[0]}';
                       }
 
-                      final label = rodIndex == 0 ? label2 : label1;
                       final dateLine = displayDate.isNotEmpty ? '$displayDate\n' : '';
                       return BarTooltipItem(
-                        '$dateLine$label\n$val đ',
+                        '$dateLine$val đ',
                         GoogleFonts.outfit(
                           color: rodIndex == 0
                               ? const Color(0xFF94A3B8)
