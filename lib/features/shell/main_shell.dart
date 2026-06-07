@@ -103,14 +103,14 @@ class MainShell extends ConsumerWidget {
                   end: Alignment.bottomRight,
                   colors: Theme.of(context).brightness == Brightness.dark
                       ? [
-                          const Color(0xFF0F172A),
-                          const Color(0xFF1E1B4B),
-                          const Color(0xFF020617),
+                          c.bg,
+                          Color.alphaBlend(primaryColor.withValues(alpha: 0.08), c.bg),
+                          c.bg,
                         ]
                       : [
-                          const Color(0xFFE0F2FE),
-                          const Color(0xFFF1F5F9),
-                          const Color(0xFFE0E7FF),
+                          Color.alphaBlend(primaryColor.withValues(alpha: 0.06), c.bg),
+                          c.bg,
+                          Color.alphaBlend(primaryColor.withValues(alpha: 0.04), c.bg),
                         ],
                 ),
               ),
@@ -140,9 +140,9 @@ class MainShell extends ConsumerWidget {
               height: 500,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.purpleAccent.withValues(alpha: 0.1),
+                color: primaryColor.withValues(alpha: 0.06),
                 boxShadow: [
-                  BoxShadow(color: Colors.purpleAccent.withValues(alpha: 0.1), blurRadius: 100),
+                  BoxShadow(color: primaryColor.withValues(alpha: 0.06), blurRadius: 100),
                 ]
               ),
             ),
