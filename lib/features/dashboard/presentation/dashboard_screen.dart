@@ -195,17 +195,17 @@ class DashboardScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Xin chào, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'}',
-                              style: theme.textTheme.headlineLarge?.copyWith(
+                              'Chào bạn, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'} 👋',
+                              style: theme.textTheme.headlineMedium?.copyWith(
                                 color: c.textPrimary,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: -1.0,
+                                letterSpacing: -0.5,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             Text(
                               'Tổng quan hôm nay',
-                              style: theme.textTheme.bodyLarge?.copyWith(
+                              style: theme.textTheme.bodyMedium?.copyWith(
                                 color: c.textSecondary,
                               ),
                             ),
@@ -217,15 +217,14 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: c.card,
+                          color: c.cardAlt.withValues(alpha: 0.5),
                           shape: BoxShape.circle,
-                          border: Border.all(color: c.divider, width: 1),
                         ),
                         child: IconButton(
                           icon: HugeIcon(
                             icon: HugeIcons.strokeRoundedSearch01,
                             color: c.textPrimary,
-                            size: 22,
+                            size: 20,
                           ),
                           onPressed: () {
                             showSearch(
@@ -239,15 +238,14 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: c.card,
+                          color: c.cardAlt.withValues(alpha: 0.5),
                           shape: BoxShape.circle,
-                          border: Border.all(color: c.divider, width: 1),
                         ),
                         child: IconButton(
                           icon: HugeIcon(
                             icon: HugeIcons.strokeRoundedNotification03,
                             color: c.textPrimary,
-                            size: 22,
+                            size: 20,
                           ),
                           onPressed: () => context.push('/notifications'),
                           tooltip: 'Thông báo',
@@ -429,18 +427,18 @@ class DashboardScreen extends ConsumerWidget {
                             },
                           ),
                           const SizedBox(height: 16),
-                          TimeFilterBar(
-                            filter,
-                            (v) => ref
-                                .read(_dashboardTimeFilterProvider.notifier)
-                                .update(v),
-                          ),
                           salesAsync2?.whenOrNull(
                                 data: (data2) => ComparisonBarChart(
                                   (data['daily'] as List?) ?? [],
                                   (data2['daily'] as List?) ?? [],
                                   label1,
                                   label2,
+                                  filterWidget: TimeFilterBar(
+                                    filter,
+                                    (v) => ref
+                                        .read(_dashboardTimeFilterProvider.notifier)
+                                        .update(v),
+                                  ),
                                 ),
                               ) ??
                               const ShimmerDashboard(),
