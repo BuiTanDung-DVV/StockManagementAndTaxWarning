@@ -419,7 +419,7 @@ class _MiniDonutChartState extends State<MiniDonutChart> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: segments.take(7).map((e) {
+            children: widget.segments.take(7).map((e) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
