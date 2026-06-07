@@ -8,9 +8,9 @@ import { lockTransactionMiddleware } from '../middleware/lock-transaction.middle
 router.use(lockTransactionMiddleware);
 
 router.get('/sales-orders', requirePermission('sales', 'view'), salesCtrl.findAll);
-router.get('/sales-orders/summary', requirePermission('sales', 'view'), salesCtrl.summary);
-router.get('/sales-orders/payment-summary', requirePermission('sales', 'view'), salesCtrl.paymentSummary);
-router.get('/sales-orders/top-products', requirePermission('sales', 'view'), salesCtrl.topProducts);
+router.get('/sales-orders/summary', requirePermission(['sales', 'finance', 'dashboard'], 'view'), salesCtrl.summary);
+router.get('/sales-orders/payment-summary', requirePermission(['sales', 'finance', 'dashboard'], 'view'), salesCtrl.paymentSummary);
+router.get('/sales-orders/top-products', requirePermission(['sales', 'finance', 'dashboard'], 'view'), salesCtrl.topProducts);
 router.get('/sales-orders/:id', requirePermission('sales', 'view'), salesCtrl.findOne);
 router.post('/sales-orders', requirePermission('sales', 'edit'), salesCtrl.create);
 router.put('/sales-orders/:id', requirePermission('sales', 'edit'), salesCtrl.updateOrder);

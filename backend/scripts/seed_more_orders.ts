@@ -19,7 +19,7 @@ async function seedMoreOrders() {
         const custIds = customers.map((c: any) => c.id);
 
         // Find products
-        const products = await AppDataSource.query(`SELECT id, price FROM products WHERE shop_id = $1`, [shopId]);
+        const products = await AppDataSource.query(`SELECT id, selling_price as price FROM products WHERE shop_id = $1`, [shopId]);
         if (!products.length) {
             console.log(`No products found for shop ${shop.shop_code}, skipping.`);
             continue;

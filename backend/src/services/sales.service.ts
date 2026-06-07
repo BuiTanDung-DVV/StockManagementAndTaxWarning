@@ -39,19 +39,20 @@ export class SalesService {
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
     
-    async summary(shopId: number | number[], from?: string, to?: string) {
+    async summary(shopId: number | number[], from?: string, to?: string, userId?: number, isOwner?: boolean) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
 
         const shopCondition = Array.isArray(shopId) ? 'o.shop_id IN (:...shopIds)' : 'o.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
+        const userCondition = !isOwner && userId ? ' AND o.created_by = :userId' : '';
 
         const result = await this.orderRepo.createQueryBuilder('o')
             .select('COALESCE(SUM(o.total_amount), 0)', 'totalRevenue')
             .addSelect('COALESCE(SUM(o.total_cogs), 0)', 'totalCogs')
             .addSelect('COUNT(o.id)', 'orderCount')
-            .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition}${userCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate, userId })
             .getRawOne();
 
         const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
@@ -61,7 +62,7 @@ export class SalesService {
             .select(`TO_CHAR(o.order_date, '${dateFormat}')`, 'date')
             .addSelect('COALESCE(SUM(o.total_amount), 0)', 'revenue')
             .addSelect('COUNT(o.id)', 'orderCount')
-            .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition}${userCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate, userId })
             .groupBy(`TO_CHAR(o.order_date, '${dateFormat}')`)
             .orderBy(`TO_CHAR(o.order_date, '${dateFormat}')`, 'ASC')
             .getRawMany();
@@ -79,13 +80,17 @@ export class SalesService {
         };
     }
 
-    async getTopProducts(shopId: number | number[], from?: string, to?: string) {
+    async getTopProducts(shopId: number | number[], from?: string, to?: string, userId?: number, isOwner?: boolean) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
 
         const isArray = Array.isArray(shopId);
         const shopCondition = isArray ? 'o.shop_id = ANY($1)' : 'o.shop_id = $1';
+        const userCondition = !isOwner && userId ? ' AND o.created_by = $4' : '';
+
+        const params: any[] = isArray ? [shopId, fromDate, toDate] : [shopId, fromDate, toDate];
+        if (!isOwner && userId) params.push(userId);
 
         // Query top 5 selling products by revenue
         const topProducts = await AppDataSource.query(`
@@ -98,11 +103,12 @@ export class SalesService {
             WHERE ${shopCondition} 
               AND o.order_date >= $2 
               AND o.order_date <= $3 
+              ${userCondition}
               AND o.status != 'CANCELLED'
             GROUP BY p.id, p.name
             ORDER BY value DESC
             LIMIT 5
-        `, [isArray ? shopId : shopId, fromDate, toDate]);
+        `, params);
 
         return topProducts.map((p: any) => ({
             name: p.name,
@@ -110,19 +116,20 @@ export class SalesService {
         }));
     }
 
-    async paymentMethodSummary(shopId: number | number[], from?: string, to?: string) {
+    async paymentMethodSummary(shopId: number | number[], from?: string, to?: string, userId?: number, isOwner?: boolean) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
 
         const shopCondition = Array.isArray(shopId) ? 'o.shop_id IN (:...shopIds)' : 'o.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
+        const userCondition = !isOwner && userId ? ' AND o.created_by = :userId' : '';
 
         const methods = await this.orderRepo.createQueryBuilder('o')
             .select('o.payment_method', 'method')
             .addSelect('COUNT(o.id)', 'count')
             .addSelect('COALESCE(SUM(o.total_amount), 0)', 'total')
-            .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition}${userCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate, userId })
             .groupBy('o.payment_method')
             .getRawMany();
 
