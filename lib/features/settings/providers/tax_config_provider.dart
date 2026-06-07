@@ -167,8 +167,8 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
     try {
       final api = ref.read(apiClientProvider);
       final res = await api.get('/tax/config');
-      if (res['success'] == true && res['data'] != null) {
-        final data = res['data'];
+      if (res != null) {
+        final data = res;
 
         if (data['thresholds'] != null) {
           final th = data['thresholds'] as Map<String, dynamic>;

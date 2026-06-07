@@ -41,7 +41,7 @@ class SalesRepository {
       '/sales-orders/top-products',
       params: {'from': from, 'to': to},
     );
-    return res['data'] as List<dynamic>? ?? [];
+    return res as List<dynamic>? ?? [];
   }
 }
 
@@ -90,5 +90,5 @@ final recentTransactionsProvider = FutureProvider<List<dynamic>>((ref) async {
   final shopState = ref.watch(shopProvider);
   if (shopState.userShops.isEmpty) return [];
   final res = await ref.read(salesRepoProvider).findAll(page: 1, limit: 5);
-  return res['data'] as List<dynamic>? ?? [];
+  return res['items'] as List<dynamic>? ?? [];
 });

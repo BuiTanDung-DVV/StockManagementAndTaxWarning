@@ -39,7 +39,7 @@ class TagRepository {
 
   Future<List<TagModel>> getAll({String type = 'product'}) async {
     final res = await _api.get('/tags', params: {'type': type});
-    final data = res['data'] as List? ?? [];
+    final data = res as List? ?? [];
     return data.map((e) => TagModel.fromJson(e)).toList();
   }
 
@@ -52,7 +52,7 @@ class TagRepository {
       '/tags',
       data: {'name': name, 'color': color, 'type': type},
     );
-    return TagModel.fromJson(res['data']);
+    return TagModel.fromJson(res);
   }
 
   Future<TagModel> update(
@@ -65,7 +65,7 @@ class TagRepository {
       '/tags/$id',
       data: {'name': name, 'color': color, 'type': type},
     );
-    return TagModel.fromJson(res['data']);
+    return TagModel.fromJson(res);
   }
 
   Future<void> delete(int id) async {

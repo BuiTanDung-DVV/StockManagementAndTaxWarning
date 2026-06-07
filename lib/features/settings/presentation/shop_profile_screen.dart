@@ -39,7 +39,7 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
     try {
       final repo = ref.read(systemRepoProvider);
       final data = await repo.getShopProfile();
-      final d = data['data'] ?? data;
+      final d = data;
       _shopNameCtrl.text = d['shopName'] ?? d['shop_name'] ?? '';
       _phoneCtrl.text = d['phone'] ?? '';
       _addressCtrl.text = d['address'] ?? '';

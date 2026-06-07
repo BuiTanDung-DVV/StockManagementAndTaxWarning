@@ -145,7 +145,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     child: Text('Lỗi: $e'),
                   ),
                   data: (d) {
-                    final items = (d['data']?['items'] as List?) ?? [];
+                    final items = (d['items'] as List?) ?? [];
                     if (items.isEmpty)
                       return const Padding(
                         padding: EdgeInsets.all(16),

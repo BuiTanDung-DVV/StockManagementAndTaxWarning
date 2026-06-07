@@ -47,7 +47,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       final api = ref.read(apiClientProvider);
       final res = await api.get('/profile');
-      final data = res['data'] ?? res;
+      final data = res;
       _nameCtrl.text = data['fullName'] ?? '';
       _emailCtrl.text = data['email'] ?? '';
       _phoneCtrl.text = data['phone'] ?? '';
@@ -73,7 +73,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           'phone': _phoneCtrl.text.trim(),
         },
       );
-      final updatedUser = res['data'] ?? res;
+      final updatedUser = res;
       // Update auth state with new user info
       final currentAuth = ref.read(authProvider);
       final merged = Map<String, dynamic>.from({
