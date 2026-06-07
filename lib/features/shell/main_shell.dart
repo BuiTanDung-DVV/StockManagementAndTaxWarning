@@ -178,43 +178,40 @@ class MainShell extends ConsumerWidget {
                           itemCount: allTabs.length,
                           itemBuilder: (context, i) {
                             final isActive = i == idx;
-                            final color = isActive ? Colors.white : c.textSecondary;
+                            final color = isActive ? primaryColor : c.textSecondary;
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: () => context.go(allTabs[i].route),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: isActive ? primaryColor : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: isActive ? [
-                                      BoxShadow(
-                                        color: primaryColor.withValues(alpha: 0.3),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      )
-                                    ] : null,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      HugeIcon(
-                                        icon: allTabs[i].icon,
-                                        color: color,
-                                        size: 24,
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Text(
-                                        allTabs[i].label,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () => context.go(allTabs[i].route),
+                                  hoverColor: c.divider.withValues(alpha: 0.1),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isActive ? primaryColor.withValues(alpha: 0.1) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        HugeIcon(
+                                          icon: allTabs[i].icon,
                                           color: color,
+                                          size: 24,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 14),
+                                        Text(
+                                          allTabs[i].label,
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                                            color: color,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
