@@ -611,7 +611,7 @@ class ComparisonBarChart extends StatelessWidget {
                     child: BarChart(
                       BarChartData(
                 alignment: BarChartAlignment.spaceAround,
-                maxY: maxRev * 1.15,
+                maxY: maxRev * 1.3,
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
@@ -635,6 +635,8 @@ class ComparisonBarChart extends StatelessWidget {
                 ),
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
                     getTooltipColor: (group) =>
                         const Color(0xFF1E293B).withValues(alpha: 0.9),
                     tooltipPadding: const EdgeInsets.symmetric(
@@ -1033,13 +1035,15 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
       );
     }
     final colors = [
-      theme.colorScheme.primary,
-      theme.colorScheme.primary.withValues(alpha: 0.8),
-      theme.colorScheme.primary.withValues(alpha: 0.6),
-      theme.colorScheme.primary.withValues(alpha: 0.4),
-      theme.colorScheme.primary.withValues(alpha: 0.2),
-      AppColors.info,
-      AppColors.warning,
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF10B981), // Green
+      const Color(0xFFF59E0B), // Orange
+      const Color(0xFF8B5CF6), // Purple
+      const Color(0xFFEF4444), // Red
+      const Color(0xFF14B8A6), // Teal
+      const Color(0xFFF43F5E), // Rose
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFFEAB308), // Yellow
     ];
 
     final chartData = widget.data.asMap().entries.map((e) {
@@ -1107,13 +1111,15 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
                         final i = entry.key;
                         final e = entry.value;
                         final isTouched = i == touchedIndex;
+                        final double val = e['value'] as double;
+                        final bool showText = val >= 5.0 || isTouched;
                         return PieChartSectionData(
                           color: e['color'] as Color,
-                          value: e['value'] as double,
-                          showTitle: isTouched,
-                          title: isTouched ? '${e['name']}\n${(e['value'] as double).toStringAsFixed(1)}%' : '',
+                          value: val,
+                          showTitle: showText,
+                          title: showText ? '${val.toStringAsFixed(1)}%' : '',
                           radius: isTouched ? 45 : 35,
-                          titleStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                          titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                         );
                       }).toList(),
                     ),
@@ -1417,6 +1423,8 @@ class CashFlowAreaChart extends StatelessWidget {
                   touchSpotThreshold: 40,
                   handleBuiltInTouches: true,
                   touchTooltipData: LineTouchTooltipData(
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
                     getTooltipColor: (_) =>
                         const Color(0xFF1E293B).withValues(alpha: 0.9),
                     tooltipPadding: const EdgeInsets.symmetric(
@@ -1723,13 +1731,15 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
                       centerSpaceRadius: 40,
                       sections: chartData.asMap().entries.map((e) {
                         final isTouched = e.key == touchedIndex;
-                        final fontSize = isTouched ? 16.0 : 12.0;
+                        final fontSize = isTouched ? 14.0 : 11.0;
                         final radius = isTouched ? 45.0 : 40.0;
                         final val = e.value['value'] as double;
+                        final bool showText = val >= 5.0 || isTouched;
                         return PieChartSectionData(
                           color: e.value['color'] as Color,
                           value: val,
-                          title: '${val.toStringAsFixed(1)}%',
+                          showTitle: showText,
+                          title: showText ? '${val.toStringAsFixed(1)}%' : '',
                           radius: radius,
                           titleStyle: TextStyle(
                             fontSize: fontSize,
