@@ -190,15 +190,17 @@ class SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    
     final bgGradient = isHero
         ? LinearGradient(
-            colors: [color, color.withAlpha(200)],
+            colors: [color, color.withAlpha(220)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           )
         : null;
 
-    final bgColor = isHero ? null : c.card;
+    final bgColor = isHero ? null : c.surface;
     final textColor = isHero ? Colors.white : c.textPrimary;
     final subTextColor = isHero
         ? Colors.white.withValues(alpha: 0.9)
@@ -212,78 +214,71 @@ class SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         gradient: bgGradient,
-        borderRadius: BorderRadius.circular(20),
-        border: isHero
-            ? null
-            : Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isHero 
+              ? Colors.white.withValues(alpha: 0.15) 
+              : c.divider.withValues(alpha: 0.4),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: isHero ? 0.3 : 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: color.withValues(alpha: isHero ? 0.25 : 0.05),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
           ),
+          if (isHero)
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.1),
+              blurRadius: 0,
+              spreadRadius: 1,
+              offset: const Offset(0, 1),
+            )
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isHero)
-              Positioned(
-                right: -20,
-                bottom: -20,
-                child: HugeIcon(
-                  icon: icon,
-                  size: 100,
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: iconBg,
-                          shape: BoxShape.circle,
-                        ),
-                        child: HugeIcon(icon: icon, size: 16, color: iconColor),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: subTextColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    value,
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: textColor,
-                      letterSpacing: -0.5,
-                      height: 1.1,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                  child: HugeIcon(icon: icon, size: 18, color: iconColor),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: subTextColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+                letterSpacing: -0.5,
+                height: 1.1,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -543,21 +538,18 @@ class ComparisonBarChart extends StatelessWidget {
     if (maxRev == 0) maxRev = 1000000;
 
     return Container(
-      height: 260, // Slightly taller for more breathing room
+      height: 280,
       margin: const EdgeInsets.only(top: 14),
-      padding: const EdgeInsets.only(left: 4, right: 16, top: 20, bottom: 12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: c.card,
+        color: c.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.08),
-          width: 1.5,
-        ),
+        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -804,157 +796,147 @@ class TopProductsChart extends StatelessWidget {
     if (data.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 250,
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16),
+      height: 280,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: c.card.withValues(alpha: 0.7),
+        color: c.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.05),
-            blurRadius: 20,
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 30,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Top 5 Sản phẩm doanh thu cao',
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: c.textSecondary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Top 5 Sản phẩm doanh thu cao',
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: c.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceBetween,
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (group) => theme.colorScheme.primary,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final val = NumberFormat.compact(
+                        locale: 'vi_VN',
+                      ).format(rod.toY);
+                      return BarTooltipItem(
+                        '${data[group.x.toInt()]['name']}\n$val đ',
+                        GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: BarChart(
-                  BarChartData(
-                    alignment: BarChartAlignment.spaceBetween,
-                    barTouchData: BarTouchData(
-                      touchTooltipData: BarTouchTooltipData(
-                        getTooltipColor: (group) => c.surface,
-                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          final val = NumberFormat.compact(
-                            locale: 'vi_VN',
-                          ).format(rod.toY);
-                          return BarTooltipItem(
-                            '${data[group.x.toInt()]['name']}\n$val đ',
-                            GoogleFonts.outfit(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    titlesData: FlTitlesData(
-                      show: true,
-                      rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 28,
-                          getTitlesWidget: (value, meta) {
-                            if (value == meta.max || value == meta.min)
-                              return const SizedBox.shrink();
-                            String label = '';
-                            if (value >= 1000000) {
-                              label =
-                                  '${(value / 1000000).toStringAsFixed(0)}Tr';
-                            }
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  color: c.textMuted,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 80,
-                          getTitlesWidget: (value, meta) {
-                            final idx = value.toInt();
-                            if (idx < 0 || idx >= data.length)
-                              return const SizedBox.shrink();
-                            final name = data[idx]['name'] as String;
-                            final shortName = name.length > 12
-                                ? '${name.substring(0, 10)}...'
-                                : name;
-                            return Text(
-                              shortName,
-                              style: TextStyle(
-                                color: c.textSecondary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.right,
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    gridData: FlGridData(
-                      show: true,
-                      drawVerticalLine: true,
-                      drawHorizontalLine: false,
-                      getDrawingVerticalLine: (value) => FlLine(
-                        color: c.divider.withValues(alpha: 0.3),
-                        strokeWidth: 1,
-                      ),
-                    ),
-                    borderData: FlBorderData(show: false),
-                    barGroups: data.asMap().entries.map((entry) {
-                      final val =
-                          num.tryParse(
-                            entry.value['value']?.toString() ?? '0',
-                          )?.toDouble() ??
-                          0.0;
-                      return BarChartGroupData(
-                        x: entry.key,
-                        barRods: [
-                          BarChartRodData(
-                            toY: val,
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.8,
-                            ),
-                            width: 14,
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(4),
-                              bottomRight: Radius.circular(4),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 42,
+                      getTitlesWidget: (value, meta) {
+                        if (value == meta.max || value == meta.min)
+                          return const SizedBox.shrink();
+                        String label = '';
+                        if (value >= 1000000) {
+                          label = '${(value / 1000000).toStringAsFixed(0)}Tr';
+                        } else if (value >= 1000) {
+                          label = '${(value / 1000).toStringAsFixed(0)}K';
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              color: c.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
-                      );
-                    }).toList(),
+                        );
+                      },
+                    ),
                   ),
-                  duration: const Duration(milliseconds: 300),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 70,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= data.length)
+                          return const SizedBox.shrink();
+                        final name = data[idx]['name'] as String;
+                        final shortName = name.length > 12
+                            ? '${name.substring(0, 10)}...'
+                            : name;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Text(
+                            shortName,
+                            style: TextStyle(
+                              color: c.textSecondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.right,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: true,
+                  drawHorizontalLine: false,
+                  getDrawingVerticalLine: (value) => FlLine(
+                    color: c.divider.withValues(alpha: 0.15),
+                    strokeWidth: 1,
+                    dashArray: [4, 4],
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: data.asMap().entries.map((entry) {
+                  final val = num.tryParse(entry.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                  return BarChartGroupData(
+                    x: entry.key,
+                    barRods: [
+                      BarChartRodData(
+                        toY: val,
+                        color: theme.colorScheme.primary,
+                        width: 20,
+                        borderRadius: const BorderRadius.all(Radius.circular(6)),
+                      ),
+                    ],
+                  );
+                }).toList(),
               ),
-            ],
+              duration: const Duration(milliseconds: 300),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -979,13 +961,13 @@ class InventoryDonutChart extends StatelessWidget {
           (num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0.0),
     );
     final colors = [
-      AppColors.success,
+      theme.colorScheme.primary,
+      theme.colorScheme.primary.withValues(alpha: 0.8),
+      theme.colorScheme.primary.withValues(alpha: 0.6),
+      theme.colorScheme.primary.withValues(alpha: 0.4),
+      theme.colorScheme.primary.withValues(alpha: 0.2),
       AppColors.info,
       AppColors.warning,
-      theme.colorScheme.primary,
-      AppColors.danger,
-      Colors.purple,
-      Colors.teal,
     ];
 
     final chartData = data.asMap().entries.map((e) {
@@ -1001,104 +983,101 @@ class InventoryDonutChart extends StatelessWidget {
     }).toList();
 
     return Container(
-      height: 250,
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16),
+      height: 280,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: c.card.withValues(alpha: 0.7),
+        color: c.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.05),
-            blurRadius: 20,
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 30,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Cơ cấu Hàng tồn kho (Theo Category)',
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: c.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: PieChart(
-                        PieChartData(
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 40,
-                          sections: chartData.map((e) {
-                            return PieChartSectionData(
-                              color: e['color'] as Color,
-                              value: e['value'] as double,
-                              title:
-                                  '${(e['value'] as double).toStringAsFixed(1)}%',
-                              radius: 20,
-                              titleStyle: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: chartData.map((e) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 12,
-                                  height: 12,
-                                  decoration: BoxDecoration(
-                                    color: e['color'] as Color,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    e['name'] as String,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: c.textSecondary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Cơ cấu Hàng tồn kho (Theo Category)',
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: c.textSecondary,
+            ),
           ),
-        ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: PieChart(
+                    PieChartData(
+                      sectionsSpace: 3,
+                      centerSpaceRadius: 40,
+                      sections: chartData.map((e) {
+                        return PieChartSectionData(
+                          color: e['color'] as Color,
+                          value: e['value'] as double,
+                          title: '${(e['value'] as double).toStringAsFixed(1)}%',
+                          radius: 35,
+                          titleStyle: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 1,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: chartData.map((e) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: e['color'] as Color,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  e['name'] as String,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: c.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1146,21 +1125,18 @@ class CashFlowAreaChart extends StatelessWidget {
 
     double calculatedMaxX = (expectedLen - 1).toDouble();
     return Container(
-      height: 260,
+      height: 280,
       margin: const EdgeInsets.only(top: 14),
-      padding: const EdgeInsets.only(left: 4, right: 16, top: 20, bottom: 12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: c.card,
+        color: c.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.08),
-          width: 1.5,
-        ),
+        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
