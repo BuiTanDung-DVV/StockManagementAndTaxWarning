@@ -478,7 +478,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               const AppShimmer(
                                 child: ShimmerBox(
                                   width: double.infinity,
-                                  height: 260,
+                                  height: 380,
                                   radius: 24,
                                 ),
                               ),
