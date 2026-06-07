@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../providers/inventory_provider.dart';
 import 'stock_take_form_screen.dart';
+import 'stock_take_history_screen.dart';
 
 class StockTakeScreen extends ConsumerWidget {
   const StockTakeScreen({super.key});
@@ -32,6 +33,16 @@ class StockTakeScreen extends ConsumerWidget {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history_rounded, size: 22),
+            tooltip: 'Lịch sử kiểm kê',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StockTakeHistoryScreen()),
+              );
+            },
+          ),
           featureGuideButton(context, 'stock_take'),
           const SizedBox(width: 8),
         ],
