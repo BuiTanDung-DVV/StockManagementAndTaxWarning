@@ -857,23 +857,23 @@ class TopProductsChart extends StatelessWidget {
                       showTitles: true,
                       reservedSize: 42,
                       getTitlesWidget: (value, meta) {
-                        if (value == meta.max || value == meta.min)
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= data.length)
                           return const SizedBox.shrink();
-                        String label = '';
-                        if (value >= 1000000) {
-                          label = '${(value / 1000000).toStringAsFixed(0)}Tr';
-                        } else if (value >= 1000) {
-                          label = '${(value / 1000).toStringAsFixed(0)}K';
-                        }
+                        final name = data[idx]['name'] as String;
+                        final shortName = name.length > 8
+                            ? '${name.substring(0, 8)}...'
+                            : name;
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            label,
+                            shortName,
                             style: TextStyle(
-                              color: c.textMuted,
+                              color: c.textSecondary,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         );
                       },
@@ -882,21 +882,24 @@ class TopProductsChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 70,
+                      reservedSize: 50,
                       getTitlesWidget: (value, meta) {
-                        final idx = value.toInt();
-                        if (idx < 0 || idx >= data.length)
+                        if (value == meta.max || value == meta.min)
                           return const SizedBox.shrink();
-                        final name = data[idx]['name'] as String;
-                        final shortName = name.length > 12
-                            ? '${name.substring(0, 10)}...'
-                            : name;
+                        String label = '';
+                        if (value >= 1000000) {
+                          label = '${(value / 1000000).toStringAsFixed(0)}Tr';
+                        } else if (value >= 1000) {
+                          label = '${(value / 1000).toStringAsFixed(0)}K';
+                        } else {
+                          label = value.toStringAsFixed(0);
+                        }
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Text(
-                            shortName,
+                            label,
                             style: TextStyle(
-                              color: c.textSecondary,
+                              color: c.textMuted,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1022,13 +1025,8 @@ class InventoryDonutChart extends StatelessWidget {
                         return PieChartSectionData(
                           color: e['color'] as Color,
                           value: e['value'] as double,
-                          title: '${(e['value'] as double).toStringAsFixed(1)}%',
+                          showTitle: false,
                           radius: 35,
-                          titleStyle: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
                         );
                       }).toList(),
                     ),
@@ -1042,6 +1040,7 @@ class InventoryDonutChart extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: chartData.map((e) {
+                        final pctStr = (e['value'] as double).toStringAsFixed(1);
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Row(
@@ -1057,7 +1056,7 @@ class InventoryDonutChart extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  e['name'] as String,
+                                  '${e['name']} ($pctStr%)',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: c.textSecondary,
