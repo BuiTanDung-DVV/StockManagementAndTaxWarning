@@ -524,7 +524,7 @@ class ComparisonBarChart extends StatelessWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: c.text,
+                    color: c.textSecondary,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -539,7 +539,7 @@ class ComparisonBarChart extends StatelessWidget {
                     _buildLegendItem(
                       label1,
                       presentColor,
-                      c.text,
+                      c.textSecondary,
                     ),
                   ],
                 ),
@@ -685,15 +685,6 @@ class ComparisonBarChart extends StatelessWidget {
                     ),
                   ),
                 ),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: c.divider.withValues(alpha: 0.3),
-                    strokeWidth: 1,
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
                 barGroups: barGroups,
               ),
             ),
@@ -1124,7 +1115,7 @@ class CashFlowAreaChart extends StatelessWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: c.text,
+                    color: c.textSecondary,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -1306,7 +1297,7 @@ class CashFlowAreaChart extends StatelessWidget {
                 maxY: maxY * 1.15,
                 lineBarsData: [
                   LineChartBarData(
-                    spots: incomeSpots,
+                    spots: spotsIncome,
                     isCurved: true,
                     curveSmoothness: 0.35,
                     color: theme.colorScheme.primary,
@@ -1326,7 +1317,7 @@ class CashFlowAreaChart extends StatelessWidget {
                     ),
                   ),
                   LineChartBarData(
-                    spots: expenseSpots,
+                    spots: spotsExpense,
                     isCurved: true,
                     curveSmoothness: 0.35,
                     color: AppColors.danger,
