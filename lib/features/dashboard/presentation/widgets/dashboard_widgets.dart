@@ -948,7 +948,8 @@ class TopProductsChart extends StatelessWidget {
               })(),
             ),
           ),
-        ],
+        ),
+      ],
       ),
     );
   }
