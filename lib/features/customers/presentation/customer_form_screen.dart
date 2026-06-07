@@ -55,9 +55,13 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-        'address': _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+        'address': _addressCtrl.text.trim().isEmpty
+            ? null
+            : _addressCtrl.text.trim(),
         'notes': _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-        'taxCode': _taxCodeCtrl.text.trim().isEmpty ? null : _taxCodeCtrl.text.trim(),
+        'taxCode': _taxCodeCtrl.text.trim().isEmpty
+            ? null
+            : _taxCodeCtrl.text.trim(),
         'tags': _tags,
       };
       if (_isEdit) {
@@ -67,7 +71,9 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       }
       ref.invalidate(customerListProvider);
       if (mounted) {
-        ToastService.showSuccess(_isEdit ? 'Cập nhật thành công!' : 'Thêm khách hàng thành công!');
+        ToastService.showSuccess(
+          _isEdit ? 'Cập nhật thành công!' : 'Thêm khách hàng thành công!',
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -80,8 +86,12 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose(); _phoneCtrl.dispose(); _emailCtrl.dispose();
-    _addressCtrl.dispose(); _noteCtrl.dispose(); _taxCodeCtrl.dispose();
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _emailCtrl.dispose();
+    _addressCtrl.dispose();
+    _noteCtrl.dispose();
+    _taxCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -102,12 +112,31 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _field('Tên khách hàng *', _nameCtrl, HugeIcons.strokeRoundedUser, c,
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập tên' : null),
+                _field(
+                  'Tên khách hàng *',
+                  _nameCtrl,
+                  HugeIcons.strokeRoundedUser,
+                  c,
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? 'Vui lòng nhập tên'
+                      : null,
+                ),
                 const SizedBox(height: 16),
-                _field('Số điện thoại', _phoneCtrl, HugeIcons.strokeRoundedCall02, c, keyboardType: TextInputType.phone),
+                _field(
+                  'Số điện thoại',
+                  _phoneCtrl,
+                  HugeIcons.strokeRoundedCall02,
+                  c,
+                  keyboardType: TextInputType.phone,
+                ),
                 const SizedBox(height: 16),
-                _field('Email', _emailCtrl, HugeIcons.strokeRoundedMail01, c, keyboardType: TextInputType.emailAddress),
+                _field(
+                  'Email',
+                  _emailCtrl,
+                  HugeIcons.strokeRoundedMail01,
+                  c,
+                  keyboardType: TextInputType.emailAddress,
+                ),
                 const SizedBox(height: 16),
                 AddressInputField(
                   label: 'Địa chỉ',
@@ -116,11 +145,29 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                   onChanged: (v) => _addressCtrl.text = v,
                 ),
                 const SizedBox(height: 16),
-                _field('Mã số thuế', _taxCodeCtrl, HugeIcons.strokeRoundedInvoice01, c),
+                _field(
+                  'Mã số thuế',
+                  _taxCodeCtrl,
+                  HugeIcons.strokeRoundedInvoice01,
+                  c,
+                ),
                 const SizedBox(height: 16),
-                _field('Ghi chú', _noteCtrl, HugeIcons.strokeRoundedNote, c, maxLines: 3),
+                _field(
+                  'Ghi chú',
+                  _noteCtrl,
+                  HugeIcons.strokeRoundedNote,
+                  c,
+                  maxLines: 3,
+                ),
                 const SizedBox(height: 16),
-                Text('Nhãn phân loại', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary)),
+                Text(
+                  'Nhãn phân loại',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: c.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 _buildTagEditor(c),
               ],
@@ -141,11 +188,26 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
             runSpacing: 8,
             children: _tags.map((tag) {
               return Chip(
-                label: Text(tag, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500)),
-                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
-                deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                label: Text(
+                  tag,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.8),
+                deleteIcon: const Icon(
+                  Icons.close,
+                  size: 14,
+                  color: Colors.white,
+                ),
                 onDeleted: () => setState(() => _tags.remove(tag)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 side: BorderSide.none,
               );
             }).toList(),
@@ -157,7 +219,9 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
               context: context,
               isScrollControlled: true,
               backgroundColor: c.bg,
-              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
               builder: (ctx) {
                 return InlineTagPicker(
                   type: 'customer',
@@ -171,15 +235,29 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.5),
+              ),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add, size: 16, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.add,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 4),
-                Text('Chọn/Thêm nhãn', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500)),
+                Text(
+                  'Chọn/Thêm nhãn',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -188,21 +266,47 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, dynamic icon, AppThemeColors c, {
-    TextInputType? keyboardType, int maxLines = 1, String? hint,
+  Widget _field(
+    String label,
+    TextEditingController ctrl,
+    dynamic icon,
+    AppThemeColors c, {
+    TextInputType? keyboardType,
+    int maxLines = 1,
+    String? hint,
     String? Function(String?)? validator,
   }) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     return TextFormField(
-      controller: ctrl, keyboardType: keyboardType, maxLines: maxLines, validator: validator,
+      controller: ctrl,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      validator: validator,
       decoration: InputDecoration(
-        labelText: label, hintText: hint,
-        prefixIcon: Padding(padding: const EdgeInsets.all(12), child: HugeIcon(icon: icon, size: 20, color: primaryColor)),
-        filled: true, fillColor: c.card,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.danger)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Padding(
+          padding: const EdgeInsets.all(12),
+          child: HugeIcon(icon: icon, size: 20, color: primaryColor),
+        ),
+        filled: true,
+        fillColor: c.card,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.danger),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }

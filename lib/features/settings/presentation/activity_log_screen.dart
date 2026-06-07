@@ -22,12 +22,22 @@ class ActivityLogScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('Nhật ký hoạt động', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: c.textPrimary)),
+        title: Text(
+          'Nhật ký hoạt động',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: c.textPrimary,
+          ),
+        ),
         centerTitle: true,
         actions: [
-          IconButton(icon: const Icon(Icons.filter_list_rounded), onPressed: () {
-            ToastService.showSuccess('Tính năng bộ lọc đang được phát triển');
-          })
+          IconButton(
+            icon: const Icon(Icons.filter_list_rounded),
+            onPressed: () {
+              ToastService.showSuccess('Tính năng bộ lọc đang được phát triển');
+            },
+          ),
         ],
       ),
       body: logsAsync.when(
@@ -38,9 +48,19 @@ class ActivityLogScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.history_toggle_off_rounded, size: 64, color: c.textMuted.withValues(alpha: 0.5)),
+                  Icon(
+                    Icons.history_toggle_off_rounded,
+                    size: 64,
+                    color: c.textMuted.withValues(alpha: 0.5),
+                  ),
                   const SizedBox(height: 16),
-                  Text('Chưa có nhật ký hoạt động', style: GoogleFonts.inter(color: c.textSecondary, fontWeight: FontWeight.w500)),
+                  Text(
+                    'Chưa có nhật ký hoạt động',
+                    style: GoogleFonts.inter(
+                      color: c.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -55,12 +75,16 @@ class ActivityLogScreen extends ConsumerWidget {
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (_, i) {
                 final log = items[i] as Map;
-                
+
                 // 1. Better Actor parsing
                 final userObj = log['user'];
                 String actor = 'Hệ thống';
                 if (userObj is Map) {
-                  actor = (userObj['fullName'] ?? userObj['username'] ?? 'Người dùng').toString();
+                  actor =
+                      (userObj['fullName'] ??
+                              userObj['username'] ??
+                              'Người dùng')
+                          .toString();
                 } else if (log['actor'] != null) {
                   actor = log['actor'].toString();
                 }
@@ -73,18 +97,21 @@ class ActivityLogScreen extends ConsumerWidget {
                 }
 
                 // 3. Readable Date
-                final rawDate = (log['createdAt'] ?? log['created_at'] ?? '').toString();
+                final rawDate = (log['createdAt'] ?? log['created_at'] ?? '')
+                    .toString();
                 String formattedDate = rawDate;
                 String timeOnly = '';
                 try {
                   final dt = DateTime.parse(rawDate).toLocal();
                   final now = DateTime.now();
                   final difference = now.difference(dt);
-                  
+
                   timeOnly = DateFormat('HH:mm').format(dt);
                   if (difference.inDays == 0 && now.day == dt.day) {
                     formattedDate = 'Hôm nay';
-                  } else if (difference.inDays <= 1 && (now.day - dt.day == 1 || (now.day == 1 && difference.inHours < 48))) {
+                  } else if (difference.inDays <= 1 &&
+                      (now.day - dt.day == 1 ||
+                          (now.day == 1 && difference.inHours < 48))) {
                     formattedDate = 'Hôm qua';
                   } else {
                     formattedDate = DateFormat('dd/MM/yyyy').format(dt);
@@ -104,10 +131,13 @@ class ActivityLogScreen extends ConsumerWidget {
                       final List<String> parts = [];
                       parsed.forEach((key, value) {
                         if (value != null && value.toString().isNotEmpty) {
-                          final translatedKey = _translateLogKey(key.toString());
+                          final translatedKey = _translateLogKey(
+                            key.toString(),
+                          );
                           String displayValue = value.toString();
                           if (value is Map || value is List) {
-                            displayValue = '[Dữ liệu phức hợp]'; // Simplified for readability
+                            displayValue =
+                                '[Dữ liệu phức hợp]'; // Simplified for readability
                           }
                           parts.add('• $translatedKey: $displayValue');
                         }
@@ -126,20 +156,28 @@ class ActivityLogScreen extends ConsumerWidget {
                 IconData actionIcon = Icons.history_rounded;
                 Color actionColor = AppColors.primary;
                 final searchStr = (message + ' ' + rawAction).toLowerCase();
-                
-                if (searchStr.contains('tạo') || searchStr.contains('thêm') || searchStr.contains('create')) {
+
+                if (searchStr.contains('tạo') ||
+                    searchStr.contains('thêm') ||
+                    searchStr.contains('create')) {
                   actionIcon = Icons.add_circle_outline_rounded;
                   actionColor = AppColors.success;
-                } else if (searchStr.contains('xóa') || searchStr.contains('delete') || searchStr.contains('remove')) {
+                } else if (searchStr.contains('xóa') ||
+                    searchStr.contains('delete') ||
+                    searchStr.contains('remove')) {
                   actionIcon = Icons.delete_outline_rounded;
                   actionColor = AppColors.danger;
-                } else if (searchStr.contains('cập nhật') || searchStr.contains('sửa') || searchStr.contains('update')) {
+                } else if (searchStr.contains('cập nhật') ||
+                    searchStr.contains('sửa') ||
+                    searchStr.contains('update')) {
                   actionIcon = Icons.edit_outlined;
                   actionColor = AppColors.warning;
-                } else if (searchStr.contains('đăng nhập') || searchStr.contains('login')) {
+                } else if (searchStr.contains('đăng nhập') ||
+                    searchStr.contains('login')) {
                   actionIcon = Icons.login_rounded;
                   actionColor = AppColors.info;
-                } else if (searchStr.contains('thanh toán') || searchStr.contains('payment')) {
+                } else if (searchStr.contains('thanh toán') ||
+                    searchStr.contains('payment')) {
                   actionIcon = Icons.payments_outlined;
                   actionColor = AppColors.success;
                 }
@@ -151,7 +189,11 @@ class ActivityLogScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: c.divider.withValues(alpha: 0.3)),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
                   child: Row(
@@ -172,14 +214,30 @@ class ActivityLogScreen extends ConsumerWidget {
                           children: [
                             Text(
                               message,
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: c.textPrimary, height: 1.4),
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: c.textPrimary,
+                                height: 1.4,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                Icon(Icons.person_outline_rounded, size: 14, color: c.textSecondary),
+                                Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 14,
+                                  color: c.textSecondary,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(actor, style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500)),
+                                Text(
+                                  actor,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: c.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ],
                             ),
                             if (formattedMetadata.isNotEmpty) ...[
@@ -190,7 +248,9 @@ class ActivityLogScreen extends ConsumerWidget {
                                 decoration: BoxDecoration(
                                   color: c.bg.withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: c.divider.withValues(alpha: 0.2)),
+                                  border: Border.all(
+                                    color: c.divider.withValues(alpha: 0.2),
+                                  ),
                                 ),
                                 child: Text(
                                   formattedMetadata,
@@ -210,9 +270,22 @@ class ActivityLogScreen extends ConsumerWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(timeOnly, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13, color: c.textPrimary)),
+                          Text(
+                            timeOnly,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: c.textPrimary,
+                            ),
+                          ),
                           const SizedBox(height: 2),
-                          Text(formattedDate, style: GoogleFonts.inter(fontSize: 11, color: c.textMuted)),
+                          Text(
+                            formattedDate,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: c.textMuted,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -223,7 +296,12 @@ class ActivityLogScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e', style: const TextStyle(color: AppColors.danger))),
+        error: (e, _) => Center(
+          child: Text(
+            'Lỗi: $e',
+            style: const TextStyle(color: AppColors.danger),
+          ),
+        ),
       ),
     );
   }

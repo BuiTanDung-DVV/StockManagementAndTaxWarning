@@ -28,7 +28,9 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final reportAsync = ref.watch(xntReportProvider((from: _from, to: _to, warehouseId: null)));
+    final reportAsync = ref.watch(
+      xntReportProvider((from: _from, to: _to, warehouseId: null)),
+    );
     final slowAsync = ref.watch(slowMovingProvider);
 
     return Scaffold(
@@ -95,7 +97,9 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Thử lại'),
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -118,7 +122,10 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
               children: [
                 // Period label styled like a premium badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
@@ -126,7 +133,11 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.date_range_rounded, size: 14, color: theme.colorScheme.primary),
+                      Icon(
+                        Icons.date_range_rounded,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Kỳ báo cáo: $_from → $_to',
@@ -144,13 +155,37 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                 // Summary cards grid
                 Row(
                   children: [
-                    Expanded(child: _MiniCard('Tồn đầu', '$openingTotal', AppColors.info)),
+                    Expanded(
+                      child: _MiniCard(
+                        'Tồn đầu',
+                        '$openingTotal',
+                        AppColors.info,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Expanded(child: _MiniCard('Tổng nhập', '$importTotal', AppColors.success)),
+                    Expanded(
+                      child: _MiniCard(
+                        'Tổng nhập',
+                        '$importTotal',
+                        AppColors.success,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Expanded(child: _MiniCard('Tổng xuất', '$exportTotal', AppColors.warning)),
+                    Expanded(
+                      child: _MiniCard(
+                        'Tổng xuất',
+                        '$exportTotal',
+                        AppColors.warning,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Expanded(child: _MiniCard('Tồn cuối', '$closingTotal', AppColors.primary)),
+                    Expanded(
+                      child: _MiniCard(
+                        'Tồn cuối',
+                        '$closingTotal',
+                        AppColors.primary,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -172,7 +207,10 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                       padding: const EdgeInsets.all(32),
                       child: Text(
                         'Không có dữ liệu phát sinh trong kỳ',
-                        style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13),
+                        style: GoogleFonts.inter(
+                          color: c.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   )
@@ -182,7 +220,9 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                     decoration: BoxDecoration(
                       color: c.card,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                      border: Border.all(
+                        color: c.divider.withValues(alpha: 0.5),
+                      ),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: SingleChildScrollView(
@@ -192,38 +232,144 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                         headingRowColor: WidgetStateProperty.all(c.surface),
                         columnSpacing: 24,
                         columns: [
-                          DataColumn(label: Text('Mã SP', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: c.textSecondary))),
-                          DataColumn(label: Text('Tên sản phẩm', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: c.textSecondary))),
-                          DataColumn(label: Text('Tồn đầu', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: c.textSecondary))),
-                          DataColumn(label: Text('Nhập', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: c.textSecondary))),
-                          DataColumn(label: Text('Xuất', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: c.textSecondary))),
-                          DataColumn(label: Text('Tồn cuối', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: c.textSecondary))),
+                          DataColumn(
+                            label: Text(
+                              'Mã SP',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'Tên sản phẩm',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'Tồn đầu',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'Nhập',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'Xuất',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
+                              'Tồn cuối',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ),
                         ],
                         rows: items.map<DataRow>((item) {
                           final sku = item['sku'] ?? item['productCode'] ?? '';
-                          final name = item['productName'] ?? item['name'] ?? '';
+                          final name =
+                              item['productName'] ?? item['name'] ?? '';
                           final opening = item['openingStock'] ?? 0;
-                          final imported = item['imported'] ?? item['totalImport'] ?? 0;
-                          final exported = item['exported'] ?? item['totalExport'] ?? 0;
+                          final imported =
+                              item['imported'] ?? item['totalImport'] ?? 0;
+                          final exported =
+                              item['exported'] ?? item['totalExport'] ?? 0;
                           final closing = item['closingStock'] ?? 0;
                           return DataRow(
                             cells: [
-                              DataCell(Text('$sku', style: GoogleFonts.inter(fontSize: 11, color: c.textPrimary))),
+                              DataCell(
+                                Text(
+                                  '$sku',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: c.textPrimary,
+                                  ),
+                                ),
+                              ),
                               DataCell(
                                 Container(
-                                  constraints: const BoxConstraints(maxWidth: 150),
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 150,
+                                  ),
                                   child: Text(
                                     '$name',
-                                    style: GoogleFonts.inter(fontSize: 11, color: c.textPrimary, fontWeight: FontWeight.w500),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: c.textPrimary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ),
-                              DataCell(Text('$opening', style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary))),
-                              DataCell(Text('$imported', style: GoogleFonts.inter(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.bold))),
-                              DataCell(Text('$exported', style: GoogleFonts.inter(fontSize: 11, color: AppColors.warning, fontWeight: FontWeight.bold))),
-                              DataCell(Text('$closing', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: c.textPrimary))),
+                              DataCell(
+                                Text(
+                                  '$opening',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: c.textSecondary,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  '$imported',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  '$exported',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: AppColors.warning,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  '$closing',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: c.textPrimary,
+                                  ),
+                                ),
+                              ),
                             ],
                           );
                         }).toList(),
@@ -243,30 +389,44 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                 ),
                 const SizedBox(height: 12),
                 slowAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Text('Lỗi: $e', style: const TextStyle(color: AppColors.danger)),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Text(
+                    'Lỗi: $e',
+                    style: const TextStyle(color: AppColors.danger),
+                  ),
                   data: (slowItems) {
                     if (slowItems.isEmpty) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         child: Text(
                           'Không có sản phẩm chậm luân chuyển nào được phát hiện.',
-                          style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13),
+                          style: GoogleFonts.inter(
+                            color: c.textSecondary,
+                            fontSize: 13,
+                          ),
                         ),
                       );
                     }
                     return Column(
                       children: slowItems.take(5).map<Widget>((item) {
-                        final name = item['productName'] ?? item['name'] ?? 'SP';
-                        final qty = item['quantity'] ?? item['currentStock'] ?? 0;
-                        final days = item['daysUnsold'] ?? item['daysSinceLastSale'] ?? 0;
+                        final name =
+                            item['productName'] ?? item['name'] ?? 'SP';
+                        final qty =
+                            item['quantity'] ?? item['currentStock'] ?? 0;
+                        final days =
+                            item['daysUnsold'] ??
+                            item['daysSinceLastSale'] ??
+                            0;
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: c.card,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.warning.withValues(alpha: 0.2)),
+                            border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.2),
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -287,16 +447,24 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       'Tồn vướng kho: $qty sản phẩm',
-                                      style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: c.textSecondary,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.warning.withValues(alpha: 0.1),
+                                  color: AppColors.warning.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(

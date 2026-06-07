@@ -49,7 +49,7 @@ class AppConfirmModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    
+
     return AlertDialog(
       backgroundColor: c.card,
       elevation: 24,
@@ -59,12 +59,16 @@ class AppConfirmModal extends StatelessWidget {
         side: BorderSide(color: c.divider.withValues(alpha: 0.5)),
       ),
       title: Text(
-        title, 
-        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: c.textPrimary)
+        title,
+        style: GoogleFonts.outfit(
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+          color: c.textPrimary,
+        ),
       ),
       content: Text(
-        message, 
-        style: TextStyle(color: c.textSecondary, fontSize: 15, height: 1.5)
+        message,
+        style: TextStyle(color: c.textSecondary, fontSize: 15, height: 1.5),
       ),
       actionsPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       actions: [
@@ -73,20 +77,32 @@ class AppConfirmModal extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor: c.textSecondary,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          child: Text(cancelText, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+          child: Text(
+            cancelText,
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+          ),
         ),
         ElevatedButton(
           onPressed: onConfirm,
           style: ElevatedButton.styleFrom(
-            backgroundColor: isDestructive ? AppColors.danger : Theme.of(context).primaryColor,
+            backgroundColor: isDestructive
+                ? AppColors.danger
+                : Theme.of(context).primaryColor,
             foregroundColor: Colors.white,
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          child: Text(confirmText, style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+          child: Text(
+            confirmText,
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );

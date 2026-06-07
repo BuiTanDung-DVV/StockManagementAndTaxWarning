@@ -8,7 +8,11 @@ import '../../../core/utils/toast_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/sales_provider.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 
 class OrderDetailScreen extends ConsumerWidget {
   final int id;
@@ -40,7 +44,9 @@ class OrderDetailScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.print_rounded, size: 20),
             onPressed: () {
-              ToastService.showSuccess('Phiếu tính tiền bán lẻ - Không thay thế hóa đơn tài chính (GTGT) theo NĐ 123.');
+              ToastService.showSuccess(
+                'Phiếu tính tiền bán lẻ - Không thay thế hóa đơn tài chính (GTGT) theo NĐ 123.',
+              );
             },
             tooltip: 'In phiếu tính tiền',
           ),
@@ -49,15 +55,24 @@ class OrderDetailScreen extends ConsumerWidget {
       ),
       body: orderAsync.when(
         data: (order) {
-          final createdAt = (order['createdAt'] ?? order['created_at'])?.toString();
-          final customerName = (order['customer']?['name'] ?? order['customerName'] ?? 'Khách mua lẻ').toString();
+          final createdAt = (order['createdAt'] ?? order['created_at'])
+              ?.toString();
+          final customerName =
+              (order['customer']?['name'] ??
+                      order['customerName'] ??
+                      'Khách mua lẻ')
+                  .toString();
           final status = (order['status'] ?? 'PENDING').toString();
           final returnStatus = order['returnStatus']?.toString();
           final orderCode = (order['orderCode'] ?? 'DH-$id').toString();
 
-          final totalAmount = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
-          final paidAmount = double.tryParse(order['paidAmount']?.toString() ?? '0') ?? 0.0;
-          final remaining = (totalAmount - paidAmount) < 0 ? 0.0 : (totalAmount - paidAmount);
+          final totalAmount =
+              double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
+          final paidAmount =
+              double.tryParse(order['paidAmount']?.toString() ?? '0') ?? 0.0;
+          final remaining = (totalAmount - paidAmount) < 0
+              ? 0.0
+              : (totalAmount - paidAmount);
 
           final items = (order['items'] as List?) ?? const [];
 
@@ -68,7 +83,7 @@ class OrderDetailScreen extends ConsumerWidget {
 
           Color statusColor;
           String statusLabel;
-          
+
           if (isReturned) {
             statusColor = AppColors.danger;
             statusLabel = 'Đã trả hàng';
@@ -108,7 +123,10 @@ class OrderDetailScreen extends ConsumerWidget {
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -118,29 +136,44 @@ class OrderDetailScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: c.card,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                          border: Border.all(
+                            color: c.divider.withValues(alpha: 0.5),
+                          ),
                         ),
                         child: Column(
                           children: [
                             _InfoRow('Mã đơn hàng', orderCode, c),
                             if (createdAt != null && createdAt.isNotEmpty)
-                              _InfoRow('Thời gian tạo', _formatDate(createdAt), c),
+                              _InfoRow(
+                                'Thời gian tạo',
+                                _formatDate(createdAt),
+                                c,
+                              ),
                             _InfoRow('Khách hàng', customerName, c),
-                            
+
                             const SizedBox(height: 6),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   'Trạng thái đơn',
-                                  style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+                                  style: GoogleFonts.inter(
+                                    color: c.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: statusColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: statusColor.withValues(alpha: 0.2)),
+                                    border: Border.all(
+                                      color: statusColor.withValues(alpha: 0.2),
+                                    ),
                                   ),
                                   child: Text(
                                     statusLabel,
@@ -150,7 +183,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                       color: statusColor,
                                     ),
                                   ),
-                                )
+                                ),
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -159,14 +192,25 @@ class OrderDetailScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   'Thanh toán',
-                                  style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13, fontWeight: FontWeight.w500),
+                                  style: GoogleFonts.inter(
+                                    color: c.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: paymentColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: paymentColor.withValues(alpha: 0.2)),
+                                    border: Border.all(
+                                      color: paymentColor.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                    ),
                                   ),
                                   child: Text(
                                     paymentLabel,
@@ -176,14 +220,14 @@ class OrderDetailScreen extends ConsumerWidget {
                                       color: paymentColor,
                                     ),
                                   ),
-                                )
+                                ),
                               ],
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       Text(
                         'Danh sách sản phẩm mua',
                         style: GoogleFonts.outfit(
@@ -193,36 +237,61 @@ class OrderDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       if (items.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Text(
                             'Không có sản phẩm nào trong đơn hàng.',
-                            style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13),
+                            style: GoogleFonts.inter(
+                              color: c.textSecondary,
+                              fontSize: 13,
+                            ),
                           ),
                         )
                       else
                         ...items.map((raw) {
                           final it = raw as Map;
-                          final name = (it['productName'] ?? it['product']?['name'] ?? 'Sản phẩm không tên').toString();
-                          final qty = double.tryParse(it['quantity']?.toString() ?? '0') ?? 0.0;
-                          final unitPrice = double.tryParse(it['unitPrice']?.toString() ?? '0') ?? 0.0;
-                          final subtotal = double.tryParse(it['subtotal']?.toString() ?? '0') ?? (qty * unitPrice);
+                          final name =
+                              (it['productName'] ??
+                                      it['product']?['name'] ??
+                                      'Sản phẩm không tên')
+                                  .toString();
+                          final qty =
+                              double.tryParse(
+                                it['quantity']?.toString() ?? '0',
+                              ) ??
+                              0.0;
+                          final unitPrice =
+                              double.tryParse(
+                                it['unitPrice']?.toString() ?? '0',
+                              ) ??
+                              0.0;
+                          final subtotal =
+                              double.tryParse(
+                                it['subtotal']?.toString() ?? '0',
+                              ) ??
+                              (qty * unitPrice);
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               color: c.card,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                              border: Border.all(
+                                color: c.divider.withValues(alpha: 0.5),
+                              ),
                             ),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         name,
@@ -259,23 +328,30 @@ class OrderDetailScreen extends ConsumerWidget {
                             ),
                           );
                         }),
-                      
+
                       // Hiển thị phần trả hàng nếu có
-                      if (order['returns'] != null && (order['returns'] as List).isNotEmpty) ...[
+                      if (order['returns'] != null &&
+                          (order['returns'] as List).isNotEmpty) ...[
                         const SizedBox(height: 20),
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: AppColors.danger.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
+                            border: Border.all(
+                              color: AppColors.danger.withValues(alpha: 0.2),
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.assignment_return_rounded, color: AppColors.danger, size: 20),
+                                  const Icon(
+                                    Icons.assignment_return_rounded,
+                                    color: AppColors.danger,
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Thông tin Trả Hàng',
@@ -290,9 +366,15 @@ class OrderDetailScreen extends ConsumerWidget {
                               const SizedBox(height: 12),
                               ...((order['returns'] as List).map((ret) {
                                 final rMap = ret as Map;
-                                final refundAmt = double.tryParse(rMap['refundAmount']?.toString() ?? '0') ?? 0.0;
-                                final retCode = (rMap['returnCode'] ?? '').toString();
-                                final retReason = (rMap['reason'] ?? '').toString();
+                                final refundAmt =
+                                    double.tryParse(
+                                      rMap['refundAmount']?.toString() ?? '0',
+                                    ) ??
+                                    0.0;
+                                final retCode = (rMap['returnCode'] ?? '')
+                                    .toString();
+                                final retReason = (rMap['reason'] ?? '')
+                                    .toString();
                                 return Container(
                                   margin: const EdgeInsets.only(top: 8),
                                   decoration: BoxDecoration(
@@ -305,21 +387,39 @@ class OrderDetailScreen extends ConsumerWidget {
                                     borderRadius: BorderRadius.circular(12),
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(12),
-                                      onTap: () => context.push('/returns/detail', extra: ret),
+                                      onTap: () => context.push(
+                                        '/returns/detail',
+                                        extra: ret,
+                                      ),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            _InfoRow('Mã phiếu trả', retCode, c),
-                                            _InfoRow('Tiền hoàn lại', _currFmt.format(refundAmt), c),
+                                            _InfoRow(
+                                              'Mã phiếu trả',
+                                              retCode,
+                                              c,
+                                            ),
+                                            _InfoRow(
+                                              'Tiền hoàn lại',
+                                              _currFmt.format(refundAmt),
+                                              c,
+                                            ),
                                             if (retReason.isNotEmpty)
                                               _InfoRow('Lý do', retReason, c),
                                             const SizedBox(height: 4),
                                             Align(
                                               alignment: Alignment.centerRight,
-                                              child: Text('Bấm để xem chi tiết', style: GoogleFonts.inter(fontSize: 10, color: c.textMuted)),
-                                            )
+                                              child: Text(
+                                                'Bấm để xem chi tiết',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 10,
+                                                  color: c.textMuted,
+                                                ),
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -339,12 +439,22 @@ class OrderDetailScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: c.card,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                          border: Border.all(
+                            color: c.divider.withValues(alpha: 0.5),
+                          ),
                         ),
                         child: Column(
                           children: [
-                            _InfoRow('Tổng tiền thanh toán', _currFmt.format(totalAmount), c),
-                            _InfoRow('Khách đã thanh toán', _currFmt.format(paidAmount), c),
+                            _InfoRow(
+                              'Tổng tiền thanh toán',
+                              _currFmt.format(totalAmount),
+                              c,
+                            ),
+                            _InfoRow(
+                              'Khách đã thanh toán',
+                              _currFmt.format(paidAmount),
+                              c,
+                            ),
                             Divider(height: 20, color: c.divider),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -352,7 +462,9 @@ class OrderDetailScreen extends ConsumerWidget {
                                 Text(
                                   'Dư nợ còn lại',
                                   style: GoogleFonts.outfit(
-                                    color: remaining > 0 ? AppColors.danger : AppColors.success,
+                                    color: remaining > 0
+                                        ? AppColors.danger
+                                        : AppColors.success,
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -362,7 +474,9 @@ class OrderDetailScreen extends ConsumerWidget {
                                   style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.w900,
                                     fontSize: 18,
-                                    color: remaining > 0 ? AppColors.danger : AppColors.success,
+                                    color: remaining > 0
+                                        ? AppColors.danger
+                                        : AppColors.success,
                                   ),
                                 ),
                               ],
@@ -385,23 +499,35 @@ class OrderDetailScreen extends ConsumerWidget {
                         const SizedBox(height: 12),
                         ...(order['payments'] as List).map((p) {
                           final pMap = p as Map;
-                          final amt = double.tryParse(pMap['amount']?.toString() ?? '0') ?? 0.0;
+                          final amt =
+                              double.tryParse(
+                                pMap['amount']?.toString() ?? '0',
+                              ) ??
+                              0.0;
                           final method = (pMap['method'] ?? 'CASH').toString();
-                          final paidAt = (pMap['paidAt'] ?? pMap['paid_at'])?.toString();
+                          final paidAt = (pMap['paidAt'] ?? pMap['paid_at'])
+                              ?.toString();
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               color: c.surface.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+                              border: Border.all(
+                                color: c.divider.withValues(alpha: 0.4),
+                              ),
                             ),
                             child: Row(
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: AppColors.success.withValues(alpha: 0.1),
+                                    color: AppColors.success.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Icon(
@@ -413,7 +539,8 @@ class OrderDetailScreen extends ConsumerWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         '+${_currFmt.format(amt)}',
@@ -444,14 +571,16 @@ class OrderDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              
+
               // Bottom floating visual control sheet
               if (!isCancelled)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: c.card,
-                    border: Border(top: BorderSide(color: c.divider.withValues(alpha: 0.4))),
+                    border: Border(
+                      top: BorderSide(color: c.divider.withValues(alpha: 0.4)),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.05),
@@ -468,35 +597,73 @@ class OrderDetailScreen extends ConsumerWidget {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: () => _showPaymentDialog(context, ref, id, remaining),
-                              icon: const Icon(Icons.payment_rounded, size: 18, color: Colors.white),
+                              onPressed: () => _showPaymentDialog(
+                                context,
+                                ref,
+                                id,
+                                remaining,
+                              ),
+                              icon: const Icon(
+                                Icons.payment_rounded,
+                                size: 18,
+                                color: Colors.white,
+                              ),
                               label: Text(
                                 'Thanh toán ngay (${_currFmt.format(remaining)})',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.success,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                               ),
                             ),
                           ),
-                        if (status == 'DELIVERED' || status == 'COMPLETED' || isFullyPaid) ...[
+                        if (status == 'DELIVERED' ||
+                            status == 'COMPLETED' ||
+                            isFullyPaid) ...[
                           if (!isFullyPaid) const SizedBox(height: 10),
                           if (!isReturned)
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
-                                onPressed: () => _showReturnDialog(context, ref, id, items, paidAmount),
-                                icon: const Icon(Icons.assignment_return_rounded, size: 18, color: AppColors.danger),
+                                onPressed: () => _showReturnDialog(
+                                  context,
+                                  ref,
+                                  id,
+                                  items,
+                                  paidAmount,
+                                ),
+                                icon: const Icon(
+                                  Icons.assignment_return_rounded,
+                                  size: 18,
+                                  color: AppColors.danger,
+                                ),
                                 label: Text(
                                   'Yêu Cầu Trả Hàng',
-                                  style: GoogleFonts.outfit(color: AppColors.danger, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.outfit(
+                                    color: AppColors.danger,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.danger, width: 1.5),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  side: const BorderSide(
+                                    color: AppColors.danger,
+                                    width: 1.5,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
                                 ),
                               ),
                             ),
@@ -532,7 +699,9 @@ class OrderDetailScreen extends ConsumerWidget {
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Thử lại'),
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -544,7 +713,12 @@ class OrderDetailScreen extends ConsumerWidget {
   }
 }
 
-void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double remaining) {
+void _showPaymentDialog(
+  BuildContext context,
+  WidgetRef ref,
+  int orderId,
+  double remaining,
+) {
   final c = AppThemeColors.of(context);
   final theme = Theme.of(context);
   final amountCtrl = TextEditingController(text: remaining.toStringAsFixed(0));
@@ -556,33 +730,59 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
     context: context,
     isScrollControlled: true,
     backgroundColor: c.card,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => Padding(
-        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: Container(width: 44, height: 4, decoration: BoxDecoration(color: c.divider, borderRadius: BorderRadius.circular(2))),
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
             const SizedBox(height: 18),
             Text(
               'Thanh toán đơn hàng',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: c.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               'Hạn mức cần thu: ${_currFmt.format(remaining)}',
-              style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: c.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 20),
 
             // Amount field
             Text(
               'Số tiền thanh toán (VNĐ)',
-              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: c.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             TextField(
@@ -594,28 +794,60 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                 suffixText: '₫',
                 filled: true,
                 fillColor: c.inputFill,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: c.inputBorder)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: c.inputBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 1.5,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
             if (errorMessage != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: Text(errorMessage!, style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.bold)),
+                child: Text(
+                  errorMessage!,
+                  style: GoogleFonts.inter(
+                    color: AppColors.danger,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
 
             // Payment method
             Text(
               'Phương thức giao dịch',
-              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: c.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
-                _MethodChip('CASH', 'Tiền mặt', Icons.money_rounded, selectedMethod, (v) => setState(() => selectedMethod = v)),
-                _MethodChip('TRANSFER', 'Chuyển khoản', Icons.account_balance_rounded, selectedMethod, (v) => setState(() => selectedMethod = v)),
+                _MethodChip(
+                  'CASH',
+                  'Tiền mặt',
+                  Icons.money_rounded,
+                  selectedMethod,
+                  (v) => setState(() => selectedMethod = v),
+                ),
+                _MethodChip(
+                  'TRANSFER',
+                  'Chuyển khoản',
+                  Icons.account_balance_rounded,
+                  selectedMethod,
+                  (v) => setState(() => selectedMethod = v),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -623,7 +855,11 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
             // Notes
             Text(
               'Ghi chú bổ sung',
-              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: c.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             TextField(
@@ -633,8 +869,17 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                 hintText: 'Ghi chú (Không bắt buộc)',
                 filled: true,
                 fillColor: c.inputFill,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: c.inputBorder)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: c.inputBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 1.5,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -647,12 +892,17 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                     onPressed: () => Navigator.of(ctx).pop(),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: c.divider, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
                       'Hủy bỏ',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: c.textSecondary),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: c.textSecondary,
+                      ),
                     ),
                   ),
                 ),
@@ -663,11 +913,17 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                     onPressed: () async {
                       final amount = double.tryParse(amountCtrl.text) ?? 0;
                       if (amount <= 0) {
-                        setState(() => errorMessage = 'Số tiền thanh toán phải lớn hơn 0!');
+                        setState(
+                          () => errorMessage =
+                              'Số tiền thanh toán phải lớn hơn 0!',
+                        );
                         return;
                       }
                       if (amount > remaining) {
-                        setState(() => errorMessage = 'Không thể thanh toán vượt quá ${_currFmt.format(remaining)}');
+                        setState(
+                          () => errorMessage =
+                              'Không thể thanh toán vượt quá ${_currFmt.format(remaining)}',
+                        );
                         return;
                       }
                       Navigator.of(ctx).pop();
@@ -675,12 +931,16 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                         await ref.read(salesRepoProvider).addPayment(orderId, {
                           'amount': amount,
                           'method': selectedMethod,
-                          'notes': notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+                          'notes': notesCtrl.text.trim().isEmpty
+                              ? null
+                              : notesCtrl.text.trim(),
                         });
                         ref.invalidate(salesDetailProvider(orderId));
                         ref.invalidate(salesListProvider);
                         if (context.mounted) {
-                          ToastService.showSuccess('Đã thanh toán ${_currFmt.format(amount)}');
+                          ToastService.showSuccess(
+                            'Đã thanh toán ${_currFmt.format(amount)}',
+                          );
                         }
                       } catch (e) {
                         if (context.mounted) {
@@ -688,14 +948,23 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
                         }
                       }
                     },
-                    icon: const Icon(Icons.check_circle_outline_rounded, size: 18, color: Colors.white),
+                    icon: const Icon(
+                      Icons.check_circle_outline_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
                     label: Text(
                       'Xác Nhận',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
@@ -709,7 +978,13 @@ void _showPaymentDialog(BuildContext context, WidgetRef ref, int orderId, double
   );
 }
 
-void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? items, double maxRefund) {
+void _showReturnDialog(
+  BuildContext context,
+  WidgetRef ref,
+  int orderId,
+  List? items,
+  double maxRefund,
+) {
   final c = AppThemeColors.of(context);
   final theme = Theme.of(context);
   final amountCtrl = TextEditingController(text: maxRefund.toStringAsFixed(0));
@@ -721,33 +996,59 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
     context: context,
     isScrollControlled: true,
     backgroundColor: c.card,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => Padding(
-        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: Container(width: 44, height: 4, decoration: BoxDecoration(color: c.divider, borderRadius: BorderRadius.circular(2))),
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
             const SizedBox(height: 18),
             Text(
               'Trả hàng & Hoàn tiền sản phẩm',
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.danger),
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.danger,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               'Hạn mức hoàn trả tối đa: ${_currFmt.format(maxRefund)}',
-              style: GoogleFonts.inter(fontSize: 12, color: c.textSecondary, fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: c.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 20),
 
             // Amount field
             Text(
               'Số tiền hoàn trả cho khách lẻ (VNĐ)',
-              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: c.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             TextField(
@@ -759,28 +1060,60 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                 suffixText: '₫',
                 filled: true,
                 fillColor: c.inputFill,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: c.inputBorder)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: c.inputBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 1.5,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
             if (errorMessage != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
-                child: Text(errorMessage!, style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.bold)),
+                child: Text(
+                  errorMessage!,
+                  style: GoogleFonts.inter(
+                    color: AppColors.danger,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
 
             // Payment method
             Text(
               'Phương thức trả tiền',
-              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: c.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
-                _MethodChip('CASH', 'Tiền mặt', Icons.money_rounded, selectedMethod, (v) => setState(() => selectedMethod = v)),
-                _MethodChip('TRANSFER', 'Chuyển khoản', Icons.account_balance_rounded, selectedMethod, (v) => setState(() => selectedMethod = v)),
+                _MethodChip(
+                  'CASH',
+                  'Tiền mặt',
+                  Icons.money_rounded,
+                  selectedMethod,
+                  (v) => setState(() => selectedMethod = v),
+                ),
+                _MethodChip(
+                  'TRANSFER',
+                  'Chuyển khoản',
+                  Icons.account_balance_rounded,
+                  selectedMethod,
+                  (v) => setState(() => selectedMethod = v),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -788,7 +1121,11 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
             // Reason
             Text(
               'Lý do trả lại hàng',
-              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: c.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             TextField(
@@ -798,8 +1135,17 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                 hintText: 'Nhập lý do trả hàng...',
                 filled: true,
                 fillColor: c.inputFill,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: c.inputBorder)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: c.inputBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 1.5,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -812,12 +1158,17 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                     onPressed: () => Navigator.of(ctx).pop(),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: c.divider, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: Text(
                       'Hủy bỏ',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: c.textSecondary),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: c.textSecondary,
+                      ),
                     ),
                   ),
                 ),
@@ -828,51 +1179,74 @@ void _showReturnDialog(BuildContext context, WidgetRef ref, int orderId, List? i
                     onPressed: () async {
                       final amount = double.tryParse(amountCtrl.text) ?? 0;
                       if (amount < 0 || amount > maxRefund) {
-                        setState(() => errorMessage = 'Số tiền hoàn phải hợp lệ (0 - ${_currFmt.format(maxRefund)})');
+                        setState(
+                          () => errorMessage =
+                              'Số tiền hoàn phải hợp lệ (0 - ${_currFmt.format(maxRefund)})',
+                        );
                         return;
                       }
 
-                      final returnItems = (items ?? []).map((i) {
-                        final it = i as Map;
-                        return {
-                          'productId': it['productId'] ?? it['product']?['id'],
-                          'quantity': it['quantity'],
-                          'unitPrice': it['unitPrice'],
-                          'subtotal': it['subtotal'],
-                          'reason': reasonCtrl.text.trim(),
-                        };
-                      }).where((item) => item['productId'] != null).toList();
+                      final returnItems = (items ?? [])
+                          .map((i) {
+                            final it = i as Map;
+                            return {
+                              'productId':
+                                  it['productId'] ?? it['product']?['id'],
+                              'quantity': it['quantity'],
+                              'unitPrice': it['unitPrice'],
+                              'subtotal': it['subtotal'],
+                              'reason': reasonCtrl.text.trim(),
+                            };
+                          })
+                          .where((item) => item['productId'] != null)
+                          .toList();
 
                       if (returnItems.isEmpty) {
-                        setState(() => errorMessage = 'Không có sản phẩm hợp lệ để trả lại');
+                        setState(
+                          () => errorMessage =
+                              'Không có sản phẩm hợp lệ để trả lại',
+                        );
                         return;
                       }
 
                       try {
-                        await ref.read(salesRepoProvider).createReturn(orderId, {
-                          'refundAmount': amount,
-                          'refundMethod': selectedMethod,
-                          'reason': reasonCtrl.text.trim(),
-                          'items': returnItems,
-                        });
+                        await ref
+                            .read(salesRepoProvider)
+                            .createReturn(orderId, {
+                              'refundAmount': amount,
+                              'refundMethod': selectedMethod,
+                              'reason': reasonCtrl.text.trim(),
+                              'items': returnItems,
+                            });
                         ref.invalidate(salesDetailProvider(orderId));
                         ref.invalidate(salesListProvider);
                         if (ctx.mounted) {
                           Navigator.of(ctx).pop();
                         }
-                        ToastService.showSuccess('Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)}');
+                        ToastService.showSuccess(
+                          'Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)}',
+                        );
                       } catch (e) {
                         ToastService.showError('Lỗi: $e');
                       }
                     },
-                    icon: const Icon(Icons.assignment_return_rounded, size: 18, color: Colors.white),
+                    icon: const Icon(
+                      Icons.assignment_return_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
                     label: Text(
                       'Xác Nhận Trả',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.danger,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
@@ -911,7 +1285,13 @@ class _MethodChip extends StatelessWidget {
   final IconData icon;
   final String selected;
   final ValueChanged<String> onTap;
-  const _MethodChip(this.value, this.label, this.icon, this.selected, this.onTap);
+  const _MethodChip(
+    this.value,
+    this.label,
+    this.icon,
+    this.selected,
+    this.onTap,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -922,14 +1302,23 @@ class _MethodChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : c.surface,
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : c.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? AppColors.primary : c.divider, width: 1.5),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : c.divider,
+            width: 1.5,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: isSelected ? AppColors.primary : c.textSecondary),
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? AppColors.primary : c.textSecondary,
+            ),
             const SizedBox(width: 6),
             Text(
               label,

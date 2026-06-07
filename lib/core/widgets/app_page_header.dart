@@ -27,13 +27,30 @@ class AppPageHeader extends StatelessWidget {
               children: [
                 if (breadcrumbs != null && breadcrumbs!.isNotEmpty) ...[
                   Row(
-                    children: breadcrumbs!.expand((widget) => [widget, const Icon(Icons.chevron_right, size: 16, color: Colors.grey)]).toList()..removeLast(),
+                    children:
+                        breadcrumbs!
+                            .expand(
+                              (widget) => [
+                                widget,
+                                const Icon(
+                                  Icons.chevron_right,
+                                  size: 16,
+                                  color: Colors.grey,
+                                ),
+                              ],
+                            )
+                            .toList()
+                          ..removeLast(),
                   ),
                   const SizedBox(height: 8),
                 ],
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),

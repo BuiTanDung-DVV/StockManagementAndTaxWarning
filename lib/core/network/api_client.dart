@@ -30,7 +30,8 @@ class ApiClient {
 
     // Yêu cầu bắt buộc phải truyền cấu hình môi trường lúc build
     throw Exception(
-        'API_URL is not set. Please build the app with --dart-define-from-file=env/dev.json or env/prod.json');
+      'API_URL is not set. Please build the app with --dart-define-from-file=env/dev.json or env/prod.json',
+    );
   }
 
   late final Dio _dio;
@@ -102,7 +103,8 @@ class ApiClient {
               final lowerMsg = errorMessage.toLowerCase();
               if (lowerMsg.contains('invalid credentials')) {
                 errorMessage = 'Sai tên đăng nhập hoặc mật khẩu';
-              } else if (lowerMsg.contains('username already exists') || lowerMsg.contains('phone already exists')) {
+              } else if (lowerMsg.contains('username already exists') ||
+                  lowerMsg.contains('phone already exists')) {
                 errorMessage = 'Tên đăng nhập / Số điện thoại này đã tồn tại';
               } else if (lowerMsg.contains('email already exists')) {
                 errorMessage = 'Email này đã tồn tại trong hệ thống';
@@ -110,7 +112,8 @@ class ApiClient {
                 errorMessage = 'Phiên làm việc hết hạn';
               } else if (lowerMsg.contains('unauthorized')) {
                 errorMessage = 'Không có quyền truy cập';
-              } else if (lowerMsg.contains('user not found') || lowerMsg.contains('invalid user')) {
+              } else if (lowerMsg.contains('user not found') ||
+                  lowerMsg.contains('invalid user')) {
                 errorMessage = 'Không tìm thấy tài khoản';
               } else if (lowerMsg.contains('account is inactive')) {
                 errorMessage = 'Tài khoản đã bị khóa hoặc chưa kích hoạt';
@@ -138,10 +141,12 @@ class ApiClient {
                 } else {
                   errorMessage = 'Dữ liệu đã tồn tại';
                 }
-              } else if (lowerMsg.contains('validation') || lowerMsg.contains('missing')) {
+              } else if (lowerMsg.contains('validation') ||
+                  lowerMsg.contains('missing')) {
                 errorMessage = 'Dữ liệu cung cấp không hợp lệ hoặc bị thiếu';
               } else if (lowerMsg.contains('double-entry validation failed')) {
-                errorMessage = 'Lỗi hạch toán kép: Tổng phát sinh Nợ và Có không cân bằng';
+                errorMessage =
+                    'Lỗi hạch toán kép: Tổng phát sinh Nợ và Có không cân bằng';
               }
             }
           } else if (e.type == DioExceptionType.connectionTimeout ||
@@ -173,6 +178,7 @@ class ApiClient {
       }
     });
   }
+
   String? get shopId => _shopId;
   Dio get dio => _dio;
 
@@ -182,7 +188,10 @@ class ApiClient {
     final body = res.data;
     if (body is Map) {
       if (body.containsKey('success') && body['success'] == false) {
-        throw ApiException(body['message'] ?? 'Lỗi không xác định', res.statusCode);
+        throw ApiException(
+          body['message'] ?? 'Lỗi không xác định',
+          res.statusCode,
+        );
       }
       if (body.containsKey('data')) {
         return body['data'];

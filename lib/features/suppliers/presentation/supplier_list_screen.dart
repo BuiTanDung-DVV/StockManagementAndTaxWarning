@@ -42,7 +42,11 @@ class SupplierListScreen extends ConsumerWidget {
         onPressed: () => context.push('/suppliers/form'),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 3,
-        icon: const Icon(Icons.domain_add_rounded, color: Colors.white, size: 20),
+        icon: const Icon(
+          Icons.domain_add_rounded,
+          color: Colors.white,
+          size: 20,
+        ),
         label: Text(
           'Thêm Đối Tác',
           style: GoogleFonts.outfit(
@@ -59,7 +63,8 @@ class SupplierListScreen extends ConsumerWidget {
           if (items.isEmpty) {
             return const AppEmpty(
               message: 'Chưa có nhà cung cấp nào.',
-              subtitle: 'Hãy đăng ký đối tác nhà cung cấp đầu tiên của bạn để nhập kho.',
+              subtitle:
+                  'Hãy đăng ký đối tác nhà cung cấp đầu tiên của bạn để nhập kho.',
             );
           }
           return Container(
@@ -67,104 +72,111 @@ class SupplierListScreen extends ConsumerWidget {
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(supplierListProvider),
               child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.15)),
-              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-              itemBuilder: (_, i) {
-                final s = items[i];
-                final name = s['name'] ?? 'Nhà cung cấp ẩn danh';
-                final taxCode = s['taxCode'] ?? 'N/A';
-                final term = s['paymentTermDays'];
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => Divider(
+                  height: 1,
+                  color: c.divider.withValues(alpha: 0.15),
+                ),
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                itemBuilder: (_, i) {
+                  final s = items[i];
+                  final name = s['name'] ?? 'Nhà cung cấp ẩn danh';
+                  final taxCode = s['taxCode'] ?? 'N/A';
+                  final term = s['paymentTermDays'];
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 0),
-                  decoration: const BoxDecoration(
-                    color: Colors.transparent,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => context.push('/suppliers/${s['id']}'),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.info.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(14),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 0),
+                    decoration: const BoxDecoration(color: Colors.transparent),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => context.push('/suppliers/${s['id']}'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.info.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(
+                                  Icons.business_rounded,
+                                  color: AppColors.info,
+                                  size: 22,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.business_rounded,
-                                color: AppColors.info,
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    name,
-                                    style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: c.textPrimary,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: c.textPrimary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'MST: $taxCode',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      color: c.textSecondary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (term != null) ...[
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Hạn nợ: $term ngày',
+                                      'MST: $taxCode',
                                       style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        color: c.textMuted,
+                                        fontSize: 11,
+                                        color: c.textSecondary,
                                         fontWeight: FontWeight.w500,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
+                                    if (term != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Hạn nợ: $term ngày',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          color: c.textMuted,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                    const SizedBox(height: 4),
+                                    if (s['tags'] != null ||
+                                        _isNew(s['createdAt']))
+                                      _buildTagsRow(s, c, theme),
                                   ],
-                                  const SizedBox(height: 4),
-                                  if (s['tags'] != null || _isNew(s['createdAt']))
-                                    _buildTagsRow(s, c, theme),
-                                ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: c.textMuted,
-                              size: 14,
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: c.textMuted,
+                                size: 14,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
             ),
           );
         },
@@ -184,7 +196,11 @@ class SupplierListScreen extends ConsumerWidget {
     return DateTime.now().difference(createdAt).inDays <= 30;
   }
 
-  Widget _buildTagsRow(Map<String, dynamic> s, AppThemeColors c, ThemeData theme) {
+  Widget _buildTagsRow(
+    Map<String, dynamic> s,
+    AppThemeColors c,
+    ThemeData theme,
+  ) {
     List<String> tags = [];
     final tagsRaw = s['tags'];
     if (tagsRaw is List) {
@@ -221,7 +237,11 @@ class SupplierListScreen extends ConsumerWidget {
             ),
             child: Text(
               t,
-              style: GoogleFonts.inter(fontSize: 9, color: textColor, fontWeight: FontWeight.bold),
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           );
         }).toList(),

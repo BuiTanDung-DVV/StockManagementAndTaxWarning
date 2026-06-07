@@ -19,7 +19,9 @@ enum AppBrandColor {
   const AppBrandColor(this.label, this.color, this.isDark);
 }
 
-final brandColorProvider = NotifierProvider<BrandColorNotifier, AppBrandColor>(BrandColorNotifier.new);
+final brandColorProvider = NotifierProvider<BrandColorNotifier, AppBrandColor>(
+  BrandColorNotifier.new,
+);
 
 final themeProvider = Provider<ThemeMode>((ref) {
   final brandColor = ref.watch(brandColorProvider);
@@ -50,4 +52,3 @@ class BrandColorNotifier extends Notifier<AppBrandColor> {
     await prefs.setString(_kColorKey, brandColor.name);
   }
 }
-

@@ -7,13 +7,18 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/tax_config_provider.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 
 class TaxCalculatorScreen extends ConsumerStatefulWidget {
   const TaxCalculatorScreen({super.key});
 
   @override
-  ConsumerState<TaxCalculatorScreen> createState() => _TaxCalculatorScreenState();
+  ConsumerState<TaxCalculatorScreen> createState() =>
+      _TaxCalculatorScreenState();
 }
 
 class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
@@ -32,6 +37,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final config = ref.watch(taxConfigProvider);
+    final thresholds = config.thresholds;
     final vat = config.calculateVat(_revenue);
     final pit = config.calculatePit(_revenue);
     final total = vat + pit;
@@ -87,7 +93,11 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                       color: theme.colorScheme.primary.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.business_center_rounded, size: 18, color: theme.colorScheme.primary),
+                    child: Icon(
+                      Icons.business_center_rounded,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -97,9 +107,9 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                         Text(
                           config.businessType.label,
                           style: GoogleFonts.outfit(
-                            fontSize: 13, 
-                            fontWeight: FontWeight.bold, 
-                            color: theme.colorScheme.primary
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -107,7 +117,11 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                         const SizedBox(height: 2),
                         Text(
                           'Tỷ suất: GTGT ${(config.effectiveVatRate * 100).toStringAsFixed(1)}% • TNCN ${(config.businessType.pitRate * 100).toStringAsFixed(1)}%',
-                          style: TextStyle(fontSize: 11, color: c.textSecondary, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: c.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -119,25 +133,29 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
 
             // Method selector
             Text(
-              'Phương pháp tính', 
-              style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: c.textPrimary)
+              'Phương pháp tính',
+              style: GoogleFonts.outfit(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
                   child: _MethodTab(
-                    'Trực tiếp DT', 
-                    _method == 0, 
-                    () => setState(() => _method = 0)
+                    'Trực tiếp DT',
+                    _method == 0,
+                    () => setState(() => _method = 0),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _MethodTab(
-                    'Thu nhập CT', 
-                    _method == 1, 
-                    () => setState(() => _method = 1)
+                    'Thu nhập CT',
+                    _method == 1,
+                    () => setState(() => _method = 1),
                   ),
                 ),
               ],
@@ -146,33 +164,56 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
 
             // Revenue input
             Text(
-              'Doanh thu nhập vào', 
-              style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: c.textPrimary)
+              'Doanh thu nhập vào',
+              style: GoogleFonts.outfit(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _controller,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: c.textPrimary),
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: c.textPrimary,
+              ),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: c.card,
                 hintText: 'Nhập số tiền doanh thu (VNĐ)',
-                prefixIcon: Icon(Icons.payments_rounded, color: theme.colorScheme.primary),
+                prefixIcon: Icon(
+                  Icons.payments_rounded,
+                  color: theme.colorScheme.primary,
+                ),
                 suffixText: 'VNĐ',
-                suffixStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                suffixStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: c.divider.withValues(alpha: 0.6)),
+                  borderSide: BorderSide(
+                    color: c.divider.withValues(alpha: 0.6),
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 2,
+                  ),
                 ),
               ),
-              onChanged: (v) => setState(() => _revenue = double.tryParse(v) ?? 0),
+              onChanged: (v) =>
+                  setState(() => _revenue = double.tryParse(v) ?? 0),
             ),
             const SizedBox(height: 24),
 
@@ -202,13 +243,15 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: RevenueThreshold.getColor(_revenue).withValues(alpha: 0.12),
+                          color: thresholds
+                              .getColor(_revenue)
+                              .withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.radar_rounded,
                           size: 16,
-                          color: RevenueThreshold.getColor(_revenue),
+                          color: thresholds.getColor(_revenue),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -223,7 +266,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Interactive double progress track
                   LayoutBuilder(
                     builder: (context, constraints) {
@@ -252,12 +295,14 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   gradient: LinearGradient(
                                     colors: [
                                       theme.colorScheme.primary,
-                                      RevenueThreshold.getColor(_revenue),
+                                      thresholds.getColor(_revenue),
                                     ],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: RevenueThreshold.getColor(_revenue).withValues(alpha: 0.35),
+                                      color: thresholds
+                                          .getColor(_revenue)
+                                          .withValues(alpha: 0.35),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),
@@ -272,15 +317,20 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   width: 16,
                                   height: 16,
                                   decoration: BoxDecoration(
-                                    color: _revenue >= 500000000.0 
-                                        ? AppColors.warning 
+                                    color: _revenue >= 500000000.0
+                                        ? AppColors.warning
                                         : c.textMuted.withValues(alpha: 0.5),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2.5),
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2.5,
+                                    ),
                                     boxShadow: [
                                       if (_revenue >= 500000000.0)
                                         BoxShadow(
-                                          color: AppColors.warning.withValues(alpha: 0.5),
+                                          color: AppColors.warning.withValues(
+                                            alpha: 0.5,
+                                          ),
                                           blurRadius: 6,
                                           spreadRadius: 1,
                                         ),
@@ -296,15 +346,20 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   width: 16,
                                   height: 16,
                                   decoration: BoxDecoration(
-                                    color: _revenue >= 1000000000.0 
-                                        ? AppColors.danger 
+                                    color: _revenue >= 1000000000.0
+                                        ? AppColors.danger
                                         : c.textMuted.withValues(alpha: 0.5),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2.5),
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2.5,
+                                    ),
                                     boxShadow: [
                                       if (_revenue >= 1000000000.0)
                                         BoxShadow(
-                                          color: AppColors.danger.withValues(alpha: 0.5),
+                                          color: AppColors.danger.withValues(
+                                            alpha: 0.5,
+                                          ),
                                           blurRadius: 6,
                                           spreadRadius: 1,
                                         ),
@@ -321,42 +376,70 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                             children: [
                               Text(
                                 '0',
-                                style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w600, color: c.textMuted),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: c.textMuted,
+                                ),
                               ),
                               Expanded(
                                 child: Container(
                                   alignment: Alignment.centerLeft,
-                                  padding: EdgeInsets.only(left: trackWidth * milestone1Ratio - 35),
+                                  padding: EdgeInsets.only(
+                                    left: trackWidth * milestone1Ratio - 35,
+                                  ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         '500M',
                                         style: GoogleFonts.outfit(
-                                          fontSize: 11, 
-                                          fontWeight: FontWeight.bold, 
-                                          color: _revenue >= 500000000.0 ? AppColors.warning : c.textSecondary
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: _revenue >= 500000000.0
+                                              ? AppColors.warning
+                                              : c.textSecondary,
                                         ),
                                       ),
-                                      Text('Khai thuế', style: TextStyle(fontSize: 8, color: c.textMuted, fontWeight: FontWeight.w500)),
+                                      Text(
+                                        'Khai thuế',
+                                        style: TextStyle(
+                                          fontSize: 8,
+                                          color: c.textMuted,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                               ),
                               Container(
-                                padding: EdgeInsets.only(right: trackWidth * (1.0 - milestone2Ratio) - 22),
+                                padding: EdgeInsets.only(
+                                  right:
+                                      trackWidth * (1.0 - milestone2Ratio) - 22,
+                                ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
                                       '1 Tỷ',
                                       style: GoogleFonts.outfit(
-                                        fontSize: 11, 
-                                        fontWeight: FontWeight.bold, 
-                                        color: _revenue >= 1000000000.0 ? AppColors.danger : c.textSecondary
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: _revenue >= 1000000000.0
+                                            ? AppColors.danger
+                                            : c.textSecondary,
                                       ),
                                     ),
-                                    Text('Bắt buộc HĐĐT', style: TextStyle(fontSize: 8, color: c.textMuted, fontWeight: FontWeight.w500)),
+                                    Text(
+                                      'Bắt buộc HĐĐT',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        color: c.textMuted,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -367,15 +450,19 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Text warning advisory
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: RevenueThreshold.getColor(_revenue).withValues(alpha: 0.08),
+                      color: thresholds
+                          .getColor(_revenue)
+                          .withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: RevenueThreshold.getColor(_revenue).withValues(alpha: 0.15),
+                        color: thresholds
+                            .getColor(_revenue)
+                            .withValues(alpha: 0.15),
                         width: 1,
                       ),
                     ),
@@ -383,16 +470,16 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Ngưỡng hiện tại: ${RevenueThreshold.getTierLabel(_revenue)}',
+                          'Ngưỡng hiện tại: ${thresholds.getTierLabel(_revenue)}',
                           style: GoogleFonts.outfit(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: RevenueThreshold.getColor(_revenue),
+                            color: thresholds.getColor(_revenue),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          RevenueThreshold.getObligation(_revenue),
+                          thresholds.getObligation(_revenue),
                           style: TextStyle(
                             fontSize: 12,
                             color: c.textSecondary,
@@ -404,8 +491,12 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Doanh thu tiếp theo cần lưu ý: ${_currFmt.format(RevenueThreshold.getNextThreshold(_revenue))}',
-                    style: TextStyle(fontSize: 11, color: c.textMuted, fontWeight: FontWeight.w500),
+                    'Doanh thu tiếp theo cần lưu ý: ${_currFmt.format(thresholds.getNextThreshold(_revenue))}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: c.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -414,8 +505,12 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
 
             // Tax breakdown list (Sleek Ledger style)
             Text(
-              'Chi tiết thuế phải nộp', 
-              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: c.textPrimary)
+              'Chi tiết thuế phải nộp',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: c.textPrimary,
+              ),
             ),
             const SizedBox(height: 12),
 
@@ -431,17 +526,22 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
               ),
               child: Column(
                 children: [
-                  _TaxRow('Doanh thu kê khai', _currFmt.format(_revenue), c.textPrimary, isBold: true),
+                  _TaxRow(
+                    'Doanh thu kê khai',
+                    _currFmt.format(_revenue),
+                    c.textPrimary,
+                    isBold: true,
+                  ),
                   Divider(color: c.divider.withValues(alpha: 0.4), height: 24),
                   _TaxRow(
                     'Thuế GTGT (${(config.effectiveVatRate * 100).toStringAsFixed(1)}%)',
-                    _currFmt.format(vat), 
-                    AppColors.warning
+                    _currFmt.format(vat),
+                    AppColors.warning,
                   ),
                   if (config.vatReduction20) ...[
                     const SizedBox(height: 4),
                     _TaxRow(
-                      '  └ Miễn giảm 20% (NQ 204)', 
+                      '  └ Miễn giảm 20% (NQ 204)',
                       '−${_currFmt.format(config.businessType.vatRate * _revenue * 0.2)}',
                       AppColors.success,
                       isItalic: true,
@@ -450,13 +550,23 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                   const SizedBox(height: 12),
                   _TaxRow(
                     'Thuế TNCN (${(config.businessType.pitRate * 100).toStringAsFixed(1)}%)',
-                    _currFmt.format(pit), 
-                    AppColors.info
+                    _currFmt.format(pit),
+                    AppColors.info,
                   ),
                   Divider(color: c.divider.withValues(alpha: 0.4), height: 24),
-                  _TaxRow('TỔNG THUẾ PHẢI NỘP', _currFmt.format(total), AppColors.danger, isBold: true),
+                  _TaxRow(
+                    'TỔNG THUẾ PHẢI NỘP',
+                    _currFmt.format(total),
+                    AppColors.danger,
+                    isBold: true,
+                  ),
                   const SizedBox(height: 12),
-                  _TaxRow('Thu nhập còn lại sau thuế', _currFmt.format(afterTax), AppColors.success, isBold: true),
+                  _TaxRow(
+                    'Thu nhập còn lại sau thuế',
+                    _currFmt.format(afterTax),
+                    AppColors.success,
+                    isBold: true,
+                  ),
                 ],
               ),
             ),
@@ -467,31 +577,45 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: (RevenueThreshold.canUseInvoice(_revenue) ? AppColors.success : AppColors.warning).withValues(alpha: 0.08),
+                  color:
+                      (thresholds.canUseInvoice(_revenue)
+                              ? AppColors.success
+                              : AppColors.warning)
+                          .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: (RevenueThreshold.canUseInvoice(_revenue) ? AppColors.success : AppColors.warning).withValues(alpha: 0.25),
+                    color:
+                        (thresholds.canUseInvoice(_revenue)
+                                ? AppColors.success
+                                : AppColors.warning)
+                            .withValues(alpha: 0.25),
                     width: 1,
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      RevenueThreshold.canUseInvoice(_revenue) ? Icons.verified_user_rounded : Icons.info_outline_rounded,
+                      thresholds.canUseInvoice(_revenue)
+                          ? Icons.verified_user_rounded
+                          : Icons.info_outline_rounded,
                       size: 20,
-                      color: RevenueThreshold.canUseInvoice(_revenue) ? AppColors.success : AppColors.warning,
+                      color: thresholds.canUseInvoice(_revenue)
+                          ? AppColors.success
+                          : AppColors.warning,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        RevenueThreshold.mustUseEInvoice(_revenue)
+                        thresholds.mustUseEInvoice(_revenue)
                             ? 'BẮT BUỘC sử dụng Hóa đơn điện tử (HĐĐT) cho mọi giao dịch bán lẻ theo đúng quy định.'
-                            : RevenueThreshold.canUseInvoice(_revenue)
-                                ? 'Đủ điều kiện xuất hóa đơn. Khuyến khích đăng ký sử dụng HĐĐT để tối ưu quy trình.'
-                                : 'Chưa đủ ngưỡng sử dụng hóa đơn bán hàng lẻ (< 500 triệu VNĐ).',
+                            : thresholds.canUseInvoice(_revenue)
+                            ? 'Đủ điều kiện xuất hóa đơn. Khuyến khích đăng ký sử dụng HĐĐT để tối ưu quy trình.'
+                            : 'Chưa đủ ngưỡng sử dụng hóa đơn bán hàng lẻ (< 500 triệu VNĐ).',
                         style: TextStyle(
                           fontSize: 12,
-                          color: RevenueThreshold.canUseInvoice(_revenue) ? AppColors.success : AppColors.warning,
+                          color: thresholds.canUseInvoice(_revenue)
+                              ? AppColors.success
+                              : AppColors.warning,
                           fontWeight: FontWeight.w600,
                           height: 1.3,
                         ),
@@ -528,7 +652,9 @@ class _MethodTab extends StatelessWidget {
           color: active ? theme.colorScheme.primary : c.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: active ? theme.colorScheme.primary : c.divider.withValues(alpha: 0.6),
+            color: active
+                ? theme.colorScheme.primary
+                : c.divider.withValues(alpha: 0.6),
             width: 1,
           ),
           boxShadow: [
@@ -560,7 +686,13 @@ class _TaxRow extends StatelessWidget {
   final Color color;
   final bool isBold;
   final bool isItalic;
-  const _TaxRow(this.label, this.amount, this.color, {this.isBold = false, this.isItalic = false});
+  const _TaxRow(
+    this.label,
+    this.amount,
+    this.color, {
+    this.isBold = false,
+    this.isItalic = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -570,19 +702,19 @@ class _TaxRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            label, 
+            label,
             style: TextStyle(
-              fontSize: 13, 
+              fontSize: 13,
               fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
               fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
             ),
           ),
           const SizedBox(width: 16),
           Text(
-            amount, 
+            amount,
             style: GoogleFonts.outfit(
-              fontSize: isBold ? 17 : 14, 
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.bold, 
+              fontSize: isBold ? 17 : 14,
+              fontWeight: isBold ? FontWeight.w800 : FontWeight.bold,
               color: color,
             ),
           ),

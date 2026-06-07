@@ -12,7 +12,8 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
@@ -44,14 +45,25 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   void initState() {
     super.initState();
-    _phoneFocus.addListener(() => setState(() => _phoneHasFocus = _phoneFocus.hasFocus));
-    _otpFocus.addListener(() => setState(() => _otpHasFocus = _otpFocus.hasFocus));
-    _passwordFocus.addListener(() => setState(() => _passwordHasFocus = _passwordFocus.hasFocus));
-    _confirmPasswordFocus.addListener(() => setState(() => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus));
-    
+    _phoneFocus.addListener(
+      () => setState(() => _phoneHasFocus = _phoneFocus.hasFocus),
+    );
+    _otpFocus.addListener(
+      () => setState(() => _otpHasFocus = _otpFocus.hasFocus),
+    );
+    _passwordFocus.addListener(
+      () => setState(() => _passwordHasFocus = _passwordFocus.hasFocus),
+    );
+    _confirmPasswordFocus.addListener(
+      () => setState(
+        () => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus,
+      ),
+    );
+
     void clearError() {
       if (_error != null) setState(() => _error = null);
     }
+
     _phoneCtrl.addListener(clearError);
     _otpCtrl.addListener(clearError);
     _passwordCtrl.addListener(clearError);
@@ -65,7 +77,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     _otpCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
-    
+
     _phoneFocus.dispose();
     _otpFocus.dispose();
     _passwordFocus.dispose();
@@ -91,12 +103,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       setState(() => _error = 'Vui lòng nhập số điện thoại hoặc email');
       return;
     }
-    
+
     final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
-    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-    
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
+
     if (!phoneRegex.hasMatch(phone) && !emailRegex.hasMatch(phone)) {
-      setState(() => _error = 'Định dạng số điện thoại hoặc email không hợp lệ');
+      setState(
+        () => _error = 'Định dạng số điện thoại hoặc email không hợp lệ',
+      );
       return;
     }
 
@@ -109,22 +125,25 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       final api = ref.read(apiClientProvider);
       // Calls forgot-password API which dynamically sends OTP
       await api.post('/auth/forgot-password', data: {'identifier': phone});
-      
+
       ToastService.showSuccess('Đã gửi mã xác thực OTP thành công!');
-      
+
       setState(() {
         _otpSent = true;
       });
       _startTimer();
     } catch (e) {
-      String msg = 'Không thể gửi mã khôi phục. Vui lòng kiểm tra lại SĐT hoặc kết nối mạng';
+      String msg =
+          'Không thể gửi mã khôi phục. Vui lòng kiểm tra lại SĐT hoặc kết nối mạng';
       if (e is ApiException) {
         msg = e.message;
       } else if (e is DioException && e.response?.data != null) {
         msg = e.response?.data['message'] ?? msg;
       }
       final lowerMsg = msg.toLowerCase();
-      if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
+      if (lowerMsg.contains('network') ||
+          lowerMsg.contains('connection') ||
+          lowerMsg.contains('socket')) {
         msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
       }
       setState(() => _error = msg);
@@ -139,7 +158,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final pass = _passwordCtrl.text;
     final confirmPass = _confirmPasswordCtrl.text;
 
-    if (phone.isEmpty || otpCode.isEmpty || pass.isEmpty || confirmPass.isEmpty) {
+    if (phone.isEmpty ||
+        otpCode.isEmpty ||
+        pass.isEmpty ||
+        confirmPass.isEmpty) {
       setState(() => _error = 'Vui lòng nhập đầy đủ thông tin');
       return;
     }
@@ -168,11 +190,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       final api = ref.read(apiClientProvider);
       await api.post(
         '/auth/reset-password',
-        data: {
-          'identifier': phone,
-          'newPassword': pass,
-          'otpCode': otpCode,
-        },
+        data: {'identifier': phone, 'newPassword': pass, 'otpCode': otpCode},
       );
 
       setState(() {
@@ -188,7 +206,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         msg = e.response?.data['message'] ?? msg;
       }
       final lowerMsg = msg.toLowerCase();
-      if (lowerMsg.contains('network') || lowerMsg.contains('connection') || lowerMsg.contains('socket')) {
+      if (lowerMsg.contains('network') ||
+          lowerMsg.contains('connection') ||
+          lowerMsg.contains('socket')) {
         msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
       }
       setState(() {
@@ -237,14 +257,25 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.08,
+                        ),
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15), width: 1.5),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.15,
+                          ),
+                          width: 1.5,
+                        ),
                       ),
                       child: Icon(
-                        _success ? Icons.check_circle_rounded : Icons.lock_reset_rounded,
+                        _success
+                            ? Icons.check_circle_rounded
+                            : Icons.lock_reset_rounded,
                         size: 38,
-                        color: _success ? AppColors.success : theme.colorScheme.primary,
+                        color: _success
+                            ? AppColors.success
+                            : theme.colorScheme.primary,
                       ),
                     ),
                   ),
@@ -260,9 +291,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _success 
-                      ? 'Mật khẩu của bạn đã được thay đổi. Hãy đăng nhập lại bằng mật khẩu mới.'
-                      : _otpSent 
+                    _success
+                        ? 'Mật khẩu của bạn đã được thay đổi. Hãy đăng nhập lại bằng mật khẩu mới.'
+                        : _otpSent
                         ? 'Vui lòng nhập mã OTP đã gửi đến ${_phoneCtrl.text} cùng mật khẩu mới của bạn.'
                         : 'Nhập số điện thoại hoặc email đã đăng ký. Chúng tôi sẽ gửi mã xác thực để khôi phục.',
                     textAlign: TextAlign.center,
@@ -281,12 +312,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: Text(
                           'Quay lại Đăng nhập',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -312,17 +347,24 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
                           child: _isSendingOtp
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : Text(
                                   'Gửi Mã Xác Thực OTP',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                         ),
                       ),
@@ -345,23 +387,37 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                           SizedBox(
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: _countdownSeconds > 0 || _isSendingOtp ? null : _sendOtp,
+                              onPressed: _countdownSeconds > 0 || _isSendingOtp
+                                  ? null
+                                  : _sendOtp,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: theme.colorScheme.primary,
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
                               ),
                               child: _isSendingOtp
                                   ? const SizedBox(
                                       height: 18,
                                       width: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
                                     )
                                   : Text(
-                                      _countdownSeconds > 0 ? '${_countdownSeconds}s' : 'Gửi lại',
-                                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                                      _countdownSeconds > 0
+                                          ? '${_countdownSeconds}s'
+                                          : 'Gửi lại',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     ),
                             ),
                           ),
@@ -381,7 +437,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         obscureText: _obscure,
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                            _obscure
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
                             color: c.textMuted,
                             size: 20,
                           ),
@@ -402,11 +460,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         obscureText: _obscureConfirm,
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                            _obscureConfirm
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
                             color: c.textMuted,
                             size: 20,
                           ),
-                          onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                          onPressed: () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -418,17 +480,24 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
                           child: _isLoading
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : Text(
                                   'Xác Nhận Đặt Lại Mật Khẩu',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                         ),
                       ),
@@ -444,12 +513,20 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: AppColors.danger,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 _error!,
-                                style: GoogleFonts.inter(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w500),
+                                style: GoogleFonts.inter(
+                                  color: AppColors.danger,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ],
@@ -513,9 +590,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+            borderSide: BorderSide(
+              color: theme.colorScheme.primary,
+              width: 1.5,
+            ),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );

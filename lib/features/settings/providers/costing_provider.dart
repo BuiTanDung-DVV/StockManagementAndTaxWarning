@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 
@@ -25,10 +26,13 @@ class CostingNotifier extends Notifier<CostingState> {
     try {
       final data = await _api.get('/cogs/method');
       state = state.copyWith(
-        method: (data is Map && data['method'] != null) ? data['method'].toString() : 'AVG',
+        method: (data is Map && data['method'] != null)
+            ? data['method'].toString()
+            : 'AVG',
         isLoading: false,
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('CostingProvider.loadCostingMethod error: $e');
       state = state.copyWith(isLoading: false);
     }
   }
@@ -40,7 +44,8 @@ class CostingNotifier extends Notifier<CostingState> {
       await _api.put('/system/shop-profile/1', data: {'costingMethod': method});
       state = state.copyWith(method: method, isLoading: false);
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('CostingProvider.updateCostingMethod error: $e');
       state = state.copyWith(isLoading: false);
       return false;
     }
@@ -54,7 +59,8 @@ class CostingNotifier extends Notifier<CostingState> {
         return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
       return [];
-    } catch (_) {
+    } catch (e) {
+      debugPrint('CostingProvider.getProductLots error: $e');
       return [];
     }
   }
@@ -66,10 +72,13 @@ class CostingNotifier extends Notifier<CostingState> {
       if (productId != null) params['productId'] = productId;
       final data = await _api.get('/cogs/valuation', params: params);
       return data is Map ? Map<String, dynamic>.from(data) : {};
-    } catch (_) {
+    } catch (e) {
+      debugPrint('CostingProvider.getValuation error: $e');
       return {};
     }
   }
 }
 
-final costingProvider = NotifierProvider<CostingNotifier, CostingState>(CostingNotifier.new);
+final costingProvider = NotifierProvider<CostingNotifier, CostingState>(
+  CostingNotifier.new,
+);

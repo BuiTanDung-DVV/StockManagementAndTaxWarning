@@ -45,7 +45,11 @@ class StockTakeScreen extends ConsumerWidget {
         },
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 3,
-        icon: const Icon(Icons.fact_check_rounded, color: Colors.white, size: 20),
+        icon: const Icon(
+          Icons.fact_check_rounded,
+          color: Colors.white,
+          size: 20,
+        ),
         label: Text(
           'Tạo Phiếu Kiểm',
           style: GoogleFonts.outfit(
@@ -81,7 +85,9 @@ class StockTakeScreen extends ConsumerWidget {
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Thử lại'),
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -90,9 +96,7 @@ class StockTakeScreen extends ConsumerWidget {
         ),
         data: (items) {
           if (items.isEmpty) {
-            return const AppEmpty(
-              message: 'Chưa có dữ liệu tồn kho',
-            );
+            return const AppEmpty(message: 'Chưa có dữ liệu tồn kho');
           }
           return Container(
             color: c.card,
@@ -100,97 +104,108 @@ class StockTakeScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               physics: const BouncingScrollPhysics(),
               itemCount: items.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
-              final item = items[i] as Map;
-              final name = item['product']?['name'] ?? item['productName'] ?? 'Sản phẩm không tên';
-              final sku = item['product']?['sku'] ?? item['sku'] ?? '';
-              final qty = item['currentQuantity'] ?? item['quantity'] ?? 0;
-              final minStock = item['product']?['minStock'] ?? item['minStock'] ?? 0;
-              final isLow = (qty is num && minStock is num && qty <= minStock);
+                final item = items[i] as Map;
+                final name =
+                    item['product']?['name'] ??
+                    item['productName'] ??
+                    'Sản phẩm không tên';
+                final sku = item['product']?['sku'] ?? item['sku'] ?? '';
+                final qty = item['currentQuantity'] ?? item['quantity'] ?? 0;
+                final minStock =
+                    item['product']?['minStock'] ?? item['minStock'] ?? 0;
+                final isLow =
+                    (qty is num && minStock is num && qty <= minStock);
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 0),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: const BoxDecoration(
-                  color: Colors.transparent,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: (isLow ? AppColors.danger : AppColors.success)
-                            .withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(14),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: const BoxDecoration(color: Colors.transparent),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (isLow ? AppColors.danger : AppColors.success)
+                              .withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          Icons.inventory_2_rounded,
+                          color: isLow ? AppColors.danger : AppColors.success,
+                          size: 20,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.inventory_2_rounded,
-                        color: isLow ? AppColors.danger : AppColors.success,
-                        size: 20,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              name,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: c.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              sku.toString().isNotEmpty
+                                  ? 'SKU: $sku'
+                                  : 'Không có SKU',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: c.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            name,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                              color: c.textPrimary,
+                            '$qty',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18,
+                              color: isLow
+                                  ? AppColors.danger
+                                  : AppColors.success,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            sku.toString().isNotEmpty ? 'SKU: $sku' : 'Không có SKU',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: c.textSecondary,
-                              fontWeight: FontWeight.w500,
+                          if (isLow)
+                            Text(
+                              'Min: $minStock',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$qty',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 18,
-                            color: isLow ? AppColors.danger : AppColors.success,
-                          ),
-                        ),
-                        if (isLow)
-                          Text(
-                            'Min: $minStock',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              color: AppColors.danger,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }

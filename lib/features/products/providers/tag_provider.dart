@@ -8,7 +8,12 @@ class TagModel {
   final String color;
   final String type;
 
-  TagModel({required this.id, required this.name, required this.color, this.type = 'product'});
+  TagModel({
+    required this.id,
+    required this.name,
+    required this.color,
+    this.type = 'product',
+  });
 
   factory TagModel.fromJson(Map<String, dynamic> json) {
     return TagModel(
@@ -38,13 +43,28 @@ class TagRepository {
     return data.map((e) => TagModel.fromJson(e)).toList();
   }
 
-  Future<TagModel> create(String name, String color, {String type = 'product'}) async {
-    final res = await _api.post('/tags', data: {'name': name, 'color': color, 'type': type});
+  Future<TagModel> create(
+    String name,
+    String color, {
+    String type = 'product',
+  }) async {
+    final res = await _api.post(
+      '/tags',
+      data: {'name': name, 'color': color, 'type': type},
+    );
     return TagModel.fromJson(res['data']);
   }
 
-  Future<TagModel> update(int id, String name, String color, {String type = 'product'}) async {
-    final res = await _api.put('/tags/$id', data: {'name': name, 'color': color, 'type': type});
+  Future<TagModel> update(
+    int id,
+    String name,
+    String color, {
+    String type = 'product',
+  }) async {
+    final res = await _api.put(
+      '/tags/$id',
+      data: {'name': name, 'color': color, 'type': type},
+    );
     return TagModel.fromJson(res['data']);
   }
 
@@ -53,8 +73,13 @@ class TagRepository {
   }
 }
 
-final tagRepoProvider = Provider<TagRepository>((ref) => TagRepository(ref.read(apiClientProvider)));
+final tagRepoProvider = Provider<TagRepository>(
+  (ref) => TagRepository(ref.read(apiClientProvider)),
+);
 
-final tagListProvider = FutureProvider.family<List<TagModel>, String>((ref, type) async {
+final tagListProvider = FutureProvider.family<List<TagModel>, String>((
+  ref,
+  type,
+) async {
   return await ref.read(tagRepoProvider).getAll(type: type);
 });

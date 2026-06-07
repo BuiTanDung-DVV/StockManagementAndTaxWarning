@@ -6,17 +6,30 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/supplier_provider.dart';
 import 'supplier_form_screen.dart';
+import 'package:bot_toast/bot_toast.dart';
+import 'package:go_router/go_router.dart';
 
-final _currFmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
+final _currFmt = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
 
-class SupplierDetailScreen extends ConsumerWidget {
+class SupplierDetailScreen extends ConsumerStatefulWidget {
   final int id;
   const SupplierDetailScreen({super.key, required this.id});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SupplierDetailScreen> createState() =>
+      _SupplierDetailScreenState();
+}
+
+class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final c = AppThemeColors.of(context);
-    final detailAsync = ref.watch(supplierDetailProvider(id));
+    final detailAsync = ref.watch(supplierDetailProvider(widget.id));
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -35,6 +48,11 @@ class SupplierDetailScreen extends ConsumerWidget {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            tooltip: 'Xóa nhà cung cấp',
+            onPressed: () => _confirmDelete(context, ref),
+          ),
           featureGuideButton(context, 'supplier_detail'),
           const SizedBox(width: 8),
         ],
@@ -60,11 +78,14 @@ class SupplierDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(supplierDetailProvider(id)),
+                  onPressed: () =>
+                      ref.invalidate(supplierDetailProvider(widget.id)),
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Thử lại'),
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -73,7 +94,8 @@ class SupplierDetailScreen extends ConsumerWidget {
         ),
         data: (s) {
           final name = s['name'] ?? 'Nhà cung cấp ẩn danh';
-          final contactName = s['contactName'] ?? s['contactPerson'] ?? s['contact'] ?? '';
+          final contactName =
+              s['contactName'] ?? s['contactPerson'] ?? s['contact'] ?? '';
           final phone = s['phone'] ?? '';
           final email = s['email'] ?? '';
           final address = s['address'] ?? '';
@@ -81,8 +103,11 @@ class SupplierDetailScreen extends ConsumerWidget {
           final bankName = s['bankName'] ?? '';
           final bankAccount = s['bankAccount'] ?? '';
           final paymentTerms = s['paymentTerms'] ?? s['paymentTermDays'] ?? '';
-          final balance = num.tryParse(s['balance']?.toString() ?? '')?.toDouble() ?? 0;
-          final totalPurchase = num.tryParse(s['totalPurchase']?.toString() ?? '')?.toDouble() ?? 0;
+          final balance =
+              num.tryParse(s['balance']?.toString() ?? '')?.toDouble() ?? 0;
+          final totalPurchase =
+              num.tryParse(s['totalPurchase']?.toString() ?? '')?.toDouble() ??
+              0;
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -97,7 +122,10 @@ class SupplierDetailScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: AppColors.info.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(26),
-                      border: Border.all(color: AppColors.info.withValues(alpha: 0.15), width: 1.5),
+                      border: Border.all(
+                        color: AppColors.info.withValues(alpha: 0.15),
+                        width: 1.5,
+                      ),
                     ),
                     child: Center(
                       child: Text(
@@ -131,24 +159,35 @@ class SupplierDetailScreen extends ConsumerWidget {
                 // Info Section 1: Business Parameters
                 _Card([
                   if (taxCode.isNotEmpty) _R('Mã số thuế (MST)', taxCode, c),
-                  if (contactName.isNotEmpty) _R('Người đại diện liên hệ', contactName, c),
+                  if (contactName.isNotEmpty)
+                    _R('Người đại diện liên hệ', contactName, c),
                   if (phone.isNotEmpty) _R('Điện thoại liên lạc', phone, c),
                   if (email.isNotEmpty) _R('Địa chỉ thư điện tử', email, c),
                   if (address.isNotEmpty) _R('Địa chỉ văn phòng', address, c),
-                  if (bankName.isNotEmpty) _R('Ngân hàng thụ hưởng', bankName, c),
-                  if (bankAccount.isNotEmpty) _R('Số tài khoản ngân hàng', bankAccount, c),
-                  if (paymentTerms.toString().isNotEmpty) _R('Kỳ hạn thanh toán nợ', '$paymentTerms ngày', c),
+                  if (bankName.isNotEmpty)
+                    _R('Ngân hàng thụ hưởng', bankName, c),
+                  if (bankAccount.isNotEmpty)
+                    _R('Số tài khoản ngân hàng', bankAccount, c),
+                  if (paymentTerms.toString().isNotEmpty)
+                    _R('Kỳ hạn thanh toán nợ', '$paymentTerms ngày', c),
                 ]),
                 const SizedBox(height: 12),
 
                 // Info Section 2: Ledger Summary parameters
                 _Card([
-                  if (totalPurchase > 0) _R('Lũy kế nhập hàng từ NCC', _currFmt.format(totalPurchase), c),
+                  if (totalPurchase > 0)
+                    _R(
+                      'Lũy kế nhập hàng từ NCC',
+                      _currFmt.format(totalPurchase),
+                      c,
+                    ),
                   _R(
                     'Công nợ hiện tại với NCC',
                     _currFmt.format(balance),
                     c,
-                    valColor: balance > 0 ? AppColors.danger : AppColors.success,
+                    valColor: balance > 0
+                        ? AppColors.danger
+                        : AppColors.success,
                   ),
                 ]),
 
@@ -158,7 +197,11 @@ class SupplierDetailScreen extends ConsumerWidget {
                     child: Text(
                       'Thông tin liên hệ của nhà cung cấp chưa được cập nhật đầy đủ.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(color: c.textMuted, fontSize: 12, height: 1.4),
+                      style: GoogleFonts.inter(
+                        color: c.textMuted,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
                     ),
                   ),
               ],
@@ -166,20 +209,67 @@ class SupplierDetailScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: detailAsync.hasValue ? FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => SupplierFormScreen(supplier: detailAsync.value!)),
-          );
-          ref.invalidate(supplierDetailProvider(id));
-          ref.invalidate(supplierListProvider);
-        },
-        icon: const Icon(Icons.edit_rounded),
-        label: const Text('Chỉnh sửa', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ) : null,
+      floatingActionButton: detailAsync.hasValue
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        SupplierFormScreen(supplier: detailAsync.value!),
+                  ),
+                );
+                ref.invalidate(supplierDetailProvider(widget.id));
+                ref.invalidate(supplierListProvider);
+              },
+              icon: const Icon(Icons.edit_rounded),
+              label: const Text(
+                'Chỉnh sửa',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+            )
+          : null,
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xóa nhà cung cấp'),
+        content: const Text(
+          'Bạn có chắc chắn muốn xóa nhà cung cấp này? Mọi dữ liệu liên quan sẽ không thể khôi phục.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final cancel = BotToast.showCustomLoading(
+                toastBuilder: (_) =>
+                    const Center(child: CircularProgressIndicator()),
+              );
+              try {
+                await ref.read(supplierRepoProvider).delete(widget.id);
+                cancel();
+                BotToast.showText(text: 'Xóa nhà cung cấp thành công');
+                ref.invalidate(supplierListProvider);
+                if (mounted) context.pop();
+              } catch (e) {
+                cancel();
+                BotToast.showText(text: 'Lỗi: $e');
+              }
+            },
+            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -195,12 +285,12 @@ class _Card extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(12), // Taste-Skill Shape Consistency
+        borderRadius: BorderRadius.circular(
+          12,
+        ), // Taste-Skill Shape Consistency
         border: Border.all(color: c.divider), // Solid border, no alpha
       ),
-      child: Column(
-        children: children,
-      ),
+      child: Column(children: children),
     );
   }
 }

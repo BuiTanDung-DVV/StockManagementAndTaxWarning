@@ -36,14 +36,7 @@ class ChartCard extends StatelessWidget {
         color: c.card,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: c.divider.withValues(alpha: 0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.025),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: -4,
-          ),
-        ],
+        boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +105,11 @@ class EmptyChartPlaceholder extends StatelessWidget {
               color: theme.colorScheme.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 28, color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+            child: Icon(
+              icon,
+              size: 28,
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+            ),
           ),
           const SizedBox(height: 14),
           Text(
@@ -174,12 +171,24 @@ class MiniAreaChart extends StatelessWidget {
       return const EmptyChartPlaceholder(message: 'Chưa có dữ liệu');
     }
 
-    final spots1 = data1.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList();
-    final spots2 = data2.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList();
+    final spots1 = data1
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .toList();
+    final spots2 = data2
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .toList();
     final maxLen = data1.length > data2.length ? data1.length : data2.length;
     double maxY = 0;
-    for (final v in data1) { if (v > maxY) maxY = v; }
-    for (final v in data2) { if (v > maxY) maxY = v; }
+    for (final v in data1) {
+      if (v > maxY) maxY = v;
+    }
+    for (final v in data2) {
+      if (v > maxY) maxY = v;
+    }
     if (maxY == 0) maxY = 1000000;
 
     return Column(
@@ -206,19 +215,34 @@ class MiniAreaChart extends StatelessWidget {
                 ),
               ),
               titlesData: FlTitlesData(
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: xLabels != null,
                     reservedSize: 22,
                     getTitlesWidget: (v, m) {
                       final idx = v.toInt();
-                      if (xLabels == null || idx < 0 || idx >= xLabels!.length) return const SizedBox.shrink();
-                      if (maxLen > 7 && idx % (maxLen / 5).ceil() != 0 && idx != maxLen - 1) return const SizedBox.shrink();
+                      if (xLabels == null || idx < 0 || idx >= xLabels!.length)
+                        return const SizedBox.shrink();
+                      if (maxLen > 7 &&
+                          idx % (maxLen / 5).ceil() != 0 &&
+                          idx != maxLen - 1)
+                        return const SizedBox.shrink();
                       return Padding(
                         padding: const EdgeInsets.only(top: 6),
-                        child: Text(xLabels![idx], style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          xLabels![idx],
+                          style: TextStyle(
+                            color: c.textMuted,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -228,10 +252,16 @@ class MiniAreaChart extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 36,
                     getTitlesWidget: (v, m) {
-                      if (v == m.max || v == m.min) return const SizedBox.shrink();
+                      if (v == m.max || v == m.min)
+                        return const SizedBox.shrink();
                       return Text(
                         _compactFmt.format(v),
-                        style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                        style: AppTheme.tabularStyle(
+                          context,
+                          fontSize: 9,
+                          color: c.textMuted,
+                          fontWeight: FontWeight.bold,
+                        ),
                         textAlign: TextAlign.right,
                       );
                     },
@@ -251,7 +281,10 @@ class MiniAreaChart extends StatelessWidget {
                   barWidth: 2,
                   isStrokeCapRound: true,
                   dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(show: true, color: color1.withValues(alpha: 0.08)),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: color1.withValues(alpha: 0.08),
+                  ),
                 ),
                 LineChartBarData(
                   spots: spots2,
@@ -260,7 +293,10 @@ class MiniAreaChart extends StatelessWidget {
                   barWidth: 2,
                   isStrokeCapRound: true,
                   dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(show: true, color: color2.withValues(alpha: 0.08)),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: color2.withValues(alpha: 0.08),
+                  ),
                 ),
               ],
             ),
@@ -275,11 +311,22 @@ class MiniAreaChart extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8, height: 8,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 10, color: c.textSecondary, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: c.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
@@ -324,7 +371,11 @@ class MiniDonutChart extends StatelessWidget {
                   value: e.value,
                   title: pct >= 5 ? '${pct.toStringAsFixed(0)}%' : '',
                   radius: 22,
-                  titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                  titleStyle: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 );
               }).toList(),
             ),
@@ -343,8 +394,12 @@ class MiniDonutChart extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 10, height: 10,
-                      decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: e.color,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -400,7 +455,9 @@ class MiniBarChart extends StatelessWidget {
     }
 
     double maxY = 0;
-    for (final v in values) { if (v > maxY) maxY = v; }
+    for (final v in values) {
+      if (v > maxY) maxY = v;
+    }
     if (maxY == 0) maxY = 1;
 
     final defaultColor = barColor ?? theme.colorScheme.primary;
@@ -415,7 +472,8 @@ class MiniBarChart extends StatelessWidget {
             getTooltipItem: (group, gIdx, rod, rIdx) {
               return BarTooltipItem(
                 _compactFmt.format(rod.toY),
-                GoogleFonts.outfit(
+                AppTheme.tabularStyle(
+                  context,
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
@@ -425,21 +483,32 @@ class MiniBarChart extends StatelessWidget {
           ),
         ),
         titlesData: FlTitlesData(
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: labels != null,
               reservedSize: 22,
               getTitlesWidget: (v, m) {
                 final idx = v.toInt();
-                if (labels == null || idx < 0 || idx >= labels!.length) return const SizedBox.shrink();
+                if (labels == null || idx < 0 || idx >= labels!.length)
+                  return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                     labels![idx],
-                    style: TextStyle(color: c.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: c.textMuted,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 );
               },
@@ -449,11 +518,14 @@ class MiniBarChart extends StatelessWidget {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (v) => FlLine(color: c.divider.withValues(alpha: 0.15), strokeWidth: 1),
+          getDrawingHorizontalLine: (v) =>
+              FlLine(color: c.divider.withValues(alpha: 0.15), strokeWidth: 1),
         ),
         borderData: FlBorderData(show: false),
         barGroups: values.asMap().entries.map((e) {
-          final color = barColors != null && e.key < barColors!.length ? barColors![e.key] : defaultColor;
+          final color = barColors != null && e.key < barColors!.length
+              ? barColors![e.key]
+              : defaultColor;
           return BarChartGroupData(
             x: e.key,
             barRods: [
@@ -500,14 +572,23 @@ class HorizontalBarList extends StatelessWidget {
                   Expanded(
                     child: Text(
                       item.label,
-                      style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary, fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: c.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Text(
                     _compactFmt.format(item.value),
-                    style: GoogleFonts.outfit(fontSize: 11, color: c.textPrimary, fontWeight: FontWeight.bold),
+                    style: AppTheme.tabularStyle(
+                      context,
+                      fontSize: 11,
+                      color: c.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),

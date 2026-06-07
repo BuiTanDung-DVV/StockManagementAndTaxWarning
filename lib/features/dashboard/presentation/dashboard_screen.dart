@@ -27,12 +27,15 @@ final _currFmt = NumberFormat.currency(
   symbol: '₫',
   decimalDigits: 0,
 );
+
 class _DashboardTimeFilter extends Notifier<String> {
   @override
   String build() => 'month';
   void update(String val) => state = val;
 }
-final _dashboardTimeFilterProvider = NotifierProvider<_DashboardTimeFilter, String>(_DashboardTimeFilter.new);
+
+final _dashboardTimeFilterProvider =
+    NotifierProvider<_DashboardTimeFilter, String>(_DashboardTimeFilter.new);
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -43,41 +46,71 @@ class DashboardScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final shopState = ref.watch(shopProvider);
     final hasFinance = shopState.isOwner || shopState.hasPermission('finance');
-    final hasInventory = shopState.isOwner || shopState.hasPermission('inventory');
+    final hasInventory =
+        shopState.isOwner || shopState.hasPermission('inventory');
 
     final filter = ref.watch(_dashboardTimeFilterProvider);
     final today = DateTime.now();
-    
+
     String from1, to1, from2, to2;
     String label1, label2;
-    
+
     if (filter == 'week') {
       final weekStart = today.subtract(Duration(days: today.weekday - 1));
       from1 = weekStart.toIso8601String().split('T')[0];
       to1 = today.toIso8601String().split('T')[0];
       final lastWeekStart = weekStart.subtract(const Duration(days: 7));
       from2 = lastWeekStart.toIso8601String().split('T')[0];
-      to2 = weekStart.subtract(const Duration(days: 1)).toIso8601String().split('T')[0];
+      to2 = weekStart
+          .subtract(const Duration(days: 1))
+          .toIso8601String()
+          .split('T')[0];
       label1 = 'Tuần này';
       label2 = 'Tuần trước';
     } else {
       // month
-      from1 = DateTime(today.year, today.month, 1).toIso8601String().split('T')[0];
+      from1 = DateTime(
+        today.year,
+        today.month,
+        1,
+      ).toIso8601String().split('T')[0];
       to1 = today.toIso8601String().split('T')[0];
-      from2 = DateTime(today.year, today.month - 1, 1).toIso8601String().split('T')[0];
-      to2 = DateTime(today.year, today.month, 0).toIso8601String().split('T')[0];
+      from2 = DateTime(
+        today.year,
+        today.month - 1,
+        1,
+      ).toIso8601String().split('T')[0];
+      to2 = DateTime(
+        today.year,
+        today.month,
+        0,
+      ).toIso8601String().split('T')[0];
       label1 = 'Tháng này';
       label2 = 'Tháng trước';
     }
 
-    final salesAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(salesSummaryProvider((from: from1, to: to1))) : null;
-    final salesAsync2 = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(salesSummaryProvider((from: from2, to: to2))) : null;
-    final topProductsAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(topProductsProvider((from: from1, to: to1))) : null;
-    final cashFlowAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(cashSummaryProvider((from: from1, to: to1))) : null;
-    
-    final lowStockAsync = hasInventory && shopState.userShops.isNotEmpty ? ref.watch(lowStockProvider) : null;
-    final inventoryCatAsync = hasInventory && shopState.userShops.isNotEmpty ? ref.watch(inventoryCategoriesSummaryProvider) : null;
-    final recentTransactionsAsync = hasFinance && shopState.userShops.isNotEmpty ? ref.watch(recentTransactionsProvider) : null;
+    final salesAsync = hasFinance && shopState.userShops.isNotEmpty
+        ? ref.watch(salesSummaryProvider((from: from1, to: to1)))
+        : null;
+    final salesAsync2 = hasFinance && shopState.userShops.isNotEmpty
+        ? ref.watch(salesSummaryProvider((from: from2, to: to2)))
+        : null;
+    final topProductsAsync = hasFinance && shopState.userShops.isNotEmpty
+        ? ref.watch(topProductsProvider((from: from1, to: to1)))
+        : null;
+    final cashFlowAsync = hasFinance && shopState.userShops.isNotEmpty
+        ? ref.watch(cashSummaryProvider((from: from1, to: to1)))
+        : null;
+
+    final lowStockAsync = hasInventory && shopState.userShops.isNotEmpty
+        ? ref.watch(lowStockProvider)
+        : null;
+    final inventoryCatAsync = hasInventory && shopState.userShops.isNotEmpty
+        ? ref.watch(inventoryCategoriesSummaryProvider)
+        : null;
+    final recentTransactionsAsync = hasFinance && shopState.userShops.isNotEmpty
+        ? ref.watch(recentTransactionsProvider)
+        : null;
 
     if (shopState.userShops.isEmpty) {
       return Scaffold(
@@ -87,18 +120,37 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                HugeIcon(icon: HugeIcons.strokeRoundedStore02, color: theme.colorScheme.primary, size: 64),
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedStore02,
+                  color: theme.colorScheme.primary,
+                  size: 64,
+                ),
                 const SizedBox(height: 16),
-                Text('Chưa có cửa hàng nào', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: c.textPrimary)),
+                Text(
+                  'Chưa có cửa hàng nào',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: c.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text('Bạn cần tạo cửa hàng hoặc chờ chủ shop duyệt yêu cầu tham gia.', 
-                  textAlign: TextAlign.center, 
-                  style: GoogleFonts.inter(fontSize: 14, color: c.textSecondary)
+                Text(
+                  'Bạn cần tạo cửa hàng hoặc chờ chủ shop duyệt yêu cầu tham gia.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: c.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(shopProvider), 
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedRefresh, color: Colors.white, size: 20),
+                  onPressed: () => ref.invalidate(shopProvider),
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedRefresh,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   label: const Text('Tải lại trạng thái'),
                 ),
               ],
@@ -189,17 +241,64 @@ class DashboardScreen extends ConsumerWidget {
                   child: Row(
                     children: [
                       if (shopState.isOwner || shopState.hasPermission('pos'))
-                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedStore01, 'Bán hàng', () => context.push('/pos'))),
-                      if (shopState.isOwner || shopState.hasPermission('products'))
-                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedPackage, 'Sản phẩm', () => context.push('/products'))),
-                      if (shopState.isOwner || shopState.hasPermission('customers'))
-                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedUserGroup, 'Khách hàng', () => context.push('/customers'))),
-                      if (shopState.isOwner || shopState.hasPermission('finance'))
-                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedInvoice01, 'Đơn hàng', () => context.push('/sales'))),
-                      if (shopState.isOwner || shopState.hasPermission('inventory'))
-                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedTask01, 'Kiểm kê', () => context.push('/stock-take'))),
-                      if (shopState.isOwner || shopState.hasPermission('finance'))
-                        Padding(padding: const EdgeInsets.only(right: 12), child: _QuickAction(HugeIcons.strokeRoundedAnalytics01, 'Lãi/Lỗ', () => context.push('/profit-loss'))),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _QuickAction(
+                            HugeIcons.strokeRoundedStore01,
+                            'Bán hàng',
+                            () => context.push('/pos'),
+                          ),
+                        ),
+                      if (shopState.isOwner ||
+                          shopState.hasPermission('products'))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _QuickAction(
+                            HugeIcons.strokeRoundedPackage,
+                            'Sản phẩm',
+                            () => context.push('/products'),
+                          ),
+                        ),
+                      if (shopState.isOwner ||
+                          shopState.hasPermission('customers'))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _QuickAction(
+                            HugeIcons.strokeRoundedUserGroup,
+                            'Khách hàng',
+                            () => context.push('/customers'),
+                          ),
+                        ),
+                      if (shopState.isOwner ||
+                          shopState.hasPermission('finance'))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _QuickAction(
+                            HugeIcons.strokeRoundedInvoice01,
+                            'Đơn hàng',
+                            () => context.push('/sales'),
+                          ),
+                        ),
+                      if (shopState.isOwner ||
+                          shopState.hasPermission('inventory'))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _QuickAction(
+                            HugeIcons.strokeRoundedTask01,
+                            'Kiểm kê',
+                            () => context.push('/stock-take'),
+                          ),
+                        ),
+                      if (shopState.isOwner ||
+                          shopState.hasPermission('finance'))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _QuickAction(
+                            HugeIcons.strokeRoundedAnalytics01,
+                            'Lãi/Lỗ',
+                            () => context.push('/profit-loss'),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -209,10 +308,19 @@ class DashboardScreen extends ConsumerWidget {
                 if (hasFinance && salesAsync != null) ...[
                   salesAsync.when(
                     data: (data) {
-                      final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                      final orders = data['totalOrders'] ?? data['orderCount'] ?? 0;
+                      final revenue =
+                          num.tryParse(
+                            data['totalRevenue']?.toString() ?? '0',
+                          )?.toDouble() ??
+                          0.0;
+                      final orders =
+                          data['totalOrders'] ?? data['orderCount'] ?? 0;
                       final avgOrder = orders > 0 ? revenue / orders : 0.0;
-                      final grossProfit = num.tryParse(data['grossProfit']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                      final grossProfit =
+                          num.tryParse(
+                            data['grossProfit']?.toString() ?? '0',
+                          )?.toDouble() ??
+                          0.0;
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -269,7 +377,9 @@ class DashboardScreen extends ConsumerWidget {
                                       AppStrings.dashboardLowStock,
                                       '${items.length}',
                                       HugeIcons.strokeRoundedAlert02,
-                                      items.isEmpty ? AppColors.success : AppColors.danger,
+                                      items.isEmpty
+                                          ? AppColors.success
+                                          : AppColors.danger,
                                     ),
                                     loading: () => _SummaryCard(
                                       AppStrings.dashboardLowStock,
@@ -291,14 +401,21 @@ class DashboardScreen extends ConsumerWidget {
                             ),
                           ],
                           const SizedBox(height: 16),
-                          _TimeFilterBar(filter, (v) => ref.read(_dashboardTimeFilterProvider.notifier).update(v)),
+                          _TimeFilterBar(
+                            filter,
+                            (v) => ref
+                                .read(_dashboardTimeFilterProvider.notifier)
+                                .update(v),
+                          ),
                           salesAsync2?.whenOrNull(
-                            data: (data2) => _ComparisonBarChart(
-                              (data['daily'] as List?) ?? [],
-                              (data2['daily'] as List?) ?? [],
-                              label1, label2
-                            ),
-                          ) ?? const ShimmerDashboard(),
+                                data: (data2) => _ComparisonBarChart(
+                                  (data['daily'] as List?) ?? [],
+                                  (data2['daily'] as List?) ?? [],
+                                  label1,
+                                  label2,
+                                ),
+                              ) ??
+                              const ShimmerDashboard(),
                         ],
                       );
                     },
@@ -321,7 +438,9 @@ class DashboardScreen extends ConsumerWidget {
                             AppStrings.dashboardLowStock,
                             '${items.length}',
                             HugeIcons.strokeRoundedAlert02,
-                            items.isEmpty ? AppColors.success : AppColors.danger,
+                            items.isEmpty
+                                ? AppColors.success
+                                : AppColors.danger,
                           ),
                           loading: () => _SummaryCard(
                             AppStrings.dashboardLowStock,
@@ -346,9 +465,10 @@ class DashboardScreen extends ConsumerWidget {
                 if (hasFinance && topProductsAsync != null) ...[
                   const SizedBox(height: 20),
                   topProductsAsync.when(
-                    data: (data) => data.isEmpty 
+                    data: (data) => data.isEmpty
                         ? EmptyChartPlaceholder(
-                            message: 'Tạo đơn bán đầu tiên để thấy Top sản phẩm',
+                            message:
+                                'Tạo đơn bán đầu tiên để thấy Top sản phẩm',
                             icon: Icons.leaderboard_rounded,
                             actionLabel: 'Tạo đơn bán',
                             onAction: () => context.push('/pos'),
@@ -358,13 +478,14 @@ class DashboardScreen extends ConsumerWidget {
                     error: (_, __) => const SizedBox.shrink(),
                   ),
                 ],
-                
+
                 if (hasInventory && inventoryCatAsync != null) ...[
                   const SizedBox(height: 20),
                   inventoryCatAsync.when(
-                    data: (data) => data.isEmpty 
+                    data: (data) => data.isEmpty
                         ? EmptyChartPlaceholder(
-                            message: 'Thêm sản phẩm vào kho để thấy biểu đồ tồn kho',
+                            message:
+                                'Thêm sản phẩm vào kho để thấy biểu đồ tồn kho',
                             icon: Icons.pie_chart_outline_rounded,
                             actionLabel: 'Thêm sản phẩm',
                             onAction: () => context.push('/products/form'),
@@ -378,124 +499,147 @@ class DashboardScreen extends ConsumerWidget {
                 if (hasFinance && cashFlowAsync != null) ...[
                   const SizedBox(height: 20),
                   cashFlowAsync.when(
-                    data: (data) => _CashFlowAreaChart((data['dailyFlow'] as List?) ?? [], label1),
+                    data: (data) => _CashFlowAreaChart(
+                      (data['dailyFlow'] as List?) ?? [],
+                      label1,
+                    ),
                     loading: () => const ShimmerDashboard(),
                     error: (_, __) => const SizedBox.shrink(),
                   ),
                 ],
-                
+
                 if (hasFinance && salesAsync != null) ...[
                   const SizedBox(height: 20),
 
                   // Revenue threshold warning (Glow progress meter)
                   salesAsync.whenOrNull(
-                    data: (data) {
-                      final revenue = num.tryParse(data['totalRevenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                      if (revenue <= 0) return const SizedBox.shrink();
-                      final progress = RevenueThreshold.getProgress(revenue).clamp(0.0, 1.0);
-                      final color = RevenueThreshold.getColor(revenue);
-                      final nextThreshold = RevenueThreshold.getNextThreshold(revenue);
-                      return GestureDetector(
-                          onTap: () => context.push('/tax-calculator'),
-                          child: Container(
-                            padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: color.withValues(alpha: 0.25),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withValues(alpha: 0.03),
-                                blurRadius: 16,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.12),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: HugeIcon(
-                                      icon: HugeIcons.strokeRoundedFlag01,
-                                      size: 16,
-                                      color: color,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Ngưỡng DT: ${RevenueThreshold.getTierLabel(revenue)}',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: color,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Icon(
-                                    Icons.arrow_forward_ios_rounded,
-                                    size: 12,
-                                    color: c.textMuted,
+                        data: (data) {
+                          final revenue =
+                              num.tryParse(
+                                data['totalRevenue']?.toString() ?? '0',
+                              )?.toDouble() ??
+                              0.0;
+                          if (revenue <= 0) return const SizedBox.shrink();
+                          final thresholds = ref
+                              .watch(taxConfigProvider)
+                              .thresholds;
+                          final progress = thresholds
+                              .getProgress(revenue)
+                              .clamp(0.0, 1.0);
+                          final color = thresholds.getColor(revenue);
+                          final nextThreshold = thresholds.getNextThreshold(
+                            revenue,
+                          );
+                          return GestureDetector(
+                            onTap: () => context.push('/tax-calculator'),
+                            child: Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: color.withValues(alpha: 0.25),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: color.withValues(alpha: 0.03),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 14),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: Stack(
-                                  children: [
-                                    Container(
-                                      height: 8,
-                                      color: c.surface,
-                                    ),
-                                    AnimatedContainer(
-                                      duration: const Duration(milliseconds: 500),
-                                      height: 8,
-                                      width: MediaQuery.of(context).size.width * 0.8 * progress,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(6),
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            color,
-                                            color.withValues(alpha: 0.7),
-                                          ],
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: color.withValues(alpha: 0.12),
+                                          shape: BoxShape.circle,
                                         ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: color.withValues(alpha: 0.35),
-                                            blurRadius: 6,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
+                                        child: HugeIcon(
+                                          icon: HugeIcons.strokeRoundedFlag01,
+                                          size: 16,
+                                          color: color,
+                                        ),
                                       ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Ngưỡng DT: ${thresholds.getTierLabel(revenue)}',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: color,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        size: 12,
+                                        color: c.textMuted,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Stack(
+                                      children: [
+                                        Container(height: 8, color: c.surface),
+                                        AnimatedContainer(
+                                          duration: const Duration(
+                                            milliseconds: 500,
+                                          ),
+                                          height: 8,
+                                          width:
+                                              MediaQuery.of(
+                                                context,
+                                              ).size.width *
+                                              0.8 *
+                                              progress,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                color,
+                                                color.withValues(alpha: 0.7),
+                                              ],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: color.withValues(
+                                                  alpha: 0.35,
+                                                ),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    '${thresholds.getObligation(revenue)} • Ngưỡng tiếp: ${_currFmt.format(nextThreshold)}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: c.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 10),
-                              Text(
-                                '${RevenueThreshold.getObligation(revenue)} • Ngưỡng tiếp: ${_currFmt.format(nextThreshold)}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: c.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ); // closes GestureDetector
-                  },
-                  ) ?? const SizedBox.shrink(),
+                            ),
+                          ); // closes GestureDetector
+                        },
+                      ) ??
+                      const SizedBox.shrink(),
 
                   // Real Tax Obligation Reminder
                   const _TaxObligationReminder(),
@@ -506,7 +650,7 @@ class DashboardScreen extends ConsumerWidget {
                   Text(
                     'Giao dịch gần đây',
                     style: GoogleFonts.outfit(
-                      fontSize: 20, 
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
                     ),
@@ -515,7 +659,9 @@ class DashboardScreen extends ConsumerWidget {
                   recentTransactionsAsync.when(
                     data: (transactions) {
                       if (transactions.isEmpty) {
-                        return const Center(child: Text('Chưa có giao dịch nào'));
+                        return const Center(
+                          child: Text('Chưa có giao dịch nào'),
+                        );
                       }
                       return Container(
                         decoration: BoxDecoration(
@@ -527,33 +673,57 @@ class DashboardScreen extends ConsumerWidget {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: transactions.length,
-                          separatorBuilder: (_, __) => Divider(color: c.divider),
+                          separatorBuilder: (_, __) =>
+                              Divider(color: c.divider),
                           itemBuilder: (context, index) {
                             final t = transactions[index];
                             final id = t['id'];
-                            final total = num.tryParse(t['totalAmount']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                            final total =
+                                num.tryParse(
+                                  t['totalAmount']?.toString() ?? '0',
+                                )?.toDouble() ??
+                                0.0;
                             final dateStr = t['orderDate'] ?? '';
                             final date = DateTime.tryParse(dateStr);
-                            final formattedDate = date != null ? DateFormat('dd/MM HH:mm').format(date) : '';
-                            final customerName = t['customer']?['name'] ?? 'Khách lẻ';
+                            final formattedDate = date != null
+                                ? DateFormat('dd/MM HH:mm').format(date)
+                                : '';
+                            final customerName =
+                                t['customer']?['name'] ?? 'Khách lẻ';
 
                             return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 8,
+                              ),
                               leading: Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                  color: theme.colorScheme.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   shape: BoxShape.circle,
                                 ),
-                                child: HugeIcon(icon: HugeIcons.strokeRoundedInvoice03, size: 20, color: theme.colorScheme.primary),
+                                child: HugeIcon(
+                                  icon: HugeIcons.strokeRoundedInvoice03,
+                                  size: 20,
+                                  color: theme.colorScheme.primary,
+                                ),
                               ),
                               title: Text(
                                 customerName,
-                                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: c.textPrimary, fontSize: 15),
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                  color: c.textPrimary,
+                                  fontSize: 15,
+                                ),
                               ),
                               subtitle: Text(
                                 'HD-$id • $formattedDate',
-                                style: TextStyle(color: c.textSecondary, fontSize: 12),
+                                style: TextStyle(
+                                  color: c.textSecondary,
+                                  fontSize: 12,
+                                ),
                               ),
                               trailing: Text(
                                 _currFmt.format(total),
@@ -569,8 +739,14 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, trace) => Center(child: Text('Lỗi tải GD: $e', style: const TextStyle(color: Colors.red))),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, trace) => Center(
+                      child: Text(
+                        'Lỗi tải GD: $e',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
                   ),
                 ],
 
@@ -579,91 +755,107 @@ class DashboardScreen extends ConsumerWidget {
                 if (hasInventory && lowStockAsync != null)
                   lowStockAsync.when(
                     data: (items) {
-                    if (items.isEmpty) return const SizedBox.shrink();
-                    final display = items.take(5).toList();
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.warning_amber_rounded,
-                                  color: AppColors.danger,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Dưới định mức tối thiểu',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                      if (items.isEmpty) return const SizedBox.shrink();
+                      final display = items.take(5).toList();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.warning_amber_rounded,
                                     color: AppColors.danger,
+                                    size: 20,
                                   ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Dưới định mức tối thiểu',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.danger,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              TextButton.icon(
+                                onPressed: () => context.push('/inventory'),
+                                icon: const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 14,
                                 ),
-                              ],
-                            ),
-                            TextButton.icon(
-                              onPressed: () => context.push('/inventory'),
-                              icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                              label: const Text('Xem tất cả', style: TextStyle(fontSize: 12)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ...display.map(
-                          (item) => Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: c.card,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: c.divider.withValues(alpha: 0.4),
-                                width: 1,
+                                label: const Text(
+                                  'Xem tất cả',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...display.map(
+                            (item) => Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: c.card,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: c.divider.withValues(alpha: 0.4),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item['product']?['name'] ??
+                                          item['productName'] ??
+                                          'Sản phẩm',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: c.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.warning.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      'Tồn: ${item['currentQuantity'] ?? item['quantity'] ?? 0}',
+                                      style: const TextStyle(
+                                        color: AppColors.warning,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    item['product']?['name'] ?? item['productName'] ?? 'Sản phẩm',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: c.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.warning.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    'Tồn: ${item['currentQuantity'] ?? item['quantity'] ?? 0}',
-                                    style: const TextStyle(
-                                      color: AppColors.warning,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, _) => const SizedBox.shrink(),
-                ),
+                        ],
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
                 const SizedBox(height: 32),
               ],
             ),
@@ -697,10 +889,14 @@ class _TaxObligationReminder extends ConsumerWidget {
             children: pending.map<Widget>((t) {
               final period = t['period'] ?? '';
               final dueDateStr = t['dueDate']?.toString().split('T').first;
-              final vatDeclared = num.tryParse(t['vatDeclared']?.toString() ?? '0') ?? 0;
-              final vatPaid = num.tryParse(t['vatPaid']?.toString() ?? '0') ?? 0;
-              final pitDeclared = num.tryParse(t['pitDeclared']?.toString() ?? '0') ?? 0;
-              final pitPaid = num.tryParse(t['pitPaid']?.toString() ?? '0') ?? 0;
+              final vatDeclared =
+                  num.tryParse(t['vatDeclared']?.toString() ?? '0') ?? 0;
+              final vatPaid =
+                  num.tryParse(t['vatPaid']?.toString() ?? '0') ?? 0;
+              final pitDeclared =
+                  num.tryParse(t['pitDeclared']?.toString() ?? '0') ?? 0;
+              final pitPaid =
+                  num.tryParse(t['pitPaid']?.toString() ?? '0') ?? 0;
               final vatOwed = vatDeclared - vatPaid;
               final pitOwed = pitDeclared - pitPaid;
               final totalOwed = vatOwed + pitOwed;
@@ -721,7 +917,8 @@ class _TaxObligationReminder extends ConsumerWidget {
               IconData urgencyIcon;
               if (status == 'overdue' || (daysLeft != null && daysLeft < 0)) {
                 urgencyColor = AppColors.danger;
-                urgencyLabel = 'Quá hạn${daysLeft != null ? " ${(-daysLeft)} ngày" : ""}';
+                urgencyLabel =
+                    'Quá hạn${daysLeft != null ? " ${(-daysLeft)} ngày" : ""}';
                 urgencyIcon = Icons.error_rounded;
               } else if (daysLeft != null && daysLeft <= 7) {
                 urgencyColor = AppColors.danger;
@@ -733,15 +930,17 @@ class _TaxObligationReminder extends ConsumerWidget {
                 urgencyIcon = Icons.schedule_rounded;
               } else {
                 urgencyColor = AppColors.info;
-                urgencyLabel = daysLeft != null ? 'Còn $daysLeft ngày' : 'Chờ nộp';
+                urgencyLabel = daysLeft != null
+                    ? 'Còn $daysLeft ngày'
+                    : 'Chờ nộp';
                 urgencyIcon = Icons.info_outline_rounded;
               }
 
               return GestureDetector(
-                  onTap: () => context.push('/tax-obligations'),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(16),
+                onTap: () => context.push('/tax-obligations'),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: urgencyColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(24),
@@ -815,7 +1014,7 @@ class _TaxObligationReminder extends ConsumerWidget {
                   ),
                 ),
               ); // closes GestureDetector
-          }).toList(),
+            }).toList(),
           ),
         );
       },
@@ -837,10 +1036,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: c.divider,
-          width: 1,
-        ),
+        border: Border.all(color: c.divider, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -885,7 +1081,7 @@ class _SummaryCard extends StatelessWidget {
           Text(
             value,
             style: GoogleFonts.outfit(
-              fontSize: 32, 
+              fontSize: 32,
               fontWeight: FontWeight.w900,
               color: c.textPrimary,
               letterSpacing: -1.5,
@@ -897,9 +1093,9 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            title, 
+            title,
             style: GoogleFonts.inter(
-              fontSize: 14, 
+              fontSize: 14,
               color: c.textSecondary,
               fontWeight: FontWeight.w500,
             ),
@@ -920,14 +1116,12 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 80,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-        ),
+        decoration: BoxDecoration(color: Colors.transparent),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -945,7 +1139,11 @@ class _QuickAction extends StatelessWidget {
                   ),
                 ],
               ),
-              child: HugeIcon(icon: icon, color: theme.colorScheme.primary, size: 24),
+              child: HugeIcon(
+                icon: icon,
+                color: theme.colorScheme.primary,
+                size: 24,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -992,7 +1190,13 @@ class _TimeFilterBar extends StatelessWidget {
     );
   }
 
-  Widget _buildBtn(BuildContext context, String val, String label, ThemeData theme, AppThemeColors c) {
+  Widget _buildBtn(
+    BuildContext context,
+    String val,
+    String label,
+    ThemeData theme,
+    AppThemeColors c,
+  ) {
     final active = currentFilter == val;
     return GestureDetector(
       onTap: () => onChanged(val),
@@ -1000,7 +1204,9 @@ class _TimeFilterBar extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? theme.colorScheme.primary.withValues(alpha: 0.12) : Colors.transparent,
+          color: active
+              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
@@ -1020,7 +1226,12 @@ class _ComparisonBarChart extends StatelessWidget {
   final List<dynamic> currentData;
   final List<dynamic> previousData;
   final String label1, label2;
-  const _ComparisonBarChart(this.currentData, this.previousData, this.label1, this.label2);
+  const _ComparisonBarChart(
+    this.currentData,
+    this.previousData,
+    this.label1,
+    this.label2,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1040,50 +1251,69 @@ class _ComparisonBarChart extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              HugeIcon(icon: HugeIcons.strokeRoundedAnalytics01, size: 32, color: c.textMuted),
+              HugeIcon(
+                icon: HugeIcons.strokeRoundedAnalytics01,
+                size: 32,
+                color: c.textMuted,
+              ),
               const SizedBox(height: 8),
-              Text('Chưa có dữ liệu giao dịch', style: TextStyle(color: c.textSecondary, fontSize: 13)),
+              Text(
+                'Chưa có dữ liệu giao dịch',
+                style: TextStyle(color: c.textSecondary, fontSize: 13),
+              ),
             ],
           ),
         ),
       );
     }
 
-    final maxLen = currentData.length > previousData.length ? currentData.length : previousData.length;
+    final maxLen = currentData.length > previousData.length
+        ? currentData.length
+        : previousData.length;
     double maxRev = 0;
-    
+
     // Create grouped data
     final barGroups = <BarChartGroupData>[];
     for (int i = 0; i < maxLen; i++) {
       double rev1 = 0;
       double rev2 = 0;
       if (i < currentData.length) {
-        rev1 = num.tryParse(currentData[i]['revenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
+        rev1 =
+            num.tryParse(
+              currentData[i]['revenue']?.toString() ?? '0',
+            )?.toDouble() ??
+            0.0;
         if (rev1 > maxRev) maxRev = rev1;
       }
       if (i < previousData.length) {
-        rev2 = num.tryParse(previousData[i]['revenue']?.toString() ?? '0')?.toDouble() ?? 0.0;
+        rev2 =
+            num.tryParse(
+              previousData[i]['revenue']?.toString() ?? '0',
+            )?.toDouble() ??
+            0.0;
         if (rev2 > maxRev) maxRev = rev2;
       }
-      
-      barGroups.add(BarChartGroupData(
-        x: i,
-        barRods: [
-          BarChartRodData(
-            toY: rev2,
-            color: c.textMuted.withValues(alpha: 0.4),
-            width: 12,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          BarChartRodData(
-            toY: rev1,
-            color: theme.colorScheme.primary,
-            width: 12,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ],
-        barsSpace: 4,
-      ));
+
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: rev2,
+              color: c.textMuted.withValues(alpha: 0.4),
+              width: 12,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            BarChartRodData(
+              toY: rev1,
+              color: theme.colorScheme.primary,
+              width: 12,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ],
+          barsSpace: 4,
+        ),
+      );
     }
 
     if (maxRev == 0) maxRev = 1000000;
@@ -1125,9 +1355,17 @@ class _ComparisonBarChart extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    _buildLegendItem(label2, c.textMuted.withValues(alpha: 0.4), c.textMuted),
+                    _buildLegendItem(
+                      label2,
+                      c.textMuted.withValues(alpha: 0.4),
+                      c.textMuted,
+                    ),
                     const SizedBox(width: 12),
-                    _buildLegendItem(label1, theme.colorScheme.primary, c.textSecondary),
+                    _buildLegendItem(
+                      label1,
+                      theme.colorScheme.primary,
+                      c.textSecondary,
+                    ),
                   ],
                 ),
               ],
@@ -1142,12 +1380,16 @@ class _ComparisonBarChart extends StatelessWidget {
                   touchTooltipData: BarTouchTooltipData(
                     getTooltipColor: (group) => c.surface,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final val = NumberFormat.compact(locale: 'vi_VN').format(rod.toY);
+                      final val = NumberFormat.compact(
+                        locale: 'vi_VN',
+                      ).format(rod.toY);
                       final label = rodIndex == 0 ? label2 : label1;
                       return BarTooltipItem(
                         '$label\n$val',
                         GoogleFonts.outfit(
-                          color: rodIndex == 0 ? c.textSecondary : theme.colorScheme.primary,
+                          color: rodIndex == 0
+                              ? c.textSecondary
+                              : theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                         ),
@@ -1157,30 +1399,44 @@ class _ComparisonBarChart extends StatelessWidget {
                 ),
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 28,
                       getTitlesWidget: (value, meta) {
                         final idx = value.toInt();
-                        if (idx < 0 || idx >= currentData.length) return const SizedBox.shrink();
-                        final dateStr = currentData[idx]['date'] as String? ?? '';
+                        if (idx < 0 || idx >= currentData.length)
+                          return const SizedBox.shrink();
+                        final dateStr =
+                            currentData[idx]['date'] as String? ?? '';
                         if (dateStr.length < 5) return const SizedBox.shrink();
                         final parts = dateStr.split('-');
-                        final displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
-                        
+                        final displayDate = parts.length >= 3
+                            ? '${parts[2]}/${parts[1]}'
+                            : dateStr;
+
                         // Limit labels if too many
-                        if (currentData.length > 7 && idx % (currentData.length / 5).ceil() != 0 && idx != currentData.length - 1) {
+                        if (currentData.length > 7 &&
+                            idx % (currentData.length / 5).ceil() != 0 &&
+                            idx != currentData.length - 1) {
                           return const SizedBox.shrink();
                         }
-                        
+
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             displayDate,
-                            style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: c.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         );
                       },
@@ -1191,7 +1447,8 @@ class _ComparisonBarChart extends StatelessWidget {
                       showTitles: true,
                       reservedSize: 40,
                       getTitlesWidget: (value, meta) {
-                        if (value == meta.max || value == meta.min) return const SizedBox.shrink();
+                        if (value == meta.max || value == meta.min)
+                          return const SizedBox.shrink();
                         String label = '';
                         if (value >= 1000000) {
                           label = '${(value / 1000000).toStringAsFixed(0)}Tr';
@@ -1202,7 +1459,11 @@ class _ComparisonBarChart extends StatelessWidget {
                         }
                         return Text(
                           label,
-                          style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: c.textMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                           textAlign: TextAlign.right,
                         );
                       },
@@ -1301,9 +1562,11 @@ class _TopProductsChart extends StatelessWidget {
                     alignment: BarChartAlignment.spaceBetween,
                     barTouchData: BarTouchData(
                       touchTooltipData: BarTouchTooltipData(
-                            getTooltipColor: (group) => c.surface,
+                        getTooltipColor: (group) => c.surface,
                         getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          final val = NumberFormat.compact(locale: 'vi_VN').format(rod.toY);
+                          final val = NumberFormat.compact(
+                            locale: 'vi_VN',
+                          ).format(rod.toY);
                           return BarTooltipItem(
                             '${data[group.x.toInt()]['name']}\n$val đ',
                             GoogleFonts.outfit(
@@ -1317,23 +1580,33 @@ class _TopProductsChart extends StatelessWidget {
                     ),
                     titlesData: FlTitlesData(
                       show: true,
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
                           reservedSize: 28,
                           getTitlesWidget: (value, meta) {
-                            if (value == meta.max || value == meta.min) return const SizedBox.shrink();
+                            if (value == meta.max || value == meta.min)
+                              return const SizedBox.shrink();
                             String label = '';
                             if (value >= 1000000) {
-                              label = '${(value / 1000000).toStringAsFixed(0)}Tr';
+                              label =
+                                  '${(value / 1000000).toStringAsFixed(0)}Tr';
                             }
                             return Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
                                 label,
-                                style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  color: c.textMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             );
                           },
@@ -1345,12 +1618,19 @@ class _TopProductsChart extends StatelessWidget {
                           reservedSize: 80,
                           getTitlesWidget: (value, meta) {
                             final idx = value.toInt();
-                            if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+                            if (idx < 0 || idx >= data.length)
+                              return const SizedBox.shrink();
                             final name = data[idx]['name'] as String;
-                            final shortName = name.length > 12 ? '${name.substring(0, 10)}...' : name;
+                            final shortName = name.length > 12
+                                ? '${name.substring(0, 10)}...'
+                                : name;
                             return Text(
                               shortName,
-                              style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: c.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                               textAlign: TextAlign.right,
                             );
                           },
@@ -1368,13 +1648,19 @@ class _TopProductsChart extends StatelessWidget {
                     ),
                     borderData: FlBorderData(show: false),
                     barGroups: data.asMap().entries.map((entry) {
-                      final val = num.tryParse(entry.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                      final val =
+                          num.tryParse(
+                            entry.value['value']?.toString() ?? '0',
+                          )?.toDouble() ??
+                          0.0;
                       return BarChartGroupData(
                         x: entry.key,
                         barRods: [
                           BarChartRodData(
                             toY: val,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.8,
+                            ),
                             width: 14,
                             borderRadius: const BorderRadius.only(
                               topRight: Radius.circular(4),
@@ -1408,11 +1694,25 @@ class _InventoryDonutChart extends StatelessWidget {
     if (data.isEmpty) return const SizedBox.shrink();
 
     // Map data to chart format
-    final total = data.fold<double>(0, (sum, item) => sum + (num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0.0));
-    final colors = [AppColors.success, AppColors.info, AppColors.warning, theme.colorScheme.primary, AppColors.danger, Colors.purple, Colors.teal];
-    
+    final total = data.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0.0),
+    );
+    final colors = [
+      AppColors.success,
+      AppColors.info,
+      AppColors.warning,
+      theme.colorScheme.primary,
+      AppColors.danger,
+      Colors.purple,
+      Colors.teal,
+    ];
+
     final chartData = data.asMap().entries.map((e) {
-      final val = num.tryParse(e.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      final val =
+          num.tryParse(e.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
       final pct = total > 0 ? (val / total * 100) : 0.0;
       return {
         'name': e.value['name'],
@@ -1466,7 +1766,8 @@ class _InventoryDonutChart extends StatelessWidget {
                             return PieChartSectionData(
                               color: e['color'] as Color,
                               value: e['value'] as double,
-                              title: '${(e['value'] as double).toStringAsFixed(1)}%',
+                              title:
+                                  '${(e['value'] as double).toStringAsFixed(1)}%',
                               radius: 20,
                               titleStyle: const TextStyle(
                                 fontSize: 10,
@@ -1500,7 +1801,10 @@ class _InventoryDonutChart extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     e['name'] as String,
-                                    style: TextStyle(fontSize: 11, color: c.textSecondary),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: c.textSecondary,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1539,8 +1843,11 @@ class _CashFlowAreaChart extends StatelessWidget {
 
     double maxY = 0;
     for (int i = 0; i < data.length; i++) {
-      final inc = num.tryParse(data[i]['income']?.toString() ?? '0')?.toDouble() ?? 0.0;
-      final exp = num.tryParse(data[i]['expense']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      final inc =
+          num.tryParse(data[i]['income']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      final exp =
+          num.tryParse(data[i]['expense']?.toString() ?? '0')?.toDouble() ??
+          0.0;
       spotsIncome.add(FlSpot(i.toDouble(), inc));
       spotsExpense.add(FlSpot(i.toDouble(), exp));
       if (inc > maxY) maxY = inc;
@@ -1565,16 +1872,51 @@ class _CashFlowAreaChart extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Dòng tiền ($label)', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: c.textSecondary)),
+                Text(
+                  'Dòng tiền ($label)',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: c.textSecondary,
+                  ),
+                ),
                 Row(
                   children: [
-                    Container(width: 10, height: 10, decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(3))),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
                     const SizedBox(width: 4),
-                    Text('Thu', style: TextStyle(fontSize: 10, color: c.textSecondary, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Thu',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: c.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Container(width: 10, height: 10, decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(3))),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: AppColors.danger,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
                     const SizedBox(width: 4),
-                    Text('Chi', style: TextStyle(fontSize: 10, color: c.textSecondary, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Chi',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: c.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -1583,23 +1925,50 @@ class _CashFlowAreaChart extends StatelessWidget {
           Expanded(
             child: LineChart(
               LineChartData(
-                gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (v) => FlLine(color: c.divider.withValues(alpha: 0.2), strokeWidth: 1)),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (v) => FlLine(
+                    color: c.divider.withValues(alpha: 0.2),
+                    strokeWidth: 1,
+                  ),
+                ),
                 titlesData: FlTitlesData(
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 22,
                       getTitlesWidget: (v, m) {
                         final idx = v.toInt();
-                        if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
-                        if (data.length > 7 && idx % (data.length / 5).ceil() != 0 && idx != data.length - 1) return const SizedBox.shrink();
+                        if (idx < 0 || idx >= data.length)
+                          return const SizedBox.shrink();
+                        if (data.length > 7 &&
+                            idx % (data.length / 5).ceil() != 0 &&
+                            idx != data.length - 1)
+                          return const SizedBox.shrink();
                         final dateStr = data[idx]['date'] as String? ?? '';
                         if (dateStr.length < 5) return const SizedBox.shrink();
                         final parts = dateStr.split('-');
-                        final displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
-                        return Padding(padding: const EdgeInsets.only(top: 8), child: Text(displayDate, style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold)));
+                        final displayDate = parts.length >= 3
+                            ? '${parts[2]}/${parts[1]}'
+                            : dateStr;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            displayDate,
+                            style: TextStyle(
+                              color: c.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -1608,9 +1977,22 @@ class _CashFlowAreaChart extends StatelessWidget {
                       showTitles: true,
                       reservedSize: 40,
                       getTitlesWidget: (v, m) {
-                        if (v == m.max || v == m.min) return const SizedBox.shrink();
-                        String lbl = v >= 1000000 ? '${(v / 1000000).toStringAsFixed(0)}Tr' : (v >= 1000 ? '${(v / 1000).toStringAsFixed(0)}K' : v.toStringAsFixed(0));
-                        return Text(lbl, style: TextStyle(color: c.textMuted, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.right);
+                        if (v == m.max || v == m.min)
+                          return const SizedBox.shrink();
+                        String lbl = v >= 1000000
+                            ? '${(v / 1000000).toStringAsFixed(0)}Tr'
+                            : (v >= 1000
+                                  ? '${(v / 1000).toStringAsFixed(0)}K'
+                                  : v.toStringAsFixed(0));
+                        return Text(
+                          lbl,
+                          style: TextStyle(
+                            color: c.textMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.right,
+                        );
                       },
                     ),
                   ),
@@ -1628,7 +2010,10 @@ class _CashFlowAreaChart extends StatelessWidget {
                     barWidth: 2,
                     isStrokeCapRound: true,
                     dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(show: true, color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    ),
                   ),
                   LineChartBarData(
                     spots: spotsExpense,
@@ -1637,7 +2022,10 @@ class _CashFlowAreaChart extends StatelessWidget {
                     barWidth: 2,
                     isStrokeCapRound: true,
                     dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(show: true, color: AppColors.danger.withValues(alpha: 0.1)),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: AppColors.danger.withValues(alpha: 0.1),
+                    ),
                   ),
                 ],
               ),

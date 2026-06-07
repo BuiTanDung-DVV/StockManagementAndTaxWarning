@@ -20,7 +20,7 @@ class FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -49,7 +49,10 @@ class FilterBar extends StatelessWidget {
                       prefixIcon: Icon(Icons.search, color: c.textMuted),
                       border: InputBorder.none,
                       filled: false,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -72,10 +75,7 @@ class FilterBar extends StatelessWidget {
               ),
             ),
           ],
-          if (trailing != null) ...[
-            const SizedBox(width: 12),
-            trailing!,
-          ]
+          if (trailing != null) ...[const SizedBox(width: 12), trailing!],
         ],
       ),
     );
