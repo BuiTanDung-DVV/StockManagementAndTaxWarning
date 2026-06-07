@@ -1,3 +1,4 @@
+import { In } from 'typeorm';
 import { AppDataSource } from '../config/db.config';
 import { ShopMember, ShopRole, Notification } from '../shop/entities';
 import { User } from '../auth/entities';
@@ -39,9 +40,10 @@ export class ShopMemberService {
     }
 
     /** List PENDING requests of a shop */
-    async findAllPending(shopId: number) {
+    async findAllPending(shopId: number | number[]) {
         const members = await this.memberRepo.find({
-            where: { shopId, status: 'PENDING' },
+            where: { shopId: Array.isArray(shopId) ? In(shopId) : shopId, status: 'PENDING' },
+            relations: ['shop'],
             order: { createdAt: 'ASC' },
         });
         const userIds = members.map(m => m.userId);
@@ -58,6 +60,8 @@ export class ShopMemberService {
                 avatarUrl: u?.avatarUrl,
                 status: m.status,
                 createdAt: m.createdAt,
+                shopId: m.shopId,
+                shopName: m.shop?.shopName,
             };
         });
     }
