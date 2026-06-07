@@ -25,7 +25,7 @@ export const deleteCashTransaction = async (req: Request, res: Response) => {
 const getShopId = (req: any) => req.isAllShops ? req.shopIds : req.shopId;
 
 export const getCashFlowSummary = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.getCashFlowSummary(getShopId(req), req.query.period as string, req.query.from as string, req.query.to as string) }); }
+    try { res.json({ success: true, data: await financeService.getCashFlowSummary(getShopId(req), req.query.period as string, req.query.from as string, req.query.to as string, (req as any).user?.sub, (req as any).isOwner) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 export const getProfitLoss = async (req: Request, res: Response) => {

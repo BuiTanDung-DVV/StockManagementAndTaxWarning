@@ -15,7 +15,7 @@ router.get('/cash-transactions', requirePermission('finance', 'view'), financeCt
 router.post('/cash-transactions', requirePermission('finance', 'edit'), financeCtrl.createCashTransaction);
 router.put('/cash-transactions/:id', requirePermission('finance', 'edit'), financeCtrl.updateCashTransaction);
 router.delete('/cash-transactions/:id', requirePermission('finance', 'edit'), financeCtrl.deleteCashTransaction);
-router.get('/cash-transactions/summary', requirePermission('finance', 'view'), financeCtrl.getCashFlowSummary);
+router.get('/cash-transactions/summary', requirePermission(['finance', 'dashboard'], 'view'), financeCtrl.getCashFlowSummary);
 router.get('/cash-transactions/profit-loss', requirePermission('finance', 'view'), financeCtrl.getProfitLoss);
 router.get('/cash-transactions/invoice-reconciliation', requirePermission('finance', 'view'), financeCtrl.getInvoiceReconciliation);
 router.get('/cash-transactions/expenses-by-category', requirePermission('finance', 'view'), financeCtrl.getExpensesByCategory);

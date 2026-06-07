@@ -18,7 +18,7 @@ router.put('/invoice-scans/:id', requirePermission('finance', 'edit'), systemCtr
 
 // Invoices
 router.get('/invoices', requirePermission('finance', 'view'), systemCtrl.getInvoices);
-router.get('/invoices/summary', requirePermission('finance', 'view'), systemCtrl.getInvoiceSummary);
+router.get('/invoices/summary', requirePermission(['finance', 'dashboard'], 'view'), systemCtrl.getInvoiceSummary);
 router.get('/invoices/:id', requirePermission('finance', 'view'), systemCtrl.getInvoiceById);
 router.post('/invoices', requirePermission('finance', 'edit'), systemCtrl.createInvoice);
 

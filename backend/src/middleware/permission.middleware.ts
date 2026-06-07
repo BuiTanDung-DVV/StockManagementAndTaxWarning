@@ -22,9 +22,19 @@ export const requirePermission = (key: string | string[], level: 'view' | 'edit'
             if (!rawShopId) {
                 return res.status(400).json({ success: false, message: 'Thiếu thông tin cửa hàng (shopId)' });
             }
-            const shopId = +(rawShopId);
 
             const memberRepo = AppDataSource.getRepository(ShopMember);
+            
+            if (rawShopId === 'all') {
+                // For 'all' shops, verify user is owner of at least one shop
+                const members = await memberRepo.find({ where: { userId, isActive: true } });
+                if (!members.length) return res.status(403).json({ success: false, message: 'Bạn không thuộc cửa hàng nào' });
+                req.isOwner = members.some(m => m.memberType === 'OWNER');
+                req.memberType = req.isOwner ? 'OWNER' : 'EMPLOYEE';
+                return next();
+            }
+
+            const shopId = +(rawShopId);
             const member = await memberRepo.findOne({
                 where: { userId, shopId, isActive: true },
                 relations: ['role'],
@@ -33,6 +43,9 @@ export const requirePermission = (key: string | string[], level: 'view' | 'edit'
             if (!member) {
                 return res.status(403).json({ success: false, message: 'Bạn không thuộc cửa hàng này' });
             }
+
+            req.isOwner = member.memberType === 'OWNER';
+            req.memberType = member.memberType;
 
             // Owners have full access
             if (member.memberType === 'OWNER') return next();
