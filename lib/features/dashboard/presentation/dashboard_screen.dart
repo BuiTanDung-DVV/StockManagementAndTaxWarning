@@ -354,11 +354,11 @@ class DashboardScreen extends ConsumerWidget {
                               // If there are only 4 cards (no inventory), and we have 5 columns, reduce to 4
                               if (!hasInventory && crossAxisCount == 5) crossAxisCount = 4;
                               
-                              final cardWidth = (w - (crossAxisCount - 1) * 12) / crossAxisCount;
+                              final cardWidth = (w - (crossAxisCount - 1) * 16) / crossAxisCount;
 
                               return Wrap(
-                                spacing: 12,
-                                runSpacing: 12,
+                                spacing: 16,
+                                runSpacing: 16,
                                 children: [
                                   SizedBox(
                                     width: cardWidth,
@@ -611,45 +611,35 @@ class DashboardScreen extends ConsumerWidget {
                                     ],
                                   ),
                                   const SizedBox(height: 14),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Stack(
-                                      children: [
-                                        Container(height: 8, color: c.surface),
-                                        AnimatedContainer(
-                                          duration: const Duration(
-                                            milliseconds: 500,
-                                          ),
-                                          height: 8,
-                                          width:
-                                              MediaQuery.of(
-                                                context,
-                                              ).size.width *
-                                              0.8 *
-                                              progress,
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                color,
-                                                color.withValues(alpha: 0.7),
-                                              ],
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: color.withValues(
-                                                  alpha: 0.35,
+                                  LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Stack(
+                                          children: [
+                                            Container(height: 8, width: double.infinity, color: c.surface),
+                                            AnimatedContainer(
+                                              duration: const Duration(milliseconds: 500),
+                                              height: 8,
+                                              width: constraints.maxWidth * progress,
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(6),
+                                                gradient: LinearGradient(
+                                                  colors: [color, color.withValues(alpha: 0.7)],
                                                 ),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 2),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: color.withValues(alpha: 0.35),
+                                                    blurRadius: 6,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      );
+                                    },
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
