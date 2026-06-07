@@ -442,7 +442,13 @@ class DashboardScreen extends ConsumerWidget {
                                   ),
                                 ),
                               ) ??
-                              const ShimmerDashboard(),
+                              const AppShimmer(
+                                child: ShimmerBox(
+                                  width: double.infinity,
+                                  height: 260,
+                                  radius: 24,
+                                ),
+                              ),
                         ],
                       );
                     },
@@ -501,7 +507,13 @@ class DashboardScreen extends ConsumerWidget {
                             onAction: () => context.push('/pos'),
                           )
                         : TopProductsChart(data),
-                    loading: () => const ShimmerDashboard(),
+                    loading: () => const AppShimmer(
+                      child: ShimmerBox(
+                        width: double.infinity,
+                        height: 260,
+                        radius: 24,
+                      ),
+                    ),
                     error: (_, __) => const SizedBox.shrink(),
                   ),
                 ],
@@ -518,7 +530,13 @@ class DashboardScreen extends ConsumerWidget {
                             onAction: () => context.push('/products/form'),
                           )
                         : InventoryDonutChart(data),
-                    loading: () => const ShimmerDashboard(),
+                    loading: () => const AppShimmer(
+                      child: ShimmerBox(
+                        width: double.infinity,
+                        height: 260,
+                        radius: 24,
+                      ),
+                    ),
                     error: (_, __) => const SizedBox.shrink(),
                   ),
                 ],
@@ -530,7 +548,13 @@ class DashboardScreen extends ConsumerWidget {
                       (data['dailyFlow'] as List?) ?? [],
                       label1,
                     ),
-                    loading: () => const ShimmerDashboard(),
+                    loading: () => const AppShimmer(
+                      child: ShimmerBox(
+                        width: double.infinity,
+                        height: 260,
+                        radius: 24,
+                      ),
+                    ),
                     error: (_, __) => const SizedBox.shrink(),
                   ),
                 ],
