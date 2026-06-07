@@ -156,20 +156,60 @@ export class FinanceService {
             .where(`${shopCondition}${userCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate, userId })
             .getRawOne();
 
+        const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
+        const isMonthFormat = diffDays > 60;
+        const dateFormat = isMonthFormat ? 'YYYY-MM' : 'YYYY-MM-DD';
+
         const dailyFlowRaw = await this.cashTxRepo.createQueryBuilder('t')
-            .select("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')", 'date')
+            .select(`TO_CHAR(t.transaction_date, '${dateFormat}')`, 'date')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
             .where(`${shopCondition}${userCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate, userId })
-            .groupBy("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')")
-            .orderBy("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')", 'ASC')
+            .groupBy(`TO_CHAR(t.transaction_date, '${dateFormat}')`)
+            .orderBy(`TO_CHAR(t.transaction_date, '${dateFormat}')`, 'ASC')
             .getRawMany();
 
-        const dailyFlow = dailyFlowRaw.map((d: any) => ({
-            date: d.date,
-            income: Number(d.income),
-            expense: Number(d.expense)
-        }));
+        const dailyMap = new Map();
+        dailyFlowRaw.forEach(d => {
+            dailyMap.set(d.date, {
+                income: Number(d.income || 0),
+                expense: Number(d.expense || 0)
+            });
+        });
+
+        const dailyFlow = [];
+
+        if (!isMonthFormat) {
+            for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${yyyy}-${mm}-${dd}`;
+                dailyFlow.push({
+                    date: dateStr,
+                    income: dailyMap.get(dateStr)?.income || 0,
+                    expense: dailyMap.get(dateStr)?.expense || 0
+                });
+            }
+        } else {
+            let startYear = fromDate.getFullYear();
+            let startMonth = fromDate.getMonth();
+            const endYear = toDate.getFullYear();
+            const endMonth = toDate.getMonth();
+            while (startYear < endYear || (startYear === endYear && startMonth <= endMonth)) {
+                const monthStr = `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
+                dailyFlow.push({
+                    date: monthStr,
+                    income: dailyMap.get(monthStr)?.income || 0,
+                    expense: dailyMap.get(monthStr)?.expense || 0
+                });
+                startMonth++;
+                if (startMonth > 11) {
+                    startMonth = 0;
+                    startYear++;
+                }
+            }
+        }
 
         const income = Number(result?.income || 0);
         const expense = Number(result?.expense || 0);

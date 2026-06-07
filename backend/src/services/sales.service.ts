@@ -67,16 +67,53 @@ export class SalesService {
             .orderBy(`TO_CHAR(o.order_date, '${dateFormat}')`, 'ASC')
             .getRawMany();
 
+        const dailyMap = new Map();
+        daily.forEach(d => {
+            dailyMap.set(d.date, {
+                revenue: Number(d.revenue || 0),
+                orderCount: Number(d.orderCount || 0)
+            });
+        });
+
+        const filledDaily = [];
+        if (dateFormat === 'YYYY-MM-DD') {
+            for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${yyyy}-${mm}-${dd}`;
+                filledDaily.push({
+                    date: dateStr,
+                    revenue: dailyMap.get(dateStr)?.revenue || 0,
+                    orderCount: dailyMap.get(dateStr)?.orderCount || 0
+                });
+            }
+        } else {
+            let startYear = fromDate.getFullYear();
+            let startMonth = fromDate.getMonth();
+            const endYear = toDate.getFullYear();
+            const endMonth = toDate.getMonth();
+            while (startYear < endYear || (startYear === endYear && startMonth <= endMonth)) {
+                const monthStr = `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
+                filledDaily.push({
+                    date: monthStr,
+                    revenue: dailyMap.get(monthStr)?.revenue || 0,
+                    orderCount: dailyMap.get(monthStr)?.orderCount || 0
+                });
+                startMonth++;
+                if (startMonth > 11) {
+                    startMonth = 0;
+                    startYear++;
+                }
+            }
+        }
+
         return {
             totalRevenue: Number(result?.totalRevenue || 0),
             totalCogs: Number(result?.totalCogs || 0),
             grossProfit: Number(result?.totalRevenue || 0) - Number(result?.totalCogs || 0),
             orderCount: Number(result?.orderCount || 0),
-            daily: daily.map(d => ({
-                date: d.date,
-                revenue: Number(d.revenue || 0),
-                orderCount: Number(d.orderCount || 0)
-            }))
+            daily: filledDaily
         };
     }
 

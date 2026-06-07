@@ -118,6 +118,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final cashFlowAsync = hasFinance && shopState.userShops.isNotEmpty
         ? ref.watch(cashSummaryProvider((from: from1, to: to1)))
         : null;
+    final paymentSummaryAsync = hasFinance && shopState.userShops.isNotEmpty
+        ? ref.watch(paymentSummaryProvider((from: from1, to: to1)))
+        : null;
 
     final lowStockAsync = hasInventory && shopState.userShops.isNotEmpty
         ? ref.watch(lowStockProvider)
@@ -384,12 +387,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             builder: (context, constraints) {
                               final w = constraints.maxWidth;
                               // Determine number of columns based on width
-                              int crossAxisCount = w > 1100
-                                  ? 5
-                                  : (w > 800 ? 3 : (w > 500 ? 2 : 1));
-                              // If there are only 4 cards (no inventory), and we have 5 columns, reduce to 4
-                              if (!hasInventory && crossAxisCount == 5)
-                                crossAxisCount = 4;
+                              int crossAxisCount = w > 1300
+                                  ? 4
+                                  : (w > 900 ? 3 : (w > 600 ? 2 : 1));
 
                               final cardWidth =
                                   (w - (crossAxisCount - 1) * 16) /
@@ -436,6 +436,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       AppColors.info,
                                     ),
                                   ),
+                                  if (hasFinance)
+                                    SizedBox(
+                                      width: cardWidth,
+                                      child: SummaryCard(
+                                        'Ước tính VAT (10%)',
+                                        _currFmt.format(grossProfit * 0.1),
+                                        HugeIcons.strokeRoundedTaskDone01,
+                                        Colors.orange,
+                                      ),
+                                    ),
+                                  if (hasFinance)
+                                    SizedBox(
+                                      width: cardWidth,
+                                      child: SummaryCard(
+                                        'Thuế TNDN tạm tính',
+                                        _currFmt.format(grossProfit * 0.2),
+                                        HugeIcons.strokeRoundedBank,
+                                        Colors.redAccent,
+                                      ),
+                                    ),
                                   if (hasInventory && lowStockAsync != null)
                                     SizedBox(
                                       width: cardWidth,
@@ -633,6 +653,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     },
                   ),
 
+                if (hasInventory && lowStockAsync != null)
+                  lowStockAsync.when(
+                    data: (items) => LowStockTableWidget(items),
+                    loading: () => const AppShimmer(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 20),
+                        child: ShimmerBox(
+                          width: double.infinity,
+                          height: 200,
+                          radius: 24,
+                        ),
+                      ),
+                    ),
+                    error: (e, _) => const SizedBox.shrink(),
+                  ),
+
                 if (hasFinance && cashFlowAsync != null) ...[
                   const SizedBox(height: 20),
                   cashFlowAsync.when(
@@ -650,6 +686,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     error: (e, _) => AppError(
                       message: 'Không thể tải biểu đồ dòng tiền\n$e',
                       onRetry: () => ref.invalidate(cashSummaryProvider),
+                    ),
+                  ),
+                ],
+
+                if (hasFinance && paymentSummaryAsync != null) ...[
+                  const SizedBox(height: 20),
+                  paymentSummaryAsync.when(
+                    data: (data) => PaymentMethodDonutChart(data),
+                    loading: () => const AppShimmer(
+                      child: ShimmerBox(
+                        width: double.infinity,
+                        height: 280,
+                        radius: 24,
+                      ),
+                    ),
+                    error: (e, _) => AppError(
+                      message: 'Không thể tải phương thức thanh toán\n$e',
+                      onRetry: () => ref.invalidate(paymentSummaryProvider),
                     ),
                   ),
                 ],
