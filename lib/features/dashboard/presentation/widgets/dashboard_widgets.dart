@@ -427,9 +427,6 @@ class ComparisonBarChart extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
-
     // Create grouped data
     final barGroups = <BarChartGroupData>[];
     double barWidth;
