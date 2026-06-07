@@ -825,7 +825,7 @@ class TopProductsChart extends StatelessWidget {
           Expanded(
             child: BarChart(
               BarChartData(
-                alignment: BarChartAlignment.spaceBetween,
+                alignment: BarChartAlignment.spaceAround,
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
                     getTooltipColor: (group) => theme.colorScheme.primary,
