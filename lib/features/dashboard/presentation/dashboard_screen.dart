@@ -230,6 +230,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
+                              'Chức vụ: ${shopState.memberType == 'OWNER' ? 'Chủ cửa hàng' : (shopState.memberType ?? 'Nhân viên')} - ${shopState.currentShopName ?? 'Tổng quát'}',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
                               'Tổng quan hôm nay',
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: c.textSecondary,

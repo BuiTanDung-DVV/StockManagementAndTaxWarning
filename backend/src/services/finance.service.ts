@@ -127,7 +127,7 @@ export class FinanceService {
         return { success: true };
     }
 
-    async getCashFlowSummary(shopId: number | number[], period?: string, from?: string, to?: string) {
+    async getCashFlowSummary(shopId: number | number[], period?: string, from?: string, to?: string, userId?: number, isOwner?: boolean) {
         const now = new Date();
         let fromDate: Date;
         let toDate: Date = new Date();
@@ -148,18 +148,19 @@ export class FinanceService {
 
         const shopCondition = Array.isArray(shopId) ? 't.shop_id IN (:...shopIds)' : 't.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
+        const userCondition = !isOwner && userId ? ' AND t.created_by = :userId' : '';
 
         const result = await this.cashTxRepo.createQueryBuilder('t')
             .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition}${userCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate, userId })
             .getRawOne();
 
         const dailyFlowRaw = await this.cashTxRepo.createQueryBuilder('t')
             .select("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')", 'date')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition}${userCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate, userId })
             .groupBy("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')")
             .orderBy("TO_CHAR(t.transaction_date, 'YYYY-MM-DD')", 'ASC')
             .getRawMany();
