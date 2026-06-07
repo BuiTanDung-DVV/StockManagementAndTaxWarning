@@ -335,7 +335,7 @@ class MiniAreaChart extends StatelessWidget {
 // ──────────────────────────────────────────
 // MiniDonutChart — Compact pie with legend
 // ──────────────────────────────────────────
-class MiniDonutChart extends StatelessWidget {
+class MiniDonutChart extends StatefulWidget {
   final List<DonutSegment> segments;
   final double centerRadius;
 
@@ -346,14 +346,21 @@ class MiniDonutChart extends StatelessWidget {
   });
 
   @override
+  State<MiniDonutChart> createState() => _MiniDonutChartState();
+}
+
+class _MiniDonutChartState extends State<MiniDonutChart> {
+  int touchedIndex = -1;
+
+  @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
 
-    if (segments.isEmpty) {
+    if (widget.segments.isEmpty) {
       return const EmptyChartPlaceholder(message: 'Chưa có dữ liệu');
     }
 
-    final total = segments.fold<double>(0, (s, e) => s + e.value);
+    final total = widget.segments.fold<double>(0, (s, e) => s + e.value);
 
     return Row(
       children: [
@@ -362,17 +369,41 @@ class MiniDonutChart extends StatelessWidget {
           flex: 3,
           child: PieChart(
             PieChartData(
+              pieTouchData: PieTouchData(
+                touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                  setState(() {
+                    if (!event.isInterestedForInteractions ||
+                        pieTouchResponse == null ||
+                        pieTouchResponse.touchedSection == null) {
+                      touchedIndex = -1;
+                      return;
+                    }
+                    touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                  });
+                },
+              ),
               sectionsSpace: 2,
-              centerSpaceRadius: centerRadius,
-              sections: segments.map((e) {
+              centerSpaceRadius: widget.centerRadius,
+              sections: widget.segments.asMap().entries.map((entry) {
+                final i = entry.key;
+                final e = entry.value;
+                final isTouched = i == touchedIndex;
                 final pct = total > 0 ? (e.value / total * 100) : 0.0;
+                
+                String displayTitle = '';
+                if (isTouched) {
+                    displayTitle = '${e.label}\n${pct.toStringAsFixed(1)}%';
+                } else if (pct >= 5) {
+                    displayTitle = '${pct.toStringAsFixed(0)}%';
+                }
+
                 return PieChartSectionData(
                   color: e.color,
                   value: e.value,
-                  title: pct >= 5 ? '${pct.toStringAsFixed(0)}%' : '',
-                  radius: 22,
-                  titleStyle: const TextStyle(
-                    fontSize: 10,
+                  title: displayTitle,
+                  radius: isTouched ? 28 : 22,
+                  titleStyle: TextStyle(
+                    fontSize: isTouched ? 8 : 10,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),

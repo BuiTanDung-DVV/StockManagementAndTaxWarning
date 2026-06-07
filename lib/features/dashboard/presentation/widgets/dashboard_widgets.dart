@@ -267,18 +267,21 @@ class SummaryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-                letterSpacing: -0.5,
-                height: 1.1,
-                fontFeatures: const [FontFeature.tabularFigures()],
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: GoogleFonts.outfit(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                  letterSpacing: -0.5,
+                  height: 1.1,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+                maxLines: 1,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -634,13 +637,30 @@ class ComparisonBarChart extends StatelessWidget {
                       final val = NumberFormat.compact(
                         locale: 'vi_VN',
                       ).format(rod.toY);
+                      final idx = group.x;
+                      String dateStr = '';
+                      if (rodIndex == 0 && idx < previousData.length) {
+                          dateStr = previousData[idx]['date'] as String? ?? '';
+                      } else if (rodIndex == 1 && idx < currentData.length) {
+                          dateStr = currentData[idx]['date'] as String? ?? '';
+                      }
+                      
+                      final parts = dateStr.split('-');
+                      String displayDate = dateStr;
+                      if (parts.length >= 3) {
+                          displayDate = '${parts[2]}/${parts[1]}/${parts[0]}';
+                      } else if (parts.length == 2) {
+                          displayDate = '${parts[1]}/${parts[0]}';
+                      }
+
                       final label = rodIndex == 0 ? label2 : label1;
+                      final dateLine = displayDate.isNotEmpty ? '$displayDate\n' : '';
                       return BarTooltipItem(
-                        '$label\n$val đ',
+                        '$dateLine$label\n$val đ',
                         GoogleFonts.outfit(
                           color: rodIndex == 0
                               ? const Color(0xFF94A3B8)
-                              : const Color(0xFF60A5FA),
+                              : Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -953,31 +973,52 @@ class TopProductsChart extends StatelessWidget {
               })(),
             ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }
 }
 
-class InventoryDonutChart extends StatelessWidget {
+class InventoryDonutChart extends StatefulWidget {
   final List<dynamic> data;
   const InventoryDonutChart(this.data);
+
+  @override
+  State<InventoryDonutChart> createState() => _InventoryDonutChartState();
+}
+
+class _InventoryDonutChartState extends State<InventoryDonutChart> {
+  int touchedIndex = -1;
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
 
-    if (data.isEmpty) return const SizedBox.shrink();
+    if (widget.data.isEmpty) return const SizedBox.shrink();
 
     // Map data to chart format
-    final total = data.fold<double>(
+    final total = widget.data.fold<double>(
       0,
       (sum, item) =>
           sum +
           (num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0.0),
     );
+
+    if (total == 0) {
+      return Container(
+        height: 280,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        ),
+        child: Center(
+          child: Text('Chưa có dữ liệu tồn kho', style: TextStyle(color: c.textSecondary)),
+        ),
+      );
+    }
     final colors = [
       theme.colorScheme.primary,
       theme.colorScheme.primary.withValues(alpha: 0.8),
@@ -988,7 +1029,7 @@ class InventoryDonutChart extends StatelessWidget {
       AppColors.warning,
     ];
 
-    final chartData = data.asMap().entries.map((e) {
+    final chartData = widget.data.asMap().entries.map((e) {
       final val =
           num.tryParse(e.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
       final pct = total > 0 ? (val / total * 100) : 0.0;
@@ -1034,14 +1075,32 @@ class InventoryDonutChart extends StatelessWidget {
                   flex: 1,
                   child: PieChart(
                     PieChartData(
+                      pieTouchData: PieTouchData(
+                        touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                          setState(() {
+                            if (!event.isInterestedForInteractions ||
+                                pieTouchResponse == null ||
+                                pieTouchResponse.touchedSection == null) {
+                              touchedIndex = -1;
+                              return;
+                            }
+                            touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                          });
+                        },
+                      ),
                       sectionsSpace: 3,
                       centerSpaceRadius: 40,
-                      sections: chartData.map((e) {
+                      sections: chartData.asMap().entries.map((entry) {
+                        final i = entry.key;
+                        final e = entry.value;
+                        final isTouched = i == touchedIndex;
                         return PieChartSectionData(
                           color: e['color'] as Color,
                           value: e['value'] as double,
-                          showTitle: false,
-                          radius: 35,
+                          showTitle: isTouched,
+                          title: isTouched ? '${e['name']}\n${(e['value'] as double).toStringAsFixed(1)}%' : '',
+                          radius: isTouched ? 45 : 35,
+                          titleStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
                         );
                       }).toList(),
                     ),
