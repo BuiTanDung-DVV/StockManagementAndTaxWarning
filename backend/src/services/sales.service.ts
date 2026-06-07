@@ -54,13 +54,16 @@ export class SalesService {
             .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
             .getRawOne();
 
+        const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
+        const dateFormat = diffDays > 60 ? 'YYYY-MM' : 'YYYY-MM-DD';
+
         const daily = await this.orderRepo.createQueryBuilder('o')
-            .select("TO_CHAR(o.order_date, 'YYYY-MM-DD')", 'date')
+            .select(`TO_CHAR(o.order_date, '${dateFormat}')`, 'date')
             .addSelect('COALESCE(SUM(o.total_amount), 0)', 'revenue')
             .addSelect('COUNT(o.id)', 'orderCount')
             .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
-            .groupBy("TO_CHAR(o.order_date, 'YYYY-MM-DD')")
-            .orderBy("TO_CHAR(o.order_date, 'YYYY-MM-DD')", 'ASC')
+            .groupBy(`TO_CHAR(o.order_date, '${dateFormat}')`)
+            .orderBy(`TO_CHAR(o.order_date, '${dateFormat}')`, 'ASC')
             .getRawMany();
 
         return {

@@ -487,7 +487,7 @@ class ComparisonBarChart extends StatelessWidget {
       bSpace = isMobile ? 2.0 : 4.0;
     }
 
-    final pastColor = theme.colorScheme.primary.withValues(alpha: 0.25);
+    final pastColor = Colors.grey.shade400;
     final presentColor = theme.colorScheme.primary;
 
     for (int i = 0; i < maxLen; i++) {
@@ -517,7 +517,7 @@ class ComparisonBarChart extends StatelessWidget {
             BarChartRodData(
               toY: rev2,
               gradient: LinearGradient(
-                colors: [pastColor, pastColor.withValues(alpha: 0.1)],
+                colors: [pastColor, pastColor.withValues(alpha: 0.5)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -527,7 +527,7 @@ class ComparisonBarChart extends StatelessWidget {
             BarChartRodData(
               toY: rev1,
               gradient: LinearGradient(
-                colors: [presentColor, presentColor.withValues(alpha: 0.5)],
+                colors: [presentColor, presentColor.withValues(alpha: 0.7)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -543,7 +543,7 @@ class ComparisonBarChart extends StatelessWidget {
     if (maxRev == 0) maxRev = 1000000;
 
     return Container(
-      height: 280,
+      height: 380,
       margin: const EdgeInsets.only(top: 14),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
