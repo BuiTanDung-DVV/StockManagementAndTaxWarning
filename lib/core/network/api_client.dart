@@ -31,11 +31,11 @@ class ApiClient {
     // Provide a fallback for production (Vercel) if not passed via build args
     if (kIsWeb) {
       // Default to the provided production backend
-      return 'https://stock-management-and-tax-warning.vercel.app/api'; 
+      return 'https://stock-management-and-tax-warning.vercel.app/api/'; 
     }
     
     // Default fallback for mobile
-    return 'http://10.0.2.2:3000/api';
+    return 'http://10.0.2.2:3000/api/';
   }
 
   late final Dio _dio;
@@ -204,9 +204,11 @@ class ApiClient {
     return body;
   }
 
+  String _cleanPath(String path) => path.startsWith('/') ? path.substring(1) : path;
+
   Future<dynamic> get(String path, {Map<String, dynamic>? params}) async {
     try {
-      final res = await _dio.get(path, queryParameters: params);
+      final res = await _dio.get(_cleanPath(path), queryParameters: params);
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
@@ -216,7 +218,7 @@ class ApiClient {
 
   Future<dynamic> post(String path, {dynamic data}) async {
     try {
-      final res = await _dio.post(path, data: data);
+      final res = await _dio.post(_cleanPath(path), data: data);
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
@@ -226,7 +228,7 @@ class ApiClient {
 
   Future<dynamic> put(String path, {dynamic data}) async {
     try {
-      final res = await _dio.put(path, data: data);
+      final res = await _dio.put(_cleanPath(path), data: data);
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
@@ -236,7 +238,7 @@ class ApiClient {
 
   Future<dynamic> delete(String path) async {
     try {
-      final res = await _dio.delete(path);
+      final res = await _dio.delete(_cleanPath(path));
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;

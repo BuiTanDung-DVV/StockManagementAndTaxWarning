@@ -26,7 +26,7 @@ class TaxService {
     final token = _apiClient.token;
     final shopId = _apiClient.shopId;
 
-    final baseUri = Uri.parse('${ApiClient.baseUrl}/tax/export-htkk');
+    final baseUri = Uri.parse('${ApiClient.baseUrl}tax/export-htkk');
     final url = baseUri.replace(
       queryParameters: {
         'period': period,
