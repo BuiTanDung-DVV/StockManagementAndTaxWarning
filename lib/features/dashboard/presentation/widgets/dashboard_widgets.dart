@@ -424,10 +424,20 @@ class ComparisonBarChart extends StatelessWidget {
         : previousData.length;
     double maxRev = 0;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     // Create grouped data
     final barGroups = <BarChartGroupData>[];
-    final barWidth = maxLen <= 7 ? 22.0 : 8.0;
-    final bSpace = maxLen <= 7 ? 6.0 : 2.0;
+    double barWidth;
+    double bSpace;
+    if (maxLen <= 7) {
+      barWidth = isMobile ? 12.0 : 22.0;
+      bSpace = isMobile ? 4.0 : 6.0;
+    } else {
+      barWidth = isMobile ? 4.0 : 10.0;
+      bSpace = isMobile ? 1.0 : 2.0;
+    }
 
     for (int i = 0; i < maxLen; i++) {
       double rev1 = 0;
@@ -564,6 +574,7 @@ class ComparisonBarChart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 28,
+                      interval: 1,
                       getTitlesWidget: (value, meta) {
                         final idx = value.toInt();
                         if (idx < 0 || idx >= maxLen)
@@ -1115,6 +1126,7 @@ class CashFlowAreaChart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 22,
+                      interval: 1,
                       getTitlesWidget: (v, m) {
                         final idx = v.toInt();
                         if (idx < 0 || idx >= data.length)
