@@ -25,7 +25,7 @@ class ApiClient {
           return envUrl.replaceAll('127.0.0.1', '10.0.2.2');
         }
       }
-      return envUrl;
+      return envUrl.endsWith('/') ? envUrl : '$envUrl/';
     }
 
     // Provide a fallback for production (Vercel) if not passed via build args
