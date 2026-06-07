@@ -27,14 +27,14 @@ export class ProductService {
 
         if (search) {
             qb.andWhere(new Brackets(sub => {
-                sub.where('p.name LIKE :search', { search: `%${search}%` })
-                   .orWhere('p.sku LIKE :search', { search: `%${search}%` })
-                   .orWhere('p.barcode LIKE :search', { search: `%${search}%` });
+                sub.where('p.name ILIKE :search', { search: `%${search}%` })
+                   .orWhere('p.sku ILIKE :search', { search: `%${search}%` })
+                   .orWhere('p.barcode ILIKE :search', { search: `%${search}%` });
             }));
         }
 
         if (tag) {
-            qb.andWhere('p.tags LIKE :tag', { tag: `%${tag}%` });
+            qb.andWhere('p.tags ILIKE :tag', { tag: `%${tag}%` });
         }
 
         const [items, total] = await qb.skip((page - 1) * limit)
