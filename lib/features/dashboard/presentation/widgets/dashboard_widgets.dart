@@ -599,8 +599,17 @@ class ComparisonBarChart extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: BarChart(
-              BarChartData(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final double minWidth = barGroups.length * 50.0;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Container(
+                    padding: const EdgeInsets.only(right: 16),
+                    width: minWidth > constraints.maxWidth ? minWidth : constraints.maxWidth,
+                    child: BarChart(
+                      BarChartData(
                 alignment: BarChartAlignment.spaceAround,
                 maxY: maxRev * 1.15,
                 gridData: FlGridData(
@@ -776,8 +785,11 @@ class ComparisonBarChart extends StatelessWidget {
                 barGroups: barGroups,
               ),
             ),
-          ),
-        ],
+          );
+        },
+      ),
+    ),
+  ],
       ),
     );
   }
@@ -1235,7 +1247,7 @@ class CashFlowAreaChart extends StatelessWidget {
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
+                        color: AppColors.success,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -1272,9 +1284,18 @@ class CashFlowAreaChart extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final double minWidth = expectedLen * 30.0;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Container(
+                    padding: const EdgeInsets.only(right: 16),
+                    width: minWidth > constraints.maxWidth ? minWidth : constraints.maxWidth,
+                    child: LineChart(
+                      LineChartData(
+                        gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (v) => FlLine(
@@ -1430,11 +1451,11 @@ class CashFlowAreaChart extends StatelessWidget {
                     spots: spotsIncome,
                     isCurved: true,
                     curveSmoothness: 0.35,
-                    color: theme.colorScheme.primary,
+                    color: AppColors.success,
                     barWidth: 2,
                     isStrokeCapRound: true,
                     shadow: Shadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                      color: AppColors.success.withValues(alpha: 0.5),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -1443,8 +1464,8 @@ class CashFlowAreaChart extends StatelessWidget {
                       show: true,
                       gradient: LinearGradient(
                         colors: [
-                          theme.colorScheme.primary.withValues(alpha: 0.35),
-                          theme.colorScheme.primary.withValues(alpha: 0.0),
+                          AppColors.success.withValues(alpha: 0.35),
+                          AppColors.success.withValues(alpha: 0.0),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -1478,6 +1499,300 @@ class CashFlowAreaChart extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        );
+      },
+    ),
+  ),
+],
+      ),
+    );
+  }
+}
+
+class LowStockTableWidget extends StatelessWidget {
+  final List<dynamic> items;
+  const LowStockTableWidget(this.items);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(HugeIcons.strokeRoundedAlert02, color: AppColors.danger, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Cảnh báo tồn kho',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: c.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length > 5 ? 5 : items.length,
+            separatorBuilder: (_, __) => Divider(color: c.divider.withValues(alpha: 0.2), height: 16),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final name = item['name'] ?? 'Unknown';
+              final qty = item['total_quantity'] ?? 0;
+              final minQty = item['min_quantity'] ?? 0;
+              return Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: c.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$qty / $minQty',
+                      style: const TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PaymentMethodDonutChart extends StatefulWidget {
+  final List<dynamic> data;
+  const PaymentMethodDonutChart(this.data);
+
+  @override
+  State<PaymentMethodDonutChart> createState() => _PaymentMethodDonutChartState();
+}
+
+class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
+  int touchedIndex = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+
+    if (widget.data.isEmpty) return const SizedBox.shrink();
+
+    final total = widget.data.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (num.tryParse(item['total']?.toString() ?? '0')?.toDouble() ?? 0.0),
+    );
+
+    if (total == 0) {
+      return Container(
+        height: 280,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        ),
+        child: Center(
+          child: Text('Chưa có dữ liệu thanh toán', style: TextStyle(color: c.textSecondary)),
+        ),
+      );
+    }
+
+    String getMethodName(String method) {
+      if (method == 'CASH') return 'Tiền mặt';
+      if (method == 'BANK_TRANSFER') return 'Chuyển khoản';
+      if (method == 'CREDIT_CARD') return 'Thẻ tín dụng';
+      if (method == 'DEBT') return 'Ghi nợ';
+      return method;
+    }
+
+    Color getMethodColor(String method) {
+      if (method == 'CASH') return AppColors.success;
+      if (method == 'BANK_TRANSFER') return theme.colorScheme.primary;
+      if (method == 'DEBT') return AppColors.warning;
+      return AppColors.info;
+    }
+
+    final chartData = widget.data.map((item) {
+      final val = num.tryParse(item['total']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      final pct = total > 0 ? (val / total * 100) : 0.0;
+      final method = item['method']?.toString() ?? 'UNKNOWN';
+      return {
+        'name': getMethodName(method),
+        'value': pct,
+        'color': getMethodColor(method),
+        'rawValue': val,
+      };
+    }).toList();
+
+    return Container(
+      height: 280,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Phương thức Thanh toán',
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: c.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: PieChart(
+                    PieChartData(
+                      pieTouchData: PieTouchData(
+                        touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                          setState(() {
+                            if (!event.isInterestedForInteractions ||
+                                pieTouchResponse == null ||
+                                pieTouchResponse.touchedSection == null) {
+                              touchedIndex = -1;
+                              return;
+                            }
+                            touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                          });
+                        },
+                      ),
+                      borderData: FlBorderData(show: false),
+                      sectionsSpace: 2,
+                      centerSpaceRadius: 40,
+                      sections: chartData.asMap().entries.map((e) {
+                        final isTouched = e.key == touchedIndex;
+                        final fontSize = isTouched ? 16.0 : 12.0;
+                        final radius = isTouched ? 45.0 : 40.0;
+                        final val = e.value['value'] as double;
+                        return PieChartSectionData(
+                          color: e.value['color'] as Color,
+                          value: val,
+                          title: '${val.toStringAsFixed(1)}%',
+                          radius: radius,
+                          titleStyle: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          badgeWidget: isTouched
+                              ? Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                                  ),
+                                  child: Text(
+                                    NumberFormat.compact(locale: 'vi_VN').format(e.value['rawValue']),
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
+                                  ),
+                                )
+                              : null,
+                          badgePositionPercentageOffset: 1.3,
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: chartData.length,
+                    itemBuilder: (context, index) {
+                      final item = chartData[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: item['color'] as Color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                item['name'] as String,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: c.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ],

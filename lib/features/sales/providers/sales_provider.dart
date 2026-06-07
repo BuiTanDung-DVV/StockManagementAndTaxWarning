@@ -43,6 +43,14 @@ class SalesRepository {
     );
     return res as List<dynamic>? ?? [];
   }
+
+  Future<List<dynamic>> getPaymentSummary(String from, String to) async {
+    final res = await _api.get(
+      '/sales-orders/payment-summary',
+      params: {'from': from, 'to': to},
+    );
+    return res as List<dynamic>? ?? [];
+  }
 }
 
 final salesRepoProvider = Provider<SalesRepository>(
@@ -92,3 +100,11 @@ final recentTransactionsProvider = FutureProvider<List<dynamic>>((ref) async {
   final res = await ref.read(salesRepoProvider).findAll(page: 1, limit: 5);
   return res['items'] as List<dynamic>? ?? [];
 });
+
+final paymentSummaryProvider =
+    FutureProvider.family<List<dynamic>, ({String from, String to})>((
+      ref,
+      args,
+    ) {
+      return ref.read(salesRepoProvider).getPaymentSummary(args.from, args.to);
+    });
