@@ -785,9 +785,9 @@ class ComparisonBarChart extends StatelessWidget {
                 barGroups: barGroups,
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     ),
   ],
       ),
@@ -965,23 +965,24 @@ class TopProductsChart extends StatelessWidget {
                   return data.asMap().entries.map((entry) {
                     final val = num.tryParse(entry.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
                     return BarChartGroupData(
-                    x: entry.key,
-                    barRods: [
-                      BarChartRodData(
-                        toY: val,
-                        color: theme.colorScheme.primary,
-                        width: 32,
-                        borderRadius: const BorderRadius.all(Radius.circular(6)),
-                        backDrawRodData: BackgroundBarChartRodData(
-                          show: true,
-                          toY: maxVal * 1.1 == 0 ? 100 : maxVal * 1.1,
-                          color: c.divider.withValues(alpha: 0.15),
+                      x: entry.key,
+                      barRods: [
+                        BarChartRodData(
+                          toY: val,
+                          color: theme.colorScheme.primary,
+                          width: 32,
+                          borderRadius: const BorderRadius.all(Radius.circular(6)),
+                          backDrawRodData: BackgroundBarChartRodData(
+                            show: true,
+                            toY: maxVal * 1.1 == 0 ? 100 : maxVal * 1.1,
+                            color: c.divider.withValues(alpha: 0.15),
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                }).toList();
-              })(),
+                      ],
+                    );
+                  }).toList();
+                })(),
+              ),
             ),
           ),
         ],
