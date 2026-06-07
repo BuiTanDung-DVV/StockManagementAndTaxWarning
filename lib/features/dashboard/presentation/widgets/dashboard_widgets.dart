@@ -786,12 +786,13 @@ class ComparisonBarChart extends StatelessWidget {
               ),
             ),
           ),
-        );
-      },
-    ),
-  ],
-      ),
-    );
+        ); // ends SingleChildScrollView
+      }, // ends builder
+    ), // ends LayoutBuilder
+  ), // ends Expanded
+], // ends Column children
+      ), // ends Column
+    ); // ends Container
   }
 
   Widget _buildLegendItem(String label, Color color, Color textColor) {
