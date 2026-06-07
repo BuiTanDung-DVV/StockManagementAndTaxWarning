@@ -502,58 +502,102 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ],
 
-                if (hasFinance && topProductsAsync != null) ...[
-                  const SizedBox(height: 20),
-                  topProductsAsync.when(
-                    data: (data) => data.isEmpty
-                        ? EmptyChartPlaceholder(
-                            message:
-                                'Tạo đơn bán đầu tiên để thấy Top sản phẩm',
-                            icon: Icons.leaderboard_rounded,
-                            actionLabel: 'Tạo đơn bán',
-                            onAction: () => context.push('/pos'),
-                          )
-                        : TopProductsChart(data),
-                    loading: () => const AppShimmer(
-                      child: ShimmerBox(
-                        width: double.infinity,
-                        height: 260,
-                        radius: 24,
-                      ),
-                    ),
-                    error: (e, _) => AppError(
-                      message: 'Không thể tải Top sản phẩm\n$e',
-                      onRetry: () => ref.invalidate(topProductsProvider),
-                    ),
-                  ),
-                ],
+                if ((hasFinance && topProductsAsync != null) ||
+                    (hasInventory && inventoryCatAsync != null))
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isDesktop = constraints.maxWidth > 800;
 
-                if (hasInventory && inventoryCatAsync != null) ...[
-                  const SizedBox(height: 20),
-                  inventoryCatAsync.when(
-                    data: (data) => data.isEmpty
-                        ? EmptyChartPlaceholder(
-                            message:
-                                'Thêm sản phẩm vào kho để thấy biểu đồ tồn kho',
-                            icon: Icons.pie_chart_outline_rounded,
-                            actionLabel: 'Thêm sản phẩm',
-                            onAction: () => context.push('/products/form'),
-                          )
-                        : InventoryDonutChart(data),
-                    loading: () => const AppShimmer(
-                      child: ShimmerBox(
-                        width: double.infinity,
-                        height: 260,
-                        radius: 24,
-                      ),
-                    ),
-                    error: (e, _) => AppError(
-                      message: 'Không thể tải phân bổ tồn kho\n$e',
-                      onRetry: () =>
-                          ref.invalidate(inventoryCategoriesSummaryProvider),
-                    ),
+                      final topProductsWidget = (hasFinance &&
+                              topProductsAsync != null)
+                          ? topProductsAsync.when(
+                              data: (data) => data.isEmpty
+                                  ? EmptyChartPlaceholder(
+                                      message:
+                                          'Tạo đơn bán đầu tiên để thấy Top sản phẩm',
+                                      icon: Icons.leaderboard_rounded,
+                                      actionLabel: 'Tạo đơn bán',
+                                      onAction: () => context.push('/pos'),
+                                    )
+                                  : TopProductsChart(data),
+                              loading: () => const AppShimmer(
+                                child: ShimmerBox(
+                                  width: double.infinity,
+                                  height: 260,
+                                  radius: 24,
+                                ),
+                              ),
+                              error: (e, _) => AppError(
+                                message: 'Không thể tải Top sản phẩm\n$e',
+                                onRetry: () =>
+                                    ref.invalidate(topProductsProvider),
+                              ),
+                            )
+                          : null;
+
+                      final inventoryDonutWidget = (hasInventory &&
+                              inventoryCatAsync != null)
+                          ? inventoryCatAsync.when(
+                              data: (data) => data.isEmpty
+                                  ? EmptyChartPlaceholder(
+                                      message:
+                                          'Thêm sản phẩm vào kho để thấy biểu đồ tồn kho',
+                                      icon: Icons.pie_chart_outline_rounded,
+                                      actionLabel: 'Thêm sản phẩm',
+                                      onAction: () =>
+                                          context.push('/products/form'),
+                                    )
+                                  : InventoryDonutChart(data),
+                              loading: () => const AppShimmer(
+                                child: ShimmerBox(
+                                  width: double.infinity,
+                                  height: 260,
+                                  radius: 24,
+                                ),
+                              ),
+                              error: (e, _) => AppError(
+                                message: 'Không thể tải phân bổ tồn kho\n$e',
+                                onRetry: () => ref.invalidate(
+                                  inventoryCategoriesSummaryProvider,
+                                ),
+                              ),
+                            )
+                          : null;
+
+                      if (isDesktop) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (topProductsWidget != null)
+                                Expanded(child: topProductsWidget),
+                              if (topProductsWidget != null &&
+                                  inventoryDonutWidget != null)
+                                const SizedBox(width: 16),
+                              if (inventoryDonutWidget != null)
+                                Expanded(child: inventoryDonutWidget),
+                            ],
+                          ),
+                        );
+                      } else {
+                        return Column(
+                          children: [
+                            if (topProductsWidget != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 20),
+                                child: topProductsWidget,
+                              ),
+                            if (inventoryDonutWidget != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 20),
+                                child: inventoryDonutWidget,
+                              ),
+                          ],
+                        );
+                      }
+                    },
                   ),
-                ],
 
                 if (hasFinance && cashFlowAsync != null) ...[
                   const SizedBox(height: 20),
