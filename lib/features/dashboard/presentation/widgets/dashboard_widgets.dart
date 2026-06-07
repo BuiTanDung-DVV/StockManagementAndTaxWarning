@@ -426,6 +426,9 @@ class ComparisonBarChart extends StatelessWidget {
 
     // Create grouped data
     final barGroups = <BarChartGroupData>[];
+    final barWidth = maxLen <= 7 ? 22.0 : 8.0;
+    final bSpace = maxLen <= 7 ? 6.0 : 2.0;
+
     for (int i = 0; i < maxLen; i++) {
       double rev1 = 0;
       double rev2 = 0;
@@ -453,17 +456,17 @@ class ComparisonBarChart extends StatelessWidget {
             BarChartRodData(
               toY: rev2,
               color: c.textMuted.withValues(alpha: 0.4),
-              width: 12,
+              width: barWidth,
               borderRadius: BorderRadius.circular(4),
             ),
             BarChartRodData(
               toY: rev1,
               color: theme.colorScheme.primary,
-              width: 12,
+              width: barWidth,
               borderRadius: BorderRadius.circular(4),
             ),
           ],
-          barsSpace: 4,
+          barsSpace: bSpace,
         ),
       );
     }
@@ -563,20 +566,36 @@ class ComparisonBarChart extends StatelessWidget {
                       reservedSize: 28,
                       getTitlesWidget: (value, meta) {
                         final idx = value.toInt();
-                        if (idx < 0 || idx >= currentData.length)
+                        if (idx < 0 || idx >= maxLen)
                           return const SizedBox.shrink();
-                        final dateStr =
-                            currentData[idx]['date'] as String? ?? '';
-                        if (dateStr.length < 5) return const SizedBox.shrink();
-                        final parts = dateStr.split('-');
-                        final displayDate = parts.length >= 3
-                            ? '${parts[2]}/${parts[1]}'
-                            : dateStr;
+
+                        String displayDate = '';
+                        if (idx < currentData.length) {
+                          final dateStr = currentData[idx]['date'] as String? ?? '';
+                          final parts = dateStr.split('-');
+                          displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                        } else if (currentData.isNotEmpty) {
+                          // Project forward from the first day
+                          final firstDateStr = currentData.first['date'] as String? ?? '';
+                          final firstDate = DateTime.tryParse(firstDateStr);
+                          if (firstDate != null) {
+                            final projectedDate = firstDate.add(Duration(days: idx));
+                            final d = projectedDate.day.toString().padLeft(2, '0');
+                            final m = projectedDate.month.toString().padLeft(2, '0');
+                            displayDate = '$d/$m';
+                          }
+                        } else if (idx < previousData.length) {
+                           final dateStr = previousData[idx]['date'] as String? ?? '';
+                           final parts = dateStr.split('-');
+                           displayDate = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : dateStr;
+                        }
+
+                        if (displayDate.length < 5) return const SizedBox.shrink();
 
                         // Limit labels if too many
-                        if (currentData.length > 7 &&
-                            idx % (currentData.length / 5).ceil() != 0 &&
-                            idx != currentData.length - 1) {
+                        if (maxLen > 7 &&
+                            idx % (maxLen / 5).ceil() != 0 &&
+                            idx != maxLen - 1) {
                           return const SizedBox.shrink();
                         }
 
