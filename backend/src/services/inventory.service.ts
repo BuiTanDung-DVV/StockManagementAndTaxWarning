@@ -33,13 +33,13 @@ export class InventoryService {
         const shopParams = isArray ? { shopIds: shopId } : { shopId };
 
         const query = this.stockRepo.createQueryBuilder('s')
+            .leftJoinAndSelect('s.product', 'p')
             .where(shopCondition, shopParams);
             
         if (threshold !== undefined && !isNaN(threshold)) {
             query.andWhere('s.quantity <= :threshold', { threshold });
         } else {
-            query.innerJoin(Product, 'p', 'p.id = s.product_id')
-                 .andWhere('s.quantity <= p.min_stock'); // typeorm uses db column name in raw builder if not mapped as property on s
+            query.andWhere('s.quantity <= p.min_stock');
         }
         return query.getMany();
     }
