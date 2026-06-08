@@ -717,79 +717,78 @@ class _BrandColorTile extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              // Horizontal list of colors
-              SizedBox(
-                height: 90,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: AppBrandColor.values.length,
-                  itemBuilder: (context, i) {
-                    final item = AppBrandColor.values[i];
-                    final isSelected = item == current;
-                    return GestureDetector(
-                      onTap: () {
-                        ref
-                            .read(brandColorProvider.notifier)
-                            .setBrandColor(item);
-                        Navigator.pop(ctx);
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Column(
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: item.color,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected
-                                      ? (isDark
-                                            ? Colors.white
-                                            : AppColors.primary)
-                                      : Colors.transparent,
-                                  width: 3,
-                                ),
-                                boxShadow: [
-                                  if (isSelected)
-                                    BoxShadow(
-                                      color: item.color.withValues(alpha: 0.5),
-                                      blurRadius: 10,
-                                      spreadRadius: 1,
-                                    ),
-                                ],
-                              ),
-                              child: isSelected
-                                  ? const Icon(
-                                      Icons.check_rounded,
-                                      color: Colors.white,
-                                      size: 24,
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              item.label,
-                              style: GoogleFonts.outfit(
-                                fontSize: 10,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+              // Wrap of colors instead of horizontal ListView for better web/desktop UX
+              Wrap(
+                spacing: 12,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
+                children: AppBrandColor.values.map((item) {
+                  final isSelected = item == current;
+                  return GestureDetector(
+                    onTap: () {
+                      ref
+                          .read(brandColorProvider.notifier)
+                          .setBrandColor(item);
+                      Navigator.pop(ctx);
+                    },
+                    child: SizedBox(
+                      width: 60,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: item.color,
+                              shape: BoxShape.circle,
+                              border: Border.all(
                                 color: isSelected
-                                    ? Theme.of(context).colorScheme.primary
-                                    : c.textSecondary,
+                                    ? (isDark
+                                          ? Colors.white
+                                          : AppColors.primary)
+                                    : Colors.transparent,
+                                width: 3,
                               ),
+                              boxShadow: [
+                                if (isSelected)
+                                  BoxShadow(
+                                    color: item.color.withValues(alpha: 0.5),
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
+                                  ),
+                              ],
                             ),
-                          ],
-                        ),
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            item.label,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : c.textSecondary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                }).toList(),
               ),
             ],
           ),

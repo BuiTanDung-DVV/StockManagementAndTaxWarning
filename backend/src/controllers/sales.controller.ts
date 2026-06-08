@@ -53,7 +53,10 @@ export const findOne = async (req: Request, res: Response) => {
 };
 
 export const create = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.create((req as any).shopId, req.body) }); }
+    try { 
+        req.body.createdBy = (req as any).user?.sub;
+        res.json({ success: true, data: await salesService.create((req as any).shopId, req.body) }); 
+    }
     catch (e: any) { sendServiceError(res, e); }
 };
 
@@ -71,11 +74,17 @@ export const updateOrder = async (req: Request, res: Response) => {
 };
 
 export const addPayment = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.addPayment((req as any).shopId, +req.params.id, req.body) }); }
+    try { 
+        req.body.createdBy = (req as any).user?.sub;
+        res.json({ success: true, data: await salesService.addPayment((req as any).shopId, +req.params.id, req.body) }); 
+    }
     catch (e: any) { sendServiceError(res, e); }
 };
 
 export const createReturn = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.createReturn((req as any).shopId, +req.params.id, req.body) }); }
+    try { 
+        req.body.createdBy = (req as any).user?.sub;
+        res.json({ success: true, data: await salesService.createReturn((req as any).shopId, +req.params.id, req.body) }); 
+    }
     catch (e: any) { sendServiceError(res, e); }
 };
