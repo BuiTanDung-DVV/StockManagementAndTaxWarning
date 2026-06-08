@@ -11,7 +11,10 @@ export const getCashTransactions = async (req: Request, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 export const createCashTransaction = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.createCashTransaction((req as any).shopId, req.body) }); }
+    try { 
+        req.body.createdBy = (req as any).user?.sub;
+        res.json({ success: true, data: await financeService.createCashTransaction((req as any).shopId, req.body) }); 
+    }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 export const updateCashTransaction = async (req: Request, res: Response) => {

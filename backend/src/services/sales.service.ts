@@ -297,6 +297,7 @@ export class SalesService {
                 invoiceNumber: dto.invoiceNumber,
                 ...(customer ? { customer } : {}),
                 items,
+                createdBy: dto.createdBy,
             });
 
             const savedOrder = await manager.save(SalesOrder, order);
@@ -331,7 +332,8 @@ export class SalesService {
                     referenceCode: savedOrder.orderCode,
                     description: `Thanh toán cho đơn hàng ${savedOrder.orderCode}`,
                     transactionDate: savedOrder.orderDate,
-                    status: 'COMPLETED'
+                    status: 'COMPLETED',
+                    createdBy: dto.createdBy
                 } as any, manager);
             }
 
@@ -540,7 +542,8 @@ export class SalesService {
                 referenceCode: order.orderCode,
                 description: `Thanh toán thêm cho đơn hàng ${order.orderCode}`,
                 transactionDate: new Date(),
-                status: 'COMPLETED'
+                status: 'COMPLETED',
+                createdBy: (dto as any).createdBy
             } as any, manager);
 
             // === Journal Ledger: Thu nợ khách hàng (Nợ TK 111 / Có TK 131) ===
@@ -717,7 +720,8 @@ export class SalesService {
                     referenceCode: savedReturn.returnCode,
                     description: `Hoàn tiền cho khách trả hàng ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
                     transactionDate: savedReturn.returnDate,
-                    status: 'COMPLETED'
+                    status: 'COMPLETED',
+                    createdBy: (dto as any).createdBy
                 } as any, manager);
 
                 // === Journal Ledger: Hoàn tiền trả hàng (Nợ TK 511 / Có TK 111) ===

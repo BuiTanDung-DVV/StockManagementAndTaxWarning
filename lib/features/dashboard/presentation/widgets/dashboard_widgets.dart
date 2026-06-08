@@ -1120,6 +1120,19 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
                           title: showText ? '${val.toStringAsFixed(1)}%' : '',
                           radius: isTouched ? 45 : 35,
                           titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                          badgeWidget: isTouched ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E293B).withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${e['name']}\n${val.toStringAsFixed(1)}%',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                          ) : null,
+                          badgePositionPercentageOffset: 1.2,
                         );
                       }).toList(),
                     ),
