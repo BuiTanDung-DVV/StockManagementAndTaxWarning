@@ -827,6 +827,17 @@ class TopProductsChart extends StatelessWidget {
   final List<dynamic> data;
   const TopProductsChart(this.data);
 
+  String _formatAmount(double amount) {
+    if (amount >= 1000000000) {
+      return '${(amount / 1000000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}T đ';
+    } else if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}M đ';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}K đ';
+    }
+    return '${amount.toStringAsFixed(0)} đ';
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
@@ -834,9 +845,13 @@ class TopProductsChart extends StatelessWidget {
 
     if (data.isEmpty) return const SizedBox.shrink();
 
+    final maxVal = data.fold<double>(0.0, (m, e) {
+      final v = num.tryParse(e['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      return v > m ? v : m;
+    });
+
     return Container(
-      height: 280,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: BorderRadius.circular(24),
@@ -855,139 +870,104 @@ class TopProductsChart extends StatelessWidget {
           Text(
             'Top 5 Sản phẩm doanh thu cao',
             style: GoogleFonts.outfit(
-              fontSize: 14,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: c.textSecondary,
+              color: c.textPrimary,
             ),
           ),
           const SizedBox(height: 24),
-          Expanded(
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (group) => theme.colorScheme.primary,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final val = NumberFormat.compact(
-                        locale: 'vi_VN',
-                      ).format(rod.toY);
-                      return BarTooltipItem(
-                        '${data[group.x.toInt()]['name']}\n$val đ',
-                        GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
+          ...data.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final val = num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+            final percentage = maxVal > 0 ? val / maxVal : 0.0;
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${index + 1}',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item['name']?.toString() ?? 'Unknown',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: c.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _formatAmount(val),
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: c.textPrimary,
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 42,
-                      getTitlesWidget: (value, meta) {
-                        final idx = value.toInt();
-                        if (idx < 0 || idx >= data.length)
-                          return const SizedBox.shrink();
-                        final name = data[idx]['name'] as String;
-                        final shortName = name.length > 8
-                            ? '${name.substring(0, 8)}...'
-                            : name;
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            shortName,
-                            style: TextStyle(
-                              color: c.textSecondary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 50,
-                      getTitlesWidget: (value, meta) {
-                        if (value == meta.max || value == meta.min)
-                          return const SizedBox.shrink();
-                        String label = '';
-                        if (value >= 1000000) {
-                          label = '${(value / 1000000).toStringAsFixed(0)}Tr';
-                        } else if (value >= 1000) {
-                          label = '${(value / 1000).toStringAsFixed(0)}K';
-                        } else {
-                          label = value.toStringAsFixed(0);
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              color: c.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.right,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  drawHorizontalLine: true,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: c.divider.withValues(alpha: 0.15),
-                    strokeWidth: 1,
-                    dashArray: [4, 4],
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                barGroups: (() {
-                  final maxVal = data.fold<double>(0.0, (m, e) {
-                    final v = num.tryParse(e['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                    return v > m ? v : m;
-                  });
-                  return data.asMap().entries.map((entry) {
-                    final val = num.tryParse(entry.value['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                    return BarChartGroupData(
-                      x: entry.key,
-                      barRods: [
-                        BarChartRodData(
-                          toY: val,
-                          color: theme.colorScheme.primary,
-                          width: 32,
-                          borderRadius: const BorderRadius.all(Radius.circular(6)),
-                          backDrawRodData: BackgroundBarChartRodData(
-                            show: true,
-                            toY: maxVal * 1.1 == 0 ? 100 : maxVal * 1.1,
-                            color: c.divider.withValues(alpha: 0.15),
-                          ),
+                        const SizedBox(height: 8),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            return Stack(
+                              children: [
+                                Container(
+                                  height: 6,
+                                  width: constraints.maxWidth,
+                                  decoration: BoxDecoration(
+                                    color: c.divider.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 500),
+                                  height: 6,
+                                  width: constraints.maxWidth * percentage,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
-                    );
-                  }).toList();
-                })(),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
@@ -1583,9 +1563,9 @@ class LowStockTableWidget extends StatelessWidget {
             separatorBuilder: (_, __) => Divider(color: c.divider.withValues(alpha: 0.2), height: 16),
             itemBuilder: (context, index) {
               final item = items[index];
-              final name = item['name'] ?? 'Unknown';
-              final qty = item['total_quantity'] ?? 0;
-              final minQty = item['min_quantity'] ?? 0;
+              final name = item['product']?['name'] ?? item['productName'] ?? item['name'] ?? 'Unknown';
+              final qty = item['currentQuantity'] ?? item['quantity'] ?? item['total_quantity'] ?? 0;
+              final minQty = item['minStock'] ?? item['min_quantity'] ?? 0;
               return Row(
                 children: [
                   Expanded(
@@ -1667,7 +1647,7 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
 
     String getMethodName(String method) {
       if (method == 'CASH') return 'Tiền mặt';
-      if (method == 'BANK_TRANSFER') return 'Chuyển khoản';
+      if (method == 'BANK_TRANSFER' || method == 'TRANSFER') return 'Chuyển khoản';
       if (method == 'CREDIT_CARD') return 'Thẻ tín dụng';
       if (method == 'DEBT') return 'Ghi nợ';
       return method;
@@ -1675,7 +1655,7 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
 
     Color getMethodColor(String method) {
       if (method == 'CASH') return AppColors.success;
-      if (method == 'BANK_TRANSFER') return theme.colorScheme.primary;
+      if (method == 'BANK_TRANSFER' || method == 'TRANSFER') return theme.colorScheme.primary;
       if (method == 'DEBT') return AppColors.warning;
       return AppColors.info;
     }

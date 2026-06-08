@@ -995,7 +995,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   size: 14,
                                 ),
                                 label: const Text(
-                                  'Xem táº¥t cáº£',
+                                  'Xem tất cả',
                                   style: TextStyle(fontSize: 12),
                                 ),
                               ),
@@ -1044,7 +1044,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      'Tá»“n: ${item['currentQuantity'] ?? item['quantity'] ?? 0}',
+                                      'Tồn: ${item['currentQuantity'] ?? item['quantity'] ?? 0}',
                                       style: const TextStyle(
                                         color: AppColors.warning,
                                         fontWeight: FontWeight.bold,
