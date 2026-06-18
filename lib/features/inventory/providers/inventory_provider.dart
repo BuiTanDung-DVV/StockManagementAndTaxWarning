@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../settings/providers/shop_provider.dart';
 
 class InventoryRepository {
   final ApiClient _api;
@@ -92,16 +93,17 @@ class InventoryRepository {
       await _api.delete('/stock-takes/$id');
 }
 
-final inventoryRepoProvider = Provider<InventoryRepository>(
-  (ref) => InventoryRepository(ref.read(apiClientProvider)),
-);
+final inventoryRepoProvider = Provider<InventoryRepository>((ref) {
+  ref.watch(shopProvider);
+  return InventoryRepository(ref.read(apiClientProvider));
+});
 
 final stockProvider = FutureProvider.family<List<dynamic>, int?>((
   ref,
   warehouseId,
 ) async {
   final result = await ref
-      .read(inventoryRepoProvider)
+      .watch(inventoryRepoProvider)
       .getCurrentStock(warehouseId: warehouseId);
   if (result is List) return result;
   if (result is Map) return (result['items'] as List?) ?? [];
@@ -109,7 +111,7 @@ final stockProvider = FutureProvider.family<List<dynamic>, int?>((
 });
 
 final lowStockProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(inventoryRepoProvider).getLowStock();
+  return ref.watch(inventoryRepoProvider).getLowStock();
 });
 
 final inventoryMovementsProvider =
@@ -118,12 +120,12 @@ final inventoryMovementsProvider =
       args,
     ) {
       return ref
-          .read(inventoryRepoProvider)
+          .watch(inventoryRepoProvider)
           .getMovements(productId: args.productId, page: args.page);
     });
 
 final warehousesProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(inventoryRepoProvider).findWarehouses();
+  return ref.watch(inventoryRepoProvider).findWarehouses();
 });
 
 final xntReportProvider =
@@ -132,31 +134,31 @@ final xntReportProvider =
       ({String from, String to, int? warehouseId})
     >((ref, args) {
       return ref
-          .read(inventoryRepoProvider)
+          .watch(inventoryRepoProvider)
           .getXNTReport(args.from, args.to, warehouseId: args.warehouseId);
     });
 
 final expiringProductsProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(inventoryRepoProvider).getExpiringProducts();
+  return ref.watch(inventoryRepoProvider).getExpiringProducts();
 });
 
 final slowMovingProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(inventoryRepoProvider).getSlowMovingProducts();
+  return ref.watch(inventoryRepoProvider).getSlowMovingProducts();
 });
 
 final purchaseOrdersProvider = FutureProvider.family<Map<String, dynamic>, int>(
   (ref, page) {
-    return ref.read(inventoryRepoProvider).findPurchaseOrders(page: page);
+    return ref.watch(inventoryRepoProvider).findPurchaseOrders(page: page);
   },
 );
 
 final inventoryCategoriesSummaryProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(inventoryRepoProvider).getCategoriesSummary();
+  return ref.watch(inventoryRepoProvider).getCategoriesSummary();
 });
 
 final stockTakesProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   page,
 ) {
-  return ref.read(inventoryRepoProvider).findStockTakes(page: page);
+  return ref.watch(inventoryRepoProvider).findStockTakes(page: page);
 });

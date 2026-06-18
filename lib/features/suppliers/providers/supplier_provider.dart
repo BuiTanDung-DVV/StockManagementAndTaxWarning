@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../settings/providers/shop_provider.dart';
 
 class SupplierRepository {
   final ApiClient _api;
@@ -26,9 +27,10 @@ class SupplierRepository {
       await _api.get('/suppliers/$id/payables');
 }
 
-final supplierRepoProvider = Provider<SupplierRepository>(
-  (ref) => SupplierRepository(ref.read(apiClientProvider)),
-);
+final supplierRepoProvider = Provider<SupplierRepository>((ref) {
+  ref.watch(shopProvider);
+  return SupplierRepository(ref.read(apiClientProvider));
+});
 
 final supplierListProvider =
     FutureProvider.family<Map<String, dynamic>, ({int page, String? search})>((
@@ -36,12 +38,12 @@ final supplierListProvider =
       args,
     ) {
       return ref
-          .read(supplierRepoProvider)
+          .watch(supplierRepoProvider)
           .findAll(page: args.page, search: args.search);
     });
 
 final supplierDetailProvider = FutureProvider.family<Map<String, dynamic>, int>(
   (ref, id) {
-    return ref.read(supplierRepoProvider).findById(id);
+    return ref.watch(supplierRepoProvider).findById(id);
   },
 );

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../settings/providers/shop_provider.dart';
 
 class FinanceRepository {
   final ApiClient _api;
@@ -197,9 +198,10 @@ class FinanceRepository {
       await _api.delete('/tax-obligations/$id');
 }
 
-final financeRepoProvider = Provider<FinanceRepository>(
-  (ref) => FinanceRepository(ref.read(apiClientProvider)),
-);
+final financeRepoProvider = Provider<FinanceRepository>((ref) {
+  ref.watch(shopProvider);
+  return FinanceRepository(ref.read(apiClientProvider));
+});
 
 final transactionsProvider =
     FutureProvider.family<
@@ -207,7 +209,7 @@ final transactionsProvider =
       ({int page, String? type, String? from, String? to})
     >((ref, args) {
       return ref
-          .read(financeRepoProvider)
+          .watch(financeRepoProvider)
           .findTransactions(
             page: args.page,
             type: args.type,
@@ -222,7 +224,7 @@ final cashSummaryProvider =
       args,
     ) {
       return ref
-          .read(financeRepoProvider)
+          .watch(financeRepoProvider)
           .getCashFlowSummary(args.from, args.to);
     });
 
@@ -231,7 +233,7 @@ final profitLossProvider =
       ref,
       args,
     ) {
-      return ref.read(financeRepoProvider).getProfitLoss(args.from, args.to);
+      return ref.watch(financeRepoProvider).getProfitLoss(args.from, args.to);
     });
 
 final invoiceReconciliationProvider =
@@ -240,34 +242,34 @@ final invoiceReconciliationProvider =
       args,
     ) {
       return ref
-          .read(financeRepoProvider)
+          .watch(financeRepoProvider)
           .getInvoiceReconciliation(args.from, args.to);
     });
 
 final expensesByCategoryProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.read(financeRepoProvider).getExpensesByCategory();
+  return ref.watch(financeRepoProvider).getExpensesByCategory();
 });
 
 final dailyClosingProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, date) {
-      return ref.read(financeRepoProvider).getDailyClosing(date);
+      return ref.watch(financeRepoProvider).getDailyClosing(date);
     });
 
 final dailyClosingsListProvider =
     FutureProvider.family<Map<String, dynamic>, int>((ref, page) {
-      return ref.read(financeRepoProvider).getDailyClosings(page: page);
+      return ref.watch(financeRepoProvider).getDailyClosings(page: page);
     });
 
 final cashAccountsProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(financeRepoProvider).findAccounts();
+  return ref.watch(financeRepoProvider).findAccounts();
 });
 
 final forecastsProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(financeRepoProvider).findForecasts();
+  return ref.watch(financeRepoProvider).findForecasts();
 });
 
 final budgetPlansProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(financeRepoProvider).findBudgetPlans();
+  return ref.watch(financeRepoProvider).findBudgetPlans();
 });
 
 final invoiceListProvider =
@@ -276,7 +278,7 @@ final invoiceListProvider =
       args,
     ) {
       return ref
-          .read(financeRepoProvider)
+          .watch(financeRepoProvider)
           .findInvoices(page: args.page, type: args.type);
     });
 
@@ -286,15 +288,15 @@ final invoiceSummaryProvider =
       args,
     ) {
       return ref
-          .read(financeRepoProvider)
+          .watch(financeRepoProvider)
           .getInvoiceSummary(args.from, args.to);
     });
 
 final purchasesNoInvoiceProvider =
     FutureProvider.family<Map<String, dynamic>, int>((ref, page) {
-      return ref.read(financeRepoProvider).findPurchasesNoInvoice(page: page);
+      return ref.watch(financeRepoProvider).findPurchasesNoInvoice(page: page);
     });
 
 final taxObligationsProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.read(financeRepoProvider).getTaxObligations();
+  return ref.watch(financeRepoProvider).getTaxObligations();
 });
