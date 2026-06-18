@@ -53,9 +53,10 @@ class SalesRepository {
   }
 }
 
-final salesRepoProvider = Provider<SalesRepository>(
-  (ref) => SalesRepository(ref.read(apiClientProvider)),
-);
+final salesRepoProvider = Provider<SalesRepository>((ref) {
+  ref.watch(shopProvider);
+  return SalesRepository(ref.read(apiClientProvider));
+});
 
 final salesListProvider =
     FutureProvider.family<
@@ -63,7 +64,7 @@ final salesListProvider =
       ({int page, String? status, int? customerId})
     >((ref, args) {
       return ref
-          .read(salesRepoProvider)
+          .watch(salesRepoProvider)
           .findAll(
             page: args.page,
             status: args.status,
@@ -75,7 +76,7 @@ final salesDetailProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   id,
 ) {
-  return ref.read(salesRepoProvider).findById(id);
+  return ref.watch(salesRepoProvider).findById(id);
 });
 
 final salesSummaryProvider =
@@ -83,7 +84,7 @@ final salesSummaryProvider =
       ref,
       args,
     ) {
-      return ref.read(salesRepoProvider).getSummary(args.from, args.to);
+      return ref.watch(salesRepoProvider).getSummary(args.from, args.to);
     });
 
 final topProductsProvider =
@@ -91,13 +92,13 @@ final topProductsProvider =
       ref,
       args,
     ) {
-      return ref.read(salesRepoProvider).getTopProducts(args.from, args.to);
+      return ref.watch(salesRepoProvider).getTopProducts(args.from, args.to);
     });
 
 final recentTransactionsProvider = FutureProvider<List<dynamic>>((ref) async {
   final shopState = ref.watch(shopProvider);
   if (shopState.userShops.isEmpty) return [];
-  final res = await ref.read(salesRepoProvider).findAll(page: 1, limit: 5);
+  final res = await ref.watch(salesRepoProvider).findAll(page: 1, limit: 5);
   return res['items'] as List<dynamic>? ?? [];
 });
 
@@ -106,5 +107,5 @@ final paymentSummaryProvider =
       ref,
       args,
     ) {
-      return ref.read(salesRepoProvider).getPaymentSummary(args.from, args.to);
+      return ref.watch(salesRepoProvider).getPaymentSummary(args.from, args.to);
     });

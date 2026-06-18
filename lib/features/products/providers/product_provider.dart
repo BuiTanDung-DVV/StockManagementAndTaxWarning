@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../settings/providers/shop_provider.dart';
 import 'tag_provider.dart';
 
 class ProductRepository {
@@ -28,9 +29,10 @@ class ProductRepository {
   Future<List<dynamic>> findCategories() async => await _api.get('/categories');
 }
 
-final productRepoProvider = Provider<ProductRepository>(
-  (ref) => ProductRepository(ref.read(apiClientProvider)),
-);
+final productRepoProvider = Provider<ProductRepository>((ref) {
+  ref.watch(shopProvider);
+  return ProductRepository(ref.read(apiClientProvider));
+});
 
 final productListProvider =
     FutureProvider.family<
@@ -38,7 +40,7 @@ final productListProvider =
       ({int page, String? search, String? tag})
     >((ref, args) {
       return ref
-          .read(productRepoProvider)
+          .watch(productRepoProvider)
           .findAll(page: args.page, search: args.search, tag: args.tag);
     });
 
@@ -46,11 +48,11 @@ final productDetailProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   id,
 ) {
-  return ref.read(productRepoProvider).findById(id);
+  return ref.watch(productRepoProvider).findById(id);
 });
 
 final categoriesProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(productRepoProvider).findCategories();
+  return ref.watch(productRepoProvider).findCategories();
 });
 
 final availableTagsProvider = FutureProvider<List<TagModel>>((ref) async {
@@ -59,7 +61,7 @@ final availableTagsProvider = FutureProvider<List<TagModel>>((ref) async {
   final tagMap = {for (var t in managedTags) t.name: t};
 
   // Fetch recent products to find used tags not in managed list
-  final res = await ref.read(productRepoProvider).findAll(limit: 500);
+  final res = await ref.watch(productRepoProvider).findAll(limit: 500);
   final items = (res['items'] as List?) ?? [];
   final Set<String> usedTags = {};
 
