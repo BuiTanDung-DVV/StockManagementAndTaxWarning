@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../settings/providers/shop_provider.dart';
 import 'package:flutter/material.dart';
 
 class TagModel {
@@ -73,13 +74,14 @@ class TagRepository {
   }
 }
 
-final tagRepoProvider = Provider<TagRepository>(
-  (ref) => TagRepository(ref.read(apiClientProvider)),
-);
+final tagRepoProvider = Provider<TagRepository>((ref) {
+  ref.watch(shopProvider);
+  return TagRepository(ref.read(apiClientProvider));
+});
 
 final tagListProvider = FutureProvider.family<List<TagModel>, String>((
   ref,
   type,
 ) async {
-  return await ref.read(tagRepoProvider).getAll(type: type);
+  return await ref.watch(tagRepoProvider).getAll(type: type);
 });

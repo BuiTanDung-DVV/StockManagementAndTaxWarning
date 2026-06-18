@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../settings/providers/shop_provider.dart';
 
 class CustomerRepository {
   final ApiClient _api;
@@ -34,9 +35,10 @@ class CustomerRepository {
       await _api.get('/customers/overdue-debts');
 }
 
-final customerRepoProvider = Provider<CustomerRepository>(
-  (ref) => CustomerRepository(ref.read(apiClientProvider)),
-);
+final customerRepoProvider = Provider<CustomerRepository>((ref) {
+  ref.watch(shopProvider);
+  return CustomerRepository(ref.read(apiClientProvider));
+});
 
 final customerListProvider =
     FutureProvider.family<Map<String, dynamic>, ({int page, String? search})>((
@@ -44,13 +46,13 @@ final customerListProvider =
       args,
     ) {
       return ref
-          .read(customerRepoProvider)
+          .watch(customerRepoProvider)
           .findAll(page: args.page, search: args.search);
     });
 
 final customerDetailProvider = FutureProvider.family<Map<String, dynamic>, int>(
   (ref, id) {
-    return ref.read(customerRepoProvider).findById(id);
+    return ref.watch(customerRepoProvider).findById(id);
   },
 );
 
@@ -58,9 +60,9 @@ final debtAgingProvider = FutureProvider.family<Map<String, dynamic>, String?>((
   ref,
   asOf,
 ) {
-  return ref.read(customerRepoProvider).getDebtAging(asOf: asOf);
+  return ref.watch(customerRepoProvider).getDebtAging(asOf: asOf);
 });
 
 final overdueDebtsProvider = FutureProvider<List<dynamic>>((ref) {
-  return ref.read(customerRepoProvider).findOverdueDebts();
+  return ref.watch(customerRepoProvider).findOverdueDebts();
 });

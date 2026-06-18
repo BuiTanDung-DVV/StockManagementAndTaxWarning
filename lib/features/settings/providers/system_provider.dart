@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import 'shop_provider.dart';
 
 class SystemRepository {
   final ApiClient _api;
@@ -18,17 +19,18 @@ class SystemRepository {
       );
 }
 
-final systemRepoProvider = Provider<SystemRepository>(
-  (ref) => SystemRepository(ref.read(apiClientProvider)),
-);
+final systemRepoProvider = Provider<SystemRepository>((ref) {
+  ref.watch(shopProvider);
+  return SystemRepository(ref.read(apiClientProvider));
+});
 
 final shopProfileProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.read(systemRepoProvider).getShopProfile();
+  return ref.watch(systemRepoProvider).getShopProfile();
 });
 
 final activityLogsProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   page,
 ) {
-  return ref.read(systemRepoProvider).getLogs(page: page);
+  return ref.watch(systemRepoProvider).getLogs(page: page);
 });
