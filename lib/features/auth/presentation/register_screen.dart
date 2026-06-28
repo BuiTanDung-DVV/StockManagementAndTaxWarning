@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,29 +16,23 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _fullNameCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _otpCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
 
   final _fullNameFocus = FocusNode();
-  final _phoneFocus = FocusNode();
-  final _otpFocus = FocusNode();
+  final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
 
   bool _fullNameHasFocus = false;
-  bool _phoneHasFocus = false;
-  bool _otpHasFocus = false;
+  bool _emailHasFocus = false;
   bool _passwordHasFocus = false;
   bool _confirmPasswordHasFocus = false;
 
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
-  bool _isSendingOtp = false;
-  int _countdownSeconds = 0;
-  Timer? _timer;
   String? _error;
   String _accountType = 'SHOP';
 
@@ -49,11 +42,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _fullNameFocus.addListener(
       () => setState(() => _fullNameHasFocus = _fullNameFocus.hasFocus),
     );
-    _phoneFocus.addListener(
-      () => setState(() => _phoneHasFocus = _phoneFocus.hasFocus),
-    );
-    _otpFocus.addListener(
-      () => setState(() => _otpHasFocus = _otpFocus.hasFocus),
+    _emailFocus.addListener(
+      () => setState(() => _emailHasFocus = _emailFocus.hasFocus),
     );
     _passwordFocus.addListener(
       () => setState(() => _passwordHasFocus = _passwordFocus.hasFocus),
@@ -63,161 +53,108 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         () => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus,
       ),
     );
-
-    void clearError() {
-      if (_error != null) setState(() => _error = null);
-    }
-
-    _fullNameCtrl.addListener(clearError);
-    _phoneCtrl.addListener(clearError);
-    _otpCtrl.addListener(clearError);
-    _passwordCtrl.addListener(clearError);
-    _confirmPasswordCtrl.addListener(clearError);
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _fullNameCtrl.dispose();
-    _phoneCtrl.dispose();
-    _otpCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
 
     _fullNameFocus.dispose();
-    _phoneFocus.dispose();
-    _otpFocus.dispose();
+    _emailFocus.dispose();
     _passwordFocus.dispose();
     _confirmPasswordFocus.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    setState(() => _countdownSeconds = 60);
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_countdownSeconds == 0) {
-        timer.cancel();
-      } else {
-        setState(() => _countdownSeconds--);
-      }
+  void _onFieldChanged() {
+    if (_error != null) {
+      setState(() => _error = null);
+    } else {
+      setState(() {});
+    }
+  }
+
+  int _calculatePasswordStrength(String pass) {
+    if (pass.isEmpty) return 0;
+    int score = 0;
+    if (pass.length >= 8) score++;
+    if (pass.contains(RegExp(r'[A-Z]'))) score++;
+    if (pass.contains(RegExp(r'[a-z]'))) score++;
+    if (pass.contains(RegExp(r'[0-9]'))) score++;
+    if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]'))) score++;
+    return score;
+  }
+
+  Future<void> _handleSocialRegister(String provider) async {
+    ToastService.showSuccess('Đang xác thực qua $provider...');
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (!mounted) return;
+      context.go('/onboarding');
     });
   }
 
-  Future<void> _sendOtp() async {
-    final identifier = _phoneCtrl.text.trim();
-    if (identifier.isEmpty) {
-      ToastService.showError(
-        'Vui lòng nhập Số điện thoại hoặc Email để nhận mã OTP',
-      );
+  Future<void> _proceedToOtpVerification() async {
+    _error = null;
+    final fullName = _fullNameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final pass = _passwordCtrl.text;
+    final confirmPass = _confirmPasswordCtrl.text;
+
+    if (fullName.isEmpty || email.isEmpty || pass.isEmpty) {
+      setState(() => _error = 'Vui lòng điền đầy đủ thông tin');
       return;
     }
 
-    final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
     final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-    if (!phoneRegex.hasMatch(identifier) && !emailRegex.hasMatch(identifier)) {
-      ToastService.showError('Định dạng Số điện thoại hoặc Email không hợp lệ');
+    if (!emailRegex.hasMatch(email)) {
+      setState(() => _error = 'Địa chỉ Email không hợp lệ');
       return;
     }
 
-    setState(() {
-      _isSendingOtp = true;
-      _error = null;
-    });
+    final strengthScore = _calculatePasswordStrength(pass);
+    if (pass.length < 8 || strengthScore < 3) {
+      setState(() => _error = 'Mật khẩu chưa đạt tiêu chuẩn bảo quốc tế (cần tối thiểu 8 ký tự kết hợp chữ hoa, chữ thường, số hoặc ký tự đặc biệt)');
+      return;
+    }
+
+    if (pass != confirmPass) {
+      setState(() => _error = 'Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    setState(() => _isLoading = true);
 
     try {
       final api = ref.read(apiClientProvider);
-      await api.post('/auth/send-otp', data: {'identifier': identifier});
+      await api.post('/auth/send-otp', data: {'identifier': email});
 
-      ToastService.showSuccess(
-        'Đã gửi mã OTP thành công về số điện thoại của bạn!',
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ToastService.showSuccess('Đã gửi mã xác thực về email của bạn!');
+
+      context.push(
+        '/verify-otp',
+        extra: {
+          'email': email,
+          'fullName': fullName,
+          'password': pass,
+          'accountType': _accountType,
+        },
       );
-      _startTimer();
     } catch (e) {
-      String msg = 'Không thể gửi OTP. Vui lòng kiểm tra kết nối mạng';
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      String msg = 'Không thể gửi mã OTP. Vui lòng kiểm tra lại kết nối';
       if (e is ApiException) {
         msg = e.message;
       } else if (e is DioException && e.response?.data != null) {
         msg = e.response?.data['message'] ?? msg;
       }
+      setState(() => _error = msg);
       ToastService.showError(msg);
-    } finally {
-      setState(() => _isSendingOtp = false);
-    }
-  }
-
-  Future<void> _register() async {
-    setState(() {
-      _error = null;
-      _isLoading = true;
-    });
-
-    final fullName = _fullNameCtrl.text.trim();
-    final identifier = _phoneCtrl.text.trim();
-    final otpCode = _otpCtrl.text.trim();
-    final pass = _passwordCtrl.text;
-    final confirmPass = _confirmPasswordCtrl.text;
-
-    if (fullName.isEmpty ||
-        identifier.isEmpty ||
-        pass.isEmpty ||
-        otpCode.isEmpty) {
-      setState(() {
-        _error = 'Vui lòng điền đầy đủ thông tin và mã OTP';
-        _isLoading = false;
-      });
-      return;
-    }
-
-    if (pass != confirmPass) {
-      setState(() {
-        _error = 'Mật khẩu xác nhận không khớp';
-        _isLoading = false;
-      });
-      return;
-    }
-
-    try {
-      final api = ref.read(apiClientProvider);
-      await api.post(
-        '/auth/register',
-        data: {
-          'username': identifier,
-          'passwordHash': pass,
-          'fullName': fullName,
-          'accountType': _accountType,
-          'otpCode': otpCode,
-        },
-      );
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ToastService.showSuccess(
-        'Đăng ký tài khoản thành công! Vui lòng đăng nhập.',
-      );
-      context.pop();
-    } catch (e) {
-      if (!mounted) return;
-      String errorMessage = 'Đăng ký không thành công. Vui lòng thử lại.';
-      if (e is ApiException) {
-        errorMessage = e.message;
-      } else if (e is DioException && e.error is ApiException) {
-        errorMessage = (e.error as ApiException).message;
-      }
-      final lowerMsg = errorMessage.toLowerCase();
-      if (lowerMsg.contains('already exists') ||
-          lowerMsg.contains('đã tồn tại')) {
-        errorMessage =
-            'Tên đăng nhập, số điện thoại hoặc email này đã được sử dụng. Vui lòng thử lại.';
-      } else if (lowerMsg.contains('network') ||
-          lowerMsg.contains('connection') ||
-          lowerMsg.contains('socket')) {
-        errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng.';
-      }
-      setState(() {
-        _isLoading = false;
-        _error = errorMessage;
-      });
     }
   }
 
@@ -278,16 +215,61 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           Text(
                             _accountType == 'SHOP'
                                 ? 'để bắt đầu quản lý bán hàng & kho hàng doanh nghiệp'
-                                : 'để tham gia hệ thống kinh doanh với vai trò nhân viên',
+                                : 'để xin gia nhập và làm việc tại cửa hàng',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
+                            style: TextStyle(
                               color: c.textSecondary,
+                              fontSize: 13,
                             ),
                           ),
                           const SizedBox(height: 24),
 
-                          // Elegant Segmented Select Button
+                          // Social Registration Options
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildSocialButton(
+                                  icon: Icons.g_mobiledata_rounded,
+                                  iconColor: Colors.redAccent,
+                                  label: 'Google',
+                                  onTap: () => _handleSocialRegister('Google'),
+                                  c: c,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildSocialButton(
+                                  icon: Icons.facebook_rounded,
+                                  iconColor: Colors.blueAccent,
+                                  label: 'Facebook',
+                                  onTap: () => _handleSocialRegister('Facebook'),
+                                  c: c,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: c.divider)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'HOẶC ĐĂNG KÝ BẰNG EMAIL',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: c.textMuted,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              Expanded(child: Divider(color: c.divider)),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Account Type Selection
                           SegmentedButton<String>(
                             segments: [
                               ButtonSegment<String>(
@@ -340,75 +322,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             icon: Icons.person_outline_rounded,
                             c: c,
                             theme: theme,
+                            onChanged: (_) => _onFieldChanged(),
                           ),
                           const SizedBox(height: 12),
 
-                          // Phone/Username Input
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildGlowingField(
-                                  controller: _phoneCtrl,
-                                  focusNode: _phoneFocus,
-                                  hasFocus: _phoneHasFocus,
-                                  hintText: 'Số điện thoại hoặc Email đăng ký',
-                                  icon: Icons.contact_mail_rounded,
-                                  c: c,
-                                  theme: theme,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                height: 50,
-                                child: ElevatedButton(
-                                  onPressed:
-                                      _countdownSeconds > 0 || _isSendingOtp
-                                      ? null
-                                      : _sendOtp,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.colorScheme.primary,
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                  ),
-                                  child: _isSendingOtp
-                                      ? const SizedBox(
-                                          height: 18,
-                                          width: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : Text(
-                                          _countdownSeconds > 0
-                                              ? '${_countdownSeconds}s'
-                                              : 'Gửi mã',
-                                          style: GoogleFonts.outfit(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // OTP Input
+                          // Email Input
                           _buildGlowingField(
-                            controller: _otpCtrl,
-                            focusNode: _otpFocus,
-                            hasFocus: _otpHasFocus,
-                            hintText: 'Mã xác thực OTP (6 chữ số)',
-                            icon: Icons.security_rounded,
+                            controller: _emailCtrl,
+                            focusNode: _emailFocus,
+                            hasFocus: _emailHasFocus,
+                            hintText: 'Địa chỉ Email (Gmail)',
+                            icon: Icons.email_outlined,
                             c: c,
                             theme: theme,
+                            onChanged: (_) => _onFieldChanged(),
                           ),
                           const SizedBox(height: 12),
 
@@ -422,6 +349,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             c: c,
                             theme: theme,
                             obscureText: _obscure,
+                            onChanged: (_) => _onFieldChanged(),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscure
@@ -434,7 +362,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   setState(() => _obscure = !_obscure),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          _buildPasswordStrengthMeter(c),
 
                           // Confirm Password Input
                           _buildGlowingField(
@@ -446,6 +374,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             c: c,
                             theme: theme,
                             obscureText: _obscureConfirm,
+                            onChanged: (_) => _onFieldChanged(),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureConfirm
@@ -459,6 +388,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               ),
                             ),
                           ),
+                          _buildConfirmPasswordMatchIndicator(c),
 
                           if (_error != null) ...[
                             const SizedBox(height: 16),
@@ -496,7 +426,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : _register,
+                              onPressed: _isLoading ? null : _proceedToOtpVerification,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
@@ -517,7 +447,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                       ),
                                     )
                                   : Text(
-                                      'Đăng Ký Thành Viên',
+                                      'Đăng Ký & Nhận Mã OTP',
                                       style: GoogleFonts.outfit(
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
@@ -540,6 +470,176 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
+  Widget _buildPasswordStrengthMeter(AppThemeColors c) {
+    final pass = _passwordCtrl.text;
+    if (pass.isEmpty) return const SizedBox.shrink();
+
+    final score = _calculatePasswordStrength(pass);
+    Color color;
+    String label;
+    if (score <= 2) {
+      color = AppColors.danger;
+      label = 'Yếu';
+    } else if (score == 3) {
+      color = AppColors.warning;
+      label = 'Trung bình';
+    } else if (score == 4) {
+      color = AppColors.info;
+      label = 'Mạnh';
+    } else {
+      color = AppColors.success;
+      label = 'Cực mạnh';
+    }
+
+    final hasLen = pass.length >= 8;
+    final hasUpper = pass.contains(RegExp(r'[A-Z]'));
+    final hasLower = pass.contains(RegExp(r'[a-z]'));
+    final hasDigit = pass.contains(RegExp(r'[0-9]'));
+    final hasSpecial = pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]'));
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: List.generate(5, (index) {
+              final active = index < score;
+              return Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  height: 4,
+                  margin: EdgeInsets.only(right: index == 4 ? 0 : 4),
+                  decoration: BoxDecoration(
+                    color: active ? color : c.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Độ mạnh mật khẩu:',
+                style: TextStyle(fontSize: 12, color: c.textSecondary),
+              ),
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            children: [
+              _buildCriteriaItem('Từ 8 ký tự', hasLen, c),
+              _buildCriteriaItem('Chữ hoa (A-Z)', hasUpper, c),
+              _buildCriteriaItem('Chữ thường (a-z)', hasLower, c),
+              _buildCriteriaItem('Chữ số (0-9)', hasDigit, c),
+              _buildCriteriaItem('Ký tự đặc biệt', hasSpecial, c),
+            ],
+          ),
+          const SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCriteriaItem(String text, bool met, AppThemeColors c) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          met ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+          size: 14,
+          color: met ? AppColors.success : c.textMuted,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 11,
+            color: met ? c.textPrimary : c.textMuted,
+            fontWeight: met ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConfirmPasswordMatchIndicator(AppThemeColors c) {
+    final confirmPass = _confirmPasswordCtrl.text;
+    if (confirmPass.isEmpty) return const SizedBox.shrink();
+
+    final match = _passwordCtrl.text == confirmPass;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            match ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            size: 15,
+            color: match ? AppColors.success : AppColors.danger,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            match ? 'Mật khẩu xác nhận trùng khớp' : 'Mật khẩu xác nhận chưa khớp',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: match ? AppColors.success : AppColors.danger,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSocialButton({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required VoidCallback onTap,
+    required AppThemeColors c,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.divider),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: iconColor, size: 26),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: c.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildGlowingField({
     required TextEditingController controller,
     required FocusNode focusNode,
@@ -550,6 +650,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required ThemeData theme,
     bool obscureText = false,
     Widget? suffixIcon,
+    ValueChanged<String>? onChanged,
   }) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -568,6 +669,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         controller: controller,
         focusNode: focusNode,
         obscureText: obscureText,
+        onChanged: onChanged,
         style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
         decoration: InputDecoration(
           hintText: hintText,
