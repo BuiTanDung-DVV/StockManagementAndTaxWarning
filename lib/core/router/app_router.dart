@@ -49,6 +49,7 @@ import '../../features/settings/presentation/notification_list_screen.dart';
 import '../../features/settings/presentation/staff_management_screen.dart';
 import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/settings/presentation/shop_profile_screen.dart';
+import '../../features/settings/presentation/change_password_screen.dart';
 import '../../features/tax/screens/tax_estimate_screen.dart';
 import '../../features/products/presentation/product_form_screen.dart';
 import '../../features/customers/presentation/customer_form_screen.dart';
@@ -58,6 +59,7 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
 import '../../features/auth/presentation/waiting_approval_screen.dart';
+import '../../features/auth/presentation/otp_verification_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -89,7 +91,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoginRoute =
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
-          state.matchedLocation == '/forgot-password';
+          state.matchedLocation == '/forgot-password' ||
+          state.matchedLocation == '/verify-otp';
 
       if (!isLoggedIn) {
         return isLoginRoute ? null : '/login';
@@ -197,6 +200,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(
+        path: '/verify-otp',
+        builder: (_, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return OtpVerificationScreen(
+            email: extra['email'] ?? '',
+            fullName: extra['fullName'] ?? '',
+            password: extra['password'] ?? '',
+            accountType: extra['accountType'] ?? 'SHOP',
+          );
+        },
+      ),
       GoRoute(
         path: '/forgot-password',
         builder: (_, _) => const ForgotPasswordScreen(),
@@ -394,6 +409,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: '/roles', builder: (_, _) => const RoleConfigScreen()),
           GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+          GoRoute(
+            path: '/change-password',
+            builder: (_, _) => const ChangePasswordScreen(),
+          ),
           GoRoute(
             path: '/shop-profile',
             builder: (_, _) => const ShopProfileScreen(),

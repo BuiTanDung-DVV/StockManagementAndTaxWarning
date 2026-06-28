@@ -280,6 +280,22 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ], c),
 
+            // Account & Security
+            _SettingGroup('Tài khoản & Bảo mật', [
+              _SettingItem(
+                HugeIcons.strokeRoundedUserCircle,
+                'Thông tin cá nhân',
+                () => context.push('/profile'),
+                c,
+              ),
+              _SettingItem(
+                HugeIcons.strokeRoundedLockPassword,
+                'Đổi mật khẩu tài khoản',
+                () => context.push('/change-password'),
+                c,
+              ),
+            ], c),
+
             // Appearance theme toggles
             _SettingGroup('Giao diện ứng dụng', [_BrandColorTile(c: c)], c),
 

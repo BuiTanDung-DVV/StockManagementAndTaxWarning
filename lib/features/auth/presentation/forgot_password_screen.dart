@@ -134,7 +134,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       _startTimer();
     } catch (e) {
       String msg =
-          'Không thể gửi mã khôi phục. Vui lòng kiểm tra lại SĐT hoặc kết nối mạng';
+          'Không thể gửi mã khôi phục. Vui lòng kiểm tra lại địa chỉ hoặc kết nối mạng';
       if (e is ApiException) {
         msg = e.message;
       } else if (e is DioException && e.response?.data != null) {
@@ -294,8 +294,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     _success
                         ? 'Mật khẩu của bạn đã được thay đổi. Hãy đăng nhập lại bằng mật khẩu mới.'
                         : _otpSent
-                        ? 'Vui lòng nhập mã OTP đã gửi đến ${_phoneCtrl.text} cùng mật khẩu mới của bạn.'
-                        : 'Nhập số điện thoại hoặc email đã đăng ký. Chúng tôi sẽ gửi mã xác thực để khôi phục.',
+                        ? 'Vui lòng nhập mã xác thực OTP đã gửi đến ${_phoneCtrl.text} cùng mật khẩu mới.'
+                        : 'Nhập địa chỉ Email hoặc SĐT đã đăng ký. Chúng tôi sẽ gửi mã xác thực để khôi phục.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 13,
@@ -332,7 +332,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         controller: _phoneCtrl,
                         focusNode: _phoneFocus,
                         hasFocus: _phoneHasFocus,
-                        hintText: 'Nhập số điện thoại hoặc email đăng ký',
+                        hintText: 'Nhập Email hoặc số điện thoại đăng ký',
                         icon: Icons.contact_mail_rounded,
                         c: c,
                         theme: theme,

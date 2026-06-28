@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -290,7 +291,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => _showChangePasswordDialog(context),
+                      onPressed: () => context.push('/change-password'),
                       icon: const Icon(Icons.lock_reset_rounded, size: 20),
                       label: Text(
                         'Đổi mật khẩu bảo mật',
@@ -372,144 +373,4 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _showChangePasswordDialog(BuildContext context) {
-    final currentCtrl = TextEditingController();
-    final newCtrl = TextEditingController();
-    final confirmCtrl = TextEditingController();
-    final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(
-          'Đổi mật khẩu',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: c.textPrimary,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: currentCtrl,
-                obscureText: true,
-                style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-                decoration: InputDecoration(
-                  labelText: 'Mật khẩu hiện tại',
-                  prefixIcon: Icon(
-                    Icons.lock_outline_rounded,
-                    color: c.textMuted,
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: newCtrl,
-                obscureText: true,
-                style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-                decoration: InputDecoration(
-                  labelText: 'Mật khẩu mới',
-                  prefixIcon: Icon(
-                    Icons.lock_open_rounded,
-                    color: c.textMuted,
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmCtrl,
-                obscureText: true,
-                style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-                decoration: InputDecoration(
-                  labelText: 'Xác nhận mật khẩu mới',
-                  prefixIcon: Icon(
-                    Icons.lock_clock_outlined,
-                    color: c.textMuted,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Hủy',
-              style: GoogleFonts.outfit(
-                color: c.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (newCtrl.text != confirmCtrl.text) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(
-                    content: Text('Mật khẩu xác nhận không khớp'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: AppColors.danger,
-                  ),
-                );
-                return;
-              }
-              try {
-                final api = ref.read(apiClientProvider);
-                await api.put(
-                  '/profile/password',
-                  data: {
-                    'currentPassword': currentCtrl.text,
-                    'newPassword': newCtrl.text,
-                  },
-                );
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đổi mật khẩu thành công!'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(
-                      content: Text('Lỗi: $e'),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppColors.danger,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              elevation: 0,
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              'Xác nhận',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
