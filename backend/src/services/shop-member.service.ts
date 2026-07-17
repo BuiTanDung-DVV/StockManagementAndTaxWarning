@@ -43,15 +43,19 @@ export class ShopMemberService {
     async findAllPending(shopId: number | number[]) {
         const members = await this.memberRepo.find({
             where: { shopId: Array.isArray(shopId) ? In(shopId) : shopId, status: 'PENDING' },
-            relations: ['shop'],
             order: { createdAt: 'ASC' },
         });
         const userIds = members.map(m => m.userId);
         const users = userIds.length ? await this.userRepo.findByIds(userIds) : [];
         const userMap = new Map(users.map(u => [u.id, u]));
 
+        const shopIds = Array.from(new Set(members.map(m => m.shopId)));
+        const shops = shopIds.length ? await this.shopRepo.find({ where: { id: In(shopIds) } }) : [];
+        const shopMap = new Map(shops.map(s => [s.id, s]));
+
         return members.map(m => {
             const u = userMap.get(m.userId);
+            const s = shopMap.get(m.shopId);
             return {
                 id: m.id,
                 userId: m.userId,
@@ -61,7 +65,7 @@ export class ShopMemberService {
                 status: m.status,
                 createdAt: m.createdAt,
                 shopId: m.shopId,
-                shopName: m.shop?.shopName,
+                shopName: s?.shopName,
             };
         });
     }
