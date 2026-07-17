@@ -173,7 +173,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                       color: AppColors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.mark_email_read_rounded,
                       size: 36,
                       color: AppColors.primary,
@@ -213,7 +213,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                       border: Border.all(
                         color: _otpHasFocus
                             ? AppColors.primary
-                            : (_error != null ? AppColors.danger : c.border),
+                            : (_error != null ? AppColors.danger : c.inputBorder),
                         width: _otpHasFocus ? 1.5 : 1.0,
                       ),
                       boxShadow: [

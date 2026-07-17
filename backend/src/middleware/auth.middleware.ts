@@ -11,6 +11,8 @@ export interface AuthRequest extends Request {
   shopId?: number;
   isAllShops?: boolean;
   shopIds?: number[];
+  isOwner?: boolean;
+  memberType?: string;
 }
 
 export const authenticateJwt = async (req: AuthRequest, res: Response, next: NextFunction) => {
