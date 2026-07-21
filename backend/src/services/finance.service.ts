@@ -3,6 +3,7 @@ import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPla
 import { JournalEntry, JournalLine } from '../finance/ledger.entity';
 import { ActivityLog } from '../system/entities';
 import { EntityManager } from 'typeorm';
+import { SystemService } from './system.service';
 import { InventoryService } from './inventory.service';
 import { COGSService } from './cogs.service';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
@@ -585,8 +586,12 @@ export class FinanceService {
             throw new Error('Validation: Tổng tiền bảng kê phải lớn hơn 0');
         }
 
-        if (totalAmount >= 20000000 && dto.paymentMethod === 'CASH') {
-            throw new Error('Validation: Giao dịch mua hàng không hóa đơn có giá trị từ 20 triệu đồng trở lên bắt buộc phải chuyển khoản để được tính là chi phí hợp lý (theo luật thuế TNDN).');
+        const systemService = new SystemService();
+        const cashPurchaseLimitConfig = await systemService.getSystemConfig(shopId, 'CASH_PURCHASE_LIMIT', '20000000');
+        const cashPurchaseLimit = Number(cashPurchaseLimitConfig);
+
+        if (totalAmount >= cashPurchaseLimit && dto.paymentMethod === 'CASH') {
+            throw new Error(`Validation: Giao dịch mua hàng không hóa đơn có giá trị từ ${cashPurchaseLimit.toLocaleString('vi-VN')} đồng trở lên bắt buộc phải chuyển khoản để được tính là chi phí hợp lý (theo luật thuế TNDN).`);
         }
 
         const isOwner = dto.creatorAccountType === 'SHOP';

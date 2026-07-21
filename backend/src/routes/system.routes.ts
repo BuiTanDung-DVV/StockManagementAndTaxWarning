@@ -26,4 +26,8 @@ router.post('/invoices', requirePermission('finance', 'edit'), systemCtrl.create
 router.get('/purchases-without-invoice', requirePermission('finance', 'view'), systemCtrl.getPurchasesWithoutInvoice);
 router.post('/purchases-without-invoice', requirePermission('finance', 'edit'), systemCtrl.createPurchaseWithoutInvoice);
 
+// Dynamic System Configurations
+router.get('/configs', requirePermission('settings', 'view'), systemCtrl.getConfigs);
+router.post('/configs', requirePermission('settings', 'edit'), systemCtrl.saveConfigs);
+
 export default router;

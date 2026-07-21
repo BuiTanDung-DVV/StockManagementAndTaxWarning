@@ -68,3 +68,44 @@ export const createPurchaseWithoutInvoice = async (req: Request, res: Response) 
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+export const getConfigs = async (req: Request, res: Response) => {
+    try {
+        const shopId = (req as any).shopId;
+        const taxExemptionThreshold = await systemService.getSystemConfig(shopId, 'TAX_EXEMPTION_THRESHOLD', '100000000');
+        const cashPurchaseLimit = await systemService.getSystemConfig(shopId, 'CASH_PURCHASE_LIMIT', '20000000');
+        const warningRevenueThreshold = await systemService.getSystemConfig(shopId, 'WARNING_REVENUE_THRESHOLD', '90000000');
+        
+        res.json({
+            success: true,
+            data: {
+                taxExemptionThreshold: Number(taxExemptionThreshold),
+                cashPurchaseLimit: Number(cashPurchaseLimit),
+                warningRevenueThreshold: Number(warningRevenueThreshold)
+            }
+        });
+    } catch (e: any) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+export const saveConfigs = async (req: Request, res: Response) => {
+    try {
+        const shopId = (req as any).shopId;
+        const { taxExemptionThreshold, cashPurchaseLimit, warningRevenueThreshold } = req.body;
+        
+        if (taxExemptionThreshold !== undefined) {
+            await systemService.setSystemConfig(shopId, 'TAX_EXEMPTION_THRESHOLD', String(taxExemptionThreshold));
+        }
+        if (cashPurchaseLimit !== undefined) {
+            await systemService.setSystemConfig(shopId, 'CASH_PURCHASE_LIMIT', String(cashPurchaseLimit));
+        }
+        if (warningRevenueThreshold !== undefined) {
+            await systemService.setSystemConfig(shopId, 'WARNING_REVENUE_THRESHOLD', String(warningRevenueThreshold));
+        }
+        
+        res.json({ success: true, message: 'Cập nhật cấu hình hệ thống thành công' });
+    } catch (e: any) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
