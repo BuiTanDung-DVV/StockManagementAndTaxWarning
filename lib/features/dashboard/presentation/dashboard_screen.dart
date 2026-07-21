@@ -132,6 +132,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ? ref.watch(recentTransactionsProvider)
         : null;
 
+    final currentYear = today.year;
+    final ytdFrom = '$currentYear-01-01';
+    final ytdTo = today.toIso8601String().split('T')[0];
+    final ytdSalesAsync = hasFinance && shopState.userShops.isNotEmpty
+        ? ref.watch(salesSummaryProvider((from: ytdFrom, to: ytdTo)))
+        : null;
+    final cashAccountsAsync = hasFinance && shopState.userShops.isNotEmpty
+        ? ref.watch(cashAccountsProvider)
+        : null;
+
     if (shopState.userShops.isEmpty) {
       return Scaffold(
         backgroundColor: c.bg,
@@ -454,6 +464,68 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         _currFmt.format(grossProfit * 0.2),
                                         HugeIcons.strokeRoundedBank,
                                         Colors.redAccent,
+                                      ),
+                                    ),
+                                  if (hasFinance && cashAccountsAsync != null)
+                                    SizedBox(
+                                      width: cardWidth,
+                                      child: cashAccountsAsync.when(
+                                        data: (accounts) {
+                                          final totalCash = accounts
+                                              .where((a) => a['type'] == 'CASH')
+                                              .fold<double>(
+                                                  0.0,
+                                                  (sum, a) =>
+                                                      sum +
+                                                      (num.tryParse(a['balance']?.toString() ?? '0')?.toDouble() ?? 0.0));
+                                          return SummaryCard(
+                                            'Sổ quỹ tiền mặt',
+                                            _currFmt.format(totalCash),
+                                            HugeIcons.strokeRoundedWallet01,
+                                            Colors.teal,
+                                          );
+                                        },
+                                        loading: () => const SummaryCard(
+                                          'Sổ quỹ tiền mặt',
+                                          '...',
+                                          HugeIcons.strokeRoundedWallet01,
+                                          Colors.teal,
+                                        ),
+                                        error: (_, __) => const SummaryCard(
+                                          'Sổ quỹ tiền mặt',
+                                          '?',
+                                          HugeIcons.strokeRoundedWallet01,
+                                          Colors.teal,
+                                        ),
+                                      ),
+                                    ),
+                                  if (hasFinance && ytdSalesAsync != null)
+                                    SizedBox(
+                                      width: cardWidth,
+                                      child: ytdSalesAsync.when(
+                                        data: (ytdData) {
+                                          final ytdRevenue = num.tryParse(
+                                                ytdData['totalRevenue']?.toString() ?? '0',
+                                              )?.toDouble() ?? 0.0;
+                                          return SummaryCard(
+                                            'Doanh thu lũy kế (YTD)',
+                                            _currFmt.format(ytdRevenue),
+                                            HugeIcons.strokeRoundedCalendar03,
+                                            Colors.blueAccent,
+                                          );
+                                        },
+                                        loading: () => const SummaryCard(
+                                          'Doanh thu lũy kế (YTD)',
+                                          '...',
+                                          HugeIcons.strokeRoundedCalendar03,
+                                          Colors.blueAccent,
+                                        ),
+                                        error: (_, __) => const SummaryCard(
+                                          'Doanh thu lũy kế (YTD)',
+                                          '?',
+                                          HugeIcons.strokeRoundedCalendar03,
+                                          Colors.blueAccent,
+                                        ),
                                       ),
                                     ),
                                   if (hasInventory && lowStockAsync != null)
@@ -1062,6 +1134,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     loading: () => const SizedBox.shrink(),
                     error: (_, _) => const SizedBox.shrink(),
                   ),
+                if (hasFinance) const RecentDailyClosingsWidget(),
                 const SizedBox(height: 32),
               ],
             ),
