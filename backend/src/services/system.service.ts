@@ -58,5 +58,60 @@ export class SystemService {
         });
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
+
+    // Dynamic Configurations
+    async getSystemConfig(shopId: number, key: string, defaultValue: string): Promise<string> {
+        try {
+            await AppDataSource.query(`
+                CREATE TABLE IF NOT EXISTS system_configs (
+                    id SERIAL PRIMARY KEY,
+                    shop_id INT NULL,
+                    config_key VARCHAR(100) UNIQUE NOT NULL,
+                    config_value VARCHAR(500) NOT NULL,
+                    description VARCHAR(500) NULL
+                );
+            `);
+
+            const rows = await AppDataSource.query(
+                `SELECT config_value FROM system_configs WHERE (shop_id = $1 OR shop_id IS NULL) AND config_key = $2 ORDER BY shop_id DESC LIMIT 1`,
+                [shopId, key]
+            );
+
+            if (rows && rows.length > 0) {
+                return rows[0].config_value;
+            }
+
+            await AppDataSource.query(
+                `INSERT INTO system_configs (shop_id, config_key, config_value, description) 
+                 VALUES (NULL, $1, $2, 'Default system configuration') 
+                 ON CONFLICT (config_key) DO NOTHING`,
+                [key, defaultValue]
+            );
+
+            return defaultValue;
+        } catch (e) {
+            console.error('Error fetching system config, falling back to default:', e);
+            return defaultValue;
+        }
+    }
+
+    async setSystemConfig(shopId: number, key: string, value: string): Promise<void> {
+        await AppDataSource.query(`
+            CREATE TABLE IF NOT EXISTS system_configs (
+                id SERIAL PRIMARY KEY,
+                shop_id INT NULL,
+                config_key VARCHAR(100) UNIQUE NOT NULL,
+                config_value VARCHAR(500) NOT NULL,
+                description VARCHAR(500) NULL
+            );
+        `);
+
+        await AppDataSource.query(
+            `INSERT INTO system_configs (shop_id, config_key, config_value) 
+             VALUES ($1, $2, $3) 
+             ON CONFLICT (config_key) DO UPDATE SET config_value = EXCLUDED.config_value`,
+            [shopId, key, value]
+        );
+    }
 }
 

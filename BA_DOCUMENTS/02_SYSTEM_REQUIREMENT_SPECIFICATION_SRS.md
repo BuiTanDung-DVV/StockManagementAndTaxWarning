@@ -239,3 +239,22 @@
 - **Ràng buộc & Logic nghiệp vụ:**
   - **Ngưỡng miễn thuế 100M/năm:** Hệ thống kiểm tra doanh thu lũy kế cả năm dương lịch hiện tại (`yearlyRevenue`). Nếu \(\le 100.000.000\) VNĐ, tiền thuế phát sinh thực tế phải trả về bằng `0`, và hiển thị trạng thái `Miễn thuế (taxExempt: true)`.
   - **Cảnh báo tiệm cận:** Nếu doanh thu lũy kế năm đạt từ 90 triệu VNĐ trở lên và chưa vượt quá 100 triệu VNĐ, hệ thống hiển thị cảnh báo tiệm cận để chủ hộ kinh doanh có kế hoạch tài chính.
+
+---
+
+### PHÂN HỆ 8: CẤU HÌNH HỆ THỐNG ĐỘNG (DYNAMIC CONFIGURATIONS)
+
+#### 8.1. Màn hình Cài Đặt Hạn Mức & Luật Thuế Động
+- **Đường dẫn file Flutter:** [system_config_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/settings/presentation/system_config_screen.dart) (Tích hợp trong trang quản trị Cài đặt nâng cao của Owner)
+- **Đường dẫn Route GoRouter:** `/configs`
+- **Địa chỉ API kết nối:** `GET /api/system/configs` và `POST /api/system/configs`
+- **Mô tả giao diện (UI Layout):**
+  - Danh sách các nhóm cấu hình gồm ô nhập số nhập liệu:
+    - *Ngưỡng miễn thuế năm dương lịch* (mặc định 100.000.000 VNĐ).
+    - *Hạn mức thanh toán tiền mặt Bảng kê 01/TNDN* (mặc định 20.000.000 VNĐ).
+    - *Ngưỡng doanh thu bắt đầu cảnh báo chịu thuế* (mặc định 90.000.000 VNĐ).
+  - Nút hành động chính: *Lưu Cấu Hình Hệ Thống*.
+- **Ràng buộc & Logic nghiệp vụ:**
+  - **Quyền truy cập:** Chỉ tài khoản có vai trò `OWNER` mới được quyền truy cập màn hình này và gọi API ghi nhận.
+  - **Tính hợp lệ:** Các ô nhập số bắt buộc phải lớn hơn 0 và đúng định dạng tiền tệ.
+  - Khi lưu thành công, hệ thống lập tức xóa cache lưu trữ cũ của server để các luồng tính thuế kế tiếp lấy giá trị mới lập tức.

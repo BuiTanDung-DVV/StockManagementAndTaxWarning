@@ -304,3 +304,15 @@
 | `entity_name` | `VARCHAR(200)` | `NULLABLE` | Tên của bản ghi bị thay đổi (Ví dụ tên SP). |
 | `description` | `VARCHAR(500)` | `NULLABLE` | Mô tả thân thiện bằng tiếng Việt (được xuất ra log cài đặt). |
 | `created_at` | `TIMESTAMP` | `DEFAULT CURRENT` | Thời điểm phát sinh hành động. |
+
+#### 3.19. Bảng `system_configs` (Cấu hình hệ thống động)
+- **Tên Entity:** Khởi tạo động qua SQL Query (Định nghĩa tại: [system.service.ts](file:///d:/StockManagementAndTaxWarning/backend/src/services/system.service.ts))
+- **Mô tả:** Lưu trữ các cấu hình luật thuế và hạn mức tài chính thay đổi linh hoạt theo thời gian.
+
+| Tên Cột (Database) | Kiểu Dữ Liệu | Ràng Buộc | Mô Tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `INT` | `PK`, `AUTO_INCREMENT` | Định danh cấu hình. |
+| `shop_id` | `INT` | `FK`, `NULLABLE` | Liên kết tới shop cụ thể (hoặc NULL nếu cấu hình toàn hệ thống). |
+| `config_key` | `VARCHAR(100)` | `UNIQUE`, `NOT NULL` | Khóa cấu hình (Ví dụ: `TAX_EXEMPTION_THRESHOLD`). |
+| `config_value` | `VARCHAR(500)` | `NOT NULL` | Giá trị cấu hình (Lưu chuỗi string đại diện số hoặc boolean). |
+| `description` | `VARCHAR(500)` | `NULLABLE` | Diễn giải chức năng cấu hình. |

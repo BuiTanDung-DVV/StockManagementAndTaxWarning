@@ -3,6 +3,9 @@ import { SalesOrder } from '../sales/entities';
 import { TaxRule } from '../finance/entities';
 import { Between } from 'typeorm';
 import { ShopProfile } from '../system/entities';
+import { SystemService } from './system.service';
+
+const systemService = new SystemService();
 
 export class TaxService {
     async getTaxReportData(shopId: number, period: string, year: string) {
@@ -73,7 +76,14 @@ export class TaxService {
             }
         });
         const yearlyRevenue = yearlyOrders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
-        const taxExempt = yearlyRevenue <= 100000000;
+
+        const taxExemptionConfig = await systemService.getSystemConfig(shopId, 'TAX_EXEMPTION_THRESHOLD', '100000000');
+        const warningRevenueConfig = await systemService.getSystemConfig(shopId, 'WARNING_REVENUE_THRESHOLD', '90000000');
+        
+        const taxExemptionThreshold = Number(taxExemptionConfig);
+        const warningRevenueThreshold = Number(warningRevenueConfig);
+        
+        const taxExempt = yearlyRevenue <= taxExemptionThreshold;
 
         const vatOwed = taxExempt ? 0 : totalRevenue * (vatRate / 100);
         const pitOwed = taxExempt ? 0 : totalRevenue * (pitRate / 100);
@@ -86,8 +96,8 @@ export class TaxService {
             pitOwed,
             yearlyRevenue,
             taxExempt,
-            warning: yearlyRevenue > 90000000 && yearlyRevenue <= 100000000
-                ? 'Doanh thu năm của bạn đạt trên 90 triệu đồng, sắp chạm ngưỡng chịu thuế 100 triệu đồng.'
+            warning: yearlyRevenue > warningRevenueThreshold && yearlyRevenue <= taxExemptionThreshold
+                ? `Doanh thu năm của bạn đạt trên ${warningRevenueThreshold.toLocaleString('vi-VN')} đồng, sắp chạm ngưỡng chịu thuế ${taxExemptionThreshold.toLocaleString('vi-VN')} đồng.`
                 : undefined
         };
     }
