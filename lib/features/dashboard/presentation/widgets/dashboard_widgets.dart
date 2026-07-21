@@ -1805,3 +1805,178 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
     );
   }
 }
+
+class RecentDailyClosingsWidget extends ConsumerWidget {
+  const RecentDailyClosingsWidget({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    final closingsAsync = ref.watch(dailyClosingsListProvider(1));
+
+    return closingsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (data) {
+        final List<dynamic> items = (data['items'] as List?) ?? [];
+        if (items.isEmpty) return const SizedBox.shrink();
+
+        return Container(
+          margin: const EdgeInsets.only(top: 20),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: HugeIcon(
+                      icon: HugeIcons.strokeRoundedInvoice03,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Lịch sử chốt ca gần đây',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length > 5 ? 5 : items.length,
+                separatorBuilder: (_, __) => Divider(
+                  color: c.divider.withValues(alpha: 0.2),
+                  height: 16,
+                ),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final rawDate = item['closingDate'] ?? '';
+                  String dateDisplay = rawDate;
+                  try {
+                    final date = DateTime.tryParse(rawDate);
+                    if (date != null) {
+                      dateDisplay = DateFormat('dd/MM/yyyy').format(date);
+                    }
+                  } catch (_) {}
+
+                  final expected = num.tryParse(item['expectedCash']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                  final actual = num.tryParse(item['actualCash']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                  final diff = num.tryParse(item['cashDifference']?.toString() ?? '0')?.toDouble() ?? 0.0;
+                  final reason = item['discrepancyReason'] as String?;
+
+                  Color diffColor = c.textPrimary;
+                  String diffPrefix = '';
+                  if (diff > 0) {
+                    diffColor = Colors.orange;
+                    diffPrefix = '+';
+                  } else if (diff < 0) {
+                    diffColor = AppColors.danger;
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              dateDisplay,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Lý thuyết: ${_currFmt.format(expected)} • Thực tế: ${_currFmt.format(actual)}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                            if (reason != null && reason.trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  'Lý do: $reason',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: c.textMuted,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            diff == 0 ? 'Khớp két' : '$diffPrefix${_currFmt.format(diff)}',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: diff == 0 ? AppColors.success : diffColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: (diff == 0 ? AppColors.success : diffColor).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              diff == 0 ? 'Hoàn thành' : (diff > 0 ? 'Thừa quỹ' : 'Thiếu quỹ'),
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: diff == 0 ? AppColors.success : diffColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
