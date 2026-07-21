@@ -399,7 +399,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               // Determine number of columns based on width
                               int crossAxisCount = w > 1300
                                   ? 4
-                                  : (w > 900 ? 3 : (w > 600 ? 2 : 1));
+                                  : (w > 900 ? 3 : 2);
 
                               final cardWidth =
                                   (w - (crossAxisCount - 1) * 16) /

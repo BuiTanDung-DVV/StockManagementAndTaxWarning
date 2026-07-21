@@ -214,7 +214,7 @@ class SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         gradient: bgGradient,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isHero 
               ? Colors.white.withValues(alpha: 0.15) 
@@ -224,8 +224,8 @@ class SummaryCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: isHero ? 0.25 : 0.05),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
           if (isHero)
             BoxShadow(
@@ -237,26 +237,26 @@ class SummaryCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: iconBg,
                     shape: BoxShape.circle,
                   ),
-                  child: HugeIcon(icon: icon, size: 18, color: iconColor),
+                  child: HugeIcon(icon: icon, size: 14, color: iconColor),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     title,
                     style: GoogleFonts.inter(
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: subTextColor,
                     ),
@@ -266,14 +266,14 @@ class SummaryCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
                 style: GoogleFonts.outfit(
-                  fontSize: 28,
+                  fontSize: 20,
                   fontWeight: FontWeight.w700,
                   color: textColor,
                   letterSpacing: -0.5,
