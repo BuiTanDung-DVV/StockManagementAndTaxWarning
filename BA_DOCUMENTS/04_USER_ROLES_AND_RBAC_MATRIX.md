@@ -8,6 +8,7 @@
 | Phiên bản | Ngày | Người thực hiện | Nội dung thay đổi | Trạng thái |
 | :--- | :--- | :--- | :--- | :--- |
 | v1.0.0 | 2026-07-21 | Senior Business Analyst | Khởi tạo tài liệu Ma trận Phân quyền RBAC | Hoàn thành |
+| v1.1.0 | 2026-07-21 | Senior Business Analyst | Cập nhật 100% route và API: Công nợ, Chốt ca, OCR, Quỹ | Hoàn thành |
 
 ---
 
@@ -74,6 +75,9 @@ Kiểm soát truy cập trong hệ thống SmartStock FinTech tuân thủ hai ch
 | `/tax-estimate` | Xem tờ khai & kết xuất XML HTKK| `Full` | `Deny` | `Deny` | `Deny` |
 | `/staff` | Duyệt gia nhập, gán vai trò | `Full` | `Deny` | `Deny` | `Deny` |
 | `/change-password` | Đổi mật khẩu tài khoản | `Allow` | `Allow` | `Allow` | `Allow` |
+| `/customers` | Quản lý sổ nợ khách hàng | `Full` | `Full` | `Deny` | `View Only`|
+| `/daily-closing` | Phiếu chốt ca/chốt quỹ | `Full` | `Full` | `Deny` | `Limited` |
+| `/invoice-scan` | Quét hóa đơn OCR | `Full` | `Full` | `Deny` | `Deny` |
 
 ---
 
@@ -91,7 +95,11 @@ Kiểm soát truy cập trong hệ thống SmartStock FinTech tuân thủ hai ch
 | `/api/purchase-orders/:id/approve`| `PUT` | Phê duyệt đơn hàng PO nhập kho | `Yes` | `Yes` | `No` | `No` |
 | `/api/stocktakes` | `POST` | Lưu phiếu kiểm kê kho | `Yes` | `Yes` | `Yes` | `No` |
 | `/api/orders` | `POST` | Tạo đơn hàng POS bán lẻ | `Yes` | `Yes` | `No` | `Yes` |
+| `/api/customers/receivables` | `GET` | Lấy sổ công nợ khách hàng | `Yes` | `Yes` | `No` | `Yes` |
+| `/api/receivables/:id/payments` | `POST` | Ghi nhận thanh toán thu nợ | `Yes` | `Yes` | `No` | `No` |
 | `/api/finance/cashflows` | `GET` | Xem quỹ tiền, báo cáo thu chi | `Yes` | `No` | `No` | `No` |
+| `/api/finance/scan-ocr` | `POST` | Chạy phân tích hóa đơn OCR | `Yes` | `Yes` | `No` | `No` |
+| `/api/daily-closing/close` | `POST` | Ghi nhận chốt ca cuối ngày | `Yes` | `Yes` | `No` | `Yes` |
 | `/api/purchases/no-invoice` | `POST` | Lưu bảng kê Mẫu 01/TNDN | `Yes` | `Yes` | `No` | `No` |
 | `/api/tax/config` | `PUT`/`GET` | Cập nhật cấu hình thuế suất | `Yes` | `No` | `No` | `No` |
 | `/api/tax/export-xml` | `GET` | Tải về tệp XML HTKK tờ khai thuế| `Yes` | `No` | `No` | `No` |
