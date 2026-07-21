@@ -33,6 +33,8 @@ Bảng kê này là căn cứ pháp lý duy nhất để cơ quan thuế chấp 
   - *Địa chỉ cư trú* (phải ghi nhận thông tin xã/huyện/tỉnh cụ thể để cơ quan thuế đối chiếu khi cần thiết).
 - **Quy tắc chống mất mát dữ liệu (Auto-Complete):**
   - Khi người dùng đang nhập thông tin mặt hàng ở dòng cuối cùng (ví dụ nhập tên hàng: *"Xi măng Hà Tiên"*, số lượng: *10*, đơn giá: *80.000*) nhưng quên không bấm nút "Thêm vào danh sách" mà đã bấm nút "Lưu bảng kê", hệ thống sẽ tự động bắt sự kiện, nạp dòng đang nhập dở đó vào danh sách trước khi thực hiện gửi request API `POST /purchases/no-invoice` lên backend.
+- **Quy tắc khống chế thanh toán tiền mặt:**
+  - Để chi phí mua hàng theo Bảng kê 01/TNDN được chấp nhận là chi phí hợp lý được trừ khi tính thuế TNDN, các giao dịch có tổng giá trị từ **20 triệu VNĐ trở lên** bắt buộc phải thực hiện thanh toán qua ngân hàng (chuyển khoản). Hệ thống thực hiện chặn hoàn toàn và báo lỗi nếu người dùng chọn phương thức thanh toán tiền mặt (`CASH`) đối với các bảng kê có giá trị $\ge 20$ triệu VNĐ.
 
 ---
 
@@ -55,6 +57,11 @@ Khi chủ shop bật cấu hình giảm VAT (ví dụ theo Nghị quyết giảm
 - Công thức tính VAT giảm:
   $$\text{Tỷ lệ VAT mới} = \text{Tỷ lệ VAT mặc định} \times (1 - 0.2)$$
   *Ví dụ: Ngành thương mại có tỷ lệ GTGT là 1%. Khi áp dụng chính sách giảm, tỷ lệ tính GTGT mới sẽ là: $1\% \times 0.8 = 0.8\%$.*
+
+### 4.2. Ngưỡng miễn thuế doanh thu dưới 100 triệu VNĐ/năm
+- Theo quy định tại Điều 4 Thông tư 40/2021/TT-BTC, hộ kinh doanh có doanh thu từ hoạt động sản xuất, kinh doanh trong năm dương lịch từ **100 triệu đồng trở xuống** thuộc diện không phải nộp thuế GTGT và thuế TNCN.
+- Hệ thống tự động tính toán tổng doanh thu tích lũy cả năm dương lịch hiện tại (`yearlyRevenue`). Nếu con số này $\le 100.000.000$ VNĐ, các khoản thuế GTGT và TNCN phải nộp thực tế sẽ được tự động điều chỉnh về **0**.
+- Trạng thái miễn thuế (`taxExempt: true`) sẽ được hiển thị rõ ràng trên biểu khai thuế. Khi doanh thu đạt từ 90 triệu VNĐ trở lên, hệ thống sẽ hiển thị cảnh báo tiệm cận ngưỡng chịu thuế để người dùng chủ động lập kế hoạch kinh doanh.
 
 ---
 

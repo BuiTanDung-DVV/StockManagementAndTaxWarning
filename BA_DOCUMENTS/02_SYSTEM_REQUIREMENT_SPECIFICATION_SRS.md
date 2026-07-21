@@ -201,6 +201,7 @@
     - *Chênh lệch tiền mặt* (Tự động tính: Thực tế - Lý thuyết).
 - **Ràng buộc & Logic nghiệp vụ:**
   - Nếu số tiền chênh lệch khác 0, bắt buộc người dùng nhập trường **"Lý do chênh lệch"** trước khi bấm nút "Xác nhận chốt sổ".
+  - **Tự động điều chỉnh quỹ:** Khi phát sinh chênh lệch (thừa/thiếu), hệ thống sẽ tự động tạo một giao dịch điều chỉnh quỹ tương ứng (phân loại OTHER) để cộng tăng/giảm trực tiếp số dư tài khoản tiền mặt ảo, đảm bảo khớp số dư két thực tế.
 
 #### 6.3. Quét và Nhận diện Hóa đơn bằng OCR
 - **Đường dẫn file Flutter:** [invoice_scan_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/finance/presentation/invoice_scan_screen.dart)
@@ -235,3 +236,6 @@
     4. Hoạt động kinh doanh khác (tỷ lệ 3.0%).
   - Nút *Kiểm tra dữ liệu tờ khai*.
   - Nút *Xuất tờ khai XML nạp HTKK*.
+- **Ràng buộc & Logic nghiệp vụ:**
+  - **Ngưỡng miễn thuế 100M/năm:** Hệ thống kiểm tra doanh thu lũy kế cả năm dương lịch hiện tại (`yearlyRevenue`). Nếu \(\le 100.000.000\) VNĐ, tiền thuế phát sinh thực tế phải trả về bằng `0`, và hiển thị trạng thái `Miễn thuế (taxExempt: true)`.
+  - **Cảnh báo tiệm cận:** Nếu doanh thu lũy kế năm đạt từ 90 triệu VNĐ trở lên và chưa vượt quá 100 triệu VNĐ, hệ thống hiển thị cảnh báo tiệm cận để chủ hộ kinh doanh có kế hoạch tài chính.

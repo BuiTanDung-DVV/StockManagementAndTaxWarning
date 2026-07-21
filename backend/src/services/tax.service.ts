@@ -63,17 +63,32 @@ export class TaxService {
             pitRate = Number(shop.customPitRate);
         }
 
-        // Tính thuế (chỉ tính nếu tổng doanh thu năm > 100tr, hoặc cứ báo cáo tạm tính)
-        // Hiện tại tính tạm tính cho kỳ
-        const vatOwed = totalRevenue * (vatRate / 100);
-        const pitOwed = totalRevenue * (pitRate / 100);
+        const yearStartDate = new Date(y, 0, 1);
+        const yearEndDate = new Date(y, 11, 31, 23, 59, 59);
+        const yearlyOrders = await orderRepo.find({
+            where: {
+                shopId,
+                status: 'COMPLETED',
+                orderDate: Between(yearStartDate, yearEndDate)
+            }
+        });
+        const yearlyRevenue = yearlyOrders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
+        const taxExempt = yearlyRevenue <= 100000000;
+
+        const vatOwed = taxExempt ? 0 : totalRevenue * (vatRate / 100);
+        const pitOwed = taxExempt ? 0 : totalRevenue * (pitRate / 100);
 
         return {
             shopName,
             taxCode,
             totalRevenue,
             vatOwed,
-            pitOwed
+            pitOwed,
+            yearlyRevenue,
+            taxExempt,
+            warning: yearlyRevenue > 90000000 && yearlyRevenue <= 100000000
+                ? 'Doanh thu năm của bạn đạt trên 90 triệu đồng, sắp chạm ngưỡng chịu thuế 100 triệu đồng.'
+                : undefined
         };
     }
 }

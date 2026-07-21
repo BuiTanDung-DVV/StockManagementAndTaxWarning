@@ -405,7 +405,38 @@ export class FinanceService {
         if (Math.abs(cashDifference) > 50000 && (!dto.notes || dto.notes.trim().length === 0)) {
             throw new Error('Chênh lệch két vượt quá 50,000đ. Vui lòng nhập lý do giải trình vào phần ghi chú.');
         }
-        return this.closingRepo.save(this.closingRepo.create({ ...dto, shopId }));
+        
+        const closing = await this.closingRepo.save(this.closingRepo.create({ ...dto, shopId }));
+
+        if (cashDifference !== 0) {
+            const cashAccounts = await this.accountRepo.find({ where: { shopId } });
+            const targetAccount = cashAccounts.find(a => a.accountType === 'CASH') || cashAccounts[0];
+
+            if (targetAccount) {
+                const isSurplus = cashDifference > 0;
+                const adjustAmount = Math.abs(cashDifference);
+                const txCode = (isSurplus ? 'PT-ADJ-' : 'PC-ADJ-') + Date.now().toString().slice(-6);
+
+                const txDto: Partial<CashTransaction> = {
+                    transactionCode: txCode,
+                    type: isSurplus ? 'INCOME' : 'EXPENSE',
+                    category: 'OTHER',
+                    amount: adjustAmount,
+                    paymentMethod: 'CASH',
+                    account: targetAccount,
+                    counterparty: 'Hệ thống (Kiểm quỹ)',
+                    transactionDate: new Date(),
+                    notes: `Điều chỉnh chênh lệch chốt ca ngày ${dto.closingDate || new Date().toISOString().split('T')[0]}. Lý do: ${dto.notes || 'Không ghi chú'}`
+                };
+
+                await this.createCashTransaction(shopId, txDto);
+
+                targetAccount.balance = Number(targetAccount.balance || 0) + cashDifference;
+                await this.accountRepo.save(targetAccount);
+            }
+        }
+
+        return closing;
     }
 
     // Cash Accounts
@@ -552,6 +583,10 @@ export class FinanceService {
         const totalAmount = computedTotal > 0 ? computedTotal : Number(dto.totalAmount || 0);
         if (totalAmount <= 0) {
             throw new Error('Validation: Tổng tiền bảng kê phải lớn hơn 0');
+        }
+
+        if (totalAmount >= 20000000 && dto.paymentMethod === 'CASH') {
+            throw new Error('Validation: Giao dịch mua hàng không hóa đơn có giá trị từ 20 triệu đồng trở lên bắt buộc phải chuyển khoản để được tính là chi phí hợp lý (theo luật thuế TNDN).');
         }
 
         const isOwner = dto.creatorAccountType === 'SHOP';
