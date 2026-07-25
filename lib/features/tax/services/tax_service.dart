@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/api_client.dart';
@@ -23,21 +26,20 @@ class TaxService {
   }
 
   Future<void> exportHTKK(String period, String year) async {
-    final token = _apiClient.token;
-    final shopId = _apiClient.shopId;
-
-    final baseUri = Uri.parse('${ApiClient.baseUrl}tax/export-htkk');
-    final url = baseUri.replace(
-      queryParameters: {
-        'period': period,
-        'year': year,
-        'token': token ?? '',
-        'shopId': shopId ?? '',
-      },
-    );
-
     try {
-      final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
+      // Tải bằng API client để token chỉ nằm trong Authorization header,
+      // không xuất hiện trong URL, lịch sử trình duyệt hoặc log máy chủ.
+      final response = await _apiClient.dio.get<String>(
+        'tax/export-htkk',
+        queryParameters: {'period': period, 'year': year},
+        options: Options(responseType: ResponseType.plain),
+      );
+      final xml = response.data;
+      if (xml == null || xml.trim().isEmpty) {
+        throw Exception('Máy chủ không trả về nội dung XML');
+      }
+      final uri = Uri.dataFromString(xml, mimeType: 'text/xml', encoding: utf8);
+      final launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
       if (!launched) {
         throw Exception('Trình duyệt đã chặn tải xuống');
       }

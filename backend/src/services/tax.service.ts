@@ -3,9 +3,11 @@ import { SalesOrder } from '../sales/entities';
 import { TaxRule } from '../finance/entities';
 import { Between } from 'typeorm';
 import { ShopProfile } from '../system/entities';
-import { SystemService } from './system.service';
-
-const systemService = new SystemService();
+import {
+    CURRENT_TAX_POLICY,
+    normalizeNonNegative,
+    normalizeTaxCode,
+} from '../tax/tax-policy';
 
 export class TaxService {
     async getTaxReportData(shopId: number, period: string, year: string) {
@@ -27,7 +29,7 @@ export class TaxService {
         const shopRepo = AppDataSource.getRepository(ShopProfile);
         const shop = await shopRepo.findOne({ where: { shopId: shopId } });
         const shopName = shop?.shopName || 'Hộ kinh doanh';
-        const taxCode = shop?.taxCode || '0123456789'; // Dummy tax code if not available
+        const taxCode = normalizeTaxCode(shop?.taxCode);
 
         const orderRepo = AppDataSource.getRepository(SalesOrder);
         const orders = await orderRepo.find({
@@ -38,7 +40,13 @@ export class TaxService {
             }
         });
 
-        const totalRevenue = orders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
+        const totalRevenue = normalizeNonNegative(
+            orders.reduce(
+                (sum, order) =>
+                    sum + normalizeNonNegative(Number(order.totalAmount)),
+                0,
+            ),
+        );
 
         // Determine industry code from shop sector
         let industryCode = 'BAN_LE';
@@ -57,14 +65,13 @@ export class TaxService {
         // Override with shop's custom rates if they exist
         if (shop?.customVatRate != null) {
             vatRate = Number(shop.customVatRate);
-        } else if (shop?.applyVatReduction) {
-            // Apply 20% reduction to the VAT rate based on current policy
-            vatRate = vatRate * 0.8;
         }
 
         if (shop?.customPitRate != null) {
             pitRate = Number(shop.customPitRate);
         }
+        vatRate = Math.min(100, normalizeNonNegative(vatRate));
+        pitRate = Math.min(100, normalizeNonNegative(pitRate));
 
         const yearStartDate = new Date(y, 0, 1);
         const yearEndDate = new Date(y, 11, 31, 23, 59, 59);
@@ -75,18 +82,26 @@ export class TaxService {
                 orderDate: Between(yearStartDate, yearEndDate)
             }
         });
-        const yearlyRevenue = yearlyOrders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
+        const yearlyRevenue = normalizeNonNegative(
+            yearlyOrders.reduce(
+                (sum, order) =>
+                    sum + normalizeNonNegative(Number(order.totalAmount)),
+                0,
+            ),
+        );
 
-        const taxExemptionConfig = await systemService.getSystemConfig(shopId, 'TAX_EXEMPTION_THRESHOLD', '100000000');
-        const warningRevenueConfig = await systemService.getSystemConfig(shopId, 'WARNING_REVENUE_THRESHOLD', '90000000');
-        
-        const taxExemptionThreshold = Number(taxExemptionConfig);
-        const warningRevenueThreshold = Number(warningRevenueConfig);
-        
+        const {
+            taxExemptionThreshold,
+            warningRevenueThreshold,
+        } = CURRENT_TAX_POLICY;
         const taxExempt = yearlyRevenue <= taxExemptionThreshold;
 
-        const vatOwed = taxExempt ? 0 : totalRevenue * (vatRate / 100);
-        const pitOwed = taxExempt ? 0 : totalRevenue * (pitRate / 100);
+        const vatOwed = taxExempt
+            ? 0
+            : normalizeNonNegative(totalRevenue * (vatRate / 100));
+        const pitOwed = taxExempt
+            ? 0
+            : normalizeNonNegative(totalRevenue * (pitRate / 100));
 
         return {
             shopName,
@@ -96,6 +111,7 @@ export class TaxService {
             pitOwed,
             yearlyRevenue,
             taxExempt,
+            policy: CURRENT_TAX_POLICY,
             warning: yearlyRevenue > warningRevenueThreshold && yearlyRevenue <= taxExemptionThreshold
                 ? `Doanh thu năm của bạn đạt trên ${warningRevenueThreshold.toLocaleString('vi-VN')} đồng, sắp chạm ngưỡng chịu thuế ${taxExemptionThreshold.toLocaleString('vi-VN')} đồng.`
                 : undefined

@@ -71,7 +71,17 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
       final raw = prefs.getString(_storageKey);
       if (raw != null && raw.isNotEmpty) {
         final List list = jsonDecode(raw);
-        state = list.map((e) => AiDocument.fromJson(e)).toList();
+        final currentTaxDocument = _defaultDocuments.firstWhere(
+          (document) => document.id == 'DOC_TAX_01',
+        );
+        state = list.map((e) {
+          final document = AiDocument.fromJson(e);
+          if (document.id == currentTaxDocument.id) {
+            return currentTaxDocument.copyWith(isActive: document.isActive);
+          }
+          return document;
+        }).toList();
+        await _saveToStorage();
       } else {
         state = _defaultDocuments;
         await _saveToStorage();
@@ -124,14 +134,15 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
   static final List<AiDocument> _defaultDocuments = [
     AiDocument(
       id: 'DOC_TAX_01',
-      title: 'Thông tư 40/2021/TT-BTC về Thuế Hộ Kinh Doanh',
+      title: 'Nghị định 141/2026/NĐ-CP về Thuế Hộ Kinh Doanh',
       category: 'Thuế HKD',
       content: '''
-- Ngưỡng miễn thuế: Hộ kinh doanh có doanh thu trong năm từ 100 triệu đồng trở xuống thuộc đối tượng KHÔNG PHẢI NỘP thuế GTGT và thuế TNCN.
+- Ngưỡng doanh thu hiện hành: Hộ, cá nhân kinh doanh có doanh thu năm từ 1 tỷ đồng trở xuống không phải nộp thuế GTGT và thuế TNCN.
 - Tỷ lệ thuế trên doanh thu ngành Thương mại (bán lẻ hàng hóa): 1% GTGT + 0.5% TNCN.
 - Tỷ lệ thuế ngành Dịch vụ: 5% GTGT + 2% TNCN.
-- Kỳ kê khai: Kê khai theo quý hoặc theo từng lần phát sinh. Hạn nộp tờ khai quý là ngày cuối cùng của tháng đầu quý tiếp theo.
-- Hóa đơn điện tử khởi tạo từ máy tính tiền: Áp dụng bắt buộc đối với HKD nộp thuế theo phương pháp kê khai hoặc doanh thu > 500 triệu/năm.
+- Hóa đơn điện tử: Hộ, cá nhân kinh doanh có doanh thu năm trên 1 tỷ đồng thuộc diện phải áp dụng theo Nghị định 141/2026/NĐ-CP.
+- Nguồn chính thức: https://vanban.chinhphu.vn/?classid=1&docid=217960&pageid=27160&typegroupid=4
+- Nội dung chỉ hỗ trợ tham khảo; cần đối chiếu ngành nghề, phương pháp tính và hồ sơ thực tế trước khi kê khai.
 ''',
       isActive: true,
       createdAt: DateTime.now(),

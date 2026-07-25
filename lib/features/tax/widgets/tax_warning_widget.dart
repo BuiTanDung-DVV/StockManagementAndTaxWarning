@@ -105,9 +105,9 @@ class TaxWarningWidget extends StatelessWidget {
           const SizedBox(height: 12),
           _buildRow('Tổng doanh thu trong kỳ:', fmt.format(totalRevenue), c),
           const SizedBox(height: 6),
-          _buildRow('VAT ước tính (1%):', fmt.format(vatOwed), c),
+          _buildRow('GTGT ước tính:', fmt.format(vatOwed), c),
           const SizedBox(height: 6),
-          _buildRow('TNCN ước tính (0.5%):', fmt.format(pitOwed), c),
+          _buildRow('TNCN ước tính:', fmt.format(pitOwed), c),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
@@ -126,7 +126,7 @@ class TaxWarningWidget extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Chú ý: Nếu doanh thu < 100 triệu VNĐ/năm, hộ kinh doanh có thể được miễn thuế. Hệ thống chỉ hỗ trợ tính toán dự kiến.',
+                    'Theo Nghị định 141/2026/NĐ-CP, doanh thu năm từ 1 tỷ đồng trở xuống không phải nộp GTGT và TNCN. Hệ thống chỉ hỗ trợ ước tính.',
                     style: TextStyle(
                       fontStyle: FontStyle.italic,
                       color: c.textSecondary,

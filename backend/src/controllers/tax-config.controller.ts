@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/db.config';
 import { ShopProfile } from '../system/entities';
+import { CURRENT_TAX_POLICY } from '../tax/tax-policy';
 
 export const getTaxConfig = async (req: Request, res: Response) => {
     try {
@@ -14,7 +15,7 @@ export const getTaxConfig = async (req: Request, res: Response) => {
             if (shop) {
                 shopConfig = {
                     businessSector: shop.businessSector,
-                    applyVatReduction: shop.applyVatReduction,
+                    applyVatReduction: false,
                     customVatRate: shop.customVatRate,
                     customPitRate: shop.customPitRate
                 };
@@ -23,13 +24,14 @@ export const getTaxConfig = async (req: Request, res: Response) => {
 
         // Cấu hình luật thuế HKD 2026
         const config: any = {
-            fiscalYear: 2026,
+            fiscalYear: CURRENT_TAX_POLICY.fiscalYear,
             thresholds: {
-                tier1: 100000000,   // 100M: Miễn thuế
-                tier2: 300000000,   // 300M: Ngưỡng cảnh báo kê khai
-                tier3: 500000000,   // 500M: Ngưỡng kê khai mới 2026
-                tier4: 1000000000,  // 1 Tỷ: Bắt buộc HĐĐT
+                tier1: 250000000,
+                tier2: 500000000,
+                tier3: CURRENT_TAX_POLICY.warningRevenueThreshold,
+                tier4: CURRENT_TAX_POLICY.taxExemptionThreshold,
             },
+            policy: CURRENT_TAX_POLICY,
             taxRates: {
                 wholesale_retail: {
                     vat: 0.01, // 1%
@@ -49,8 +51,10 @@ export const getTaxConfig = async (req: Request, res: Response) => {
                 }
             },
             currentPolicies: {
-                vatReductionActive: false, // Ví dụ: Không còn giảm 20% VAT trong 2026
-                vatReductionRate: 0.0, 
+                // Chính sách giảm phụ thuộc nhóm hàng; chưa đủ dữ liệu để áp dụng toàn shop.
+                vatReductionActive: false,
+                vatReductionRate: 0.0,
+                vatReductionScope: 'PRODUCT_LEVEL_NOT_SUPPORTED',
             }
         };
 
@@ -77,7 +81,6 @@ export const updateTaxConfig = async (req: Request, res: Response) => {
         }
         
         if (req.body.businessSector !== undefined) shop.businessSector = req.body.businessSector;
-        if (req.body.applyVatReduction !== undefined) shop.applyVatReduction = req.body.applyVatReduction;
         if (req.body.customVatRate !== undefined) shop.customVatRate = req.body.customVatRate;
         if (req.body.customPitRate !== undefined) shop.customPitRate = req.body.customPitRate;
 

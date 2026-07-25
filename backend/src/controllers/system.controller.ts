@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { SystemService } from '../services/system.service';
+import { CURRENT_TAX_POLICY } from '../tax/tax-policy';
 
 const systemService = new SystemService();
 
@@ -71,16 +72,17 @@ export const createPurchaseWithoutInvoice = async (req: Request, res: Response) 
 export const getConfigs = async (req: Request, res: Response) => {
     try {
         const shopId = (req as any).shopId;
-        const taxExemptionThreshold = await systemService.getSystemConfig(shopId, 'TAX_EXEMPTION_THRESHOLD', '100000000');
         const cashPurchaseLimit = await systemService.getSystemConfig(shopId, 'CASH_PURCHASE_LIMIT', '20000000');
-        const warningRevenueThreshold = await systemService.getSystemConfig(shopId, 'WARNING_REVENUE_THRESHOLD', '90000000');
         
         res.json({
             success: true,
             data: {
-                taxExemptionThreshold: Number(taxExemptionThreshold),
+                taxExemptionThreshold:
+                    CURRENT_TAX_POLICY.taxExemptionThreshold,
                 cashPurchaseLimit: Number(cashPurchaseLimit),
-                warningRevenueThreshold: Number(warningRevenueThreshold)
+                warningRevenueThreshold:
+                    CURRENT_TAX_POLICY.warningRevenueThreshold,
+                taxPolicy: CURRENT_TAX_POLICY,
             }
         });
     } catch (e: any) {
@@ -91,16 +93,24 @@ export const getConfigs = async (req: Request, res: Response) => {
 export const saveConfigs = async (req: Request, res: Response) => {
     try {
         const shopId = (req as any).shopId;
-        const { taxExemptionThreshold, cashPurchaseLimit, warningRevenueThreshold } = req.body;
-        
-        if (taxExemptionThreshold !== undefined) {
-            await systemService.setSystemConfig(shopId, 'TAX_EXEMPTION_THRESHOLD', String(taxExemptionThreshold));
+        const {
+            taxExemptionThreshold,
+            cashPurchaseLimit,
+            warningRevenueThreshold,
+        } = req.body;
+
+        if (
+            taxExemptionThreshold !== undefined ||
+            warningRevenueThreshold !== undefined
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    'Ngưỡng thuế hiện hành do hệ thống quản lý theo văn bản pháp luật và không thể sửa thủ công.',
+            });
         }
         if (cashPurchaseLimit !== undefined) {
             await systemService.setSystemConfig(shopId, 'CASH_PURCHASE_LIMIT', String(cashPurchaseLimit));
-        }
-        if (warningRevenueThreshold !== undefined) {
-            await systemService.setSystemConfig(shopId, 'WARNING_REVENUE_THRESHOLD', String(warningRevenueThreshold));
         }
         
         res.json({ success: true, message: 'Cập nhật cấu hình hệ thống thành công' });
