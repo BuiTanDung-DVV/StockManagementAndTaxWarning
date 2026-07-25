@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/chart_widgets.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../providers/finance_provider.dart';
@@ -338,7 +339,10 @@ class FinanceScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                error: (_, _) => const SizedBox.shrink(),
+                error: (_, _) => AppInlineError(
+                  message: 'Không thể tải biểu đồ dòng tiền.',
+                  onRetry: () => ref.invalidate(cashSummaryProvider),
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -420,7 +424,10 @@ class FinanceScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    error: (_, _) => const SizedBox.shrink(),
+                    error: (_, _) => AppInlineError(
+                      message: 'Không thể tải phân loại chi phí.',
+                      onRetry: () => ref.invalidate(expensesByCategoryProvider),
+                    ),
                   );
                 },
               ),
@@ -634,7 +641,10 @@ class FinanceScreen extends ConsumerWidget {
                   );
                 },
                 loading: () => const ShimmerList(count: 3),
-                error: (e, s) => const SizedBox.shrink(),
+                error: (e, _) => AppInlineError(
+                  message: 'Không thể tải giao dịch gần đây.',
+                  onRetry: () => ref.invalidate(transactionsProvider),
+                ),
               ),
               const SizedBox(height: 88), // UI Breathing Room Padding
             ],

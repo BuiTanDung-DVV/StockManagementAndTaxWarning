@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -9,11 +8,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_animations.dart';
-import '../../../../core/widgets/chart_widgets.dart';
-import '../../../../core/constants/app_strings.dart';
 import '../../../../core/utils/excel_export_service.dart';
 import '../../../finance/providers/finance_provider.dart';
-import '../../../settings/providers/tax_config_provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../settings/providers/shop_provider.dart';
 
@@ -24,7 +20,7 @@ final _currFmt = NumberFormat.currency(
 );
 
 class TaxObligationReminder extends ConsumerWidget {
-  const TaxObligationReminder();
+  const TaxObligationReminder({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,8 +28,11 @@ class TaxObligationReminder extends ConsumerWidget {
     final taxAsync = ref.watch(taxObligationsProvider);
 
     return taxAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+      loading: () => const SizedBox(height: 8),
+      error: (_, _) => AppInlineError(
+        message: 'Không thể tải nghĩa vụ thuế.',
+        onRetry: () => ref.invalidate(taxObligationsProvider),
+      ),
       data: (data) {
         final all = ((data['items'] as List?) ?? []);
         final pending = all.where((t) => t['status'] != 'done').toList();
@@ -344,7 +343,7 @@ class QuickAction extends StatelessWidget {
   final dynamic icon;
   final String label;
   final VoidCallback onTap;
-  const QuickAction(this.icon, this.label, this.onTap);
+  const QuickAction(this.icon, this.label, this.onTap, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -407,7 +406,7 @@ class QuickAction extends StatelessWidget {
 class TimeFilterBar extends StatelessWidget {
   final String currentFilter;
   final Function(String) onChanged;
-  const TimeFilterBar(this.currentFilter, this.onChanged);
+  const TimeFilterBar(this.currentFilter, this.onChanged, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -484,6 +483,7 @@ class ComparisonBarChart extends StatelessWidget {
     this.label1,
     this.label2, {
     this.filterWidget,
+    super.key,
   });
 
   @override
@@ -751,8 +751,9 @@ class ComparisonBarChart extends StatelessWidget {
                               interval: 1,
                               getTitlesWidget: (value, meta) {
                                 final idx = value.toInt();
-                                if (idx < 0 || idx >= maxLen)
+                                if (idx < 0 || idx >= maxLen) {
                                   return const SizedBox.shrink();
+                                }
 
                                 String displayDate = '';
                                 if (idx < currentData.length) {
@@ -792,8 +793,9 @@ class ComparisonBarChart extends StatelessWidget {
                                       : dateStr;
                                 }
 
-                                if (displayDate.length < 5)
+                                if (displayDate.length < 5) {
                                   return const SizedBox.shrink();
+                                }
 
                                 // Limit labels if too many
                                 if (maxLen > 7 &&
@@ -821,8 +823,9 @@ class ComparisonBarChart extends StatelessWidget {
                               showTitles: true,
                               reservedSize: 52,
                               getTitlesWidget: (value, meta) {
-                                if (value == meta.max || value == meta.min)
+                                if (value == meta.max || value == meta.min) {
                                   return const SizedBox.shrink();
+                                }
                                 String label = '';
                                 if (value >= 1000000) {
                                   label =
@@ -887,7 +890,7 @@ class ComparisonBarChart extends StatelessWidget {
 
 class TopProductsChart extends StatelessWidget {
   final List<dynamic> data;
-  const TopProductsChart(this.data);
+  const TopProductsChart(this.data, {super.key});
 
   String _formatAmount(double amount) {
     if (amount >= 1000000000) {
@@ -1040,7 +1043,7 @@ class TopProductsChart extends StatelessWidget {
 
 class InventoryDonutChart extends StatefulWidget {
   final List<dynamic> data;
-  const InventoryDonutChart(this.data);
+  const InventoryDonutChart(this.data, {super.key});
 
   @override
   State<InventoryDonutChart> createState() => _InventoryDonutChartState();
@@ -1052,7 +1055,6 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
 
     if (widget.data.isEmpty) return const SizedBox.shrink();
 
@@ -1257,12 +1259,11 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
 class CashFlowAreaChart extends StatelessWidget {
   final List<dynamic> data;
   final String label;
-  const CashFlowAreaChart(this.data, this.label);
+  const CashFlowAreaChart(this.data, this.label, {super.key});
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
 
     if (data.isEmpty) return const SizedBox.shrink();
 
@@ -1409,8 +1410,9 @@ class CashFlowAreaChart extends StatelessWidget {
                                 if (v % 1 != 0) return const SizedBox.shrink();
 
                                 final idx = v.toInt();
-                                if (idx < 0 || idx > calculatedMaxX)
+                                if (idx < 0 || idx > calculatedMaxX) {
                                   return const SizedBox.shrink();
+                                }
 
                                 String displayDate = '';
                                 if (idx < data.length) {
@@ -1440,8 +1442,9 @@ class CashFlowAreaChart extends StatelessWidget {
                                   }
                                 }
 
-                                if (displayDate.length < 5)
+                                if (displayDate.length < 5) {
                                   return const SizedBox.shrink();
+                                }
 
                                 int targetLen = calculatedMaxX.toInt() + 1;
                                 if (targetLen > 7 &&
@@ -1469,8 +1472,9 @@ class CashFlowAreaChart extends StatelessWidget {
                               showTitles: true,
                               reservedSize: 52,
                               getTitlesWidget: (v, m) {
-                                if (v == m.max || v == m.min)
+                                if (v == m.max || v == m.min) {
                                   return const SizedBox.shrink();
+                                }
                                 String lbl = v >= 1000000
                                     ? '${(v / 1000000).toStringAsFixed(0)}Tr'
                                     : (v >= 1000
@@ -1754,7 +1758,7 @@ class LowStockTableWidget extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: displayItems.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 Divider(height: 1, color: c.divider.withValues(alpha: 0.3)),
             itemBuilder: (context, index) {
               final item = displayItems[index];
@@ -1891,7 +1895,7 @@ class LowStockTableWidget extends StatelessWidget {
 
 class PaymentMethodDonutChart extends StatefulWidget {
   final List<dynamic> data;
-  const PaymentMethodDonutChart(this.data);
+  const PaymentMethodDonutChart(this.data, {super.key});
 
   @override
   State<PaymentMethodDonutChart> createState() =>
@@ -1935,8 +1939,9 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
 
     String getMethodName(String method) {
       if (method == 'CASH') return 'Tiền mặt';
-      if (method == 'BANK_TRANSFER' || method == 'TRANSFER')
+      if (method == 'BANK_TRANSFER' || method == 'TRANSFER') {
         return 'Chuyển khoản';
+      }
       if (method == 'CREDIT_CARD') return 'Thẻ tín dụng';
       if (method == 'DEBT') return 'Ghi nợ';
       return method;
@@ -1944,8 +1949,9 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
 
     Color getMethodColor(String method) {
       if (method == 'CASH') return AppColors.success;
-      if (method == 'BANK_TRANSFER' || method == 'TRANSFER')
+      if (method == 'BANK_TRANSFER' || method == 'TRANSFER') {
         return theme.colorScheme.primary;
+      }
       if (method == 'DEBT') return AppColors.warning;
       return AppColors.info;
     }
@@ -2289,7 +2295,7 @@ class RecentOrdersDataTable extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: displayItems.length,
-            separatorBuilder: (_, __) =>
+            separatorBuilder: (_, _) =>
                 Divider(height: 1, color: c.divider.withValues(alpha: 0.3)),
             itemBuilder: (context, index) {
               final t = displayItems[index];
@@ -2403,8 +2409,11 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
     final closingsAsync = ref.watch(dailyClosingsListProvider(1));
 
     return closingsAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      loading: () => const SizedBox(height: 8),
+      error: (_, _) => AppInlineError(
+        message: 'Không thể tải lịch sử chốt ca.',
+        onRetry: () => ref.invalidate(dailyClosingsListProvider(1)),
+      ),
       data: (data) {
         final List<dynamic> items = (data['items'] as List?) ?? [];
         if (items.isEmpty) return const SizedBox.shrink();
@@ -2508,7 +2517,7 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: items.length > 5 ? 5 : items.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                     Divider(color: c.divider.withValues(alpha: 0.3), height: 1),
                 itemBuilder: (context, index) {
                   final item = items[index];

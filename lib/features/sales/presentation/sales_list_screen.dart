@@ -424,7 +424,10 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           ),
         ),
       ),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (_, _) => AppInlineError(
+        message: 'Không thể tải tổng quan bán hàng tháng này.',
+        onRetry: () => ref.invalidate(salesSummaryProvider),
+      ),
       data: (data) {
         final totalOrders =
             (data['orderCount'] ?? data['totalOrders'] ?? data['count'] ?? 0)

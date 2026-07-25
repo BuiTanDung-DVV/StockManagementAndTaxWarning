@@ -778,7 +778,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                       ),
                     ),
-                    error: (e, _) => const SizedBox.shrink(),
+                    error: (e, _) => AppInlineError(
+                      message: 'Không thể tải cảnh báo tồn kho.',
+                      onRetry: () => ref.invalidate(lowStockProvider),
+                    ),
                   ),
 
                 if (hasFinance && cashFlowAsync != null) ...[
@@ -966,18 +969,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 if (hasFinance && recentTransactionsAsync != null)
                   recentTransactionsAsync.when(
                     data: (transactions) => RecentOrdersDataTable(transactions),
-                    loading: () => const SizedBox.shrink(),
-                    error: (e, _) => const SizedBox.shrink(),
+                    loading: () => const AppShimmer(
+                      child: ShimmerBox(
+                        width: double.infinity,
+                        height: 160,
+                        radius: 20,
+                      ),
+                    ),
+                    error: (e, _) => AppInlineError(
+                      message: 'Không thể tải đơn hàng gần đây.',
+                      onRetry: () => ref.invalidate(recentTransactionsProvider),
+                    ),
                   ),
 
                 const SizedBox(height: 28),
-                // Low stock warnings
-                if (hasInventory && lowStockAsync != null)
-                  lowStockAsync.when(
-                    data: (items) => LowStockTableWidget(items),
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, _) => const SizedBox.shrink(),
-                  ),
                 if (hasFinance) const RecentDailyClosingsWidget(),
                 const SizedBox(height: 88), // UI Breathing Room Padding
               ],
