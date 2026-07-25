@@ -109,16 +109,8 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                   child: DropdownButtonFormField<String>(
                     initialValue: _selectedYear,
                     decoration: const InputDecoration(labelText: 'Năm'),
-                    items: [
-                      for (
-                        int i = DateTime.now().year - 2;
-                        i <= DateTime.now().year;
-                        i++
-                      )
-                        DropdownMenuItem(
-                          value: i.toString(),
-                          child: Text(i.toString()),
-                        ),
+                    items: const [
+                      DropdownMenuItem(value: '2026', child: Text('2026')),
                     ],
                     onChanged: (val) {
                       if (val != null) {

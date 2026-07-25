@@ -46,7 +46,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
     // Parameters for custom milestones progress
     const double maxScale = 1200000000.0; // 1.2 billion max scale
     final double progressRatio = (_revenue / maxScale).clamp(0.0, 1.0);
-    const double milestone1Ratio = 500000000.0 / maxScale; // 500M mark
+    const double milestone1Ratio = 900000000.0 / maxScale; // 90% warning
     const double milestone2Ratio = 1000000000.0 / maxScale; // 1B mark
 
     return Scaffold(
@@ -309,7 +309,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   ],
                                 ),
                               ),
-                              // Milestone 1 Node (500M)
+                              // Internal warning at 90% of the legal threshold.
                               Positioned(
                                 left: trackWidth * milestone1Ratio - 6,
                                 top: -3,
@@ -317,7 +317,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   width: 16,
                                   height: 16,
                                   decoration: BoxDecoration(
-                                    color: _revenue >= 500000000.0
+                                    color: _revenue >= 900000000.0
                                         ? AppColors.warning
                                         : c.textMuted.withValues(alpha: 0.5),
                                     shape: BoxShape.circle,
@@ -326,7 +326,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                       width: 2.5,
                                     ),
                                     boxShadow: [
-                                      if (_revenue >= 500000000.0)
+                                      if (_revenue >= 900000000.0)
                                         BoxShadow(
                                           color: AppColors.warning.withValues(
                                             alpha: 0.5,
@@ -393,17 +393,17 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '500M',
+                                        '900M',
                                         style: GoogleFonts.outfit(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: _revenue >= 500000000.0
+                                          color: _revenue >= 900000000.0
                                               ? AppColors.warning
                                               : c.textSecondary,
                                         ),
                                       ),
                                       Text(
-                                        'Khai thuế',
+                                        'Cảnh báo 90%',
                                         style: TextStyle(
                                           fontSize: 8,
                                           color: c.textMuted,
@@ -607,10 +607,10 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                     Expanded(
                       child: Text(
                         thresholds.mustUseEInvoice(_revenue)
-                            ? 'BẮT BUỘC sử dụng Hóa đơn điện tử (HĐĐT) cho mọi giao dịch bán lẻ theo đúng quy định.'
+                            ? 'Doanh thu năm trên 1 tỷ đồng thuộc diện phải áp dụng Hóa đơn điện tử theo Nghị định 141/2026/NĐ-CP.'
                             : thresholds.canUseInvoice(_revenue)
-                            ? 'Đủ điều kiện xuất hóa đơn. Khuyến khích đăng ký sử dụng HĐĐT để tối ưu quy trình.'
-                            : 'Chưa đủ ngưỡng sử dụng hóa đơn bán hàng lẻ (< 500 triệu VNĐ).',
+                            ? 'Có thể đăng ký sử dụng HĐĐT tự nguyện nếu đáp ứng điều kiện; chưa thuộc diện bắt buộc theo ngưỡng doanh thu.'
+                            : 'Chưa xác định điều kiện sử dụng HĐĐT.',
                         style: TextStyle(
                           fontSize: 12,
                           color: thresholds.canUseInvoice(_revenue)

@@ -486,30 +486,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       assetPath: 'assets/icon/orders_icon.svg',
                                     ),
                                   ),
-                                  if (hasFinance)
-                                    SizedBox(
-                                      width: cardWidth,
-                                      child: SummaryCard(
-                                        'Ước tính VAT (10%)',
-                                        _currFmt.format(grossProfit * 0.1),
-                                        null,
-                                        Colors.orange,
-                                        assetPath: 'assets/icon/tax_icon.svg',
-                                        badgeText: 'Thuế',
-                                      ),
-                                    ),
-                                  if (hasFinance)
-                                    SizedBox(
-                                      width: cardWidth,
-                                      child: SummaryCard(
-                                        'Thuế TNDN tạm tính',
-                                        _currFmt.format(grossProfit * 0.2),
-                                        null,
-                                        Colors.redAccent,
-                                        assetPath: 'assets/icon/tax_icon.svg',
-                                        badgeText: 'TNDN',
-                                      ),
-                                    ),
                                   if (hasFinance && cashAccountsAsync != null)
                                     SizedBox(
                                       width: cardWidth,

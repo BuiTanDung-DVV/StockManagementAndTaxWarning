@@ -77,7 +77,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Chọn ngành nghề kinh doanh để tự động xác định thuế suất GTGT và TNCN theo Sổ tay HKD.',
+                      'Chọn ngành nghề để ước tính tỷ lệ GTGT và TNCN. Ngưỡng doanh thu áp dụng theo Nghị định 141/2026/NĐ-CP.',
                       style: TextStyle(fontSize: 12, color: AppColors.info),
                     ),
                   ),
@@ -116,7 +116,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                     'Thuế GTGT',
                     '${(config.effectiveVatRate * 100).toStringAsFixed(1)}%',
                     AppColors.primary,
-                    config.vatReduction20 ? '(đã giảm 20%)' : null,
+                    null,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -167,14 +167,14 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Giảm 20% thuế GTGT',
+                          'Giảm 20% tỷ lệ GTGT',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
                         ),
                         Text(
-                          'Theo NQ 204/2025/QH15',
+                          'Chưa tự động áp dụng vì cần xác định theo từng nhóm hàng hóa/dịch vụ.',
                           style: TextStyle(
                             fontSize: 11,
                             color: c.textSecondary,
@@ -184,10 +184,8 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                     ),
                   ),
                   Switch(
-                    value: config.vatReduction20,
-                    onChanged: (v) => ref
-                        .read(taxConfigProvider.notifier)
-                        .setVatReduction20(v),
+                    value: false,
+                    onChanged: null,
                     activeThumbColor: AppColors.primary,
                   ),
                 ],
@@ -202,19 +200,26 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
-            _ThresholdRow('≤ 100 triệu', 'Không nộp thuế', AppColors.success),
-            _ThresholdRow('100 - 300 triệu', 'Thuế khoán', AppColors.info),
             _ThresholdRow(
-              '300 - 500 triệu',
-              'Kê khai quý/năm',
+              '< 900 triệu',
+              'Dưới mức cảnh báo nội bộ',
+              AppColors.success,
+            ),
+            _ThresholdRow(
+              '900 triệu - 1 tỷ',
+              'Sắp chạm ngưỡng hiện hành',
               AppColors.warning,
             ),
             _ThresholdRow(
-              '500 triệu - 1 tỷ',
-              'Khuyến khích HĐĐT',
-              AppColors.warning,
+              '≤ 1 tỷ',
+              'Không phải nộp GTGT, TNCN',
+              AppColors.info,
             ),
-            _ThresholdRow('> 1 tỷ', 'Bắt buộc HĐĐT', AppColors.danger),
+            _ThresholdRow(
+              '> 1 tỷ',
+              'Kê khai và áp dụng HĐĐT',
+              AppColors.danger,
+            ),
           ],
         ),
       ),

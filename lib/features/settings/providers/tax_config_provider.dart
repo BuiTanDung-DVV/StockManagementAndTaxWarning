@@ -25,42 +25,32 @@ class RevenueThresholds {
   final double tier4;
 
   const RevenueThresholds({
-    this.tier1 = 100000000,
-    this.tier2 = 300000000,
-    this.tier3 = 500000000,
+    this.tier1 = 250000000,
+    this.tier2 = 500000000,
+    this.tier3 = 900000000,
     this.tier4 = 1000000000,
   });
 
   String getObligation(double revenue) {
-    if (revenue <= tier1) return 'Không phải nộp thuế GTGT, TNCN';
-    if (revenue <= tier2) return 'Nộp thuế theo phương pháp khoán';
-    if (revenue <= tier3) return 'Kê khai thuế theo quý/năm';
-    return 'Bắt buộc dùng HĐĐT, kê khai đầy đủ';
+    if (revenue <= tier4) {
+      return 'Không phải nộp thuế GTGT, TNCN theo ngưỡng doanh thu năm';
+    }
+    return 'Trên ngưỡng miễn thuế; cần kê khai và áp dụng HĐĐT';
   }
 
   String getTierLabel(double revenue) {
-    if (revenue <= tier1) return '≤ 100 triệu';
-    if (revenue <= tier2) return '100 - 300 triệu';
-    if (revenue <= tier3) return '300 triệu - 500 triệu';
-    if (revenue <= tier4) return '500 triệu - 1 tỷ';
+    if (revenue < tier3) return 'Dưới ngưỡng 1 tỷ';
+    if (revenue <= tier4) return 'Sắp chạm ngưỡng 1 tỷ';
     return '> 1 tỷ';
   }
 
   double getNextThreshold(double revenue) {
-    if (revenue < tier1) return tier1;
-    if (revenue < tier2) return tier2;
-    if (revenue < tier3) return tier3;
-    if (revenue < tier4) return tier4;
     return tier4;
   }
 
   double getProgress(double revenue) {
-    final next = getNextThreshold(revenue);
-    if (next <= tier1) return revenue / tier1;
-    if (next <= tier2) return (revenue - tier1) / (tier2 - tier1);
-    if (next <= tier3) return (revenue - tier2) / (tier3 - tier2);
-    if (next <= tier4) return (revenue - tier3) / (tier4 - tier3);
-    return 1.0;
+    if (tier4 <= 0) return 0;
+    return (revenue.clamp(0, tier4) / tier4).toDouble();
   }
 
   Color getColor(double revenue) {
@@ -70,14 +60,14 @@ class RevenueThresholds {
     return const Color(0xFF10B981); // success
   }
 
-  bool canUseInvoice(double revenue) => revenue >= tier3;
-  bool mustUseEInvoice(double revenue) => revenue >= tier4;
+  bool canUseInvoice(double revenue) => revenue >= 0;
+  bool mustUseEInvoice(double revenue) => revenue > tier4;
 
   factory RevenueThresholds.fromJson(Map<String, dynamic> json) =>
       RevenueThresholds(
-        tier1: (json['tier1'] as num?)?.toDouble() ?? 100000000,
-        tier2: (json['tier2'] as num?)?.toDouble() ?? 300000000,
-        tier3: (json['tier3'] as num?)?.toDouble() ?? 500000000,
+        tier1: (json['tier1'] as num?)?.toDouble() ?? 250000000,
+        tier2: (json['tier2'] as num?)?.toDouble() ?? 500000000,
+        tier3: (json['tier3'] as num?)?.toDouble() ?? 900000000,
         tier4: (json['tier4'] as num?)?.toDouble() ?? 1000000000,
       );
   Map<String, dynamic> toJson() => {
@@ -100,23 +90,33 @@ class TaxConfig {
     this.thresholds = const RevenueThresholds(),
   });
 
-  double get effectiveVatRate =>
-      vatReduction20 ? businessType.vatRate * 0.8 : businessType.vatRate;
+  // Chưa áp dụng giảm GTGT tự động vì chính sách phụ thuộc từng nhóm hàng hóa.
+  double get effectiveVatRate => businessType.vatRate;
 
-  double calculateVat(double revenue) => revenue * effectiveVatRate;
-  double calculatePit(double revenue) => revenue * businessType.pitRate;
+  double calculateVat(double revenue) {
+    final safeRevenue = revenue < 0 ? 0.0 : revenue;
+    if (safeRevenue <= thresholds.tier4) return 0;
+    return safeRevenue * effectiveVatRate;
+  }
+
+  double calculatePit(double revenue) {
+    final safeRevenue = revenue < 0 ? 0.0 : revenue;
+    if (safeRevenue <= thresholds.tier4) return 0;
+    return safeRevenue * businessType.pitRate;
+  }
+
   double calculateTotalTax(double revenue) =>
       calculateVat(revenue) + calculatePit(revenue);
 
   Map<String, dynamic> toJson() => {
     'businessType': businessType.index,
-    'vatReduction20': vatReduction20,
+    'vatReduction20': false,
     'thresholds': thresholds.toJson(),
   };
 
   factory TaxConfig.fromJson(Map<String, dynamic> json) => TaxConfig(
     businessType: BusinessType.values[json['businessType'] ?? 0],
-    vatReduction20: json['vatReduction20'] ?? false,
+    vatReduction20: false,
     thresholds: json['thresholds'] != null
         ? RevenueThresholds.fromJson(json['thresholds'])
         : const RevenueThresholds(),
@@ -221,18 +221,20 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
     final api = ref.read(apiClientProvider);
 
     String sectorStr = 'TRADE';
-    if (state.businessType == BusinessType.manufacturing)
+    if (state.businessType == BusinessType.manufacturing) {
       sectorStr = 'PRODUCTION';
-    if (state.businessType == BusinessType.services) sectorStr = 'SERVICE';
-    if (state.businessType == BusinessType.other) sectorStr = 'OTHER';
+    }
+    if (state.businessType == BusinessType.services) {
+      sectorStr = 'SERVICE';
+    }
+    if (state.businessType == BusinessType.other) {
+      sectorStr = 'OTHER';
+    }
 
     try {
       await api.put(
         '/tax/config',
-        data: {
-          'businessSector': sectorStr,
-          'applyVatReduction': state.vatReduction20,
-        },
+        data: {'businessSector': sectorStr, 'applyVatReduction': false},
       );
     } catch (e) {
       debugPrint('Lưu cấu hình thuế lên server thất bại, đã lưu cục bộ: $e');

@@ -9,7 +9,9 @@
         "build": "tsc",
         "start": "node dist/index.js",
         "lint": "eslint src/**/*.ts",
-        "test:permissions": "npm run build && node --test test/permission.utils.test.js"
+        "test:permissions": "npm run build && node --test test/permission.utils.test.js",
+        "test:tax": "npm run build && node --test test/tax-policy.test.js",
+        "test:p0": "npm run build && node --test test/permission.utils.test.js test/tax-policy.test.js"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",
