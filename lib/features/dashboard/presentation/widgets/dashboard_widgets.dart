@@ -12,6 +12,10 @@ import '../../../../core/utils/excel_export_service.dart';
 import '../../../finance/providers/finance_provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../settings/providers/shop_provider.dart';
+import '../../../settings/providers/tax_config_provider.dart';
+import '../../../sales/providers/sales_provider.dart';
+import '../../../inventory/providers/inventory_provider.dart';
+import '../../../customers/providers/customer_provider.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -2796,133 +2800,184 @@ class DashboardHeroHeader extends ConsumerWidget {
 class UrgentBusinessPulseHeader extends ConsumerWidget {
   const UrgentBusinessPulseHeader({super.key});
 
+  Widget _chip({
+    required VoidCallback onTap,
+    required Color color,
+    required String icon,
+    required String label,
+    String? action,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            if (action != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  action,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final shopState = ref.watch(shopProvider);
+    final hasCustomers =
+        shopState.isOwner || shopState.hasPermission('customers');
+    final hasInventory =
+        shopState.isOwner || shopState.hasPermission('inventory');
+    final hasFinance =
+        shopState.isOwner ||
+        shopState.hasPermission('finance') ||
+        shopState.hasPermission('dashboard');
+
+    final chips = <Widget>[];
+
+    if (hasCustomers) {
+      final overdueAsync = ref.watch(overdueDebtsProvider);
+      chips.add(
+        overdueAsync.when(
+          loading: () => _chip(
+            onTap: () => context.push('/customer-debts'),
+            color: Colors.blueGrey,
+            icon: '📒',
+            label: 'Sổ nợ: Đang tải dữ liệu',
+          ),
+          error: (_, _) => _chip(
+            onTap: () => context.push('/customer-debts'),
+            color: Colors.blueGrey,
+            icon: '📒',
+            label: 'Sổ nợ: Chưa tải được',
+            action: 'Thử lại',
+          ),
+          data: (items) => _chip(
+            onTap: () => context.push('/customer-debts'),
+            color: items.isEmpty ? AppColors.success : Colors.orange,
+            icon: items.isEmpty ? '✅' : '🚨',
+            label: items.isEmpty
+                ? 'Sổ nợ: Không có nợ quá hạn'
+                : 'Sổ nợ: ${items.length} khoản quá hạn',
+            action: items.isEmpty ? null : 'Xem nợ',
+          ),
+        ),
+      );
+    }
+
+    if (hasInventory) {
+      final lowStockAsync = ref.watch(lowStockProvider);
+      chips.add(
+        lowStockAsync.when(
+          loading: () => _chip(
+            onTap: () => context.push('/inventory'),
+            color: Colors.blueGrey,
+            icon: '📦',
+            label: 'Kho hàng: Đang tải dữ liệu',
+          ),
+          error: (_, _) => _chip(
+            onTap: () => context.push('/inventory'),
+            color: Colors.blueGrey,
+            icon: '📦',
+            label: 'Kho hàng: Chưa tải được',
+            action: 'Thử lại',
+          ),
+          data: (items) => _chip(
+            onTap: () => context.push('/inventory'),
+            color: items.isEmpty ? AppColors.success : AppColors.danger,
+            icon: items.isEmpty ? '✅' : '⚠️',
+            label: items.isEmpty
+                ? 'Kho hàng: Không có hàng dưới định mức'
+                : 'Kho hàng: ${items.length} SP dưới định mức',
+            action: items.isEmpty ? null : 'Nhập kho',
+          ),
+        ),
+      );
+    }
+
+    if (hasFinance) {
+      final now = DateTime.now();
+      final ytdFrom = '${now.year}-01-01';
+      final ytdTo = now.toIso8601String().split('T')[0];
+      final ytdSalesAsync = ref.watch(
+        salesSummaryProvider((from: ytdFrom, to: ytdTo)),
+      );
+      final thresholds = ref.watch(taxConfigProvider).thresholds;
+
+      chips.add(
+        ytdSalesAsync.when(
+          loading: () => _chip(
+            onTap: () => context.push('/tax-calculator'),
+            color: Colors.blueGrey,
+            icon: '🏛️',
+            label: 'Thuế HKD 2026: Đang tải doanh thu',
+          ),
+          error: (_, _) => _chip(
+            onTap: () => context.push('/tax-calculator'),
+            color: Colors.blueGrey,
+            icon: '🏛️',
+            label: 'Thuế HKD 2026: Chưa tải được',
+            action: 'Kiểm tra',
+          ),
+          data: (data) {
+            final revenue =
+                num.tryParse(
+                  data['totalRevenue']?.toString() ?? '0',
+                )?.toDouble() ??
+                0;
+            final color = thresholds.getColor(revenue);
+            return _chip(
+              onTap: () => context.push('/tax-calculator'),
+              color: color,
+              icon: '🏛️',
+              label: 'Thuế HKD 2026: ${thresholds.getTierLabel(revenue)}',
+              action: 'Chi tiết',
+            );
+          },
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: [
-          // Debt alert chip
-          GestureDetector(
-            onTap: () => context.push('/customer-debts'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.orange, width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  const Text('🚨', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Sổ nợ: Cần thu hồi nợ mua thiếu',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Nhắc Zalo',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // Low stock alert chip
-          GestureDetector(
-            onTap: () => context.push('/inventory'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.danger, width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  const Text('⚠️', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Kho hàng: 7 sp dưới định mức',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.danger,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.danger,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Nhập kho',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // Tax status chip
-          GestureDetector(
-            onTap: () => context.push('/finance'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.success, width: 1.5),
-              ),
-              child: Row(
-                children: [
-                  const Text('🏛️', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Thuế HKD: Doanh thu ≤ 100 tr (Miễn thuế)',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          for (var index = 0; index < chips.length; index++) ...[
+            if (index > 0) const SizedBox(width: 10),
+            chips[index],
+          ],
         ],
       ),
     );
