@@ -47,7 +47,6 @@ router.get('/invoices/:id', requirePermission('finance', 'view'), financeCtrl.ge
 router.post('/invoices', requirePermission('finance', 'edit'), financeCtrl.createInvoice);
 router.put('/invoices/:id', requirePermission('finance', 'edit'), financeCtrl.updateInvoice);
 router.delete('/invoices/:id', requirePermission('finance', 'edit'), financeCtrl.deleteInvoice);
-router.post('/invoices/:id/issue', requirePermission('finance', 'edit'), financeCtrl.issueEInvoice);
 
 // Tax Obligations
 router.get('/tax-obligations', requirePermission('finance', 'view'), financeCtrl.getTaxObligations);

@@ -1,5 +1,6 @@
 import { AppDataSource } from '../config/db.config';
-import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, Invoice, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
+import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
+import { Invoice } from '../system/entities';
 import { JournalEntry, JournalLine } from '../finance/ledger.entity';
 import { ActivityLog } from '../system/entities';
 import { EntityManager } from 'typeorm';
@@ -117,7 +118,10 @@ export class FinanceService {
     }
 
     async updateInvoice(shopId: number, id: number, dto: Partial<Invoice>) {
-        const invoice = await this.invoiceRepo.findOne({ where: { id, shopId } });
+        const invoice = await this.invoiceRepo.findOne({
+            where: { id, shopId },
+            relations: ['items', 'items.product'],
+        });
         if (!invoice) throw new Error('Invoice not found');
         Object.assign(invoice, dto);
         return this.invoiceRepo.save(invoice);
@@ -514,7 +518,10 @@ export class FinanceService {
         return { vatIn, vatOut, vatOwed: vatOut - vatIn };
     }
     async getInvoiceById(shopId: number, id: number) {
-        const invoice = await this.invoiceRepo.findOne({ where: { id, shopId } });
+        const invoice = await this.invoiceRepo.findOne({
+            where: { id, shopId },
+            relations: ['items', 'items.product'],
+        });
         if (!invoice) throw new Error('Invoice not found');
         return invoice;
     }
