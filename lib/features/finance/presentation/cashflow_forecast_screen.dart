@@ -146,8 +146,9 @@ class CashflowForecastScreen extends ConsumerWidget {
                                         reservedSize: 42,
                                         getTitlesWidget: (value, meta) {
                                           if (value == meta.max ||
-                                              value == meta.min)
+                                              value == meta.min) {
                                             return const SizedBox.shrink();
+                                          }
                                           final isNeg = value < 0;
                                           final absVal = value.abs();
                                           String label = '';
@@ -180,8 +181,9 @@ class CashflowForecastScreen extends ConsumerWidget {
                                         getTitlesWidget: (value, meta) {
                                           final idx = value.toInt();
                                           if (idx < 0 ||
-                                              idx >= forecasts.length)
+                                              idx >= forecasts.length) {
                                             return const SizedBox.shrink();
+                                          }
                                           final f = forecasts[idx];
                                           final dateStr =
                                               f['forecastDate']
@@ -189,8 +191,9 @@ class CashflowForecastScreen extends ConsumerWidget {
                                                   .split('T')
                                                   .first ??
                                               '';
-                                          if (dateStr.length < 5)
+                                          if (dateStr.length < 5) {
                                             return const SizedBox.shrink();
+                                          }
                                           final parts = dateStr.split('-');
                                           final displayDate = parts.length >= 3
                                               ? '${parts[2]}/${parts[1]}'

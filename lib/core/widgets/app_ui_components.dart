@@ -345,7 +345,7 @@ class AppSectionHeader extends StatelessWidget {
             ),
           ],
         ),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }
@@ -467,7 +467,7 @@ class AppDataTable<T> extends StatelessWidget {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => Divider(
+                      separatorBuilder: (_, _) => Divider(
                         height: 1,
                         color: c.divider.withValues(alpha: 0.3),
                       ),

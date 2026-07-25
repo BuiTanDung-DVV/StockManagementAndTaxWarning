@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -196,11 +195,6 @@ class AppTheme {
       Colors.white.withValues(alpha: 0.2),
       primaryColor,
     );
-    final primaryDark = Color.alphaBlend(
-      Colors.black.withValues(alpha: 0.2),
-      primaryColor,
-    );
-
     final outfitTextTheme = GoogleFonts.outfitTextTheme(base.textTheme);
     final bodyTextTheme = GoogleFonts.interTextTheme(base.textTheme);
 

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -56,7 +54,7 @@ class ChartCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (trailing != null) trailing!,
+              ?trailing,
             ],
           ),
           const SizedBox(height: 14),
@@ -230,8 +228,11 @@ class MiniAreaChart extends StatelessWidget {
                         : 1.0,
                     getTitlesWidget: (v, m) {
                       final idx = v.round();
-                      if (xLabels == null || idx < 0 || idx >= xLabels!.length)
+                      if (xLabels == null ||
+                          idx < 0 ||
+                          idx >= xLabels!.length) {
                         return const SizedBox.shrink();
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
@@ -251,8 +252,9 @@ class MiniAreaChart extends StatelessWidget {
                     showTitles: true,
                     reservedSize: 36,
                     getTitlesWidget: (v, m) {
-                      if (v == m.max || v == m.min)
+                      if (v == m.max || v == m.min) {
                         return const SizedBox.shrink();
+                      }
                       return Text(
                         _compactFmt.format(v),
                         style: AppTheme.tabularStyle(
@@ -530,8 +532,9 @@ class MiniBarChart extends StatelessWidget {
               interval: 1.0,
               getTitlesWidget: (v, m) {
                 final idx = v.round();
-                if (labels == null || idx < 0 || idx >= labels!.length)
+                if (labels == null || idx < 0 || idx >= labels!.length) {
                   return const SizedBox.shrink();
+                }
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(

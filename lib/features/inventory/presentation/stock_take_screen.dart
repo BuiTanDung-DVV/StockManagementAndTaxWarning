@@ -117,7 +117,7 @@ class StockTakeScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               physics: const BouncingScrollPhysics(),
               itemCount: items.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
                   Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
                 final item = items[i] as Map;

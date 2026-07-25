@@ -84,8 +84,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (pass.contains(RegExp(r'[A-Z]'))) score++;
     if (pass.contains(RegExp(r'[a-z]'))) score++;
     if (pass.contains(RegExp(r'[0-9]'))) score++;
-    if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]')))
+    if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]'))) {
       score++;
+    }
     return score;
   }
 

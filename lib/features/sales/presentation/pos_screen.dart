@@ -522,7 +522,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             );
           },
         ),
@@ -579,7 +579,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   bottom: (cart.items.isNotEmpty && !isLargeScreen) ? 140 : 88,
                 ),
                 itemCount: products.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                     Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
                 itemBuilder: (_, i) {
                   final p = products[i];
@@ -796,7 +796,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: cart.items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (ctx, i) {
                     final item = cart.items[i];
                     return Row(
@@ -1219,7 +1219,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   void _showCheckout(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final cart = ref.read(_cartProvider);
     showModalBottomSheet(
       useSafeArea: true,
       context: context,

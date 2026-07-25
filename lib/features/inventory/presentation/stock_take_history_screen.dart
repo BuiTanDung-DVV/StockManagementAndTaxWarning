@@ -14,7 +14,6 @@ class StockTakeHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
     final stAsync = ref.watch(stockTakesProvider(1));
 
     return Scaffold(
@@ -74,7 +73,7 @@ class StockTakeHistoryScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               physics: const BouncingScrollPhysics(),
               itemCount: items.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
                   Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
                 final st = items[i] as Map;

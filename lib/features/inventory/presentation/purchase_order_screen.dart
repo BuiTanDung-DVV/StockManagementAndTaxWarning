@@ -8,7 +8,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../providers/inventory_provider.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/utils/toast_service.dart';
 import 'purchase_order_form_screen.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -116,7 +115,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               physics: const BouncingScrollPhysics(),
               itemCount: items.length,
-              separatorBuilder: (_, __) =>
+              separatorBuilder: (_, _) =>
                   Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
                 final po = items[i] as Map;
