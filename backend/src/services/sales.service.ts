@@ -36,19 +36,19 @@ export class SalesService {
         const statuses = normalizeSalesStatusFilter(status);
         const qb = this.orderRepo.createQueryBuilder('o')
             .leftJoinAndSelect('o.customer', 'customer')
-            .where('o.shop_id = :shopId', { shopId });
+            .where('o.shopId = :shopId', { shopId });
 
         if (customerId) qb.andWhere('customer.id = :customerId', { customerId });
         if (statuses) qb.andWhere('o.status IN (:...statuses)', { statuses });
         if (search?.trim()) {
             qb.andWhere(
-                '(LOWER(o.order_code) LIKE :search OR LOWER(COALESCE(customer.name, \'\')) LIKE :search OR LOWER(COALESCE(customer.phone, \'\')) LIKE :search)',
+                '(LOWER(o.orderCode) LIKE :search OR LOWER(COALESCE(customer.name, \'\')) LIKE :search OR LOWER(COALESCE(customer.phone, \'\')) LIKE :search)',
                 { search: `%${search.trim().toLowerCase()}%` },
             );
         }
 
         const [items, total] = await qb
-            .orderBy('o.created_at', 'DESC')
+            .orderBy('o.createdAt', 'DESC')
             .skip((safePage - 1) * safeLimit)
             .take(safeLimit)
             .getManyAndCount();
