@@ -99,21 +99,29 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final media = MediaQuery.of(context);
+    final isMobile = media.size.width < 700;
+    final mobileBottomOffset = 84.0 + media.padding.bottom;
+    final panelBottom = isMobile ? mobileBottomOffset + 68 : 80.0;
+    final panelHeight = (media.size.height - panelBottom - 24)
+        .clamp(320.0, 490.0)
+        .toDouble();
 
     return Stack(
       fit: StackFit.expand,
       children: [
         if (_isOpen)
           Positioned(
-            bottom: 80,
+            bottom: panelBottom,
             right: 16,
+            left: isMobile ? 16 : null,
             child: Material(
               elevation: 16,
               borderRadius: BorderRadius.circular(24),
               color: isDark ? const Color(0xFF1E293B) : Colors.white,
               child: Container(
-                width: 360,
-                height: 490,
+                width: isMobile ? null : 360,
+                height: panelHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
@@ -321,21 +329,34 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
 
         // Floating Trigger Button
         Positioned(
-          bottom: 20,
+          bottom: isMobile ? mobileBottomOffset : 20,
           right: 16,
-          child: FloatingActionButton.extended(
-            onPressed: () => setState(() => _isOpen = !_isOpen),
-            backgroundColor: AppColors.primary,
-            icon: const Icon(Icons.smart_toy_rounded, color: Colors.white),
-            label: Text(
-              'Hỏi AI Tri Thức',
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 13,
-              ),
-            ),
-          ),
+          child: isMobile
+              ? FloatingActionButton(
+                  onPressed: () => setState(() => _isOpen = !_isOpen),
+                  backgroundColor: AppColors.primary,
+                  tooltip: 'Hỏi AI Tri Thức',
+                  child: const Icon(
+                    Icons.smart_toy_rounded,
+                    color: Colors.white,
+                  ),
+                )
+              : FloatingActionButton.extended(
+                  onPressed: () => setState(() => _isOpen = !_isOpen),
+                  backgroundColor: AppColors.primary,
+                  icon: const Icon(
+                    Icons.smart_toy_rounded,
+                    color: Colors.white,
+                  ),
+                  label: Text(
+                    'Hỏi AI Tri Thức',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
         ),
       ],
     );
