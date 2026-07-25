@@ -93,7 +93,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => Divider(
+                      separatorBuilder: (_, _) => Divider(
                         height: 1,
                         color: tc.divider.withValues(alpha: 0.15),
                       ),

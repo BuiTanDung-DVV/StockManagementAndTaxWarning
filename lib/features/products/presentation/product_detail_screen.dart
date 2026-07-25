@@ -279,7 +279,7 @@ class ProductDetailScreen extends ConsumerWidget {
                   ),
                   data: (data) {
                     final items = (data['items'] as List?) ?? [];
-                    if (items.isEmpty)
+                    if (items.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
@@ -287,11 +287,12 @@ class ProductDetailScreen extends ConsumerWidget {
                           style: TextStyle(color: Colors.grey, fontSize: 13),
                         ),
                       );
+                    }
                     return ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           Divider(color: c.divider.withValues(alpha: 0.3)),
                       itemBuilder: (_, i) {
                         final m = items[i];

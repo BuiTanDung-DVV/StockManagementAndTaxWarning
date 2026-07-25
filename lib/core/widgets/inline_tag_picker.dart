@@ -127,7 +127,7 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text('Lỗi tải danh sách nhãn'),
+              error: (_, _) => const Text('Lỗi tải danh sách nhãn'),
             ),
             const SizedBox(height: 24),
             Row(

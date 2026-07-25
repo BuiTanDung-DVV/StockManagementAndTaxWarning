@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/inline_tag_picker.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
-import '../providers/tag_provider.dart';
 import '../../../core/network/api_client.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {

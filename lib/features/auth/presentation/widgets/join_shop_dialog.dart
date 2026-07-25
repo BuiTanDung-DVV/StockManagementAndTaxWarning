@@ -48,11 +48,15 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
   Future<void> _submitJoinRequest() async {
     if (_selectedShop == null) return;
     setState(() => _isSubmitting = true);
-    final success = await ref.read(authProvider.notifier).requestJoinShop(_selectedShop!['id']);
+    final success = await ref
+        .read(authProvider.notifier)
+        .requestJoinShop(_selectedShop!['id']);
     if (mounted) {
       setState(() => _isSubmitting = false);
       if (success) {
-        ToastService.showSuccess('Đã gửi yêu cầu gia nhập thành công. Vui lòng chờ phê duyệt.');
+        ToastService.showSuccess(
+          'Đã gửi yêu cầu gia nhập thành công. Vui lòng chờ phê duyệt.',
+        );
         Navigator.of(context).pop();
       }
     }
@@ -75,7 +79,11 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
           children: [
             Row(
               children: [
-                Icon(Icons.storefront_rounded, color: theme.colorScheme.primary, size: 28),
+                Icon(
+                  Icons.storefront_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 28,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -107,11 +115,16 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                           child: SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
                         )
                       : null,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onChanged: _onSearch,
               ),
@@ -127,19 +140,34 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: _searchResults.length,
-                    separatorBuilder: (_, __) => Divider(height: 1, color: c.divider),
+                    separatorBuilder: (_, _) =>
+                        Divider(height: 1, color: c.divider),
                     itemBuilder: (context, index) {
                       final shop = _searchResults[index];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                          backgroundColor: theme.colorScheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
                           child: Text(
                             shop['shopName']?[0] ?? 'S',
-                            style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                        title: Text(shop['shopName'] ?? '', style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w600)),
-                        subtitle: Text('Mã: ${shop['shopCode']}', style: TextStyle(color: c.textSecondary)),
+                        title: Text(
+                          shop['shopName'] ?? '',
+                          style: TextStyle(
+                            color: c.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Mã: ${shop['shopCode']}',
+                          style: TextStyle(color: c.textSecondary),
+                        ),
                         onTap: () {
                           setState(() {
                             _selectedShop = shop;
@@ -155,16 +183,24 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Row(
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      backgroundColor: theme.colorScheme.primary.withValues(
+                        alpha: 0.1,
+                      ),
                       child: Text(
                         _selectedShop!['shopName']?[0] ?? 'S',
-                        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 20),
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -174,9 +210,16 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                         children: [
                           Text(
                             _selectedShop!['shopName'],
-                            style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(
+                              color: c.textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                          Text('Mã cửa hàng: ${_selectedShop!['shopCode']}', style: TextStyle(color: c.textSecondary)),
+                          Text(
+                            'Mã cửa hàng: ${_selectedShop!['shopCode']}',
+                            style: TextStyle(color: c.textSecondary),
+                          ),
                         ],
                       ),
                     ),
@@ -194,11 +237,26 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: theme.colorScheme.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _isSubmitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Gửi yêu cầu tham gia', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Gửi yêu cầu tham gia',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
             ],
           ],

@@ -260,7 +260,7 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                 cancel();
                 BotToast.showText(text: 'Xóa nhà cung cấp thành công');
                 ref.invalidate(supplierListProvider);
-                if (mounted) context.pop();
+                if (context.mounted) context.pop();
               } catch (e) {
                 cancel();
                 BotToast.showText(text: 'Lỗi: $e');

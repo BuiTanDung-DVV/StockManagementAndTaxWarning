@@ -74,7 +74,7 @@ class SupplierListScreen extends ConsumerWidget {
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
                 itemCount: items.length,
-                separatorBuilder: (_, __) => Divider(
+                separatorBuilder: (_, _) => Divider(
                   height: 1,
                   color: c.divider.withValues(alpha: 0.15),
                 ),

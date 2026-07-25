@@ -155,7 +155,7 @@ class ActivityLogScreen extends ConsumerWidget {
 
                 IconData actionIcon = Icons.history_rounded;
                 Color actionColor = AppColors.primary;
-                final searchStr = (message + ' ' + rawAction).toLowerCase();
+                final searchStr = '$message $rawAction'.toLowerCase();
 
                 if (searchStr.contains('tạo') ||
                     searchStr.contains('thêm') ||

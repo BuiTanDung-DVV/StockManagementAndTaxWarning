@@ -109,7 +109,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
                 summaryAsync.when(
                   loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox(),
+                  error: (_, _) => const SizedBox(),
                   data: (summary) {
                     final vatIn = asNum(summary['vatIn']);
                     final vatOut = asNum(summary['vatOut']);
@@ -211,7 +211,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           Divider(height: 1, color: c.divider),
                       itemBuilder: (_, i) {
                         final inv = items[i];

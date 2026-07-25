@@ -10,7 +10,6 @@ class BudgetPlanScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
     final budgetAsync = ref.watch(budgetPlansProvider);
 
     return Scaffold(

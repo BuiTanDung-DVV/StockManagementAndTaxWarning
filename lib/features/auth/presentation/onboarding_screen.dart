@@ -621,16 +621,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             final results = await ref
                                 .read(authProvider.notifier)
                                 .searchShops(val);
-                            if (mounted)
+                            if (mounted) {
                               setState(() {
                                 _searchResults = results;
                                 _isSearching = false;
                               });
+                            }
                           } else {
-                            if (mounted)
+                            if (mounted) {
                               setState(() {
                                 _searchResults = [];
                               });
+                            }
                           }
                         },
                         suffixIcon: _isSearching

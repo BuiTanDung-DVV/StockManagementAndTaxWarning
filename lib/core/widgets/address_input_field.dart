@@ -83,7 +83,7 @@ class _AddressInputFieldState extends State<AddressInputField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<String>(
-          value: _selectedProvince,
+          initialValue: _selectedProvince,
           isExpanded: true,
           decoration: InputDecoration(
             labelText: 'Tỉnh/Thành phố',

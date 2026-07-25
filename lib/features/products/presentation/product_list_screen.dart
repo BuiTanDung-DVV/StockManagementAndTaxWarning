@@ -10,14 +10,11 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_badge.dart';
 import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/filter_bar.dart';
-import '../../../core/guides/feature_guide_sheet.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
-import '../../sales/providers/sales_provider.dart';
 import '../../sales/providers/sales_provider.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -192,7 +189,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                   );
                 },
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               );
             },
           ),
@@ -215,7 +212,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => Divider(
+                    separatorBuilder: (_, _) => Divider(
                       height: 1,
                       color: c.divider.withValues(alpha: 0.15),
                     ),
