@@ -225,13 +225,12 @@ class MiniAreaChart extends StatelessWidget {
                   sideTitles: SideTitles(
                     showTitles: xLabels != null,
                     reservedSize: 22,
+                    interval: (maxLen > 7)
+                        ? (maxLen / 5).ceil().toDouble()
+                        : 1.0,
                     getTitlesWidget: (v, m) {
-                      final idx = v.toInt();
+                      final idx = v.round();
                       if (xLabels == null || idx < 0 || idx >= xLabels!.length)
-                        return const SizedBox.shrink();
-                      if (maxLen > 7 &&
-                          idx % (maxLen / 5).ceil() != 0 &&
-                          idx != maxLen - 1)
                         return const SizedBox.shrink();
                       return Padding(
                         padding: const EdgeInsets.only(top: 6),
@@ -378,7 +377,8 @@ class _MiniDonutChartState extends State<MiniDonutChart> {
                       touchedIndex = -1;
                       return;
                     }
-                    touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                    touchedIndex =
+                        pieTouchResponse.touchedSection!.touchedSectionIndex;
                   });
                 },
               ),
@@ -389,12 +389,12 @@ class _MiniDonutChartState extends State<MiniDonutChart> {
                 final e = entry.value;
                 final isTouched = i == touchedIndex;
                 final pct = total > 0 ? (e.value / total * 100) : 0.0;
-                
+
                 String displayTitle = '';
                 if (isTouched) {
-                    displayTitle = '${e.label}\n${pct.toStringAsFixed(1)}%';
+                  displayTitle = '${e.label}\n${pct.toStringAsFixed(1)}%';
                 } else if (pct >= 5) {
-                    displayTitle = '${pct.toStringAsFixed(0)}%';
+                  displayTitle = '${pct.toStringAsFixed(0)}%';
                 }
 
                 return PieChartSectionData(
@@ -527,8 +527,9 @@ class MiniBarChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: labels != null,
               reservedSize: 22,
+              interval: 1.0,
               getTitlesWidget: (v, m) {
-                final idx = v.toInt();
+                final idx = v.round();
                 if (labels == null || idx < 0 || idx >= labels!.length)
                   return const SizedBox.shrink();
                 return Padding(
@@ -646,4 +647,70 @@ class HBarItem {
   final double value;
   final Color color;
   const HBarItem(this.label, this.value, this.color);
+}
+
+// ─────────────────────────────────────────────
+// CompactSparkline — Mini trend line chart
+// ─────────────────────────────────────────────
+class CompactSparkline extends StatelessWidget {
+  final List<double> values;
+  final Color color;
+  final double height;
+
+  const CompactSparkline({
+    super.key,
+    required this.values,
+    required this.color,
+    this.height = 36,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.isEmpty) return SizedBox(height: height);
+    final spots = values
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .toList();
+    double maxY = values.reduce((a, b) => a > b ? a : b);
+    double minY = values.reduce((a, b) => a < b ? a : b);
+    if (maxY == minY) maxY = minY + 1;
+
+    return SizedBox(
+      height: height,
+      child: LineChart(
+        LineChartData(
+          gridData: const FlGridData(show: false),
+          titlesData: const FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          minX: 0,
+          maxX: (values.length - 1).toDouble(),
+          minY: minY,
+          maxY: maxY,
+          lineTouchData: const LineTouchData(enabled: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: color,
+              barWidth: 2,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  colors: [
+                    color.withValues(alpha: 0.25),
+                    color.withValues(alpha: 0.0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

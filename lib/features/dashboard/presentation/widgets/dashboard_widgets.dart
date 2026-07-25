@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -10,12 +11,15 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_animations.dart';
 import '../../../../core/widgets/chart_widgets.dart';
 import '../../../../core/constants/app_strings.dart';
+import '../../../../core/utils/excel_export_service.dart';
 import '../../../finance/providers/finance_provider.dart';
 import '../../../settings/providers/tax_config_provider.dart';
+import '../../../auth/providers/auth_provider.dart';
+import '../../../settings/providers/shop_provider.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
-  symbol: '?',
+  symbol: '₫',
   decimalDigits: 0,
 );
 
@@ -51,7 +55,8 @@ class TaxObligationReminder extends ConsumerWidget {
                   num.tryParse(t['pitPaid']?.toString() ?? '0') ?? 0;
               final vatOwed = vatDeclared - vatPaid;
               final pitOwed = pitDeclared - pitPaid;
-              final totalOwed = vatOwed + pitOwed;
+              final rawTotalOwed = vatOwed + pitOwed;
+              final totalOwed = rawTotalOwed < 0 ? 0.0 : rawTotalOwed;
               final status = t['status'] ?? 'pending';
 
               // Calculate days remaining
@@ -179,19 +184,25 @@ class SummaryCard extends StatelessWidget {
   final dynamic icon;
   final Color color;
   final bool isHero;
+  final String? assetPath;
+  final String? badgeText;
+
   const SummaryCard(
     this.title,
     this.value,
     this.icon,
     this.color, {
+    super.key,
     this.isHero = false,
+    this.assetPath,
+    this.badgeText,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final bgGradient = isHero
         ? LinearGradient(
             colors: [color, color.withAlpha(220)],
@@ -200,81 +211,120 @@ class SummaryCard extends StatelessWidget {
           )
         : null;
 
-    final bgColor = isHero ? null : c.surface;
+    final bgColor = isHero ? null : c.card;
     final textColor = isHero ? Colors.white : c.textPrimary;
     final subTextColor = isHero
         ? Colors.white.withValues(alpha: 0.9)
         : c.textSecondary;
     final iconBg = isHero
         ? Colors.white.withValues(alpha: 0.2)
-        : color.withValues(alpha: 0.1);
+        : color.withValues(alpha: 0.15);
     final iconColor = isHero ? Colors.white : color;
+
+    Widget iconWidget;
+    if (assetPath != null && assetPath!.endsWith('.svg')) {
+      iconWidget = SvgPicture.asset(
+        assetPath!,
+        width: 18,
+        height: 18,
+        colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+      );
+    } else if (icon is IconData) {
+      iconWidget = Icon(icon as IconData, size: 18, color: iconColor);
+    } else {
+      iconWidget = HugeIcon(icon: icon, size: 18, color: iconColor);
+    }
 
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
         gradient: bgGradient,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isHero 
-              ? Colors.white.withValues(alpha: 0.15) 
-              : c.divider.withValues(alpha: 0.4),
-          width: 1,
+          color: isHero
+              ? Colors.white.withValues(alpha: 0.2)
+              : color.withValues(alpha: isDark ? 0.35 : 0.25),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: isHero ? 0.25 : 0.05),
+            color: color.withValues(alpha: isHero ? 0.3 : 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
-          if (isHero)
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.1),
-              blurRadius: 0,
-              spreadRadius: 1,
-              offset: const Offset(0, 1),
-            )
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    shape: BoxShape.circle,
-                  ),
-                  child: HugeIcon(icon: icon, size: 14, color: iconColor),
-                ),
-                const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: subTextColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: iconBg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: color.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: iconWidget,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: subTextColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                if (badgeText != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: color.withValues(alpha: 0.4)),
+                    ),
+                    child: Text(
+                      badgeText!,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: color,
+                      ),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
                   color: textColor,
                   letterSpacing: -0.5,
                   height: 1.1,
@@ -607,192 +657,204 @@ class ComparisonBarChart extends StatelessWidget {
                   physics: const BouncingScrollPhysics(),
                   child: Container(
                     padding: const EdgeInsets.only(right: 16),
-                    width: minWidth > constraints.maxWidth ? minWidth : constraints.maxWidth,
+                    width: minWidth > constraints.maxWidth
+                        ? minWidth
+                        : constraints.maxWidth,
                     child: BarChart(
                       BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: maxRev * 1.3,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (v) => FlLine(
-                    color: c.divider.withValues(alpha: 0.15),
-                    strokeWidth: 1,
-                    dashArray: [5, 5],
-                  ),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: c.divider.withValues(alpha: 0.5),
-                      width: 1,
-                    ),
-                    left: BorderSide.none,
-                    right: BorderSide.none,
-                    top: BorderSide.none,
-                  ),
-                ),
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    fitInsideHorizontally: true,
-                    fitInsideVertically: true,
-                    getTooltipColor: (group) =>
-                        const Color(0xFF1E293B).withValues(alpha: 0.9),
-                    tooltipPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    tooltipMargin: 8,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      final val = NumberFormat.compact(
-                        locale: 'vi_VN',
-                      ).format(rod.toY);
-                      final idx = group.x;
-                      String dateStr = '';
-                      if (rodIndex == 0 && idx < previousData.length) {
-                          dateStr = previousData[idx]['date'] as String? ?? '';
-                      } else if (rodIndex == 1 && idx < currentData.length) {
-                          dateStr = currentData[idx]['date'] as String? ?? '';
-                      }
-                      
-                      final parts = dateStr.split('-');
-                      String displayDate = dateStr;
-                      if (parts.length >= 3) {
-                          displayDate = '${parts[2]}/${parts[1]}/${parts[0]}';
-                      } else if (parts.length == 2) {
-                          displayDate = '${parts[1]}/${parts[0]}';
-                      }
-
-                      final dateLine = displayDate.isNotEmpty ? '$displayDate\n' : '';
-                      return BarTooltipItem(
-                        '$dateLine$val đ',
-                        GoogleFonts.outfit(
-                          color: rodIndex == 0
-                              ? const Color(0xFF94A3B8)
-                              : Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: maxRev * 1.3,
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          getDrawingHorizontalLine: (v) => FlLine(
+                            color: c.divider.withValues(alpha: 0.15),
+                            strokeWidth: 1,
+                            dashArray: [5, 5],
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      interval: 1,
-                      getTitlesWidget: (value, meta) {
-                        final idx = value.toInt();
-                        if (idx < 0 || idx >= maxLen)
-                          return const SizedBox.shrink();
+                        borderData: FlBorderData(
+                          show: true,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: c.divider.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
+                            left: BorderSide.none,
+                            right: BorderSide.none,
+                            top: BorderSide.none,
+                          ),
+                        ),
+                        barTouchData: BarTouchData(
+                          touchTooltipData: BarTouchTooltipData(
+                            fitInsideHorizontally: true,
+                            fitInsideVertically: true,
+                            getTooltipColor: (group) =>
+                                const Color(0xFF1E293B).withValues(alpha: 0.9),
+                            tooltipPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            tooltipMargin: 8,
+                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              final val = NumberFormat.compact(
+                                locale: 'vi_VN',
+                              ).format(rod.toY);
+                              final idx = group.x;
+                              String dateStr = '';
+                              if (rodIndex == 0 && idx < previousData.length) {
+                                dateStr =
+                                    previousData[idx]['date'] as String? ?? '';
+                              } else if (rodIndex == 1 &&
+                                  idx < currentData.length) {
+                                dateStr =
+                                    currentData[idx]['date'] as String? ?? '';
+                              }
 
-                        String displayDate = '';
-                        if (idx < currentData.length) {
-                          final dateStr =
-                              currentData[idx]['date'] as String? ?? '';
-                          final parts = dateStr.split('-');
-                          displayDate = parts.length >= 3
-                              ? '${parts[2]}/${parts[1]}'
-                              : dateStr;
-                        } else if (currentData.isNotEmpty) {
-                          // Project forward from the first day
-                          final firstDateStr =
-                              currentData.first['date'] as String? ?? '';
-                          final firstDate = DateTime.tryParse(firstDateStr);
-                          if (firstDate != null) {
-                            final projectedDate = firstDate.add(
-                              Duration(days: idx),
-                            );
-                            final d = projectedDate.day.toString().padLeft(
-                              2,
-                              '0',
-                            );
-                            final m = projectedDate.month.toString().padLeft(
-                              2,
-                              '0',
-                            );
-                            displayDate = '$d/$m';
-                          }
-                        } else if (idx < previousData.length) {
-                          final dateStr =
-                              previousData[idx]['date'] as String? ?? '';
-                          final parts = dateStr.split('-');
-                          displayDate = parts.length >= 3
-                              ? '${parts[2]}/${parts[1]}'
-                              : dateStr;
-                        }
+                              final parts = dateStr.split('-');
+                              String displayDate = dateStr;
+                              if (parts.length >= 3) {
+                                displayDate =
+                                    '${parts[2]}/${parts[1]}/${parts[0]}';
+                              } else if (parts.length == 2) {
+                                displayDate = '${parts[1]}/${parts[0]}';
+                              }
 
-                        if (displayDate.length < 5)
-                          return const SizedBox.shrink();
+                              final dateLine = displayDate.isNotEmpty
+                                  ? '$displayDate\n'
+                                  : '';
+                              return BarTooltipItem(
+                                '$dateLine$val đ',
+                                GoogleFonts.outfit(
+                                  color: rodIndex == 0
+                                      ? const Color(0xFF94A3B8)
+                                      : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        titlesData: FlTitlesData(
+                          show: true,
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 32,
+                              interval: 1,
+                              getTitlesWidget: (value, meta) {
+                                final idx = value.toInt();
+                                if (idx < 0 || idx >= maxLen)
+                                  return const SizedBox.shrink();
 
-                        // Limit labels if too many
-                        if (maxLen > 7 &&
-                            idx % (maxLen / 5).ceil() != 0 &&
-                            idx != maxLen - 1) {
-                          return const SizedBox.shrink();
-                        }
+                                String displayDate = '';
+                                if (idx < currentData.length) {
+                                  final dateStr =
+                                      currentData[idx]['date'] as String? ?? '';
+                                  final parts = dateStr.split('-');
+                                  displayDate = parts.length >= 3
+                                      ? '${parts[2]}/${parts[1]}'
+                                      : dateStr;
+                                } else if (currentData.isNotEmpty) {
+                                  // Project forward from the first day
+                                  final firstDateStr =
+                                      currentData.first['date'] as String? ??
+                                      '';
+                                  final firstDate = DateTime.tryParse(
+                                    firstDateStr,
+                                  );
+                                  if (firstDate != null) {
+                                    final projectedDate = firstDate.add(
+                                      Duration(days: idx),
+                                    );
+                                    final d = projectedDate.day
+                                        .toString()
+                                        .padLeft(2, '0');
+                                    final m = projectedDate.month
+                                        .toString()
+                                        .padLeft(2, '0');
+                                    displayDate = '$d/$m';
+                                  }
+                                } else if (idx < previousData.length) {
+                                  final dateStr =
+                                      previousData[idx]['date'] as String? ??
+                                      '';
+                                  final parts = dateStr.split('-');
+                                  displayDate = parts.length >= 3
+                                      ? '${parts[2]}/${parts[1]}'
+                                      : dateStr;
+                                }
 
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Text(
-                            displayDate,
-                            style: GoogleFonts.outfit(
-                              color: c.textMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                                if (displayDate.length < 5)
+                                  return const SizedBox.shrink();
+
+                                // Limit labels if too many
+                                if (maxLen > 7 &&
+                                    idx % (maxLen / 5).ceil() != 0 &&
+                                    idx != maxLen - 1) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: Text(
+                                    displayDate,
+                                    style: GoogleFonts.outfit(
+                                      color: c.textMuted,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 52,
-                      getTitlesWidget: (value, meta) {
-                        if (value == meta.max || value == meta.min)
-                          return const SizedBox.shrink();
-                        String label = '';
-                        if (value >= 1000000) {
-                          label = '${(value / 1000000).toStringAsFixed(0)}Tr';
-                        } else if (value >= 1000) {
-                          label = '${(value / 1000).toStringAsFixed(0)}K';
-                        } else {
-                          label = value.toStringAsFixed(0);
-                        }
-                        return Text(
-                          label,
-                          style: TextStyle(
-                            color: c.textMuted,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 52,
+                              getTitlesWidget: (value, meta) {
+                                if (value == meta.max || value == meta.min)
+                                  return const SizedBox.shrink();
+                                String label = '';
+                                if (value >= 1000000) {
+                                  label =
+                                      '${(value / 1000000).toStringAsFixed(0)}Tr';
+                                } else if (value >= 1000) {
+                                  label =
+                                      '${(value / 1000).toStringAsFixed(0)}K';
+                                } else {
+                                  label = value.toStringAsFixed(0);
+                                }
+                                return Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: c.textMuted,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                );
+                              },
+                            ),
                           ),
-                          textAlign: TextAlign.right,
-                        );
-                      },
+                        ),
+                        barGroups: barGroups,
+                      ),
                     ),
                   ),
-                ),
-                barGroups: barGroups,
-              ),
-            ),
-          ),
-        ); // ends SingleChildScrollView
-      }, // ends builder
-    ), // ends LayoutBuilder
-  ), // ends Expanded
-], // ends Column children
+                ); // ends SingleChildScrollView
+              }, // ends builder
+            ), // ends LayoutBuilder
+          ), // ends Expanded
+        ], // ends Column children
       ), // ends Column
     ); // ends Container
   }
@@ -879,9 +941,11 @@ class TopProductsChart extends StatelessWidget {
           ...data.asMap().entries.map((entry) {
             final index = entry.key;
             final item = entry.value;
-            final val = num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0.0;
+            final val =
+                num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ??
+                0.0;
             final percentage = maxVal > 0 ? val / maxVal : 0.0;
-            
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: Row(
@@ -1010,7 +1074,10 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
           border: Border.all(color: c.divider.withValues(alpha: 0.4)),
         ),
         child: Center(
-          child: Text('Chưa có dữ liệu tồn kho', style: TextStyle(color: c.textSecondary)),
+          child: Text(
+            'Chưa có dữ liệu tồn kho',
+            style: TextStyle(color: c.textSecondary),
+          ),
         ),
       );
     }
@@ -1081,7 +1148,9 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
                               touchedIndex = -1;
                               return;
                             }
-                            touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                            touchedIndex = pieTouchResponse
+                                .touchedSection!
+                                .touchedSectionIndex;
                           });
                         },
                       ),
@@ -1099,19 +1168,34 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
                           showTitle: showText,
                           title: showText ? '${val.toStringAsFixed(1)}%' : '',
                           radius: isTouched ? 45 : 35,
-                          titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-                          badgeWidget: isTouched ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E293B).withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '${e['name']}\n${val.toStringAsFixed(1)}%',
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            ),
-                          ) : null,
+                          titleStyle: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          badgeWidget: isTouched
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF1E293B,
+                                    ).withValues(alpha: 0.9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${e['name']}\n${val.toStringAsFixed(1)}%',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                )
+                              : null,
                           badgePositionPercentageOffset: 1.2,
                         );
                       }).toList(),
@@ -1126,7 +1210,9 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: chartData.map((e) {
-                        final pctStr = (e['value'] as double).toStringAsFixed(1);
+                        final pctStr = (e['value'] as double).toStringAsFixed(
+                          1,
+                        );
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Row(
@@ -1293,222 +1379,225 @@ class CashFlowAreaChart extends StatelessWidget {
                   physics: const BouncingScrollPhysics(),
                   child: Container(
                     padding: const EdgeInsets.only(right: 16),
-                    width: minWidth > constraints.maxWidth ? minWidth : constraints.maxWidth,
+                    width: minWidth > constraints.maxWidth
+                        ? minWidth
+                        : constraints.maxWidth,
                     child: LineChart(
                       LineChartData(
                         gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (v) => FlLine(
-                    color: c.divider.withValues(alpha: 0.15),
-                    strokeWidth: 1,
-                    dashArray: [5, 5],
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      interval: 1,
-                      getTitlesWidget: (v, m) {
-                        if (v % 1 != 0) return const SizedBox.shrink();
+                          show: true,
+                          drawVerticalLine: false,
+                          getDrawingHorizontalLine: (v) => FlLine(
+                            color: c.divider.withValues(alpha: 0.15),
+                            strokeWidth: 1,
+                            dashArray: [5, 5],
+                          ),
+                        ),
+                        titlesData: FlTitlesData(
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 32,
+                              interval: 1,
+                              getTitlesWidget: (v, m) {
+                                if (v % 1 != 0) return const SizedBox.shrink();
 
-                        final idx = v.toInt();
-                        if (idx < 0 || idx > calculatedMaxX)
-                          return const SizedBox.shrink();
+                                final idx = v.toInt();
+                                if (idx < 0 || idx > calculatedMaxX)
+                                  return const SizedBox.shrink();
 
-                        String displayDate = '';
-                        if (idx < data.length) {
-                          final dateStr = data[idx]['date'] as String? ?? '';
-                          final parts = dateStr.split('-');
-                          displayDate = parts.length >= 3
-                              ? '${parts[2]}/${parts[1]}'
-                              : dateStr;
-                        } else if (data.isNotEmpty) {
-                          final firstDateStr =
-                              data.first['date'] as String? ?? '';
-                          final firstDate = DateTime.tryParse(firstDateStr);
-                          if (firstDate != null) {
-                            final projectedDate = firstDate.add(
-                              Duration(days: idx),
-                            );
-                            final d = projectedDate.day.toString().padLeft(
-                              2,
-                              '0',
-                            );
-                            final m = projectedDate.month.toString().padLeft(
-                              2,
-                              '0',
-                            );
-                            displayDate = '$d/$m';
-                          }
-                        }
+                                String displayDate = '';
+                                if (idx < data.length) {
+                                  final dateStr =
+                                      data[idx]['date'] as String? ?? '';
+                                  final parts = dateStr.split('-');
+                                  displayDate = parts.length >= 3
+                                      ? '${parts[2]}/${parts[1]}'
+                                      : dateStr;
+                                } else if (data.isNotEmpty) {
+                                  final firstDateStr =
+                                      data.first['date'] as String? ?? '';
+                                  final firstDate = DateTime.tryParse(
+                                    firstDateStr,
+                                  );
+                                  if (firstDate != null) {
+                                    final projectedDate = firstDate.add(
+                                      Duration(days: idx),
+                                    );
+                                    final d = projectedDate.day
+                                        .toString()
+                                        .padLeft(2, '0');
+                                    final m = projectedDate.month
+                                        .toString()
+                                        .padLeft(2, '0');
+                                    displayDate = '$d/$m';
+                                  }
+                                }
 
-                        if (displayDate.length < 5)
-                          return const SizedBox.shrink();
+                                if (displayDate.length < 5)
+                                  return const SizedBox.shrink();
 
-                        int targetLen = calculatedMaxX.toInt() + 1;
-                        if (targetLen > 7 &&
-                            idx % (targetLen / 5).ceil() != 0 &&
-                            idx != targetLen - 1) {
-                          return const SizedBox.shrink();
-                        }
+                                int targetLen = calculatedMaxX.toInt() + 1;
+                                if (targetLen > 7 &&
+                                    idx % (targetLen / 5).ceil() != 0 &&
+                                    idx != targetLen - 1) {
+                                  return const SizedBox.shrink();
+                                }
 
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Text(
-                            displayDate,
-                            style: GoogleFonts.outfit(
-                              color: c.textMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: Text(
+                                    displayDate,
+                                    style: GoogleFonts.outfit(
+                                      color: c.textMuted,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 52,
-                      getTitlesWidget: (v, m) {
-                        if (v == m.max || v == m.min)
-                          return const SizedBox.shrink();
-                        String lbl = v >= 1000000
-                            ? '${(v / 1000000).toStringAsFixed(0)}Tr'
-                            : (v >= 1000
-                                  ? '${(v / 1000).toStringAsFixed(0)}K'
-                                  : v.toStringAsFixed(0));
-                        return Text(
-                          lbl,
-                          style: GoogleFonts.outfit(
-                            color: c.textMuted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 52,
+                              getTitlesWidget: (v, m) {
+                                if (v == m.max || v == m.min)
+                                  return const SizedBox.shrink();
+                                String lbl = v >= 1000000
+                                    ? '${(v / 1000000).toStringAsFixed(0)}Tr'
+                                    : (v >= 1000
+                                          ? '${(v / 1000).toStringAsFixed(0)}K'
+                                          : v.toStringAsFixed(0));
+                                return Text(
+                                  lbl,
+                                  style: GoogleFonts.outfit(
+                                    color: c.textMuted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                );
+                              },
+                            ),
                           ),
-                          textAlign: TextAlign.right,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: c.divider.withValues(alpha: 0.5),
-                      width: 1,
-                    ),
-                    left: BorderSide.none,
-                    right: BorderSide.none,
-                    top: BorderSide.none,
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  touchSpotThreshold: 40,
-                  handleBuiltInTouches: true,
-                  touchTooltipData: LineTouchTooltipData(
-                    fitInsideHorizontally: true,
-                    fitInsideVertically: true,
-                    getTooltipColor: (_) =>
-                        const Color(0xFF1E293B).withValues(alpha: 0.9),
-                    tooltipPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    tooltipMargin: 8,
-                    getTooltipItems: (touchedSpots) {
-                      return touchedSpots.map((spot) {
-                        final val = NumberFormat.compact(
-                          locale: 'vi_VN',
-                        ).format(spot.y);
-                        final isIncome = spot.barIndex == 0;
-                        return LineTooltipItem(
-                          '${isIncome ? "Thu" : "Chi"}: $val đ',
-                          GoogleFonts.outfit(
-                            color: isIncome
-                                ? const Color(0xFF60A5FA)
-                                : const Color(0xFFF87171),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                        ),
+                        borderData: FlBorderData(
+                          show: true,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: c.divider.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
+                            left: BorderSide.none,
+                            right: BorderSide.none,
+                            top: BorderSide.none,
                           ),
-                        );
-                      }).toList();
-                    },
-                  ),
-                ),
-                minX: 0,
-                maxX: calculatedMaxX,
-                minY: 0,
-                maxY: maxY * 1.15,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spotsIncome,
-                    isCurved: true,
-                    curveSmoothness: 0.35,
-                    color: AppColors.success,
-                    barWidth: 2,
-                    isStrokeCapRound: true,
-                    shadow: Shadow(
-                      color: AppColors.success.withValues(alpha: 0.5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.success.withValues(alpha: 0.35),
-                          AppColors.success.withValues(alpha: 0.0),
+                        ),
+                        lineTouchData: LineTouchData(
+                          touchSpotThreshold: 40,
+                          handleBuiltInTouches: true,
+                          touchTooltipData: LineTouchTooltipData(
+                            fitInsideHorizontally: true,
+                            fitInsideVertically: true,
+                            getTooltipColor: (_) =>
+                                const Color(0xFF1E293B).withValues(alpha: 0.9),
+                            tooltipPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            tooltipMargin: 8,
+                            getTooltipItems: (touchedSpots) {
+                              return touchedSpots.map((spot) {
+                                final val = NumberFormat.compact(
+                                  locale: 'vi_VN',
+                                ).format(spot.y);
+                                final isIncome = spot.barIndex == 0;
+                                return LineTooltipItem(
+                                  '${isIncome ? "Thu" : "Chi"}: $val đ',
+                                  GoogleFonts.outfit(
+                                    color: isIncome
+                                        ? const Color(0xFF60A5FA)
+                                        : const Color(0xFFF87171),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                );
+                              }).toList();
+                            },
+                          ),
+                        ),
+                        minX: 0,
+                        maxX: calculatedMaxX,
+                        minY: 0,
+                        maxY: maxY * 1.15,
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: spotsIncome,
+                            isCurved: true,
+                            curveSmoothness: 0.35,
+                            color: AppColors.success,
+                            barWidth: 2,
+                            isStrokeCapRound: true,
+                            shadow: Shadow(
+                              color: AppColors.success.withValues(alpha: 0.5),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                            dotData: const FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.success.withValues(alpha: 0.35),
+                                  AppColors.success.withValues(alpha: 0.0),
+                                ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                          ),
+                          LineChartBarData(
+                            spots: spotsExpense,
+                            isCurved: true,
+                            curveSmoothness: 0.35,
+                            color: AppColors.danger,
+                            barWidth: 2,
+                            isStrokeCapRound: true,
+                            shadow: Shadow(
+                              color: AppColors.danger.withValues(alpha: 0.5),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                            dotData: const FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.danger.withValues(alpha: 0.35),
+                                  AppColors.danger.withValues(alpha: 0.0),
+                                ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                          ),
                         ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
                       ),
                     ),
                   ),
-                  LineChartBarData(
-                    spots: spotsExpense,
-                    isCurved: true,
-                    curveSmoothness: 0.35,
-                    color: AppColors.danger,
-                    barWidth: 2,
-                    isStrokeCapRound: true,
-                    shadow: Shadow(
-                      color: AppColors.danger.withValues(alpha: 0.5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.danger.withValues(alpha: 0.35),
-                          AppColors.danger.withValues(alpha: 0.0),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
-        );
-      },
-    ),
-  ),
-],
+        ],
       ),
     );
   }
@@ -1516,86 +1605,281 @@ class CashFlowAreaChart extends StatelessWidget {
 
 class LowStockTableWidget extends StatelessWidget {
   final List<dynamic> items;
-  const LowStockTableWidget(this.items);
+  const LowStockTableWidget(this.items, {super.key});
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     if (items.isEmpty) return const SizedBox.shrink();
+    final displayItems = items.take(5).toList();
 
     return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(top: 20),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.divider.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Cảnh báo tồn kho',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: c.textSecondary,
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppColors.danger,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Bảng Cảnh Báo Tồn Kho Dưới Định Mức',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                TextButton.icon(
+                  onPressed: () => context.push('/inventory'),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                  label: const Text(
+                    'Quản lý kho',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
+
+          // Table Columns Header
+          Container(
+            color: c.cardAlt.withValues(alpha: 0.5),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'SẢN PHẨM',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'TỒN KHAI BÁO',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'MỨC TỐI THIỂU',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'TRẠNG THÁI',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'THAO TÁC',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
+
+          // Table Rows
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length > 5 ? 5 : items.length,
-            separatorBuilder: (_, __) => Divider(color: c.divider.withValues(alpha: 0.2), height: 16),
+            itemCount: displayItems.length,
+            separatorBuilder: (_, __) =>
+                Divider(height: 1, color: c.divider.withValues(alpha: 0.3)),
             itemBuilder: (context, index) {
-              final item = items[index];
-              final name = item['product']?['name'] ?? item['productName'] ?? item['name'] ?? 'Unknown';
-              final qty = item['currentQuantity'] ?? item['quantity'] ?? item['total_quantity'] ?? 0;
-              final minQty = item['minStock'] ?? item['min_quantity'] ?? 0;
-              return Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      name,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: c.textPrimary,
+              final item = displayItems[index];
+              final name =
+                  item['product']?['name'] ??
+                  item['productName'] ??
+                  item['name'] ??
+                  'Sản phẩm';
+              final qty =
+                  item['currentQuantity'] ??
+                  item['quantity'] ??
+                  item['total_quantity'] ??
+                  0;
+              final minQty = item['minStock'] ?? item['min_quantity'] ?? 5;
+
+              final isCritical = qty <= 0;
+
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                color: index % 2 == 1
+                    ? c.cardAlt.withValues(alpha: 0.2)
+                    : Colors.transparent,
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: c.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.danger.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$qty / $minQty',
-                      style: const TextStyle(
-                        color: AppColors.danger,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        '$qty',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isCritical
+                              ? AppColors.danger
+                              : AppColors.warning,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        '$minQty',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 13,
+                          color: c.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (isCritical
+                                        ? AppColors.danger
+                                        : AppColors.warning)
+                                    .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isCritical ? 'Hết hàng' : 'Cần nhập thêm',
+                            style: TextStyle(
+                              color: isCritical
+                                  ? AppColors.danger
+                                  : AppColors.warning,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton(
+                          onPressed: () =>
+                              context.push('/purchase-orders/form'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: BorderSide(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Text(
+                            'Nhập kho',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -1610,7 +1894,8 @@ class PaymentMethodDonutChart extends StatefulWidget {
   const PaymentMethodDonutChart(this.data);
 
   @override
-  State<PaymentMethodDonutChart> createState() => _PaymentMethodDonutChartState();
+  State<PaymentMethodDonutChart> createState() =>
+      _PaymentMethodDonutChartState();
 }
 
 class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
@@ -1640,14 +1925,18 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
           border: Border.all(color: c.divider.withValues(alpha: 0.4)),
         ),
         child: Center(
-          child: Text('Chưa có dữ liệu thanh toán', style: TextStyle(color: c.textSecondary)),
+          child: Text(
+            'Chưa có dữ liệu thanh toán',
+            style: TextStyle(color: c.textSecondary),
+          ),
         ),
       );
     }
 
     String getMethodName(String method) {
       if (method == 'CASH') return 'Tiền mặt';
-      if (method == 'BANK_TRANSFER' || method == 'TRANSFER') return 'Chuyển khoản';
+      if (method == 'BANK_TRANSFER' || method == 'TRANSFER')
+        return 'Chuyển khoản';
       if (method == 'CREDIT_CARD') return 'Thẻ tín dụng';
       if (method == 'DEBT') return 'Ghi nợ';
       return method;
@@ -1655,13 +1944,15 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
 
     Color getMethodColor(String method) {
       if (method == 'CASH') return AppColors.success;
-      if (method == 'BANK_TRANSFER' || method == 'TRANSFER') return theme.colorScheme.primary;
+      if (method == 'BANK_TRANSFER' || method == 'TRANSFER')
+        return theme.colorScheme.primary;
       if (method == 'DEBT') return AppColors.warning;
       return AppColors.info;
     }
 
     final chartData = widget.data.map((item) {
-      final val = num.tryParse(item['total']?.toString() ?? '0')?.toDouble() ?? 0.0;
+      final val =
+          num.tryParse(item['total']?.toString() ?? '0')?.toDouble() ?? 0.0;
       final pct = total > 0 ? (val / total * 100) : 0.0;
       final method = item['method']?.toString() ?? 'UNKNOWN';
       return {
@@ -1715,7 +2006,9 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
                               touchedIndex = -1;
                               return;
                             }
-                            touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                            touchedIndex = pieTouchResponse
+                                .touchedSection!
+                                .touchedSectionIndex;
                           });
                         },
                       ),
@@ -1745,11 +2038,22 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(8),
-                                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 4,
+                                      ),
+                                    ],
                                   ),
                                   child: Text(
-                                    NumberFormat.compact(locale: 'vi_VN').format(e.value['rawValue']),
-                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black),
+                                    NumberFormat.compact(
+                                      locale: 'vi_VN',
+                                    ).format(e.value['rawValue']),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
                                   ),
                                 )
                               : null,
@@ -1806,6 +2110,289 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
   }
 }
 
+class RecentOrdersDataTable extends StatelessWidget {
+  final List<dynamic> transactions;
+  const RecentOrdersDataTable(this.transactions, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    if (transactions.isEmpty) return const SizedBox.shrink();
+    final displayItems = transactions.take(6).toList();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.divider.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedInvoice03,
+                        color: theme.colorScheme.primary,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Bảng Giao Dịch Đơn Hàng Gần Đây',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          ExcelExportService.exportOrdersToExcel(transactions),
+                      icon: const Icon(Icons.table_chart_rounded, size: 14),
+                      label: const Text(
+                        'Xuất Excel',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success.withValues(
+                          alpha: 0.15,
+                        ),
+                        foregroundColor: AppColors.success,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: () => context.push('/sales'),
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                      label: const Text(
+                        'Xem tất cả',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
+
+          // Table Columns Header
+          Container(
+            color: c.cardAlt.withValues(alpha: 0.5),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'MÃ ĐƠN',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'KHÁCH HÀNG',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'THỜI GIAN',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'TỔNG TIỀN',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'THAO TÁC',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: c.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
+
+          // Rows
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: displayItems.length,
+            separatorBuilder: (_, __) =>
+                Divider(height: 1, color: c.divider.withValues(alpha: 0.3)),
+            itemBuilder: (context, index) {
+              final t = displayItems[index];
+              final id = t['id'];
+              final total =
+                  num.tryParse(
+                    t['totalAmount']?.toString() ?? '0',
+                  )?.toDouble() ??
+                  0.0;
+              final dateStr = t['orderDate'] ?? '';
+              final date = DateTime.tryParse(dateStr);
+              final formattedDate = date != null
+                  ? DateFormat('dd/MM HH:mm').format(date)
+                  : '—';
+              final customerName = t['customer']?['name'] ?? 'Khách mua lẻ';
+              final orderCode = t['orderCode'] ?? 'HD-$id';
+
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                color: index % 2 == 1
+                    ? c.cardAlt.withValues(alpha: 0.2)
+                    : Colors.transparent,
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        '$orderCode',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        customerName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: c.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        formattedDate,
+                        style: TextStyle(fontSize: 12, color: c.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        _currFmt.format(total),
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: c.textPrimary,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton(
+                          onPressed: () => context.push('/sales/$id'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Chi tiết',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class RecentDailyClosingsWidget extends ConsumerWidget {
   const RecentDailyClosingsWidget({super.key});
 
@@ -1824,56 +2411,105 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
 
         return Container(
           margin: const EdgeInsets.only(top: 20),
-          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: c.divider.withValues(alpha: 0.6)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedInvoice03,
+                        color: theme.colorScheme.primary,
+                        size: 18,
+                      ),
                     ),
-                    child: HugeIcon(
-                      icon: HugeIcons.strokeRoundedInvoice03,
-                      color: theme.colorScheme.primary,
-                      size: 20,
+                    const SizedBox(width: 10),
+                    Text(
+                      'Bảng Lịch Sử Chốt Ca Gần Đây',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: c.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Lịch sử chốt ca gần đây',
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
+              Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
+              Container(
+                color: c.cardAlt.withValues(alpha: 0.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'NGÀY CHỐT',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: c.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        'LÝ THUYẾT / THỰC TẾ',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: c.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'CHÊNH LỆCH',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: c.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: items.length > 5 ? 5 : items.length,
-                separatorBuilder: (_, __) => Divider(
-                  color: c.divider.withValues(alpha: 0.2),
-                  height: 16,
-                ),
+                separatorBuilder: (_, __) =>
+                    Divider(color: c.divider.withValues(alpha: 0.3), height: 1),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   final rawDate = item['closingDate'] ?? '';
@@ -1885,10 +2521,21 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
                     }
                   } catch (_) {}
 
-                  final expected = num.tryParse(item['expectedCash']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                  final actual = num.tryParse(item['actualCash']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                  final diff = num.tryParse(item['cashDifference']?.toString() ?? '0')?.toDouble() ?? 0.0;
-                  final reason = item['discrepancyReason'] as String?;
+                  final expected =
+                      num.tryParse(
+                        item['expectedCash']?.toString() ?? '0',
+                      )?.toDouble() ??
+                      0.0;
+                  final actual =
+                      num.tryParse(
+                        item['actualCash']?.toString() ?? '0',
+                      )?.toDouble() ??
+                      0.0;
+                  final diff =
+                      num.tryParse(
+                        item['cashDifference']?.toString() ?? '0',
+                      )?.toDouble() ??
+                      0.0;
 
                   Color diffColor = c.textPrimary;
                   String diffPrefix = '';
@@ -1899,77 +2546,52 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
                     diffColor = AppColors.danger;
                   }
 
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              dateDisplay,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
+                    color: index % 2 == 1
+                        ? c.cardAlt.withValues(alpha: 0.2)
+                        : Colors.transparent,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            dateDisplay,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Lý thuyết: ${_currFmt.format(expected)} • Thực tế: ${_currFmt.format(actual)}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: c.textSecondary,
-                              ),
-                            ),
-                            if (reason != null && reason.trim().isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  'Lý do: $reason',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: c.textMuted,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            diff == 0 ? 'Khớp két' : '$diffPrefix${_currFmt.format(diff)}',
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            'LÝ: ${_currFmt.format(expected)} • TT: ${_currFmt.format(actual)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: c.textSecondary,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            diff == 0
+                                ? 'Khớp két'
+                                : '$diffPrefix${_currFmt.format(diff)}',
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                               color: diff == 0 ? AppColors.success : diffColor,
                             ),
+                            textAlign: TextAlign.right,
                           ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: (diff == 0 ? AppColors.success : diffColor).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              diff == 0 ? 'Hoàn thành' : (diff > 0 ? 'Thừa quỹ' : 'Thiếu quỹ'),
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: diff == 0 ? AppColors.success : diffColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -1977,6 +2599,323 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class DashboardHeroHeader extends ConsumerWidget {
+  const DashboardHeroHeader({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    final authState = ref.watch(authProvider);
+    final shopState = ref.watch(shopProvider);
+    final userName =
+        authState.user?['name'] ??
+        authState.user?['email']?.toString().split('@').first ??
+        'Chủ cửa hàng';
+    final shopName = shopState.currentShopName ?? 'Cửa hàng SmartStock';
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 550;
+        return Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                theme.colorScheme.primary.withValues(alpha: 0.12),
+                c.surface,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.2),
+              width: 1.5,
+            ),
+            boxShadow: const [AppTheme.diffusionShadow],
+          ),
+          child: isNarrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.storefront_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Xin chào, $userName 👋',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: c.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$shopName • Mobile App',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: c.textSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/pos'),
+                      icon: const Icon(Icons.flash_on_rounded, size: 16),
+                      label: const Text('Bán Hàng (POS)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.storefront_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Xin chào, $userName 👋',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: c.textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$shopName • Mobile App',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: c.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/pos'),
+                      icon: const Icon(Icons.flash_on_rounded, size: 16),
+                      label: const Text('Bán Hàng (POS)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 4,
+                      ),
+                    ),
+                  ],
+                ),
+        );
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UrgentBusinessPulseHeader — Highlight Key Alerts for Small Business Owner
+// ─────────────────────────────────────────────────────────────────────────────
+class UrgentBusinessPulseHeader extends ConsumerWidget {
+  const UrgentBusinessPulseHeader({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          // Debt alert chip
+          GestureDetector(
+            onTap: () => context.push('/customer-debts'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.orange, width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  const Text('🚨', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Sổ nợ: Cần thu hồi nợ mua thiếu',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Nhắc Zalo',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+
+          // Low stock alert chip
+          GestureDetector(
+            onTap: () => context.push('/inventory'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.danger, width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  const Text('⚠️', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Kho hàng: 7 sp dưới định mức',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.danger,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Nhập kho',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+
+          // Tax status chip
+          GestureDetector(
+            onTap: () => context.push('/finance'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.success, width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  const Text('🏛️', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Thuế HKD: Doanh thu ≤ 100 tr (Miễn thuế)',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -34,32 +34,32 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
   static AppThemeColors of(BuildContext context) =>
       Theme.of(context).extension<AppThemeColors>()!;
 
-  // ── Taste-Skill: Dark Monochrome (Zinc 950/900) + High Contrast ──
+  // ── High Contrast Dark Palette (Deep Midnight FinTech) ──
   static const dark = AppThemeColors(
-    bg: Color(0xFF09090B), // Zinc 950
-    surface: Color(0xFF09090B), // Zinc 950
-    card: Color(0xFF18181B), // Zinc 900
-    cardAlt: Color(0xFF27272A), // Zinc 800
-    textPrimary: Color(0xFFFAFAFA), // Zinc 50
-    textSecondary: Color(0xFFA1A1AA), // Zinc 400
-    textMuted: Color(0xFF71717A), // Zinc 500
-    divider: Color(0xFF27272A), // Zinc 800
-    inputFill: Color(0xFF09090B),
-    inputBorder: Color(0xFF27272A),
+    bg: Color(0xFF0B0F17), // Deep Midnight Slate
+    surface: Color(0xFF111827), // Slate 900
+    card: Color(0xFF1E293B), // Slate 800 (High Contrast)
+    cardAlt: Color(0xFF334155), // Slate 700
+    textPrimary: Color(0xFFFFFFFF), // Pure White
+    textSecondary: Color(0xFFCBD5E1), // Slate 300
+    textMuted: Color(0xFF94A3B8), // Slate 400
+    divider: Color(0xFF334155), // Slate 700 Border
+    inputFill: Color(0xFF0F172A),
+    inputBorder: Color(0xFF475569),
   );
 
-  // ── Taste-Skill: Light Monochrome (Pure White / Zinc 50) ──
+  // ── High Contrast Light Palette (Crisp Porcelain FinTech) ──
   static const light = AppThemeColors(
-    bg: Color(0xFFF9FAFB), // Zinc 50
+    bg: Color(0xFFF8FAFC), // Slate 50
     surface: Color(0xFFFFFFFF), // Pure White
     card: Color(0xFFFFFFFF), // Pure White
     cardAlt: Color(0xFFF1F5F9), // Slate 100
     textPrimary: Color(0xFF0F172A), // Slate 900
-    textSecondary: Color(0xFF64748B), // Slate 500
-    textMuted: Color(0xFF94A3B8), // Slate 400
-    divider: Color(0xFFE2E8F0), // Slate 200
+    textSecondary: Color(0xFF475569), // Slate 600
+    textMuted: Color(0xFF64748B), // Slate 500
+    divider: Color(0xFFCBD5E1), // Slate 300 Border (High Contrast)
     inputFill: Color(0xFFFFFFFF),
-    inputBorder: Color(0xFFE2E8F0),
+    inputBorder: Color(0xFFCBD5E1),
   );
 
   static AppThemeColors createLight(Color primary) => light;

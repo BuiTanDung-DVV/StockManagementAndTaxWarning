@@ -72,10 +72,7 @@ class SupplierListScreen extends ConsumerWidget {
             child: RefreshIndicator(
               onRefresh: () async => ref.invalidate(supplierListProvider),
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
                 itemCount: items.length,
                 separatorBuilder: (_, __) => Divider(
                   height: 1,

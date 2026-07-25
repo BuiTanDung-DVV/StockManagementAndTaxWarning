@@ -150,6 +150,9 @@ class OrderDetailScreen extends ConsumerWidget {
                                 c,
                               ),
                             _InfoRow('Khách hàng', customerName, c),
+                            if (order['notes'] != null &&
+                                order['notes'].toString().isNotEmpty)
+                              _InfoRow('Ghi chú', order['notes'].toString(), c),
 
                             const SizedBox(height: 6),
                             Row(
@@ -445,6 +448,37 @@ class OrderDetailScreen extends ConsumerWidget {
                         ),
                         child: Column(
                           children: [
+                            if (double.tryParse(
+                                      order['discountAmount']?.toString() ??
+                                          order['discount_amount']
+                                              ?.toString() ??
+                                          '0',
+                                    ) !=
+                                    null &&
+                                (double.tryParse(
+                                          order['discountAmount']?.toString() ??
+                                              order['discount_amount']
+                                                  ?.toString() ??
+                                              '0',
+                                        ) ??
+                                        0.0) >
+                                    0) ...[
+                              _InfoRow(
+                                'Tạm tính',
+                                _currFmt.format(
+                                  double.tryParse(
+                                        order['subtotal']?.toString() ?? '0',
+                                      ) ??
+                                      totalAmount,
+                                ),
+                                c,
+                              ),
+                              _InfoRow(
+                                'Chiết khấu',
+                                '-${_currFmt.format(double.tryParse(order['discountAmount']?.toString() ?? order['discount_amount']?.toString() ?? '0') ?? 0.0)}',
+                                c,
+                              ),
+                            ],
                             _InfoRow(
                               'Tổng tiền thanh toán',
                               _currFmt.format(totalAmount),

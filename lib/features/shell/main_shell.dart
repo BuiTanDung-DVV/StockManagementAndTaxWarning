@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../settings/providers/shop_provider.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/widgets/ai_assistant_widget.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -185,50 +186,74 @@ class MainShell extends ConsumerWidget {
                                     padding: const EdgeInsets.only(bottom: 8.0),
                                     child: Material(
                                       color: Colors.transparent,
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(12),
-                                        onTap: () =>
-                                            context.go(allTabs[i].route),
-                                        hoverColor: c.divider.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                        child: AnimatedContainer(
-                                          duration: const Duration(
-                                            milliseconds: 200,
+                                      child: Semantics(
+                                        button: true,
+                                        label:
+                                            'Điều hướng đến ${allTabs[i].label}',
+                                        selected: isActive,
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 12,
+                                          onTap: () =>
+                                              context.go(allTabs[i].route),
+                                          hoverColor: c.divider.withValues(
+                                            alpha: 0.1,
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: isActive
-                                                ? primaryColor.withValues(
-                                                    alpha: 0.1,
-                                                  )
-                                                : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              12,
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 200,
                                             ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              HugeIcon(
-                                                icon: allTabs[i].icon,
-                                                color: color,
-                                                size: 24,
-                                              ),
-                                              const SizedBox(width: 14),
-                                              Text(
-                                                allTabs[i].label,
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: isActive
-                                                      ? FontWeight.w600
-                                                      : FontWeight.w500,
-                                                  color: color,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isActive
+                                                  ? primaryColor.withValues(
+                                                      alpha: 0.08,
+                                                    )
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                AnimatedContainer(
+                                                  duration: const Duration(
+                                                    milliseconds: 200,
+                                                  ),
+                                                  width: 4,
+                                                  height: isActive ? 20 : 0,
+                                                  decoration: BoxDecoration(
+                                                    color: primaryColor,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          2,
+                                                        ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                                SizedBox(
+                                                  width: isActive ? 12 : 16,
+                                                ),
+                                                HugeIcon(
+                                                  icon: allTabs[i].icon,
+                                                  color: color,
+                                                  size: 24,
+                                                ),
+                                                const SizedBox(width: 14),
+                                                Text(
+                                                  allTabs[i].label,
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: isActive
+                                                        ? FontWeight.bold
+                                                        : FontWeight.w500,
+                                                    color: color,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -323,6 +348,9 @@ class MainShell extends ConsumerWidget {
                 );
               },
             ),
+          ),
+          const Positioned.fill(
+            child: IgnorePointer(ignoring: false, child: AiAssistantWidget()),
           ),
         ],
       ),

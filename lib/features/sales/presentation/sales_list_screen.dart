@@ -178,10 +178,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(salesListProvider),
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
