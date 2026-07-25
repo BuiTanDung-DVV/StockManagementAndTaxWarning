@@ -33,6 +33,19 @@ export const receivables = async (req: Request, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+export const openReceivables = async (req: Request, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await customerService.getOpenReceivables(
+                (req as any).shopId,
+            ),
+        });
+    } catch (e: any) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
 export const createReceivable = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: {} }); } // Stub
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
@@ -55,10 +68,5 @@ export const getDebtEvidence = async (req: Request, res: Response) => {
 
 export const addEvidence = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: {} }); } // Stub
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
-};
-
-export const addPayment = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await customerService.addPayment((req as any).shopId, +req.params.id, +req.params.receivableId, req.body) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };

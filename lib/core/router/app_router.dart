@@ -172,7 +172,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           return shopState.hasPermission('products');
         }
 
-        if (path.startsWith('/customers')) {
+        if (path.startsWith('/customers') ||
+            path.startsWith('/customer-debts')) {
           return shopState.hasPermission('customers');
         }
 

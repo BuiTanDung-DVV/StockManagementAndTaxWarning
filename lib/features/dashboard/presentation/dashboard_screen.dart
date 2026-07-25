@@ -363,14 +363,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             () => context.push('/customers'),
                           ),
                         ),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: QuickAction(
-                          HugeIcons.strokeRoundedBookOpen01,
-                          'Sổ Nợ Khách',
-                          () => context.push('/customer-debts'),
+                      if (shopState.isOwner ||
+                          shopState.hasPermission('customers'))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: QuickAction(
+                            HugeIcons.strokeRoundedBookOpen01,
+                            'Sổ Nợ Khách',
+                            () => context.push('/customer-debts'),
+                          ),
                         ),
-                      ),
                       if (shopState.isOwner ||
                           shopState.hasPermission('finance'))
                         Padding(

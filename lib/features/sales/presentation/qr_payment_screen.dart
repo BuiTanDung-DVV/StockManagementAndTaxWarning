@@ -63,8 +63,9 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
             '/sales-orders/${widget.orderId}/payments',
             data: {
               'amount': widget.totalAmount,
-              'paymentMethod': 'BANK_TRANSFER',
-              'reference': widget.orderCode,
+              'method': 'TRANSFER',
+              'referenceCode': widget.orderCode,
+              'notes': 'Xác nhận thanh toán qua mã QR',
             },
           );
       setState(() => _paid = true);
