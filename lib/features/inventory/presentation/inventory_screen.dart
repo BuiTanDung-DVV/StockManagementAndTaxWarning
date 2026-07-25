@@ -1,10 +1,11 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/chart_widgets.dart';
+import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/inventory_provider.dart';
 
@@ -48,7 +49,9 @@ class InventoryScreen extends ConsumerWidget {
           ref.invalidate(slowMovingProvider);
         },
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,6 +142,14 @@ class InventoryScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              if (stockAsync.hasError || lowAsync.hasError)
+                AppInlineError(
+                  message: 'Một phần số liệu tồn kho chưa tải được.',
+                  onRetry: () {
+                    ref.invalidate(stockProvider);
+                    ref.invalidate(lowStockProvider);
+                  },
+                ),
               const SizedBox(height: 20),
 
               // ── Chart: Inventory by Category Donut ──
@@ -188,7 +199,11 @@ class InventoryScreen extends ConsumerWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => AppInlineError(
+                      message: 'Không thể tải phân bổ tồn kho.',
+                      onRetry: () =>
+                          ref.invalidate(inventoryCategoriesSummaryProvider),
+                    ),
                   );
                 },
               ),
@@ -311,8 +326,17 @@ class InventoryScreen extends ConsumerWidget {
                     ],
                   );
                 },
-                loading: () => const SizedBox.shrink(),
-                error: (e, s) => const SizedBox.shrink(),
+                loading: () => const AppShimmer(
+                  child: ShimmerBox(
+                    width: double.infinity,
+                    height: 72,
+                    radius: 16,
+                  ),
+                ),
+                error: (e, _) => AppInlineError(
+                  message: 'Không thể tải danh sách sắp hết hạn.',
+                  onRetry: () => ref.invalidate(expiringProductsProvider),
+                ),
               ),
 
               // Slow moving list
@@ -406,8 +430,17 @@ class InventoryScreen extends ConsumerWidget {
                     ],
                   );
                 },
-                loading: () => const SizedBox.shrink(),
-                error: (e, s) => const SizedBox.shrink(),
+                loading: () => const AppShimmer(
+                  child: ShimmerBox(
+                    width: double.infinity,
+                    height: 72,
+                    radius: 16,
+                  ),
+                ),
+                error: (e, _) => AppInlineError(
+                  message: 'Không thể tải danh sách tồn kho chậm luân chuyển.',
+                  onRetry: () => ref.invalidate(slowMovingProvider),
+                ),
               ),
               const SizedBox(height: 88), // UI Breathing Room Padding
             ],

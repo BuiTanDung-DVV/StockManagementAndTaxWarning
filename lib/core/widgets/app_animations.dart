@@ -167,3 +167,50 @@ class AppError extends StatelessWidget {
     );
   }
 }
+
+class AppInlineError extends StatelessWidget {
+  final String message;
+  final VoidCallback? onRetry;
+
+  const AppInlineError({super.key, required this.message, this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.danger,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: c.textSecondary, fontSize: 12),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (onRetry != null)
+            IconButton(
+              onPressed: onRetry,
+              tooltip: 'Thử lại',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+            ),
+        ],
+      ),
+    );
+  }
+}
