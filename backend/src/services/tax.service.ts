@@ -1,7 +1,7 @@
 import { AppDataSource } from '../config/db.config';
-import { SalesOrder } from '../sales/entities';
+import { SalesOrder, SalesReturn } from '../sales/entities';
 import { TaxRule } from '../finance/entities';
-import { Between } from 'typeorm';
+import { Between, Not } from 'typeorm';
 import { ShopProfile } from '../system/entities';
 import {
     CURRENT_TAX_POLICY,
@@ -35,15 +35,27 @@ export class TaxService {
         const orders = await orderRepo.find({
             where: {
                 shopId,
-                status: 'COMPLETED',
+                status: Not('CANCELLED'),
                 orderDate: Between(startDate, endDate)
             }
+        });
+        const returnRepo = AppDataSource.getRepository(SalesReturn);
+        const returns = await returnRepo.find({
+            where: {
+                shopId,
+                status: Not('CANCELLED'),
+                returnDate: Between(startDate, endDate),
+            },
         });
 
         const totalRevenue = normalizeNonNegative(
             orders.reduce(
                 (sum, order) =>
                     sum + normalizeNonNegative(Number(order.totalAmount)),
+                0,
+            ) - returns.reduce(
+                (sum, salesReturn) =>
+                    sum + normalizeNonNegative(Number(salesReturn.refundAmount)),
                 0,
             ),
         );
@@ -78,14 +90,25 @@ export class TaxService {
         const yearlyOrders = await orderRepo.find({
             where: {
                 shopId,
-                status: 'COMPLETED',
+                status: Not('CANCELLED'),
                 orderDate: Between(yearStartDate, yearEndDate)
             }
+        });
+        const yearlyReturns = await returnRepo.find({
+            where: {
+                shopId,
+                status: Not('CANCELLED'),
+                returnDate: Between(yearStartDate, yearEndDate),
+            },
         });
         const yearlyRevenue = normalizeNonNegative(
             yearlyOrders.reduce(
                 (sum, order) =>
                     sum + normalizeNonNegative(Number(order.totalAmount)),
+                0,
+            ) - yearlyReturns.reduce(
+                (sum, salesReturn) =>
+                    sum + normalizeNonNegative(Number(salesReturn.refundAmount)),
                 0,
             ),
         );

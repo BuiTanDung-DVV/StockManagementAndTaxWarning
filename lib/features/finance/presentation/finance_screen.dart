@@ -71,7 +71,9 @@ class FinanceScreen extends ConsumerWidget {
               summaryAsync.when(
                 data: (data) {
                   final balance = asDouble(
-                    data['balance'] ?? data['currentBalance'],
+                    data['cashBalance'] ??
+                        data['currentBalance'] ??
+                        data['balance'],
                   );
                   final income = asDouble(
                     data['totalIncome'] ?? data['income'],
@@ -336,7 +338,7 @@ class FinanceScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 16),
 
@@ -418,7 +420,7 @@ class FinanceScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   );
                 },
               ),

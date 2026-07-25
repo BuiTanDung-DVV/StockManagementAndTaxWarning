@@ -8,6 +8,7 @@ import { InventoryService } from './inventory.service';
 import { COGSService } from './cogs.service';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
 import { PostingService } from './posting.service';
+import { calculateNetAmount } from '../sales/sales-metric.utils';
 
 export class FinanceService {
     private cashTxRepo = AppDataSource.getRepository(CashTransaction);
@@ -68,7 +69,7 @@ export class FinanceService {
         const saved = await repo.save(repo.create({ ...dto, shopId }));
 
         // === Journal Ledger: Chỉ ghi bút toán cho các giao dịch độc lập (không liên kết với Sales/Purchase) ===
-        const linkedRefTypes = ['SALES_ORDER', 'SALES_RETURN', 'PURCHASE_ORDER'];
+        const linkedRefTypes = ['SALES_ORDER', 'SALES_ORDER_CANCEL', 'SALES_RETURN', 'PURCHASE_ORDER'];
         const refType = (dto as any).referenceType;
         if (!refType || !linkedRefTypes.includes(refType)) {
             const txType = dto.type || (dto as any).type;
@@ -149,12 +150,10 @@ export class FinanceService {
 
         const shopCondition = Array.isArray(shopId) ? 't.shop_id IN (:...shopIds)' : 't.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
-        const userCondition = !isOwner && userId ? ' AND t.created_by = :userId' : '';
-
         const result = await this.cashTxRepo.createQueryBuilder('t')
             .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where(`${shopCondition}${userCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate, userId })
+            .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
             .getRawOne();
 
         const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
@@ -165,7 +164,7 @@ export class FinanceService {
             .select(`TO_CHAR(t.transaction_date, '${dateFormat}')`, 'date')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where(`${shopCondition}${userCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate, userId })
+            .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
             .groupBy(`TO_CHAR(t.transaction_date, '${dateFormat}')`)
             .orderBy(`TO_CHAR(t.transaction_date, '${dateFormat}')`, 'ASC')
             .getRawMany();
@@ -214,7 +213,21 @@ export class FinanceService {
 
         const income = Number(result?.income || 0);
         const expense = Number(result?.expense || 0);
-        return { income, expense, balance: income - expense, period: period || 'month', dailyFlow };
+        const cashResult = await this.cashTxRepo.createQueryBuilder('t')
+            .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END), 0)", 'cashBalance')
+            .where(`${shopCondition} AND t.transaction_date <= :toDate AND (t.payment_method = 'CASH' OR t.payment_method IS NULL)`, { ...shopParams, toDate })
+            .getRawOne();
+        const netCashFlow = calculateNetAmount(income, expense);
+        return {
+            income,
+            expense,
+            netCashFlow,
+            balance: netCashFlow,
+            cashBalance: Number(cashResult?.cashBalance || 0),
+            period: { name: period || 'custom', from: fromDate, to: toDate },
+            scope: 'SHOP',
+            dailyFlow,
+        };
     }
 
     async getProfitLoss(shopId: number, from?: string, to?: string) {
@@ -227,22 +240,22 @@ export class FinanceService {
         // Doanh thu (CREDIT 511 - Doanh thu bán hàng)
         const revenueResult = await journalLineRepo.createQueryBuilder('l')
             .innerJoin('l.journalEntry', 'e')
-            .select("COALESCE(SUM(l.amount), 0)", 'revenue')
-            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '511' AND l.entry_type = 'CREDIT'", { shopId, fromDate, toDate })
+            .select("COALESCE(SUM(CASE WHEN l.entry_type = 'CREDIT' THEN l.amount ELSE -l.amount END), 0)", 'revenue')
+            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '511'", { shopId, fromDate, toDate })
             .getRawOne();
 
         // Giá vốn (DEBIT 632 - Giá vốn hàng bán)
         const cogsResult = await journalLineRepo.createQueryBuilder('l')
             .innerJoin('l.journalEntry', 'e')
-            .select("COALESCE(SUM(l.amount), 0)", 'cogs')
-            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '632' AND l.entry_type = 'DEBIT'", { shopId, fromDate, toDate })
+            .select("COALESCE(SUM(CASE WHEN l.entry_type = 'DEBIT' THEN l.amount ELSE -l.amount END), 0)", 'cogs')
+            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '632'", { shopId, fromDate, toDate })
             .getRawOne();
 
         // Chi phí vận hành (DEBIT 642 - Chi phí quản lý kinh doanh)
         const expenseResult = await journalLineRepo.createQueryBuilder('l')
             .innerJoin('l.journalEntry', 'e')
-            .select("COALESCE(SUM(l.amount), 0)", 'expenses')
-            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '642' AND l.entry_type = 'DEBIT'", { shopId, fromDate, toDate })
+            .select("COALESCE(SUM(CASE WHEN l.entry_type = 'DEBIT' THEN l.amount ELSE -l.amount END), 0)", 'expenses')
+            .where("e.shop_id = :shopId AND e.entry_date >= :fromDate AND e.entry_date <= :toDate AND e.is_voided = false AND l.account_code = '642'", { shopId, fromDate, toDate })
             .getRawOne();
 
         const revenue = Number(revenueResult?.revenue || 0);

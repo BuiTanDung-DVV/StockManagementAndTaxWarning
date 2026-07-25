@@ -22,7 +22,17 @@ const sendServiceError = (res: Response, e: any) => {
 export const findAll = async (req: Request, res: Response) => {
     try { 
         const customerId = req.query.customerId ? +req.query.customerId : undefined;
-        res.json({ success: true, data: await salesService.findAll((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), customerId) }); 
+        res.json({
+            success: true,
+            data: await salesService.findAll(
+                (req as any).shopId,
+                +(req.query.page || 1),
+                +(req.query.limit || 20),
+                customerId,
+                req.query.status as string,
+                req.query.search as string,
+            ),
+        });
     }
     catch (e: any) { sendServiceError(res, e); }
 };
@@ -61,7 +71,7 @@ export const create = async (req: Request, res: Response) => {
 };
 
 export const cancel = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.cancel((req as any).shopId, +req.params.id) }); }
+    try { res.json({ success: true, data: await salesService.cancel((req as any).shopId, +req.params.id, (req as any).user?.sub) }); }
     catch (e: any) { sendServiceError(res, e); }
 };
 
