@@ -9,6 +9,12 @@ import 'core/utils/toast_service.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'package:bot_toast/bot_toast.dart';
 
+Duration? _providerRetry(int retryCount, Object error) {
+  if (error is ApiException && error.statusCode != null) return null;
+  if (retryCount >= 2) return null;
+  return Duration(milliseconds: 500 * (retryCount + 1));
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -18,6 +24,7 @@ void main() async {
 
   runApp(
     ProviderScope(
+      retry: _providerRetry,
       overrides: [apiClientProvider.overrideWithValue(apiClient)],
       child: const MyApp(),
     ),
