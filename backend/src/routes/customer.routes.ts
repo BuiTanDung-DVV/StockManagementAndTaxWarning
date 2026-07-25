@@ -7,6 +7,7 @@ const router = Router();
 router.get('/customers', requirePermission('customers', 'view'), customerCtrl.findAll);
 router.get('/customers/overdue-debts', requirePermission('customers', 'view'), customerCtrl.overdueDebts);
 router.get('/customers/debt-aging', requirePermission('customers', 'view'), customerCtrl.debtAging);
+router.get('/customer-receivables', requirePermission('customers', 'view'), customerCtrl.openReceivables);
 router.get('/customers/:id', requirePermission('customers', 'view'), customerCtrl.findOne);
 router.post('/customers', requirePermission('customers', 'edit'), customerCtrl.create);
 router.put('/customers/:id', requirePermission('customers', 'edit'), customerCtrl.update);
@@ -18,6 +19,5 @@ router.post('/customers/:id/receivables', requirePermission('customers', 'edit')
 
 // Evidence and Payments (nested under receivables)
 router.post('/customers/receivables/:receivableId/evidence', requirePermission('customers', 'edit'), customerCtrl.addEvidence);
-router.post('/customers/receivables/:receivableId/payments', requirePermission(['customers', 'finance'], 'edit'), customerCtrl.addPayment);
 
 export default router;

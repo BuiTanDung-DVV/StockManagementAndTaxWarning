@@ -1,12 +1,14 @@
 import { AppDataSource } from '../config/db.config';
-import { Customer, Receivable, DebtEvidence, DebtPaymentHistory } from '../customer/entities';
+import { Customer, Receivable, DebtEvidence } from '../customer/entities';
 import { Not, In } from 'typeorm';
+import { SalesOrder } from '../sales/entities';
+import { calculateRemainingDebt } from '../customer/debt.utils';
 
 export class CustomerService {
     private customerRepo = AppDataSource.getRepository(Customer);
     private receivableRepo = AppDataSource.getRepository(Receivable);
     private evidenceRepo = AppDataSource.getRepository(DebtEvidence);
-    private paymentRepo = AppDataSource.getRepository(DebtPaymentHistory);
+    private orderRepo = AppDataSource.getRepository(SalesOrder);
 
     async findAll(shopId: number, page = 1, limit = 20, search?: string) {
         const qb = this.customerRepo.createQueryBuilder('c')
@@ -44,14 +46,79 @@ export class CustomerService {
         return this.receivableRepo.find({ where: { shopId, customer: { id: customerId } }, relations: ['evidences', 'paymentHistory'] });
     }
 
-    async getDebtEvidence(shopId: number, customerId: number) {
-        return this.evidenceRepo.find({ where: { shopId, receivable: { customer: { id: customerId } } } });
+    async getOpenReceivables(shopId: number) {
+        const receivables = await this.receivableRepo.find({
+            where: {
+                shopId,
+                status: Not(In(['PAID', 'CANCELLED'])),
+            },
+            relations: ['customer'],
+            order: { dueDate: 'ASC', createdAt: 'ASC' },
+        });
+
+        const openReceivables = receivables.filter(
+            (receivable) =>
+                calculateRemainingDebt(
+                    Number(receivable.amount),
+                    Number(receivable.paidAmount),
+                ) > 0,
+        );
+        const orderIds = [
+            ...new Set(
+                openReceivables
+                    .map((receivable) => Number(receivable.orderId))
+                    .filter((id) => Number.isInteger(id) && id > 0),
+            ),
+        ];
+        const orders = orderIds.length
+            ? await this.orderRepo.find({
+                where: { shopId, id: In(orderIds) },
+            })
+            : [];
+        const orderCodes = new Map(
+            orders.map((order) => [order.id, order.orderCode]),
+        );
+        const now = new Date();
+
+        return openReceivables.map((receivable) => {
+            const customer =
+                receivable.customer?.shopId === shopId
+                    ? receivable.customer
+                    : undefined;
+            const totalAmount = Number(receivable.amount);
+            const paidAmount = Number(receivable.paidAmount);
+            const remaining = calculateRemainingDebt(totalAmount, paidAmount);
+            const dueDate = new Date(receivable.dueDate);
+            const daysOverdue = dueDate < now
+                ? Math.floor(
+                    (now.getTime() - dueDate.getTime()) /
+                    (1000 * 60 * 60 * 24),
+                )
+                : 0;
+
+            return {
+                id: receivable.id,
+                customerId: customer?.id,
+                customerName: customer?.name || 'Khách hàng',
+                customerPhone:
+                    customer?.zaloPhone || customer?.phone || '',
+                orderId: receivable.orderId,
+                orderCode:
+                    orderCodes.get(Number(receivable.orderId)) ||
+                    `CN-${receivable.id}`,
+                createdAt: receivable.createdAt,
+                dueDate: receivable.dueDate,
+                totalAmount,
+                paidAmount,
+                remaining,
+                daysOverdue,
+                status: daysOverdue > 0 ? 'OVERDUE' : receivable.status,
+            };
+        });
     }
 
-    async addPayment(shopId: number, customerId: number, receivableId: number, dto: Partial<DebtPaymentHistory>) {
-        const receivable = await this.receivableRepo.findOne({ where: { id: receivableId, shopId, customer: { id: customerId } } });
-        if (!receivable) throw new Error('Receivable not found');
-        return this.paymentRepo.save(this.paymentRepo.create({ ...dto, shopId, receivable }));
+    async getDebtEvidence(shopId: number, customerId: number) {
+        return this.evidenceRepo.find({ where: { shopId, receivable: { customer: { id: customerId } } } });
     }
 
     async getDebtAging(shopId: number, asOf?: string) {

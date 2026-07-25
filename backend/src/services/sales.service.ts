@@ -1,6 +1,11 @@
 import { AppDataSource } from '../config/db.config';
 import { SalesOrder, SalesOrderItem, SalesReturn, SalesReturnItem, SalesOrderPayment, SalesOrderLotDeduction } from '../sales/entities';
-import { Customer, Receivable } from '../customer/entities';
+import {
+    Customer,
+    DebtPaymentHistory,
+    Receivable,
+} from '../customer/entities';
+import { applyDebtPayment } from '../customer/debt.utils';
 import { Product } from '../product/entities';
 import { COGSService } from './cogs.service';
 import { FinanceService } from './finance.service';
@@ -562,18 +567,35 @@ export class SalesService {
             // Cập nhật Receivable nếu tồn tại
             const receivable = await manager.findOne(Receivable, {
                 where: { shopId, orderId } as any,
+                relations: ['customer'],
             });
             if (receivable && receivable.status !== 'PAID' && receivable.status !== 'CANCELLED') {
-                receivable.paidAmount = Number(receivable.paidAmount || 0) + amount;
-                if (Number(receivable.paidAmount) >= Number(receivable.amount)) {
-                    receivable.status = 'PAID';
-                }
+                const debtPayment = applyDebtPayment(
+                    Number(receivable.amount),
+                    Number(receivable.paidAmount || 0),
+                    amount,
+                );
+                receivable.paidAmount = debtPayment.paidAmount;
+                receivable.status = debtPayment.status;
                 await manager.save(Receivable, receivable);
+                await manager.save(
+                    DebtPaymentHistory,
+                    manager.create(DebtPaymentHistory, {
+                        shopId,
+                        receivable,
+                        amount,
+                        paymentMethod: (dto as any).method || 'CASH',
+                        paymentDate: new Date(),
+                        notes: (dto as any).notes,
+                        recordedBy: (dto as any).createdBy,
+                    }),
+                );
 
                 // Giảm số dư nợ khách hàng
-                const customer = await manager.findOne(Customer, {
-                    where: { id: (receivable as any).customerId || (receivable as any).customer?.id, shopId }
-                });
+                const customer =
+                    receivable.customer?.shopId === shopId
+                        ? receivable.customer
+                        : undefined;
                 if (customer) {
                     customer.balance = Math.max(Number(customer.balance || 0) - amount, 0);
                     await manager.save(Customer, customer);
