@@ -2,6 +2,14 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth.middleware';
 import { AppDataSource } from '../config/db.config';
 import { ShopMember } from '../shop/entities';
+import {
+    membershipHasAnyPermission,
+    PermissionLevel,
+} from './permission.utils';
+
+interface PermissionOptions {
+    allowAllShops?: boolean;
+}
 
 /**
  * Middleware factory: checks that the authenticated user has a specific
@@ -11,7 +19,11 @@ import { ShopMember } from '../shop/entities';
  *
  * Usage: router.get('/products', authenticateJwt, requirePermission('products', 'view'), ctrl.list);
  */
-export const requirePermission = (key: string | string[], level: 'view' | 'edit' | 'full' = 'view') => {
+export const requirePermission = (
+    key: string | string[],
+    level: Exclude<PermissionLevel, 'none'> = 'view',
+    options: PermissionOptions = {},
+) => {
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         try {
             const userId = req.user?.sub;
@@ -24,12 +36,38 @@ export const requirePermission = (key: string | string[], level: 'view' | 'edit'
             }
 
             const memberRepo = AppDataSource.getRepository(ShopMember);
+            const keys = Array.isArray(key) ? key : [key];
             
             if (rawShopId === 'all') {
-                // For 'all' shops, verify user is owner of at least one shop
-                const members = await memberRepo.find({ where: { userId, isActive: true } });
-                if (!members.length) return res.status(403).json({ success: false, message: 'Bạn không thuộc cửa hàng nào' });
-                req.isOwner = members.some(m => m.memberType === 'OWNER');
+                if (!options.allowAllShops || level !== 'view') {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Chức năng này yêu cầu chọn một cửa hàng cụ thể',
+                    });
+                }
+
+                const members = await memberRepo.find({
+                    where: { userId, isActive: true },
+                    relations: ['role'],
+                });
+                const allowedMembers = members.filter((member) =>
+                    membershipHasAnyPermission(member, keys, level),
+                );
+
+                if (!allowedMembers.length) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Bạn không có quyền truy cập chức năng này',
+                    });
+                }
+
+                req.isAllShops = true;
+                req.shopIds = allowedMembers.map((member) => member.shopId);
+                // A single boolean cannot express mixed owner/employee scopes.
+                // Stay conservative so downstream queries never broaden access.
+                req.isOwner = allowedMembers.every(
+                    (member) => member.memberType === 'OWNER',
+                );
                 req.memberType = req.isOwner ? 'OWNER' : 'EMPLOYEE';
                 return next();
             }
@@ -50,23 +88,7 @@ export const requirePermission = (key: string | string[], level: 'view' | 'edit'
             // Owners have full access
             if (member.memberType === 'OWNER') return next();
 
-            // Parse permissions from role
-            let permissions: Record<string, string> = {};
-            if (member.role?.permissions) {
-                try { permissions = JSON.parse(member.role.permissions); } catch {}
-            }
-
-            const keys = Array.isArray(key) ? key : [key];
-            const hasAny = keys.some(k => {
-                const userLevel = permissions[k];
-                if (!userLevel || userLevel === 'none') return false;
-                const hierarchy = ['none', 'view', 'edit', 'full'];
-                const userIdx = hierarchy.indexOf(userLevel);
-                const requiredIdx = hierarchy.indexOf(level);
-                return userIdx >= requiredIdx;
-            });
-
-            if (!hasAny) {
+            if (!membershipHasAnyPermission(member, keys, level)) {
                 return res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập chức năng này' });
             }
 
@@ -87,6 +109,12 @@ export const requireOwner = async (req: AuthRequest, res: Response, next: NextFu
 
         if (!shopId) {
             return res.status(400).json({ success: false, message: 'Thiếu thông tin cửa hàng' });
+        }
+        if (req.isAllShops || shopId === 'all') {
+            return res.status(403).json({
+                success: false,
+                message: 'Chức năng này yêu cầu chọn một cửa hàng cụ thể',
+            });
         }
 
         const memberRepo = AppDataSource.getRepository(ShopMember);

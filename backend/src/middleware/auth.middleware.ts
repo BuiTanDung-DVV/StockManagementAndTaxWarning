@@ -49,6 +49,12 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
         const members = await memberRepo.find({
             where: { userId: decoded.sub, isActive: true }
         });
+        if (!members.length) {
+            return res.status(403).json({
+                success: false,
+                message: 'Bạn không thuộc cửa hàng nào đang hoạt động',
+            });
+        }
         req.isAllShops = true;
         req.shopIds = members.map(m => m.shopId);
         // We do not set req.shopId
@@ -93,6 +99,12 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
  * Rejects any request that does not carry a valid, verified shopId.
  */
 export const requireShopId = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.isAllShops && (!req.shopIds || req.shopIds.length === 0)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Bạn không có cửa hàng nào được phép truy cập',
+    });
+  }
   if (!req.isAllShops && (!req.shopId || isNaN(req.shopId))) {
     return res.status(400).json({
       success: false,

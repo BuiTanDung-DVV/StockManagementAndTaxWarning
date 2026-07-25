@@ -24,7 +24,6 @@ import '../../features/inventory/presentation/stock_take_screen.dart';
 import '../../features/inventory/presentation/purchase_order_screen.dart';
 import '../../features/inventory/presentation/purchase_order_detail_screen.dart';
 import '../../features/finance/presentation/transaction_detail_screen.dart';
-import '../../features/finance/presentation/budget_plan_screen.dart';
 import '../../features/sales/presentation/return_detail_screen.dart';
 import '../../features/finance/presentation/finance_screen.dart';
 import '../../features/finance/presentation/daily_closing_screen.dart';
@@ -32,7 +31,6 @@ import '../../features/finance/presentation/profit_loss_screen.dart';
 import '../../features/finance/presentation/cashflow_forecast_screen.dart';
 import '../../features/finance/presentation/debt_aging_screen.dart';
 import '../../features/finance/presentation/invoice_list_screen.dart';
-import '../../features/finance/presentation/invoice_scan_screen.dart';
 import '../../features/finance/presentation/purchase_no_invoice_screen.dart';
 import '../../features/inventory/presentation/xnt_report_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -107,14 +105,17 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // If logged in and loaded:
       if (!isOnboarded) {
-        if (state.matchedLocation != '/onboarding') return '/onboarding';
+        if (state.matchedLocation != '/onboarding') {
+          return '/onboarding';
+        }
         return null;
       }
 
       // If onboarded, check member status
       if (isPending || isRejected) {
-        if (state.matchedLocation != '/waiting-approval')
+        if (state.matchedLocation != '/waiting-approval') {
           return '/waiting-approval';
+        }
         return null;
       }
 
@@ -132,8 +133,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         // Allow if shop data hasn't loaded yet to prevent kicking user to Dashboard on F5
         if (shopState.userShops.isEmpty &&
             path != '/onboarding' &&
-            path != '/waiting-approval')
+            path != '/waiting-approval') {
           return true;
+        }
+
+        if (shopState.isAllShops) {
+          return path == '/' ||
+              path == '/settings' ||
+              path == '/profile' ||
+              path == '/change-password' ||
+              path == '/notifications';
+        }
 
         if (shopState.isOwner) return true;
 
@@ -155,8 +165,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
 
         if (path.startsWith('/pos') || path.startsWith('/sales')) {
-          return shopState.hasPermission('pos') ||
-              shopState.hasPermission('sales_view');
+          return shopState.hasPermission('sales');
         }
 
         if (path.startsWith('/products')) {

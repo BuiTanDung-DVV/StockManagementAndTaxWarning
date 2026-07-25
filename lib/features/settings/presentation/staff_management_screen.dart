@@ -830,8 +830,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
 // ═══════════════════════════════════════════════════
 
 const _permissionKeys = {
-  'pos': 'Bán hàng (POS)',
-  'sales_view': 'Xem đơn hàng',
+  'sales': 'Bán hàng & đơn hàng',
   'products': 'Sản phẩm',
   'inventory': 'Kho hàng',
   'customers': 'Khách hàng',
@@ -895,6 +894,20 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
         raw.forEach((k, v) => perms[k.toString()] = v.toString());
       }
     }
+    // Chuẩn hóa dữ liệu vai trò cũ về khóa `sales` mà backend sử dụng.
+    if (!perms.containsKey('sales')) {
+      final posLevel = perms['pos'] ?? 'none';
+      final legacySalesLevel = (perms['sales_view'] ?? 'none') == 'none'
+          ? 'none'
+          : 'view';
+      final posIndex = _permissionLevels.indexOf(posLevel);
+      final legacyIndex = _permissionLevels.indexOf(legacySalesLevel);
+      perms['sales'] =
+          _permissionLevels[posIndex > legacyIndex ? posIndex : legacyIndex];
+    }
+    perms.remove('pos');
+    perms.remove('sales_view');
+
     // Ensure all keys exist
     for (final key in _permissionKeys.keys) {
       perms.putIfAbsent(key, () => 'none');
