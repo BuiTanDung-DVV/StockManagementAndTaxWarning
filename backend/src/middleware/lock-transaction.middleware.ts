@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AppDataSource } from '../config/db.config';
-import { DailyClosing, CashTransaction, Invoice, PurchaseWithoutInvoice } from '../finance/entities';
+import { DailyClosing, CashTransaction, PurchaseWithoutInvoice } from '../finance/entities';
+import { Invoice } from '../system/entities';
 import { AuthRequest } from './auth.middleware';
 import { ShopMember } from '../shop/entities';
 import { SalesOrder } from '../sales/entities';

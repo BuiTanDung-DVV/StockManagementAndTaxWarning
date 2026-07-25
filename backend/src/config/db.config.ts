@@ -15,7 +15,7 @@ import { SalesOrder, SalesOrderItem, SalesOrderPayment, SalesReturn, SalesReturn
 import { ShopProfile, ActivityLog, InvoiceScan, Invoice as SystemInvoice, InvoiceItem as SystemInvoiceItem } from '../system/entities';
 import { FinancialLedger } from '../finance/entities/financial-ledger.entity';
 import { JournalEntry, JournalLine } from '../finance/ledger.entity';
-import { CashAccount, TaxRule, CashTransaction, BudgetPlan, CashflowForecast, DailyClosing, Invoice as FinanceInvoice, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
+import { CashAccount, TaxRule, CashTransaction, BudgetPlan, CashflowForecast, DailyClosing, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -38,7 +38,7 @@ export const AppDataSource = new DataSource({
     StockTake, StockTakeItem, InventoryLot, SalesOrder, SalesOrderItem, SalesOrderPayment, SalesReturn,
     SalesReturnItem, SalesOrderLotDeduction, ShopProfile, ActivityLog, InvoiceScan, SystemInvoice,
     SystemInvoiceItem, FinancialLedger, JournalEntry, JournalLine, CashAccount, TaxRule, CashTransaction,
-    BudgetPlan, CashflowForecast, DailyClosing, FinanceInvoice, TaxObligation, PurchaseWithoutInvoice,
+    BudgetPlan, CashflowForecast, DailyClosing, TaxObligation, PurchaseWithoutInvoice,
     PurchaseWithoutInvoiceItem
   ],
   migrations: [],

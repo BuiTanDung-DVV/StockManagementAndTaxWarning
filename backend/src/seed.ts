@@ -4,7 +4,8 @@
  */
 import 'reflect-metadata';
 import { AppDataSource } from './config/db.config';
-import { CashAccount, CashTransaction, BudgetPlan, CashflowForecast, DailyClosing, Invoice, TaxObligation, PurchaseWithoutInvoice } from './finance/entities';
+import { CashAccount, CashTransaction, BudgetPlan, CashflowForecast, DailyClosing, TaxObligation, PurchaseWithoutInvoice } from './finance/entities';
+import { Invoice } from './system/entities';
 
 async function seed() {
   // Force sync so new entity tables/columns are created
