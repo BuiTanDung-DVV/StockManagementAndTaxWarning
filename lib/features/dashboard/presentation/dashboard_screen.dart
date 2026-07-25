@@ -12,6 +12,7 @@ import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/global_search_delegate.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/reporting_period.dart';
 import '../../sales/providers/sales_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../settings/providers/tax_config_provider.dart';
@@ -76,12 +77,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       label1 = 'Tuần này';
       label2 = 'Tuần trước';
     } else if (filter == 'month') {
-      from1 = DateTime(
-        today.year,
-        today.month,
-        1,
-      ).toIso8601String().split('T')[0];
-      to1 = today.toIso8601String().split('T')[0];
+      final period = currentMonthReportingPeriod(today);
+      from1 = period.from;
+      to1 = period.to;
       from2 = DateTime(
         today.year,
         today.month - 1,

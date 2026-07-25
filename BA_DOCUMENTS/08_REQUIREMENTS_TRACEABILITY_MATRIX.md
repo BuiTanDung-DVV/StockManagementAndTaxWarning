@@ -1,5 +1,27 @@
 # Ma trận truy vết yêu cầu
 
+> **Delta 25/07/2026:** trạng thái `Code/test đạt` dưới đây là bằng chứng local
+> sau `bba0c5f5`; cột production cố ý để `Chưa xác minh` cho đến khi deploy.
+
+## Ma trận delta bản vá local
+
+| Yêu cầu | Màn hình | API/code | Test | Code/test | Production |
+|---|---|---|---|---|---|
+| RBAC-01 | menu theo quyền | auth/permission middleware | `permission.utils.test.js` | Đạt | Chưa xác minh |
+| RBAC-02 | chọn tất cả shop | `shop-scope.utils.ts`, membership active/cùng shop | `shop-scope.utils.test.js`, permission tests | Đạt | Chưa xác minh |
+| SALE-05 | `/#/sales` | list/summary status + `reporting_period.dart` | `sales-metric.utils.test.js`, `reporting_period_test.dart` | Backend test đạt; Flutter test chưa chạy lại | Chưa đối soát |
+| UX-ERR-01 | dashboard/finance | Async error/retry components | widget/source review | Đúng một phần | Chưa xác minh |
+| DATA-01 | invoice | một metadata owner và một route set | `invoice-metadata.test.js` | Đạt | Chưa smoke test |
+| TAX-02 | dashboard/tax/finance | `calculateOutstandingTax`, normalize DTO/read model | `tax-policy.test.js` | Đạt | Chưa xác minh |
+| TAX-04 | export XML | validator chặn thiếu/sai/placeholder MST | `tax-policy.test.js` | Đạt phạm vi MST | Chưa xác minh; XSD vẫn bị chặn |
+| DEBT-01 | `/#/customer-debts` | `/customer-receivables` | `debt.utils.test.js` + source review | Đạt phạm vi tính/API mapping | Chưa đối soát |
+| REP-CSV-01 | export công nợ | `buildCustomerDebtsCsv` | `excel_export_service_test.dart` | Test đã bổ sung, chưa chạy lại do toolchain | Chưa tải production |
+| UX-MOB-01 | `/#/pos` | CTA safe margin + `shouldShowAiAssistant` | `main_shell_layout_test.dart` | Test đã bổ sung, chưa chạy lại do toolchain | Chưa kiểm tra viewport |
+| REP-PERIOD-01 | dashboard/sales/finance | `currentMonthReportingPeriod` | `reporting_period_test.dart` | Test đã bổ sung, chưa chạy lại do toolchain | Chưa đối soát |
+
+Liên kết test: [`../backend/test/`](../backend/test/) và
+[`../test/`](../test/).
+
 ## 1. Quy ước
 
 - `UI`: route production dùng hash, ví dụ `/#/pos`.

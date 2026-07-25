@@ -1,5 +1,28 @@
 # Danh mục kiểm thử nghiệm thu
 
+> **Bằng chứng hiện có 25/07/2026:** backend P0 suite đạt `28/28` trên local cho
+> permission, debt, sales metric, invoice metadata và tax policy. Các test
+> Flutter cho reporting period, CSV công nợ và mobile AI/POS đã được bổ sung;
+> việc chạy lại toàn bộ Flutter suite bị chặn trước compile do native hook
+> `win32` không tìm thấy C++ compiler. Không test local nào thay thế smoke test
+> production.
+
+## Test delta bắt buộc trước khi đóng bản vá
+
+| ID | Phạm vi | Điều kiện đạt | Trạng thái hiện tại |
+|---|---|---|---|
+| TC-RBAC-06 | Role shop A gắn cho member shop B | API từ chối; không cấp quyền chéo shop | Unit test đạt; route/production chưa xác minh |
+| TC-RBAC-07 | `x-shop-id` rỗng, số âm, thập phân, chuỗi nhập nhằng | 400, không fallback sang scope rộng | Unit test parser đạt; production chưa xác minh |
+| TC-SALE-07 | Dữ liệu có cả `COMPLETED` và `DELIVERED` | Filter completed và summary bao gồm đúng cả hai | Unit/source test đạt; production chưa đối soát |
+| TC-ERR-01 | Dashboard API timeout/403/500 | Hiện error/retry, không hiển thị số 0 như dữ liệu thật | Code review; production chưa xác minh |
+| TC-DATA-04 | Metadata/route invoice | Một table owner, một route set, CRUD không regression | Metadata test đạt; CRUD production chưa xác minh |
+| TC-TAX-06 | Declared < paid, số âm/NaN cũ | Owed = 0; overpaid tách riêng; UI không hiện nghĩa vụ âm | Unit test đạt; production chưa xác minh |
+| TC-TAX-07 | MST `0123456789` và biến thể đơn vị phụ thuộc | 422, không tạo XML | Unit test đạt; production chưa xác minh |
+| TC-DEBT-04 | API receivable → UI → CSV | Cùng số dòng và tổng còn nợ; không âm | Backend/source review đạt một phần; Flutter test chưa chạy lại; production chưa đối soát |
+| TC-CSV-01 | Tên có dấu phẩy/nháy và ô bắt đầu `=+-@` | CSV UTF-8 đúng và không thực thi formula | Test đã bổ sung nhưng chưa chạy lại; browser production chưa xác minh |
+| TC-MOB-01 | POS 390×844 với cart và AI | Checkout không bị nav/AI che | Test đã bổ sung nhưng chưa chạy lại; viewport production chưa xác minh |
+| TC-PERIOD-01 | Ngày đầu/cuối tháng, tháng 1 | Dashboard/sales/finance dùng cùng from/to | Test đã bổ sung nhưng chưa chạy lại; API production chưa đối soát |
+
 ## 1. Tiền điều kiện chung
 
 - Môi trường staging tách production.

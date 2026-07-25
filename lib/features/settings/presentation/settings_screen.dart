@@ -530,7 +530,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               if (shopState.userShops.any(
-                (s) => s['memberType'] == 'OWNER',
+                (s) =>
+                    s['memberType'] == 'OWNER' &&
+                    s['status'] == 'ACTIVE' &&
+                    s['isActive'] != false,
               )) ...[
                 ListTile(
                   leading: HugeIcon(
@@ -574,7 +577,10 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
               ],
-              ...shopState.userShops.map((shop) {
+              ...shopState.userShops.where(
+                (shop) =>
+                    shop['status'] == 'ACTIVE' && shop['isActive'] != false,
+              ).map((shop) {
                 final isActive =
                     shop['shopId'] == shopState.currentShopId &&
                     !shopState.isAllShops;

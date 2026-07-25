@@ -107,9 +107,14 @@ export class AuthService {
             });
             shops = memberships.map(m => {
                 let permissions: Record<string, string> = {};
-                if (m.memberType === 'OWNER') {
+                if (m.memberType === 'OWNER' && m.status === 'ACTIVE' && m.isActive) {
                     permissions = { _owner: 'true' };
-                } else if (m.status === 'ACTIVE' && m.role?.permissions) {
+                } else if (
+                    m.status === 'ACTIVE' &&
+                    m.isActive &&
+                    m.role?.shopId === m.shopId &&
+                    m.role.permissions
+                ) {
                     try {
                         permissions = JSON.parse(m.role.permissions);
                     } catch {
@@ -120,6 +125,7 @@ export class AuthService {
                     shopId: m.shopId,
                     memberType: m.memberType,
                     status: m.status,
+                    isActive: m.isActive,
                     role: m.role ? { id: m.role.id, name: m.role.name } : null,
                     permissions,
                 };

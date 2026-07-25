@@ -1,5 +1,28 @@
 # Business Requirement Document (BRD)
 
+> **Trạng thái cập nhật 25/07/2026:** các trạng thái baseline trong bảng phía
+> dưới mô tả production đã đánh giá trước bản vá. Bảng delta sau đây là bằng
+> chứng code/test local trên working tree sau `bba0c5f5`, chưa thay thế nghiệm
+> thu production.
+
+## Delta yêu cầu sau bản vá local
+
+| ID | Kết quả code/test | Trạng thái phát hành |
+|---|---|---|
+| BR-RBAC-01 | Middleware kiểm tra membership active, role cùng shop và permission theo module/cấp độ; test permission đạt | Đã xác minh code/test; chưa production |
+| BR-RBAC-02 | `all` chỉ cho phép thao tác xem, giao tập shop được xác thực và tập shop có quyền; input shop không hợp lệ fail-closed | Đã xác minh code/test; chưa production |
+| BR-SALE-05 | Status hoàn tất gồm `COMPLETED` và `DELIVERED`; query list được kiểm tra property path; kỳ tháng dùng helper chung | Backend test đạt; helper Flutter đã review nhưng test chưa chạy lại; chưa đối soát production |
+| BR-DEBT-01 | UI lấy receivable thật từ `/customer-receivables`; không còn tạo danh sách nợ mẫu trên màn hình | Đã xác minh code; chưa production |
+| BR-REP-01 | CSV công nợ dùng dữ liệu API, BOM UTF-8, escape CSV/formula, số còn nợ không âm và tổng kiểm soát | Đã xác minh code; test Flutter đã bổ sung nhưng chưa chạy lại; chưa đối chiếu production |
+| BR-TAX-02 | API chuẩn hóa số thuế đầu vào và số phải nộp không âm; số nộp thừa được tách riêng | Đã xác minh code/test; chưa production |
+| BR-TAX-03 | Thiếu/sai MST và placeholder cũ `0123456789` đều chặn xuất XML | Đã xác minh code/test; chưa production |
+| BR-UX-01 | Các vùng dashboard/finance liên quan dùng error/retry rõ hơn thay vì số fallback | Đã xác minh code; chưa production |
+| BR-SALE-06 | CTA POS mobile có khoảng an toàn; AI không phủ POS mobile | Đã xác minh code; test layout đã bổ sung nhưng chưa chạy lại; chưa kiểm tra production |
+
+Các yêu cầu vẫn mở: transaction toàn vẹn sale/return, đối soát số liệu production,
+XSD/import HTKK, accessibility, migration `system_configs` và kiểm thử thiết bị
+mobile thực.
+
 ## 1. Thông tin tài liệu
 
 | Thuộc tính | Giá trị |

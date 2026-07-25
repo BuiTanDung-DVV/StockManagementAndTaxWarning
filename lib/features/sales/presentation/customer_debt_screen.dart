@@ -28,6 +28,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
   List<Map<String, dynamic>> _debts = [];
   bool _isLoading = true;
   bool _isRecordingPayment = false;
+  bool _isExporting = false;
   String? _errorMessage;
 
   @override
@@ -67,7 +68,9 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
+        _errorMessage = e is ApiException
+            ? e.message
+            : 'Dữ liệu công nợ không hợp lệ. Vui lòng thử lại.';
       });
     }
   }
@@ -75,41 +78,64 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
 
-    double totalDebt = 0;
     double totalPaid = 0;
+    double totalRemaining = 0;
     for (final d in _debts) {
-      totalDebt += _asDouble(d['totalAmount']);
-      totalPaid += _asDouble(d['paidAmount']);
+      final total = _asDouble(d['totalAmount']);
+      final paid = _asDouble(d['paidAmount']);
+      totalPaid += paid;
+      totalRemaining += (total - paid).clamp(0, double.infinity).toDouble();
     }
-    final totalRemaining = totalDebt - totalPaid;
 
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
         title: Text(
-          'Sổ Theo Dõi Nợ Khách Hàng',
+          isMobile ? 'Sổ nợ khách hàng' : 'Sổ Theo Dõi Nợ Khách Hàng',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         backgroundColor: c.surface,
         elevation: 0,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: ElevatedButton.icon(
-              onPressed: _isLoading || _debts.isEmpty
-                  ? null
-                  : () => ExcelExportService.exportCustomerDebtsToExcel(_debts),
-              icon: const Icon(Icons.table_chart_rounded, size: 16),
-              label: const Text(
-                'Xuất Excel Sổ Nợ',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                foregroundColor: Colors.white,
-              ),
-            ),
+            padding: EdgeInsets.only(right: isMobile ? 8 : 16),
+            child: isMobile
+                ? IconButton(
+                    onPressed: _isLoading || _isExporting || _debts.isEmpty
+                        ? null
+                        : _exportDebts,
+                    tooltip: 'Xuất Excel sổ nợ',
+                    icon: _isExporting
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.table_chart_rounded),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: _isLoading || _isExporting || _debts.isEmpty
+                        ? null
+                        : _exportDebts,
+                    icon: _isExporting
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.table_chart_rounded, size: 16),
+                    label: const Text(
+                      'Xuất Excel Sổ Nợ',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -232,10 +258,13 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                         ),
                       ],
                       items: _debts,
+                      emptyMessage: 'Chưa có khoản công nợ khách hàng cần thu.',
                       rowBuilder: (context, item, index) {
                         final total = _asDouble(item['totalAmount']);
                         final paid = _asDouble(item['paidAmount']);
-                        final remaining = total - paid;
+                        final remaining = (total - paid)
+                            .clamp(0, double.infinity)
+                            .toDouble();
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(
@@ -403,6 +432,30 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _exportDebts() async {
+    if (_isExporting || _debts.isEmpty) return;
+    setState(() => _isExporting = true);
+    try {
+      final launched = await ExcelExportService.exportCustomerDebtsToExcel(
+        _debts,
+      );
+      if (!mounted) return;
+      if (launched) {
+        ToastService.showSuccess('Đã tạo file Excel sổ nợ.');
+      } else {
+        ToastService.showError(
+          'Trình duyệt không cho phép tải file. Vui lòng thử lại.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ToastService.showError('Không thể xuất file sổ nợ. Vui lòng thử lại.');
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 
   Future<void> _showRepayDialog(

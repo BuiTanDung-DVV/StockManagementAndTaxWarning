@@ -92,3 +92,22 @@ test('unrelated module permissions never satisfy the request', () => {
         false,
     );
 });
+
+test('employee role from another shop never grants permissions', () => {
+    const member = {
+        memberType: 'EMPLOYEE',
+        role: {
+            shopId: 99,
+            permissions: JSON.stringify({ finance: 'full' }),
+        },
+    };
+
+    assert.equal(
+        membershipHasAnyPermission(member, ['finance'], 'view', 10),
+        false,
+    );
+    assert.equal(
+        membershipHasAnyPermission(member, ['finance'], 'view', 99),
+        true,
+    );
+});

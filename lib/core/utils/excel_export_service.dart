@@ -53,13 +53,28 @@ class ExcelExportService {
   }
 
   /// Export Customer Debt Ledger to Excel CSV
-  static void exportCustomerDebtsToExcel(List<dynamic> debts) {
+  static Future<bool> exportCustomerDebtsToExcel(List<dynamic> debts) {
+    return _downloadFile(
+      buildCustomerDebtsCsv(debts),
+      'So_No_Khach_Hang_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
+    );
+  }
+
+  /// Builds a deterministic, Excel-compatible CSV for the receivables ledger.
+  ///
+  /// Kept separate from the browser download so field escaping and control
+  /// totals can be covered by unit tests.
+  static String buildCustomerDebtsCsv(
+    List<dynamic> debts, {
+    DateTime? exportedAt,
+  }) {
     final StringBuffer buffer = StringBuffer();
     buffer.write('\uFEFF');
+    final exportTime = exportedAt ?? DateTime.now();
 
     buffer.writeln('SỔ THEO DÕI NỢ KHÁCH HÀNG MUA CHỊU - SMARTSTOCK');
     buffer.writeln(
-      'Ngày xuất: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+      'Ngày xuất: ${DateFormat('dd/MM/yyyy HH:mm').format(exportTime)}',
     );
     buffer.writeln();
 
@@ -69,39 +84,37 @@ class ExcelExportService {
 
     double totalRemainingDebt = 0;
     for (final item in debts) {
-      final name = (item['customerName'] ?? 'Khách lẻ').toString().replaceAll(
-        ',',
-        ' ',
+      final name = _safeSpreadsheetText(
+        (item['customerName'] ?? 'Khách lẻ').toString(),
       );
-      final phone = item['customerPhone'] ?? '';
-      final code = item['orderCode'] ?? '';
-      final date = item['createdAt'] != null
-          ? DateFormat(
-              'dd/MM/yyyy',
-            ).format(DateTime.tryParse(item['createdAt']) ?? DateTime.now())
-          : '';
+      final phone = _safeSpreadsheetText(
+        item['customerPhone']?.toString() ?? '',
+      );
+      final code = _safeSpreadsheetText(item['orderCode']?.toString() ?? '');
+      final parsedDate = DateTime.tryParse(item['createdAt']?.toString() ?? '');
+      final date = parsedDate == null
+          ? ''
+          : DateFormat('dd/MM/yyyy').format(parsedDate);
       final total =
           num.tryParse(item['totalAmount']?.toString() ?? '0')?.toDouble() ??
           0.0;
       final paid =
           num.tryParse(item['paidAmount']?.toString() ?? '0')?.toDouble() ??
           0.0;
-      final remaining = total - paid;
+      final remaining = (total - paid).clamp(0, double.infinity).toDouble();
 
       totalRemainingDebt += remaining;
 
       buffer.writeln(
-        '"$name","$phone","$code","$date",$total,$paid,$remaining',
+        '${_csvCell(name)},${_csvCell(phone)},${_csvCell(code)},'
+        '${_csvCell(date)},$total,$paid,$remaining',
       );
     }
 
     buffer.writeln();
     buffer.writeln('TỔNG NỢ CẦN THU CÒN LẠI,,,,,,$totalRemainingDebt');
 
-    _downloadFile(
-      buffer.toString(),
-      'So_No_Khach_Hang_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
-    );
+    return buffer.toString();
   }
 
   /// Export Inventory Items to Excel CSV
@@ -142,9 +155,24 @@ class ExcelExportService {
     );
   }
 
-  static void _downloadFile(String content, String fileName) {
+  static String _safeSpreadsheetText(String value) {
+    final trimmedLeft = value.trimLeft();
+    if (trimmedLeft.startsWith('=') ||
+        trimmedLeft.startsWith('+') ||
+        trimmedLeft.startsWith('-') ||
+        trimmedLeft.startsWith('@') ||
+        trimmedLeft.startsWith('\t') ||
+        trimmedLeft.startsWith('\r')) {
+      return "'$value";
+    }
+    return value;
+  }
+
+  static String _csvCell(String value) => '"${value.replaceAll('"', '""')}"';
+
+  static Future<bool> _downloadFile(String content, String fileName) {
     final bytes = utf8.encode(content);
     final uri = Uri.dataFromBytes(bytes, mimeType: 'text/csv;charset=utf-8');
-    launchUrl(uri);
+    return launchUrl(uri);
   }
 }

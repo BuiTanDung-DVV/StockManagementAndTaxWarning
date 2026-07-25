@@ -4,6 +4,26 @@
 > vấn pháp lý. Công thức/rule phải được chuyên gia thuế hoặc kế toán có thẩm quyền
 > duyệt trước khi dùng để kê khai.
 
+> **Cập nhật code/test local 25/07/2026:** nội dung pháp lý và nguồn đã có trong
+> tài liệu không bị thay đổi. Bản vá mới chưa deploy nên chưa được tuyên bố đạt
+> trên production.
+
+## Kết quả bản vá thuế local
+
+| Kiểm soát | Kết quả | Bằng chứng | Production |
+|---|---|---|---|
+| Ngưỡng 100 triệu lỗi thời | Code/UI hiện dùng policy 2026 với ngưỡng 1 tỷ và metadata nguồn/hiệu lực đã có | [`tax-policy.ts`](../backend/src/tax/tax-policy.ts), [`tax_config_provider.dart`](../lib/features/settings/providers/tax_config_provider.dart) | Chưa xác minh sau deploy |
+| Thuế âm | `normalizeNonNegative` và `calculateOutstandingTax` chặn số phải nộp âm; số nộp thừa trả riêng | [`tax-policy.ts`](../backend/src/tax/tax-policy.ts), [`finance.service.ts`](../backend/src/services/finance.service.ts) | Chưa xác minh sau deploy |
+| MST fallback | Không còn tự điền MST; thiếu/sai MST hoặc placeholder `0123456789` trả lỗi nghiệp vụ | [`tax.controller.ts`](../backend/src/controllers/tax.controller.ts), [`tax-policy.test.js`](../backend/test/tax-policy.test.js) | Chưa xác minh sau deploy |
+| Kỳ tính thuế | Chỉ nhận tháng `01`–`12`, quý `Q1`–`Q4` và năm có policy được xác minh | [`tax-policy.ts`](../backend/src/tax/tax-policy.ts) | Chưa xác minh sau deploy |
+
+`Đã xác minh qua code/test` không đồng nghĩa XML đã đúng XSD hoặc import được
+HTKK. TC-TAX-03 vẫn `Bị chặn` cho đến khi có fixture, validator và biên bản import
+trên phiên bản HTKK mục tiêu.
+
+Runtime DDL cho `system_configs` cũng chưa được loại vì cần migration có kiểm
+soát trước; không đưa thay đổi schema này vào bản vá thuế an toàn.
+
 ## 1. Ngày chốt pháp lý
 
 Ngày rà soát: **25/07/2026**.
@@ -28,7 +48,10 @@ Nguồn chính thức/tham chiếu cơ quan nhà nước:
 Khi có văn bản mới, không được sửa một hằng số đơn lẻ rồi coi là hoàn tất; phải đánh
 giá ngày hiệu lực, điều khoản chuyển tiếp, loại đối tượng, ngành và kỳ tính.
 
-## 2. Hành vi code hiện tại
+## 2. Hành vi production baseline trước bản vá
+
+Bảng này bảo toàn finding As-Is dùng để so sánh. Trạng thái code local mới nằm ở
+phần “Kết quả bản vá thuế local” phía trên.
 
 | Thành phần | Hành vi baseline | Trạng thái |
 |---|---|---|

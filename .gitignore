@@ -97,6 +97,10 @@ skills-lock.json
 codegraph/
 .cursor/
 .understand-anything/
+.codex-build/
+.codex-flutter-state/
+AGENTS.md
+CODEX_GUIDE_VI.md
 
 # Deployment configs
 .vercel/

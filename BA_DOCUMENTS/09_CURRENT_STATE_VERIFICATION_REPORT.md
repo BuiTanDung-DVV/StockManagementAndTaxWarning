@@ -1,5 +1,36 @@
 # Báo cáo xác minh tính chính xác hiện tại
 
+> **Cập nhật 25/07/2026:** báo cáo gốc là bằng chứng production trước bản vá.
+> Bảng dưới đây ghi kết quả local mới và không nâng trạng thái production khi
+> chưa deploy/smoke test.
+
+## Kết quả xác minh bản vá local
+
+| Finding cũ | Kết quả hiện tại | Bằng chứng | Trạng thái |
+|---|---|---|---|
+| All-shops có thể tăng quyền | Parser fail-closed; chỉ view mới được aggregate; membership/role phải active và cùng shop | permission/shop-scope code và tests | Đã xác minh code/test; production chưa xác minh |
+| Sales summary lệch list | Status `completed` bao gồm `COMPLETED`/`DELIVERED`; query list dùng property path đúng; kỳ tháng dùng helper chung | sales metric và reporting period tests | Đúng một phần; chưa đối soát production |
+| Dashboard che lỗi bằng số fallback | Nhiều vùng quan trọng chuyển sang error/retry hiển thị | source review | Đã xác minh code; chưa production |
+| Hai entity/route `invoices` | Chỉ còn một entity metadata và một nhóm route invoice | invoice metadata tests | Đã xác minh code/test; chưa CRUD production |
+| MST fallback | Fallback đã bỏ; placeholder cũ bị từ chối | tax policy tests | Đã xác minh code/test; chưa export production |
+| Thuế âm | Số phải nộp clamp 0; số nộp thừa trả riêng; item cũ âm được sanitize khi đọc | tax policy/finance service tests và review | Đã xác minh code/test; chưa production |
+| Sổ nợ hard-code | UI gọi `/customer-receivables`; remaining không âm; payment dùng sales payment API | debt tests và source review | Đã xác minh code; chưa đối soát production |
+| CSV nợ không kiểm soát | CSV dùng dữ liệu API, escape dấu nháy/dấu phẩy/formula, BOM UTF-8 và tổng còn nợ | Flutter test đã bổ sung + source review | Đã xác minh code; test chưa chạy lại; chưa tải production |
+| POS/AI che CTA mobile | CTA có safe margin, AI ẩn riêng trên POS mobile | layout test đã bổ sung + source review | Đã xác minh code; test chưa chạy lại; chưa viewport production |
+| Kỳ dashboard/sales/finance lệch nhau | Kỳ tháng hiện tại dùng helper chung; expense category nhận cùng from/to | reporting-period test đã bổ sung + source review | Đã xác minh code; test chưa chạy lại; chưa đối soát production |
+
+### Phần vẫn bị chặn hoặc còn rủi ro
+
+- Chưa có commit/deployment chứa toàn bộ bản vá local tại thời điểm cập nhật.
+- Chưa chạy lại smoke test production desktop/mobile và kiểm thử lỗi API có chủ đích.
+- Chưa có dataset chuẩn để chứng minh dashboard, sales, finance, kho và công nợ
+  khớp tuyệt đối.
+- XML chưa được validate XSD/import HTKK.
+- `system_configs` vẫn có DDL runtime và unique key chưa mô hình hóa đầy đủ theo
+  shop; cần migration riêng.
+- RBAC frontend/backend vẫn còn mapping module chưa thống nhất hoàn toàn; xem
+  [ma trận RBAC](04_USER_ROLES_AND_RBAC_MATRIX.md).
+
 ## 1. Phạm vi và phương pháp
 
 Đối chiếu bốn lớp:
@@ -16,7 +47,7 @@ flowchart LR
 thực hiện giao dịch ghi dữ liệu, hoàn tiền, xóa dữ liệu hoặc đổi phân quyền. Vì vậy,
 những luồng cần tạo dữ liệu được ghi `Bị chặn`.
 
-## 2. Kết quả theo nhóm
+## 2. Kết quả production baseline trước bản vá
 
 | ID | Hạng mục | Trạng thái | Bằng chứng | Ảnh hưởng |
 |---|---|---|---|---|
@@ -49,7 +80,7 @@ những luồng cần tạo dữ liệu được ghi `Bị chặn`.
 | VER-27 | Responsive dashboard/settings | Không chính xác | Chip bị cắt, text rút gọn quá mức, AI che nội dung/nav | Cao |
 | VER-28 | Kho tri thức AI | Không chính xác | Nội dung mặc định khẳng định ngưỡng 100 triệu đã lỗi thời | Rất cao |
 | VER-29 | Accessibility | Bị chặn | Chưa kiểm thử screen reader, keyboard, contrast và WCAG | Trung bình |
-| VER-30 | Build và test | Đúng một phần | Web/backend build thành công; Flutter test và backend lint bị chặn bởi toolchain | Trung bình |
+| VER-30 | Build và test | Đúng một phần | Web/backend build thành công; Flutter test và backend lint bị chặn bởi toolchain tại thời điểm audit baseline | Trung bình |
 
 ## 3. Bằng chứng trực tiếp
 

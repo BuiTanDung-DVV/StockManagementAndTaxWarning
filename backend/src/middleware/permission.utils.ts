@@ -10,6 +10,7 @@ const permissionHierarchy: PermissionLevel[] = [
 export interface PermissionMembership {
     memberType?: string | null;
     role?: {
+        shopId?: number | null;
         permissions?: string | Record<string, unknown> | null;
     } | null;
 }
@@ -88,8 +89,10 @@ export const membershipHasAnyPermission = (
     member: PermissionMembership,
     keys: string[],
     required: PermissionLevel,
+    shopId?: number,
 ): boolean => {
     if (member.memberType === 'OWNER') return true;
+    if (shopId !== undefined && member.role?.shopId !== shopId) return false;
 
     const permissions = parseRolePermissions(member.role?.permissions);
     return keys.some((key) =>

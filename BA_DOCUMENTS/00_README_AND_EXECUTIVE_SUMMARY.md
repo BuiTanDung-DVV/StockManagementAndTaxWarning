@@ -1,5 +1,28 @@
 # Bộ tài liệu BA SmartStock
 
+> **Cập nhật bản vá local ngày 25/07/2026:** baseline production và ảnh chụp trong
+> bộ tài liệu này vẫn phản ánh bản đã deploy trước bản vá mới. Các kết luận ghi
+> `Đã xác minh qua code/test` bên dưới chỉ áp dụng cho working tree dựa trên
+> commit `bba0c5f5`; chưa được coi là `Đã xác minh production` cho đến khi
+> commit, push, deploy và smoke test lại frontend/backend.
+
+### Tóm tắt trạng thái sau bản vá local
+
+| Nhóm | Bằng chứng local | Trạng thái production sau bản vá |
+|---|---|---|
+| RBAC và multi-shop | Parser shop scope fail-closed; membership/role phải active và cùng shop; test permission/shop-scope đạt | Chưa deploy, chưa chạy negative test production |
+| Sales summary | Chuẩn hóa status hoàn tất hiện tại/cũ; query dùng property path TypeORM; kỳ tháng dùng helper chung | Chưa đối soát lại API/list/summary trên production |
+| Dashboard và báo cáo | Bổ sung error/retry thay cho fallback gây hiểu nhầm; dashboard/sales/finance dùng cùng kỳ tháng hiện tại | Chưa chụp và kiểm tra production sau bản vá |
+| Invoice | Chỉ còn một entity sở hữu bảng `invoices`; route invoice trùng đã loại; metadata test đạt | Chưa smoke test CRUD invoice production |
+| Thuế | Ngưỡng 2026 có nguồn hiện có; chặn MST placeholder; số phải nộp không âm và giữ riêng số nộp thừa | Chưa deploy; XML vẫn chưa được chứng nhận import HTKK |
+| Công nợ khách hàng | Màn hình dùng `/customer-receivables`; CSV sinh từ dữ liệu API, escape công thức và có tổng kiểm soát | Chưa đối chiếu CSV với dữ liệu production |
+| Mobile POS/AI | Chừa vùng cho CTA thanh toán; ẩn AI trên POS mobile; dispose controller | Chưa kiểm tra thiết bị/viewport production sau bản vá |
+
+Nguồn test và code liên quan được truy vết tại
+[Ma trận truy vết](08_REQUIREMENTS_TRACEABILITY_MATRIX.md),
+[Báo cáo xác minh](09_CURRENT_STATE_VERIFICATION_REPORT.md) và
+[Danh mục nghiệm thu](11_ACCEPTANCE_TEST_CATALOG.md).
+
 ## 1. Baseline được xác minh
 
 | Thuộc tính | Giá trị |
@@ -72,9 +95,11 @@ Các vấn đề trên được mô tả với bằng chứng và tiêu chí ngh
 - Mã backend: [`../backend/src/`](../backend/src/)
 - Migration/SQL: [`../backend/database/`](../backend/database/)
 - Ảnh production: [`assets/production-audit-2026-07-25/`](assets/production-audit-2026-07-25/)
-- Kết quả build: Flutter Web release và backend TypeScript build đều thành công.
-- Kiểm thử Flutter bị chặn bởi toolchain C++/native asset `win32` trên máy kiểm thử.
-- Backend lint bị chặn vì dự án chưa khai báo/cài executable `eslint`.
+- Baseline trước bản vá: Flutter Web release và backend TypeScript build thành công.
+- Sau bản vá local: backend build/lint và P0 suite `28/28` thành công.
+- Nhóm Flutter test mục tiêu đã được bổ sung nhưng lệnh chạy bị chặn trước khi
+  compile do native hook `win32` không tìm thấy C++ compiler; chưa ghi nhận
+  Flutter suite đạt. `flutter analyze` và Flutter Web release build vẫn đạt.
 
 ## 6. Quy tắc quản trị tài liệu
 

@@ -1,5 +1,33 @@
 # Báo cáo đánh giá UI/UX production
 
+> **Lưu ý phiên bản:** ảnh và nhận xét production trong báo cáo này được giữ làm
+> bằng chứng As-Is trước bản vá. Các cải thiện local dưới đây chưa được deploy,
+> vì vậy không dùng ảnh cũ để kết luận giao diện production đã sửa.
+
+## Delta UI/UX sau bản vá local
+
+| Khu vực | Thay đổi đã xác minh qua code/test | Cần xác minh lại production |
+|---|---|---|
+| Dashboard | Các provider/vùng quan trọng có error/retry rõ; kỳ tháng dùng helper chung với sales/finance | API failure, empty state và retry trên desktop/mobile |
+| Sales | Summary dùng cùng kỳ báo cáo tháng hiện tại; status hoàn tất tương thích dữ liệu cũ/mới | List và summary khớp theo cùng filter/dataset |
+| Finance | Cash summary, transaction và phân loại chi phí nhận cùng `from/to` | Ba khối số liệu khớp và không dùng cache kỳ cũ |
+| Công nợ | Có loading, empty, error an toàn; nút export có trạng thái đang xử lý và phản hồi lỗi download | Dữ liệu API thật và file CSV tải được từ trình duyệt production |
+| POS mobile | Chừa 104 px cho CTA phía trên navigation; ẩn AI assistant trên `/pos` khi viewport dưới 800 px | Viewport 390×844, bàn phím ảo và luồng thanh toán đầy đủ |
+| AI | Controller được dispose; không che CTA POS mobile | Không có regression trên route desktop/mobile khác |
+
+Không thay đổi kết luận accessibility: chưa có kiểm thử keyboard, screen reader,
+zoom 200% và contrast chuyên biệt.
+
+### Ảnh xác minh production tại commit nền `bba0c5f5`
+
+Các ảnh dưới đây được chụp sau nhóm bản vá P0 trước, nhưng trước working tree mới
+trong báo cáo delta. Chúng là mốc so sánh, không phải bằng chứng rằng bản vá local
+hiện tại đã được deploy:
+
+- [Dashboard desktop](assets/production-audit-2026-07-25/13-dashboard-desktop-after-p0.png)
+- [Tài chính desktop](assets/production-audit-2026-07-25/14-finance-desktop-after-p0.png)
+- [Lịch sử đơn desktop](assets/production-audit-2026-07-25/15-sales-desktop-after-p0.png)
+
 ## 1. Phạm vi
 
 | Thuộc tính | Giá trị |

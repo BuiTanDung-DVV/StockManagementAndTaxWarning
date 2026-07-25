@@ -26,7 +26,25 @@ export const normalizeTaxCode = (value?: string | null): string => {
 };
 
 export const isValidVietnamTaxCode = (value?: string | null): boolean => {
-    return /^\d{10}(?:-?\d{3})?$/.test(normalizeTaxCode(value));
+    const taxCode = normalizeTaxCode(value);
+    if (!/^\d{10}(?:-?\d{3})?$/.test(taxCode)) return false;
+
+    // This value was previously used as an XML fallback. It must never make a
+    // generated declaration look as if it belongs to a real taxpayer.
+    return taxCode !== '0123456789'
+        && taxCode !== '0123456789-001'
+        && taxCode !== '0123456789001';
+};
+
+export const calculateOutstandingTax = (
+    declared: number,
+    paid: number,
+): { owed: number; overpaid: number } => {
+    const balance = normalizeNonNegative(declared) - normalizeNonNegative(paid);
+    return {
+        owed: Math.max(balance, 0),
+        overpaid: Math.max(-balance, 0),
+    };
 };
 
 export const requireValidTaxCode = (value?: string | null): string => {

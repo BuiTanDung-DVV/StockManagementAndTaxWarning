@@ -1,5 +1,36 @@
 # Product Backlog và lộ trình nâng cấp
 
+> **Cập nhật backlog 25/07/2026:** các mục ghi `Đã sửa local` chưa được đóng.
+> Chỉ đóng sau commit, deploy và nghiệm thu production theo
+> [danh mục test](11_ACCEPTANCE_TEST_CATALOG.md).
+
+## Trạng thái các finding sau bản vá local
+
+| Nhóm | Trạng thái local | Việc còn lại trước khi đóng |
+|---|---|---|
+| P0 RBAC/multi-shop | Đã sửa phần membership active, role cùng shop, all-shops view-only và input fail-closed | Test route integration và negative test production; thống nhất permission key frontend/backend |
+| Sales summary | Đã sửa status cũ/mới, query property path và kỳ tháng | Đối soát list/summary với seed và production |
+| Dashboard error state | Đã thay một số fallback bằng error/retry | Bao phủ toàn bộ màn chính, kiểm thử 4xx/5xx/timeout |
+| Invoice conflict | Đã hợp nhất entity/route và có metadata test | Smoke test CRUD, kiểm tra migration/data hiện hữu |
+| Thuế âm/MST placeholder | Đã sửa và có unit test | Deploy, smoke test; kiểm thử XML/XSD/HTKK riêng |
+| Customer debt/CSV | Đã nối API thật, chuẩn hóa remaining và CSV an toàn; test Flutter đã bổ sung nhưng chưa chạy lại | Đối soát API–DB–CSV; bổ sung kỳ xuất rõ |
+| Mobile POS/AI | Đã chừa CTA và ẩn AI trên POS mobile; test Flutter đã bổ sung nhưng chưa chạy lại | Test 390×844, bàn phím ảo, thiết bị thật |
+| Reporting period | Đã dùng helper chung ở dashboard/sales/finance | Chuẩn hóa timezone backend và thêm `period/asOf` vào response |
+
+### Backlog còn mở sau bản vá
+
+1. `P0-VERIFY`: deploy cùng commit frontend/backend và chạy toàn bộ smoke/negative
+   test không phá dữ liệu.
+2. `P0-RBAC-MAP`: thống nhất key permission cho tax-config/settings/finance và
+   điều kiện hiển thị menu với kiểm tra API.
+3. `V1.1-METRIC-CONTRACT`: mọi summary trả `from`, `to`, timezone, filter,
+   `asOf`; có reconciliation fixture.
+4. `V1.1-DEBT-RECON`: đối soát receivable, payment history, cash ledger và CSV.
+5. `V1.1-RESPONSIVE`: matrix viewport, keyboard ảo và screenshot regression.
+6. `V1.2-SYSTEM-CONFIG-MIGRATION`: tạo migration `system_configs`, thiết kế unique
+   theo shop rồi loại DDL runtime.
+7. `V1.2-TAX-EXPORT`: XSD/version contract, fixture và biên bản import HTKK.
+
 ## 1. Nguyên tắc ưu tiên
 
 - `P0`: bảo mật, phân quyền, sai dữ liệu/công thức hoặc gián đoạn nghiệp vụ.
@@ -31,7 +62,7 @@ khi chốt thiết kế kỹ thuật.
 | V11-03 | Mobile dashboard/POS/settings bị cắt/che | Row/chip không wrap; AI FAB và nav dùng vùng chồng lấp | Responsive layout theo breakpoint; safe area; chuyển FAB sang vị trí không che CTA | Hoàn tất luồng trên mobile | V1.1 | M | Thay đổi layout desktop | 390×844 không overflow; POS hoàn tất được; nội dung cuối trang cuộn lên trên nav |
 | V11-04 | Loading/empty/error không đồng nhất | Mỗi feature tự xử lý | Chuẩn hóa component và error model; retry có kiểm soát | Dễ hiểu khi lỗi mạng/dữ liệu rỗng | V1.1 | M | Che mất lỗi nghiệp vụ nếu map sai | Tất cả màn chính có loading/empty/error; lỗi 4xx giữ message an toàn |
 | V11-05 | Nhiều controller không hỗ trợ `all` | Chỉ sales/finance/inventory có helper scope | Chuẩn hóa `ShopScope` bắt buộc và repository helper | Ngăn query thiếu shopId | V1.1 | L | Query tổng hợp lớn/chậm | Mọi query shop-scoped có test shop đơn + nhiều shop, không trả ngoài scope |
-| V11-06 | Flutter test và backend lint không chạy trên môi trường hiện tại | Native asset `win32`; thiếu eslint dependency | Chuẩn hóa toolchain CI; pin dependency; thêm lint config/package | Có cổng chất lượng lặp lại | V1.1 | M | Nâng package gây warning mới | CI chạy analyze, test web, backend build/lint trên mỗi PR |
+| V11-06 | Flutter test bị chặn bởi native hook `win32`; chưa có bằng chứng CI | Máy kiểm thử thiếu C++ compiler mà dependency native hook yêu cầu; CI chưa là cổng phát hành | Chuẩn hóa toolchain CI; pin dependency; lưu artifact test; giữ backend build/lint/P0 trong pipeline | Có cổng chất lượng lặp lại | V1.1 | M | Nâng package gây warning mới | CI chạy analyze, Flutter test, backend build/lint/P0 trên mỗi PR |
 
 ## 4. V1.2 – Hoàn thiện nghiệp vụ
 

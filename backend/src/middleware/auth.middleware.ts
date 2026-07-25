@@ -5,6 +5,7 @@ import { config } from '../config/env.config';
 import { AppDataSource } from '../config/db.config';
 import { ShopMember } from '../shop/entities';
 import { requestContext } from './context.middleware';
+import { parseRequestedShopScope } from './shop-scope.utils';
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -39,15 +40,23 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
 
   try {
     // Parse shop ID from header or query param (validation deferred to requireShopId)
-    const shopIdValue = req.headers['x-shop-id'] || req.query.shopId;
-    if (shopIdValue) {
-      if (shopIdValue === 'all') {
+    const shopIdValue = req.headers['x-shop-id'] ?? req.query.shopId;
+    if (shopIdValue !== undefined) {
+      const requestedScope = parseRequestedShopScope(shopIdValue);
+      if (!requestedScope) {
+        return res.status(400).json({
+          success: false,
+          message: 'Thông tin cửa hàng không hợp lệ',
+        });
+      }
+
+      if (requestedScope.kind === 'all') {
         if (!AppDataSource.isInitialized) {
             await AppDataSource.initialize();
         }
         const memberRepo = AppDataSource.getRepository(ShopMember);
         const members = await memberRepo.find({
-            where: { userId: decoded.sub, isActive: true }
+            where: { userId: decoded.sub, isActive: true, status: 'ACTIVE' }
         });
         if (!members.length) {
             return res.status(403).json({
@@ -59,21 +68,24 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
         req.shopIds = members.map(m => m.shopId);
         // We do not set req.shopId
       } else {
-        const shopId = parseInt(shopIdValue as string, 10);
-        if (!isNaN(shopId)) {
+        const shopId = requestedScope.shopId;
           if (!AppDataSource.isInitialized) {
               await AppDataSource.initialize();
           }
           const memberRepo = AppDataSource.getRepository(ShopMember);
           const isMember = await memberRepo.findOne({ 
-              where: { shopId, userId: decoded.sub, isActive: true } 
+              where: {
+                shopId,
+                userId: decoded.sub,
+                isActive: true,
+                status: 'ACTIVE',
+              }
           });
           
           if (!isMember) {
             return res.status(403).json({ success: false, message: 'Forbidden: You do not have access to this shop' });
           }
           req.shopId = shopId;
-        }
       }
     }
 
