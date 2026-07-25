@@ -229,174 +229,390 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                     const SizedBox(height: 24),
 
                     // Data Table Section using unified AppDataTable
-                    AppDataTable<Map<String, dynamic>>(
-                      title: 'Bảng Danh Sách Khách Hàng Nợ Mua Chịu',
-                      icon: HugeIcons.strokeRoundedBookOpen01,
-                      iconColor: Colors.orange,
-                      columns: const [
-                        AppDataTableColumn(title: 'KHÁCH HÀNG / SĐT', flex: 3),
-                        AppDataTableColumn(title: 'MÃ ĐƠN NỢ', flex: 2),
-                        AppDataTableColumn(
-                          title: 'TỔNG NỢ',
-                          flex: 2,
-                          alignRight: true,
-                        ),
-                        AppDataTableColumn(
-                          title: 'ĐÃ TRẢ',
-                          flex: 2,
-                          alignRight: true,
-                        ),
-                        AppDataTableColumn(
-                          title: 'CÒN NỢ',
-                          flex: 2,
-                          alignRight: true,
-                        ),
-                        AppDataTableColumn(
-                          title: 'THAO TÁC',
-                          flex: 3,
-                          alignRight: true,
-                        ),
-                      ],
-                      items: _debts,
-                      emptyMessage: 'Chưa có khoản công nợ khách hàng cần thu.',
-                      rowBuilder: (context, item, index) {
-                        final total = _asDouble(item['totalAmount']);
-                        final paid = _asDouble(item['paidAmount']);
-                        final remaining = (total - paid)
-                            .clamp(0, double.infinity)
-                            .toDouble();
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 14,
+                    if (isMobile)
+                      _buildMobileDebtList(c)
+                    else
+                      AppDataTable<Map<String, dynamic>>(
+                        title: 'Bảng Danh Sách Khách Hàng Nợ Mua Chịu',
+                        icon: HugeIcons.strokeRoundedBookOpen01,
+                        iconColor: Colors.orange,
+                        columns: const [
+                          AppDataTableColumn(
+                            title: 'KHÁCH HÀNG / SĐT',
+                            flex: 3,
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['customerName']?.toString() ??
-                                          'Khách hàng',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      item['customerPhone']?.toString() ?? '',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: c.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  item['orderCode']?.toString() ?? '',
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  _currFmt.format(total),
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 12,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  _currFmt.format(paid),
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 12,
-                                    color: AppColors.success,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  _currFmt.format(remaining),
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.orange,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 3,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    OutlinedButton(
-                                      onPressed:
-                                          _isRecordingPayment ||
-                                              _asDouble(item['orderId']) <= 0
-                                          ? null
-                                          : () => _showRepayDialog(
-                                              context,
-                                              item,
-                                              remaining,
-                                            ),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
-                                        ),
-                                        side: const BorderSide(
-                                          color: AppColors.success,
+                          AppDataTableColumn(title: 'MÃ ĐƠN NỢ', flex: 2),
+                          AppDataTableColumn(
+                            title: 'TỔNG NỢ',
+                            flex: 2,
+                            alignRight: true,
+                          ),
+                          AppDataTableColumn(
+                            title: 'ĐÃ TRẢ',
+                            flex: 2,
+                            alignRight: true,
+                          ),
+                          AppDataTableColumn(
+                            title: 'CÒN NỢ',
+                            flex: 2,
+                            alignRight: true,
+                          ),
+                          AppDataTableColumn(
+                            title: 'THAO TÁC',
+                            flex: 3,
+                            alignRight: true,
+                          ),
+                        ],
+                        items: _debts,
+                        emptyMessage:
+                            'Chưa có khoản công nợ khách hàng cần thu.',
+                        rowBuilder: (context, item, index) {
+                          final total = _asDouble(item['totalAmount']);
+                          final paid = _asDouble(item['paidAmount']);
+                          final remaining = (total - paid)
+                              .clamp(0, double.infinity)
+                              .toDouble();
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 14,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item['customerName']?.toString() ??
+                                            'Khách hàng',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
                                         ),
                                       ),
-                                      child: const Text(
-                                        'Thu nợ',
+                                      Text(
+                                        item['customerPhone']?.toString() ?? '',
                                         style: TextStyle(
                                           fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.success,
+                                          color: c.textSecondary,
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    IconButton(
-                                      onPressed: () =>
-                                          _sendZaloReminder(item, remaining),
-                                      icon: const HugeIcon(
-                                        icon: HugeIcons.strokeRoundedComment01,
-                                        color: Colors.blue,
-                                        size: 18,
-                                      ),
-                                      tooltip: 'Nhắc nợ qua Zalo/SMS',
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    item['orderCode']?.toString() ?? '',
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    _currFmt.format(total),
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 12,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    _currFmt.format(paid),
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 12,
+                                      color: AppColors.success,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    _currFmt.format(remaining),
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 3,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      OutlinedButton(
+                                        onPressed:
+                                            _isRecordingPayment ||
+                                                _asDouble(item['orderId']) <= 0
+                                            ? null
+                                            : () => _showRepayDialog(
+                                                context,
+                                                item,
+                                                remaining,
+                                              ),
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          side: const BorderSide(
+                                            color: AppColors.success,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Thu nợ',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.success,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      IconButton(
+                                        onPressed: () =>
+                                            _sendZaloReminder(item, remaining),
+                                        icon: const HugeIcon(
+                                          icon:
+                                              HugeIcons.strokeRoundedComment01,
+                                          color: Colors.blue,
+                                          size: 18,
+                                        ),
+                                        tooltip: 'Nhắc nợ qua Zalo/SMS',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     const SizedBox(height: 88), // UI Breathing Room Padding
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildMobileDebtList(AppThemeColors c) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Row(
+              children: [
+                const HugeIcon(
+                  icon: HugeIcons.strokeRoundedBookOpen01,
+                  color: Colors.orange,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Khách hàng còn nợ',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: c.divider),
+          if (_debts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
+              child: Center(
+                child: Text(
+                  'Chưa có khoản công nợ khách hàng cần thu.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: c.textSecondary),
+                ),
+              ),
+            )
+          else
+            ..._debts.map((item) {
+              final total = _asDouble(item['totalAmount']);
+              final paid = _asDouble(item['paidAmount']);
+              final remaining = (total - paid)
+                  .clamp(0, double.infinity)
+                  .toDouble();
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: c.bg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: c.divider),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item['customerName']?.toString() ??
+                                      'Khách hàng',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                if ((item['customerPhone']?.toString() ?? '')
+                                    .isNotEmpty)
+                                  Text(
+                                    item['customerPhone'].toString(),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: c.textSecondary,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            item['orderCode']?.toString() ?? '',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Còn nợ',
+                        style: TextStyle(fontSize: 12, color: c.textSecondary),
+                      ),
+                      Text(
+                        _currFmt.format(remaining),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _mobileDebtMetric(
+                              'Tổng nợ',
+                              _currFmt.format(total),
+                              c.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _mobileDebtMetric(
+                              'Đã trả',
+                              _currFmt.format(paid),
+                              AppColors.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  _isRecordingPayment ||
+                                      _asDouble(item['orderId']) <= 0
+                                  ? null
+                                  : () => _showRepayDialog(
+                                      context,
+                                      item,
+                                      remaining,
+                                    ),
+                              icon: const Icon(
+                                Icons.payments_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Thu nợ'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextButton.icon(
+                              onPressed: () =>
+                                  _sendZaloReminder(item, remaining),
+                              icon: const Icon(
+                                Icons.message_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Nhắc nợ'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          if (_debts.isNotEmpty) const SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
+
+  Widget _mobileDebtMetric(String label, String value, Color valueColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 
