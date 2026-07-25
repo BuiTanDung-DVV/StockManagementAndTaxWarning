@@ -1,246 +1,188 @@
-# TÀI LIỆU YÊU CẦU NGHIỆP VỤ TỔNG THỂ (BUSINESS REQUIREMENT DOCUMENT - BRD)
-## Hệ thống SmartStock FinTech - Quản lý Bán hàng & Hỗ trợ Cảnh báo Thuế
+# Business Requirement Document (BRD)
 
----
+## 1. Thông tin tài liệu
 
-## 1. Kiểm soát phiên bản (Version Control)
+| Thuộc tính | Giá trị |
+|---|---|
+| Sản phẩm | SmartStock |
+| Phiên bản tài liệu | 2.0 |
+| Baseline | Production ngày 25/07/2026 |
+| Đối tượng | Hộ/cửa hàng bán lẻ, chủ cửa hàng, nhân viên bán hàng/kho/kế toán |
+| Phạm vi | Bán hàng, tồn kho, tài chính, công nợ, cảnh báo thuế, quản trị cửa hàng |
 
-| Phiên bản | Ngày | Người thực hiện | Nội dung thay đổi | Trạng thái |
-| :--- | :--- | :--- | :--- | :--- |
-| v1.0.0 | 2026-07-21 | Senior Business Analyst | Khởi tạo tài liệu BRD hệ thống SmartStock FinTech | Hoàn thành |
+## 2. Bối cảnh và vấn đề nghiệp vụ
 
----
+Cửa hàng nhỏ thường ghi nhận đơn hàng, tồn kho, công nợ và thu/chi trên nhiều công
+cụ tách rời. Hệ quả là:
 
-## 2. Giới Thiệu & Bối Cảnh Dự Án (Project Introduction & Business Context)
+- không biết số liệu nào là nguồn đúng;
+- giá vốn và lợi nhuận khó đối soát;
+- nợ mua thiếu dễ bị bỏ quên;
+- dữ liệu kê khai thuế có thể thiếu hoặc dùng quy tắc đã hết hiệu lực;
+- quyền nhân viên khó kiểm soát khi có nhiều cửa hàng;
+- báo cáo Excel/XML dễ không truy ngược được đến chứng từ.
 
-### 2.1. Bối cảnh thị trường
-Tại Việt Nam, hộ kinh doanh cá thể đóng góp vai trò to lớn vào nền kinh tế nhưng lại là đối tượng gặp nhiều khó khăn nhất trong quá trình chuyển đổi số và tuân thủ các quy định pháp luật về tài chính. Sự ra đời của **Thông tư 88/2021/TT-BTC** (hướng dẫn chế độ kế toán cho hộ kinh doanh, hợp tác xã) và **Nghị định 123/2020/NĐ-CP** (quy định về hóa đơn, chứng từ) đã đặt ra những yêu cầu bắt buộc và khắt khe về việc lưu trữ sổ sách kế toán, hóa đơn chứng từ đầu vào/đầu ra, cùng nghĩa vụ kê khai thuế định kỳ.
+SmartStock hướng đến một hệ thống đơn giản, dễ giải thích trong đồ án và đủ kiểm soát
+để hỗ trợ vận hành. Ứng dụng chỉ hỗ trợ tính toán/cảnh báo; không thay thế tư vấn
+pháp lý, kế toán hoặc cơ quan thuế.
 
-Tuy nhiên, hầu hết các hộ kinh doanh hiện tại đang vận hành theo phương thức truyền thống:
-- Ghi chép sổ sách thủ công bằng giấy hoặc bảng tính Excel rời rạc.
-- Không kiểm soát được tồn kho thực tế so với hóa đơn chứng từ, dẫn đến rủi ro bị xử phạt khi thanh tra thuế.
-- Khó khăn trong việc tính toán nghĩa vụ thuế và kết xuất tờ khai theo định dạng XML để nhập vào phần mềm HTKK (Hỗ trợ Kê khai) của Tổng cục Thuế.
+## 3. Tầm nhìn sản phẩm
 
-### 2.2. Mục tiêu dự án
-**SmartStock FinTech** ra đời nhằm cung cấp một giải pháp công nghệ "Tất-cả-trong-một" (All-in-One) giúp giải quyết triệt để các nỗi đau trên:
-1. **Tinh gọn hóa vận hành:** Số hóa các hoạt động bán hàng (POS), quản lý kho vận (Inventory), quản lý công nợ khách hàng và nhà cung cấp.
-2. **Tự động hóa tuân thủ thuế:** Hỗ trợ hộ kinh doanh lưu trữ chứng từ, lập bảng kê mua bán, tính toán thuế tự động theo từng danh mục ngành hàng, và kết xuất tờ khai XML chuẩn HTKK.
-3. **Cảnh báo sớm rủi ro (Tax Warning):** Đưa ra cảnh báo thông minh khi doanh thu tiệm cận ngưỡng chịu thuế mới, cảnh báo lệch tồn kho sổ sách với kiểm kê, và tối ưu hóa dự phóng dòng tiền (Cashflow Forecast).
+> Một nguồn dữ liệu thống nhất cho bán hàng, tồn kho, dòng tiền và nghĩa vụ thuế dự
+> kiến, có phân quyền theo cửa hàng và truy vết được từ báo cáo đến giao dịch.
 
----
+## 4. Mục tiêu nghiệp vụ
 
-## 3. Phạm Vi Hệ Thống (System Scope)
+| ID | Mục tiêu | Chỉ số mục tiêu đề xuất |
+|---|---|---|
+| OBJ-01 | Rút ngắn thao tác bán hàng | 90% đơn thường hoàn tất trong ≤ 60 giây |
+| OBJ-02 | Giảm chênh lệch tồn | ≥ 99% SKU cân theo công thức XNT sau kiểm kê |
+| OBJ-03 | Minh bạch dòng tiền | 100% giao dịch tiền liên kết chứng từ hoặc lý do |
+| OBJ-04 | Kiểm soát công nợ | 100% đơn mua thiếu tạo khoản phải thu và lịch sử thu |
+| OBJ-05 | Hỗ trợ thuế có nguồn | 100% rule có nguồn, ngày hiệu lực, phiên bản và người duyệt |
+| OBJ-06 | Bảo vệ dữ liệu nhiều shop | 100% API shop-scoped có test permission âm |
+| OBJ-07 | Báo cáo truy vết được | Tổng báo cáo khớp dữ liệu chi tiết trong bộ kiểm soát |
 
-### 3.1. Phạm vi chức năng (In-Scope)
-Hệ thống bao gồm các phân hệ cốt lõi sau:
-- **Phân hệ Xác thực & Bảo mật (Authentication & Security):** Bảo vệ tài khoản người dùng thông qua mã hóa JWT, xác thực OTP Email, và thanh đo độ mạnh mật khẩu chuẩn quốc tế.
-- **Phân hệ Quản lý Cửa hàng & Nhân sự (Shop & Staff Management):** Quản lý chuỗi chi nhánh, hỗ trợ phê duyệt yêu cầu gia nhập của nhân viên và phân quyền dựa trên vai trò (RBAC).
-- **Phân hệ Hàng hóa & Kho vận (Products & Inventory):** Quản lý danh mục sản phẩm, nhãn hàng hóa (tags), đơn đặt hàng nhà cung cấp (PO), và phiếu kiểm kê cân bằng kho.
-- **Phân hệ POS & Bán hàng (Point of Sale):** Giao diện quét mã vạch bán lẻ tại quầy, tính toán thuế VAT động, tạo nhanh khách hàng và hỗ trợ thanh toán QR Code động.
-- **Phân hệ Tài chính & Quỹ tiền (Finance & Cashflow):** Quản lý thu chi, lập bảng kê mua hàng không hóa đơn (Mẫu 01/TNDN), và biểu đồ dự phóng dòng tiền trực quan.
-- **Phân hệ Cảnh báo & Thuế (Tax & Warnings):** Cấu hình tỷ lệ giảm thuế VAT, cảnh báo hạn mức kho, và xuất tờ khai định dạng XML HTKK.
+Đây là mục tiêu tương lai, không phải số liệu đã đạt trên baseline.
 
-### 3.2. Ngoài phạm vi chức năng (Out-of-Scope)
-Các tính năng sau sẽ không nằm trong phạm vi phát triển của phiên bản hiện tại mà sẽ được xem xét ở các giai đoạn tiếp theo:
-- Kết nối trực tiếp với hóa đơn điện tử của các nhà cung cấp bên thứ ba (chỉ hỗ trợ xuất tệp XML tờ khai nạp vào HTKK).
-- Tích hợp các đơn vị vận chuyển bên thứ ba (Giao Hàng Nhanh, Viettel Post, v.v.).
-- Hệ thống chấm công và tính lương chi tiết dựa trên định vị hoặc vân tay (chỉ hỗ trợ lập phiếu chi lương cơ bản tại Sổ chi phí).
+## 5. Các bên liên quan
 
----
+| Vai trò | Nhu cầu chính | Quyền quyết định |
+|---|---|---|
+| Chủ cửa hàng | Tổng quan, lợi nhuận, thuế, nhân viên, cấu hình | Nghiệp vụ và phát hành |
+| Nhân viên bán hàng | POS, khách hàng, đơn, thu nợ theo quyền | Vận hành bán hàng |
+| Nhân viên kho | Nhập, kiểm kê, XNT, cảnh báo tồn | Vận hành kho |
+| Kế toán/người phụ trách tài chính | Sổ quỹ, công nợ, báo cáo, xuất dữ liệu | Xác nhận số liệu |
+| BA/PO | Requirement, acceptance, ưu tiên backlog | Phạm vi phiên bản |
+| Nhóm phát triển | Giải pháp kỹ thuật và test | Thiết kế kỹ thuật |
+| Chuyên gia thuế/kế toán | Công thức, nguồn pháp lý, mẫu kê khai | Duyệt nội dung thuế |
 
-## 4. Tác Nhân Hệ Thống & Chân Dung Người Dùng (System Actors & User Personas)
+## 6. Phạm vi
 
-Hệ thống thiết lập cơ chế phân quyền chặt chẽ dựa trên 4 nhóm tác nhân chính:
+### 6.1 Trong phạm vi hiện tại
 
-```mermaid
-classDiagram
-    class Owner {
-        +Quản trị tối cao
-        +Xem báo cáo tài chính/quỹ tiền
-        +Phê duyệt & Phân quyền nhân sự
-        +Cấu hình thuế & Xuất XML HTKK
-    }
-    class Manager {
-        +Quản lý hàng hóa & kho chi nhánh
-        +Tạo nhãn hàng (Tags)
-        +Duyệt đơn đặt hàng PO
-    }
-    class Storekeeper {
-        +Lập phiếu kiểm kho
-        +Theo dõi hàng hóa, tồn kho thực tế
-        +Tạo yêu cầu nhập kho
-    }
-    class Cashier {
-        +Sử dụng màn hình POS bán hàng
-        +Thêm nhanh khách hàng mới
-        +Xử lý thanh toán tại quầy
-    }
-    Owner <|-- Manager
-    Manager <|-- Storekeeper
-    Storekeeper <|-- Cashier
-```
+- Đăng ký email/OTP, đăng nhập, quên/đặt lại mật khẩu, refresh token.
+- Cửa hàng, thành viên, vai trò và permission.
+- Sản phẩm, danh mục, tag, đơn vị quy đổi, lô và lịch sử giá.
+- POS, đơn bán, payment, hoàn hàng.
+- Kho, movement, PO, kiểm kê, XNT và cảnh báo.
+- Khách hàng, nhà cung cấp, khoản phải thu/phải trả.
+- Sổ quỹ, giao dịch, P&L, dự báo, hóa đơn và nghĩa vụ thuế.
+- Ước tính thuế, cấu hình rule và xuất XML hướng HTKK.
+- Thông báo, audit log, cấu hình, hồ sơ shop và kho tri thức AI.
+- Flutter Web responsive; backend API deploy trên Vercel.
 
-### 4.1. Chủ hộ kinh doanh (Owner)
-- **Mô tả vai trò:** Người sở hữu chuỗi cửa hàng, chịu trách nhiệm pháp lý cao nhất và kiểm soát toàn bộ tài chính.
-- **Chân dung người dùng:** Anh Trần Minh Tuấn (38 tuổi), chủ chuỗi 3 cửa hàng Vật liệu xây dựng tại TP.HCM. Anh cần một công cụ tổng hợp số liệu doanh thu tức thì, kiểm tra xem nhân viên có gian lận hay không, và xuất tờ khai thuế nhanh chóng mỗi quý mà không cần thuê kế toán dịch vụ đắt đỏ.
-- **Quyền hạn chính:** Xem Dashboard tổng hợp (chế độ Tất cả cửa hàng), duyệt yêu cầu gia nhập của nhân viên mới, cấu hình hệ thống thuế suất, xuất tờ khai XML nạp vào HTKK, xem sổ quỹ tiền và dự phóng dòng tiền.
+### 6.2 Ngoài phạm vi baseline
 
-### 4.2. Quản lý chi nhánh (Manager)
-- **Mô tả vai trò:** Người điều hành các hoạt động kinh doanh và nhân sự tại một chi nhánh cụ thể do Chủ hộ chỉ định.
-- **Chân dung người dùng:** Chị Nguyễn Mai Vy (30 tuổi), quản lý chi nhánh 1 của chuỗi VLXD. Chị chịu trách nhiệm kiểm duyệt đơn nhập hàng từ nhà cung cấp, phân loại các sản phẩm mới nhập về bằng các nhãn (tags), và điều phối tồn kho.
-- **Quyền hạn chính:** Xem danh sách đơn PO, phê duyệt đơn PO để tăng kho tự động, tạo và gắn nhãn sản phẩm, quản lý thông tin khách hàng/nhà cung cấp.
+- Kết nối ngân hàng/QR production đã được chứng nhận.
+- Ký số, nộp tờ khai hoặc thanh toán thuế trực tiếp.
+- Kế toán kép hoàn chỉnh theo chuẩn pháp lý.
+- Chứng nhận tương thích HTKK.
+- Cam kết accessibility/WCAG.
+- AI đưa ra tư vấn pháp lý độc lập.
+- Tự động sửa schema, API contract hoặc công thức trong giai đoạn BA.
 
-### 4.3. Thủ kho (Storekeeper)
-- **Mô tả vai trò:** Chịu trách nhiệm trực tiếp về số lượng, chất lượng hàng hóa lưu kho và tính chính xác của tồn kho thực tế.
-- **Chân dung người dùng:** Anh Lê Văn Hải (28 tuổi), nhân viên kho. Anh cần giao diện đơn giản trên thiết bị di động/máy tính bảng để điền số lượng kiểm kho thực tế tại kệ hàng, hệ thống tự động tính toán số lượng lệch thừa/thiếu.
-- **Quyền hạn chính:** Tạo phiếu nhập kho nháp, lập phiếu kiểm kê kho (Stocktake) gửi cấp trên xác nhận hoặc tự động điều chỉnh cân bằng kho. Bị chặn hoàn toàn truy cập tới báo cáo doanh thu, quỹ tiền và thuế.
+## 7. Yêu cầu nghiệp vụ
 
-### 4.4. Nhân viên thu ngân (Cashier)
-- **Mô tả vai trò:** Nhân viên bán hàng trực tiếp tại quầy, tương tác với khách hàng và xử lý giao dịch tiền tệ.
-- **Chân dung người dùng:** Bạn Phạm Thùy Linh (21 tuổi), sinh viên làm thêm bán thời gian. Bạn cần màn hình POS trực quan, nút bấm to rõ ràng, hỗ trợ quét mã vạch nhanh bằng máy quét cầm tay, và có nút hủy đơn/xóa giỏ hàng hiển thị cảnh báo để tránh bấm nhầm khi đang đông khách.
-- **Quyền hạn chính:** Truy cập duy nhất màn hình POS để quét bán hàng, tạo nhanh khách hàng mới, chọn phương thức thanh toán. Bị giới hạn hoàn toàn tất cả các màn hình Cài đặt nhân sự, Sổ sách tài chính và Báo cáo thuế.
+### 7.1 Tài khoản và cửa hàng
 
----
+| ID | Yêu cầu | Mức ưu tiên | Trạng thái baseline |
+|---|---|---|---|
+| BR-AUTH-01 | Người dùng đăng ký bằng email đã xác minh OTP | Must | Đúng một phần |
+| BR-AUTH-02 | Phiên đăng nhập được làm mới và thu hồi an toàn | Must | Đúng một phần |
+| BR-AUTH-03 | Mỗi request chỉ truy cập shop có membership hoạt động | Must | Đúng một phần |
+| BR-RBAC-01 | Quyền được kiểm tra tại backend theo module/cấp độ | Must | Không chính xác |
+| BR-RBAC-02 | Tổng hợp nhiều shop không làm tăng quyền | Must | Không chính xác |
+| BR-RBAC-03 | Thay đổi vai trò/nhân viên có audit | Must | Đúng một phần |
 
-## 5. Bản Đồ Tính Năng Hệ Thống (Feature Map)
+### 7.2 Bán hàng
 
-```mermaid
-mindmap
-  root((SmartStock FinTech))
-    Xác thực & Bảo mật
-      Đăng ký/Đăng nhập Email
-      Xác thực OTP Email 6 số
-      Đo độ mạnh mật khẩu
-      Chỉ báo khớp mật khẩu
-      Đổi mật khẩu Cài đặt
-    Nhân sự & Chi nhánh
-      Đăng ký xin gia nhập shop
-      Chuyển đổi chi nhánh
-      Báo cáo tổng hợp Tất cả cửa hàng
-      HR duyệt nhân viên mới
-      Cấu hình vai trò nhân sự
-    Hàng hóa & Kho vận
-      Độc nhất Barcode DB
-      Phân loại nhãn hàng hóa
-      Lập & duyệt đơn PO
-      Lập phiếu kiểm kho cân bằng
-      Cảnh báo tồn kho dưới hạn mức
-    Bán hàng & POS
-      Quét barcode giỏ hàng
-      VAT động theo ngành hàng
-      Thêm nhanh khách hàng POS
-      QR Code thanh toán động
-      Modal xác nhận an toàn
-    Tài chính & Quỹ tiền
-      Bảng kê mua hàng Mẫu 01/TNDN
-      Tự động nạp dòng nhập dở
-      Sổ chi phí & Lương nhân viên
-      Biểu đồ dự phóng dòng tiền
-    Báo cáo Thuế
-      Cấu hình giảm VAT nhà nước
-      Xuất tờ khai XML HTKK
-      Cảnh báo tiệm cận hạn mức thuế
-```
+| ID | Yêu cầu | Mức ưu tiên | Trạng thái baseline |
+|---|---|---|---|
+| BR-SALE-01 | POS tìm hàng, thêm giỏ, chọn khách và thanh toán | Must | Đúng một phần |
+| BR-SALE-02 | Đơn/payment/tồn/COGS ghi atomically | Must | Bị chặn |
+| BR-SALE-03 | Đơn nợ tạo khoản phải thu | Must | Đúng một phần |
+| BR-SALE-04 | Hoàn/hủy đảo tác động đúng một lần | Must | Bị chặn |
+| BR-SALE-05 | Summary khớp danh sách theo cùng filter | Must | Không chính xác |
+| BR-SALE-06 | POS hoàn tất được trên mobile | Must | Không chính xác |
 
----
+### 7.3 Kho và giá vốn
 
-## 6. Sơ Đồ Luồng Hoạt Động Nghiệp Vụ Chính (Business Workflows)
+| ID | Yêu cầu | Mức ưu tiên | Trạng thái baseline |
+|---|---|---|---|
+| BR-INV-01 | Cảnh báo dưới định mức khớp tồn hiện tại | Must | Đã xác minh |
+| BR-INV-02 | Nhập hàng cập nhật tồn/lô/giá vốn | Must | Bị chặn |
+| BR-INV-03 | Kiểm kê và điều chỉnh có lý do/người duyệt | Must | Đúng một phần |
+| BR-INV-04 | Báo cáo XNT cân theo công thức | Must | Bị chặn |
+| BR-INV-05 | Giá vốn nhất quán giữa đơn, kho và P&L | Must | Đúng một phần |
 
-### 6.1. Quy trình Đăng ký & Kích hoạt tài khoản nhân viên mới (Onboarding Flow)
+### 7.4 Tài chính và công nợ
 
-```mermaid
-sequenceDiagram
-    autonumber
-    Actor User as Nhân viên mới
-    participant App as Flutter Web
-    participant Server as Node.js Backend
-    participant DB as PostgreSQL
-    participant Email as Mail Service
+| ID | Yêu cầu | Mức ưu tiên | Trạng thái baseline |
+|---|---|---|---|
+| BR-FIN-01 | Số dư quỹ khớp tổng thu/chi và dashboard | Must | Không chính xác |
+| BR-FIN-02 | Lợi nhuận dùng định nghĩa được công bố | Must | Đúng một phần |
+| BR-DEBT-01 | Sổ nợ dùng receivable thật, không dùng dữ liệu mẫu | Must | Không chính xác |
+| BR-DEBT-02 | Thu nợ cập nhật khoản phải thu và sổ quỹ | Must | Bị chặn |
+| BR-REP-01 | Excel phản ánh đúng dữ liệu nguồn và tổng kiểm soát | Must | Bị chặn |
 
-    User->>App: Điền Họ tên, Email, Mật khẩu (Check strength & match)
-    App->>Server: Gửi yêu cầu đăng ký (POST /auth/send-otp)
-    Server->>DB: Kiểm tra trùng lặp email
-    Server->>DB: Tạo phiên đăng ký tạm & Mã OTP 6 số (Hạn 2 phút)
-    Server->>Email: Gửi email chứa OTP cho User
-    Server-->>App: Trả về trạng thái đã gửi OTP
-    App->>App: Điều hướng sang /verify-otp
-    User->>App: Nhập mã OTP 6 số
-    App->>Server: Gửi OTP xác nhận (POST /auth/register)
-    Server->>DB: Đối chiếu OTP & Kích hoạt tài khoản
-    Server-->>App: Trả về Access Token & Refresh Token
-    App->>App: Điều hướng sang /onboarding (Giao diện Chưa có cửa hàng)
-```
+### 7.5 Thuế
 
-### 6.2. Quy trình Xin Gia Nhập & Duyệt Nhân Sự (Staff Join & Approval Flow)
+| ID | Yêu cầu | Mức ưu tiên | Trạng thái baseline |
+|---|---|---|---|
+| BR-TAX-01 | Rule thuế có nguồn và ngày hiệu lực | Must | Không chính xác |
+| BR-TAX-02 | Không hiển thị nghĩa vụ thuế âm | Must | Không chính xác |
+| BR-TAX-03 | Không xuất nếu thiếu dữ liệu định danh bắt buộc | Must | Không chính xác |
+| BR-TAX-04 | XML được validate/import đúng phiên bản HTKK | Must | Bị chặn |
+| BR-TAX-05 | Hành vi code và nhận định pháp lý được tách rõ | Must | Đúng một phần |
 
-```mermaid
-sequenceDiagram
-    autonumber
-    Actor Staff as Nhân viên
-    participant App as Flutter Web
-    Actor Owner as Chủ cửa hàng (Owner)
-    participant Server as Node.js Backend
-    participant DB as PostgreSQL
+### 7.6 UX và vận hành
 
-    Staff->>App: Tìm kiếm Cửa hàng theo Tên/Mã
-    App->>Server: Truy vấn danh sách shop (GET /auth/search-shops)
-    Server-->>App: Hiển thị kết quả shop kèm Mã (Redacted)
-    Staff->>App: Nhấn "Xin gia nhập"
-    App->>Server: Gửi yêu cầu gia nhập (POST /shop-members/join)
-    Server->>DB: Ghi nhận bản ghi với trạng thái status = 'PENDING'
-    Note over Owner: Chủ shop vào Cài đặt -> Quản lý nhân viên
-    Owner->>App: Truy cập tab "Chờ duyệt"
-    App->>Server: Lấy danh sách thành viên chờ duyệt (GET /shop-members/pending)
-    Server->>DB: Truy vấn dữ liệu & map thông tin shop
-    Server-->>App: Hiển thị danh sách nhân viên chờ duyệt
-    Owner->>App: Nhấn "Đồng ý" & cấu hình Vai trò (Ví dụ: Thu ngân)
-    App->>Server: Cập nhật trạng thái thành viên (PUT /shop-members/:id/approve)
-    Server->>DB: Đổi status = 'ACTIVE' & gán role_id
-    Server-->>App: Cập nhật giao diện thành công
-```
+| ID | Yêu cầu | Mức ưu tiên | Trạng thái baseline |
+|---|---|---|---|
+| BR-UX-01 | Màn chính có loading/empty/error/retry | Must | Đúng một phần |
+| BR-UX-02 | Desktop/mobile không che CTA hoặc cắt nội dung | Must | Không chính xác |
+| BR-OPS-01 | Build/lint/test chạy lặp lại trong CI | Must | Đúng một phần |
+| BR-OPS-02 | Schema chỉ thay đổi qua migration được duyệt | Must | Không chính xác |
+| BR-AI-01 | AI chỉ dùng nguồn đã duyệt và còn hiệu lực | Must | Không chính xác |
 
-### 6.3. Quy trình Bán hàng tại POS & Đồng bộ Doanh thu thời gian thực (POS Transactions & Sync Flow)
+## 8. Quy tắc nghiệp vụ cấp cao
 
-```mermaid
-sequenceDiagram
-    autonumber
-    Actor Cashier as Nhân viên Thu ngân
-    participant App as Flutter Web
-    participant Server as Node.js Backend
-    participant DB as PostgreSQL
-    Actor Owner as Chủ cửa hàng (Owner)
+1. Mọi bảng nghiệp vụ phải có `shop_id` hoặc quan hệ scope tương đương.
+2. Frontend không phải là hàng rào bảo mật; backend phải kiểm tra quyền.
+3. Mọi tổng phải xác định kỳ, timezone, trạng thái giao dịch và thời điểm `asOf`.
+4. Không tính doanh thu từ đơn hủy; hoàn hàng phải giảm theo rule công bố.
+5. Không ghi nghĩa vụ thuế âm.
+6. Không xuất tệp kê khai với mã định danh giả hoặc dữ liệu bắt buộc thiếu.
+7. Dữ liệu demo phải được tách môi trường hoặc gắn nhãn rõ.
+8. Thao tác sale/return/payment/stock/role/tax export phải có audit.
+9. `all shops` là scope hợp tập, không phải một vai trò.
+10. Quy định thuế phải được version hóa theo ngày hiệu lực.
 
-    Cashier->>App: Quét barcode sản phẩm đưa vào giỏ hàng POS
-    App->>App: Tính toán tổng tiền & VAT động theo cấu hình thuế
-    Cashier->>App: Bấm "Thanh toán" & Chọn "Quển QR"
-    App->>App: Tạo QR Code động chứa số tiền hóa đơn
-    Cashier->>App: Xác nhận giao dịch thành công
-    App->>Server: Gửi thông tin đơn hàng (POST /orders)
-    Server->>DB: Ghi nhận hóa đơn & Giảm tồn kho sản phẩm
-    Server->>DB: Cập nhật dòng tiền vào quỹ (cashflows)
-    Server-->>App: Trả về kết quả 201 Created
-    Note over Owner: Chủ shop đang xem Dashboard
-    Owner->>App: Dashboard tự động refetch hoặc nhận tín hiệu đồng bộ
-    App->>Server: Lấy doanh thu hôm nay (GET /reports/dashboard)
-    Server->>DB: Lấy tổng doanh thu hôm nay
-    Server-->>App: Cập nhật biểu đồ & số liệu doanh thu tăng lập tức
-```
+## 9. Ràng buộc
 
----
+- Cần duy trì Flutter/Riverpod/GoRouter và Express/TypeORM hiện có trong các bản vá gần.
+- Không đổi schema/API diện rộng nếu chưa có migration và kế hoạch tương thích.
+- Production hiện dùng Vercel serverless; DDL trong cold start là rủi ro phải loại bỏ.
+- Dữ liệu production không được dùng cho test phá hủy.
+- Nội dung pháp lý phải được xác nhận bởi người có chuyên môn.
 
-## 7. Các Quy Tắc Nghiệp Vụ Ràng Buộc (Business Rules)
+## 10. Rủi ro nghiệp vụ
 
-| ID | Danh mục | Tên quy tắc | Mô tả chi tiết ràng buộc |
-| :--- | :--- | :--- | :--- |
-| **BR-SEC-01** | Bảo mật | Độ mạnh mật khẩu | Mật khẩu bắt buộc đạt $\ge 3/5$ tiêu chí đánh giá và độ dài tối thiểu 8 ký tự mới được gửi yêu cầu đăng ký/đổi mật khẩu. |
-| **BR-SEC-02** | Bảo mật | Giới hạn thử OTP | Mã OTP chỉ có hiệu lực trong vòng 120 giây (2 phút). Quá thời gian này, mã tự động vô hiệu hóa. |
-| **BR-INV-01** | Kho hàng | Độc nhất Barcode | Trong cùng một cửa hàng (`shop_id`), hai sản phẩm khác nhau không được phép có trùng mã vạch (`barcode`). Hệ thống database chặn mức Unique Constraint. |
-| **BR-INV-02** | Kho hàng | Cập nhật kho qua PO | Số lượng tồn kho sản phẩm chỉ được tăng lên khi đơn đặt hàng PO được chuyển từ trạng thái `PENDING` sang `APPROVED` bởi quản lý hoặc chủ shop. |
-| **BR-INV-03** | Kho hàng | Phiếu kiểm kê cân bằng | Khi phiếu kiểm kho được duyệt, số lượng tồn kho của sản phẩm trên hệ thống sẽ bị ghi đè hoàn toàn bằng số lượng kiểm kê thực tế, đồng thời ghi nhận lịch sử chênh lệch thừa/thiếu. |
-| **BR-TAX-01** | Báo cáo Thuế | Kê khai doanh thu | Toàn bộ các hóa đơn bán ra thành công tại quầy POS bắt buộc phải được tổng hợp doanh thu và tự động tính toán thuế suất dựa trên danh mục thuế đã cấu hình. |
-| **BR-TAX-02** | Báo cáo Thuế | Bảng kê không hóa đơn | Mọi giao dịch mua vào không có hóa đơn đỏ (Mẫu 01/TNDN) phải điền đầy đủ thông tin cá nhân của người bán (Họ tên, SĐT/CCCD, Địa chỉ) để đủ điều kiện khấu trừ chi phí hợp lý khi quyết toán thuế. |
-| **BR-TAX-03** | Báo cáo Thuế | Miễn thuế dưới 100tr/năm | Hộ kinh doanh có tổng doanh thu năm dương lịch từ 100 triệu VNĐ trở xuống được hệ thống tự động miễn thuế GTGT và TNCN thực tế (tiền thuế phát sinh = 0). Đồng thời, hệ thống kích hoạt cảnh báo tiệm cận từ mức 90 triệu VNĐ. |
-| **BR-TAX-04** | Báo cáo Thuế | Chuyển khoản bảng kê >= 20tr | Các khoản thu mua lập theo Bảng kê 01/TNDN có giá trị từ 20 triệu VNĐ trở lên bắt buộc phải thanh toán chuyển khoản (TRANSFER). Thanh toán tiền mặt (CASH) bị hệ thống chặn hoàn toàn nhằm đảm bảo tính hợp lệ của chi phí. |
-| **BR-FIN-01** | Quỹ tiền | Điều chỉnh kiểm quỹ | Khi phát sinh chênh lệch thừa/thiếu tiền mặt lúc chốt ca Daily Closing, hệ thống tự động sinh một giao dịch điều chỉnh quỹ phân loại OTHER (INCOME hoặc EXPENSE) và điều chỉnh số dư của két tiền tương ứng để cân đối sổ sách. |
-| **BR-RBAC-01**| Phân quyền | Chặn quyền nhân sự | Vai trò `CASHIER` và `STOREKEEPER` bị chặn tuyệt đối quyền truy cập vào tất cả các API/giao diện liên quan đến Báo cáo doanh thu chuỗi, Cấu hình thuế, Sổ chi phí lương và Xuất XML HTKK. |
-| **BR-SYS-01** | Hệ thống | Minh bạch thông báo lỗi | Hệ thống tuyệt đối không hiển thị các thông báo lỗi chung chung (như "Đã có lỗi xảy ra"). Mọi thông báo lỗi phải được hiển thị chi tiết (ví dụ: mô tả nguyên nhân lỗi, hướng dẫn khắc phục hoặc mã lỗi kỹ thuật cụ thể) để tránh gây hoang mang cho người dùng. |
+| Rủi ro | Xác suất | Tác động | Ứng phó |
+|---|---|---|---|
+| Sai quyền làm lộ dữ liệu shop | Cao | Rất cao | P0 RBAC + negative tests |
+| Sai thuế do rule cũ | Cao | Rất cao | P0 rule versioning + legal review |
+| Dashboard gây quyết định sai | Cao | Cao | Metric contract + reconciliation |
+| Dữ liệu mẫu bị hiểu là dữ liệu thật | Cao | Rất cao | Xóa/ẩn hoặc gắn nhãn demo |
+| Migration/cold start gây gián đoạn | Trung bình | Cao | Migration pipeline, không DDL runtime |
+| Export không dùng được | Trung bình | Cao | Schema fixture + import acceptance |
+
+## 11. Tiêu chí thành công của bản ổn định
+
+- Không còn finding P0 mở.
+- Dashboard, sales, finance, công nợ và tồn kho khớp bộ dữ liệu kiểm soát.
+- Employee không thể vượt quyền bằng shop ID hoặc `all`.
+- Rule thuế có nguồn/hiệu lực; không còn nội dung 100 triệu như quy định hiện hành.
+- POS mobile hoàn tất được luồng chính.
+- Build/lint/test chạy trong CI và ma trận truy vết được cập nhật.

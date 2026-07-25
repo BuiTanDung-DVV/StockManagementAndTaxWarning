@@ -1,105 +1,167 @@
-# MA TRẬN PHÂN QUYỀN TRUY CẬP (ROLE-BASED ACCESS CONTROL - RBAC)
-## Hệ thống SmartStock FinTech - Quản lý Bán hàng & Hỗ trợ Cảnh báo Thuế
+# Vai trò người dùng và ma trận RBAC
 
----
+## 1. Kết luận baseline
 
-## 1. Kiểm soát phiên bản (Version Control)
+RBAC hiện tại là `Không chính xác` cho production nhiều cửa hàng. Membership theo
+shop đã được kiểm tra ở một phần backend, nhưng có ba lỗi cấu trúc:
 
-| Phiên bản | Ngày | Người thực hiện | Nội dung thay đổi | Trạng thái |
-| :--- | :--- | :--- | :--- | :--- |
-| v1.0.0 | 2026-07-21 | Senior Business Analyst | Khởi tạo tài liệu Ma trận Phân quyền RBAC | Hoàn thành |
-| v1.1.0 | 2026-07-21 | Senior Business Analyst | Cập nhật 100% route và API: Công nợ, Chốt ca, OCR, Quỹ | Hoàn thành |
+1. Chọn “tất cả cửa hàng” ở frontend tự gán `memberType='OWNER'`.
+2. Backend `requirePermission` cho `x-shop-id: all` luôn cho đi tiếp nếu user có ít
+   nhất một membership, kể cả không phải owner.
+3. Khóa quyền frontend (`pos`, `sales_view`) không khớp khóa backend (`sales`);
+   customer/supplier/tag/tax-config còn thiếu middleware quyền.
 
----
+Nguồn:
 
-## 2. Nguyên Tắc Thiết Kế Phân Quyền (RBAC Design Principles)
+- [`shop_provider.dart`](../lib/features/settings/providers/shop_provider.dart)
+- [`staff_management_screen.dart`](../lib/features/settings/presentation/staff_management_screen.dart)
+- [`auth.middleware.ts`](../backend/src/middleware/auth.middleware.ts)
+- [`permission.middleware.ts`](../backend/src/middleware/permission.middleware.ts)
+- [`backend/src/routes`](../backend/src/routes/)
 
-Kiểm soát truy cập trong hệ thống SmartStock FinTech tuân thủ hai chốt chặn bảo mật chặt chẽ:
-1. **Phân quyền tại Frontend (Client-side Router Guard):** Ứng dụng Flutter dựa trên vai trò của tài khoản thành viên (`ShopMember`) để hiển thị hoặc ẩn các tab danh mục, chặn điều hướng sang các Route không được phép của GoRouter.
-2. **Phân quyền tại Backend (Server-side API Middleware):** Middleware `requirePermission` và `requireOwner` (Định nghĩa tại: [permission.middleware.ts](file:///d:/StockManagementAndTaxWarning/backend/src/middleware/permission.middleware.ts)) kiểm tra thông tin JWT Token và Header `x-shop-id` để xác thực quyền trước khi thực thi Controller.
+## 2. Mô hình hiện tại
 
----
+```mermaid
+flowchart LR
+    USER["User/JWT"] --> MEMBER["shop_members"]
+    MEMBER --> ROLE["shop_roles.permissions"]
+    REQ["x-shop-id"] --> AUTH["authenticateJwt"]
+    AUTH --> SCOPE["requireShopId"]
+    SCOPE --> PERM["requirePermission"]
+    ROLE --> PERM
+    PERM --> CTRL["Controller"]
+```
 
-## 3. Vai Trò Nghiệp Vụ & Quyền Hạn Chi Tiết (Role Permission Definitions)
+### 2.1 Membership
 
-### 3.1. Chủ cửa hàng (OWNER)
-- **Cấp độ:** Cao nhất.
-- **Quy tắc:** Vượt qua tất cả các chốt chặn kiểm tra quyền tự động tại backend. Có toàn quyền Đọc (View), Thêm/Sửa (Edit) và Xóa (Delete) trên toàn hệ thống.
-- **Quyền độc quyền (Chỉ Owner mới có):**
-  - Quản lý thông tin tài chính chuỗi, cấu hình tài khoản ngân hàng thụ hưởng nhận QR Code.
-  - Phê duyệt/từ chối nhân viên xin gia nhập shop, gán vai trò nhân sự.
-  - Cấu hình tỷ lệ thuế suất, tỷ lệ giảm VAT của cửa hàng và xuất tệp tờ khai thuế XML.
+- `memberType`: `OWNER` hoặc `EMPLOYEE`.
+- `status/isActive`: quyết định membership có hiệu lực.
+- `role`: có thể chứa permission JSON.
+- Owner được toàn quyền trong shop cụ thể.
 
-### 3.2. Quản lý chi nhánh (MANAGER)
-- **Cấp độ:** Trung cấp.
-- **Quy tắc:** Có quyền quản lý hàng hóa, đơn hàng và kho vận chi nhánh.
-- **Quyền hạn chính:**
-  - Thêm mới, chỉnh sửa thông tin hàng hóa, nhãn dán phân loại (Tags).
-  - Lập đơn đặt hàng PO và nhấn phê duyệt đơn PO chuyển trạng thái sang "Đã nhập kho" để tăng tồn kho.
-  - Xem danh sách khách hàng và nhà cung cấp.
-- **Bị giới hạn:** Không được xem sổ sách quỹ tiền, lương nhân sự, cấu hình thuế và không có quyền xuất XML HTKK.
+### 2.2 Cấp độ quyền
 
-### 3.3. Thủ kho (STOREKEEPER)
-- **Cấp độ:** Nhân viên kho.
-- **Quy tắc:** Chỉ được phép tương tác với các nghiệp vụ lưu trữ kho hàng.
-- **Quyền hạn chính:**
-  - Lập phiếu kiểm kê kho thực tế (Stocktake), ghi nhận chênh lệch thừa thiếu.
-  - Tạo yêu cầu nhập kho (đơn PO nháp).
-- **Bị giới hạn:** Bị chặn hoàn toàn quyền truy cập các API về tài chính, POS bán hàng, cấu hình nhân sự, cấu hình thuế và xuất XML.
+`none < view < edit < full`.
 
-### 3.4. Nhân viên thu ngân (CASHIER)
-- **Cấp độ:** Nhân viên bán hàng.
-- **Quy tắc:** Chỉ được phép tương tác với màn hình POS để tạo hóa đơn bán lẻ.
-- **Quyền hạn chính:**
-  - Xem danh mục sản phẩm, quét mã vạch bán hàng, tính tổng tiền.
-  - Tạo nhanh khách hàng mới ngay tại quầy POS.
-  - Xuất hóa đơn bán lẻ và kích hoạt hiển thị QR thanh toán.
-- **Bị giới hạn:** Bị chặn truy cập các đơn PO nhập kho, phiếu kiểm kho, cài đặt nhân viên, cấu hình thuế, sổ sách chi phí quỹ tiền.
+Backend dùng so sánh thứ bậc; `full` hiện không được dùng như một hành vi khác `edit`
+ở đa số route. Cần định nghĩa rõ `full` có bao gồm delete/approve/export/config hay
+không.
 
----
+## 3. Mâu thuẫn khóa quyền
 
-## 4. Ma Trận Quyền Truy Cập Giao Diện (Frontend Routes Matrix)
+| Nghiệp vụ | Khóa frontend role editor | Khóa backend | Kết luận |
+|---|---|---|---|
+| POS | `pos` | `sales` | Không khớp |
+| Xem đơn | `sales_view` | `sales` | Không khớp |
+| Sản phẩm | `products` | `products` | Khớp |
+| Kho | `inventory` | `inventory` | Khớp |
+| Khách hàng | `customers` | Chưa gọi middleware | Không được enforce |
+| Nhà cung cấp | `suppliers` | Chưa gọi middleware | Không được enforce |
+| Tài chính | `finance` | `finance` | Khớp ở route có middleware |
+| Cài đặt | `settings` | `settings` | Khớp |
+| Dashboard | Không có key trong editor | `dashboard` được dùng thay thế ở summary | Không cấu hình được rõ |
+| Tag | Không có key riêng | Chưa gọi middleware | Không được enforce |
+| Tax config | Không có key riêng | Một route set thiếu middleware | Không nhất quán |
 
-| Đường dẫn Route | Tên màn hình (Flutter UI) | Chủ Shop (Owner) | Quản Lý (Manager) | Thủ Kho (Storekeeper) | Thu Ngân (Cashier) |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| `/login` / `/register` | Giao diện đăng nhập/đăng ký | `Allow` | `Allow` | `Allow` | `Allow` |
-| `/onboarding` | Khởi tạo shop ban đầu | `Allow` | `Deny` | `Deny` | `Deny` |
-| `/dashboard` | Dashboard tổng quan báo cáo | `Full` | `Limited` | `Deny` | `Deny` |
-| `/pos` | Giao diện bán lẻ tại quầy | `Allow` | `Allow` | `Deny` | `Allow` |
-| `/products` | Danh sách/Thêm sửa sản phẩm | `Full` | `Full` | `View Only` | `View Only`|
-| `/purchases` | Đơn PO mua hàng nhà cung cấp | `Full` | `Full` | `Draft Only` | `Deny` |
-| `/stocktake` | Lập phiếu kiểm kho | `Full` | `Full` | `Full` | `Deny` |
-| `/finance` | Sổ quỹ tiền, thu chi, dự phóng | `Full` | `Deny` | `Deny` | `Deny` |
-| `/purchases-no-invoice`| Bảng kê mua hàng không hóa đơn | `Full` | `Full` | `Deny` | `Deny` |
-| `/tax-config` | Cấu hình biểu thuế VAT/TNCN | `Full` | `Deny` | `Deny` | `Deny` |
-| `/tax-estimate` | Xem tờ khai & kết xuất XML HTKK| `Full` | `Deny` | `Deny` | `Deny` |
-| `/staff` | Duyệt gia nhập, gán vai trò | `Full` | `Deny` | `Deny` | `Deny` |
-| `/change-password` | Đổi mật khẩu tài khoản | `Allow` | `Allow` | `Allow` | `Allow` |
-| `/customers` | Quản lý sổ nợ khách hàng | `Full` | `Full` | `Deny` | `View Only`|
-| `/daily-closing` | Phiếu chốt ca/chốt quỹ | `Full` | `Full` | `Deny` | `Limited` |
-| `/invoice-scan` | Quét hóa đơn OCR | `Full` | `Full` | `Deny` | `Deny` |
+Khuyến nghị: dùng một registry permission chia sẻ bằng contract/schema, không khai
+báo chuỗi độc lập ở Flutter và Express.
 
----
+## 4. Ma trận quyền mục tiêu
 
-## 5. Ma Trận Quyền API (Backend Endpoints Matrix)
+Ký hiệu: `V` view, `E` edit/create, `F` full gồm delete/approve/export/config,
+`—` không mặc định.
 
-| API Endpoint | HTTP Method | Mục tiêu nghiệp vụ | Owner | Manager | Storekeeper | Cashier |
-| :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| `/api/auth/register` | `POST` | Đăng ký tài khoản mới | `Yes` | `Yes` | `Yes` | `Yes` |
-| `/api/shop-members/pending` | `GET` | Xem danh sách chờ duyệt HR | `Yes` | `No` | `No` | `No` |
-| `/api/shop-members/:id/approve` | `PUT` | Phê duyệt & phân quyền nhân viên| `Yes` | `No` | `No` | `No` |
-| `/api/products` | `GET` | Xem danh sách hàng hóa | `Yes` | `Yes` | `Yes` | `Yes` |
-| `/api/products` | `POST`/`PUT` | Thêm mới/chỉnh sửa hàng hóa | `Yes` | `Yes` | `No` | `No` |
-| `/api/products/:id` | `DELETE` | Xóa hàng hóa khỏi danh mục | `Yes` | `Yes` | `No` | `No` |
-| `/api/purchase-orders` | `POST` | Lập đơn mua hàng PO | `Yes` | `Yes` | `Yes` | `No` |
-| `/api/purchase-orders/:id/approve`| `PUT` | Phê duyệt đơn hàng PO nhập kho | `Yes` | `Yes` | `No` | `No` |
-| `/api/stocktakes` | `POST` | Lưu phiếu kiểm kê kho | `Yes` | `Yes` | `Yes` | `No` |
-| `/api/orders` | `POST` | Tạo đơn hàng POS bán lẻ | `Yes` | `Yes` | `No` | `Yes` |
-| `/api/customers/receivables` | `GET` | Lấy sổ công nợ khách hàng | `Yes` | `Yes` | `No` | `Yes` |
-| `/api/receivables/:id/payments` | `POST` | Ghi nhận thanh toán thu nợ | `Yes` | `Yes` | `No` | `No` |
-| `/api/finance/cashflows` | `GET` | Xem quỹ tiền, báo cáo thu chi | `Yes` | `No` | `No` | `No` |
-| `/api/finance/scan-ocr` | `POST` | Chạy phân tích hóa đơn OCR | `Yes` | `Yes` | `No` | `No` |
-| `/api/daily-closing/close` | `POST` | Ghi nhận chốt ca cuối ngày | `Yes` | `Yes` | `No` | `Yes` |
-| `/api/purchases/no-invoice` | `POST` | Lưu bảng kê Mẫu 01/TNDN | `Yes` | `Yes` | `No` | `No` |
-| `/api/tax/config` | `PUT`/`GET` | Cập nhật cấu hình thuế suất | `Yes` | `No` | `No` | `No` |
-| `/api/tax/export-xml` | `GET` | Tải về tệp XML HTKK tờ khai thuế| `Yes` | `No` | `No` | `No` |
+| Module | Owner | Quản lý | Bán hàng | Kho | Kế toán | Chỉ xem |
+|---|---:|---:|---:|---:|---:|---:|
+| Dashboard | F | V | V | V | V | V |
+| POS/sales | F | F | E | V | V | V |
+| Return/cancel | F | F | E theo hạn mức | — | V | — |
+| Product | F | E | V | E | V | V |
+| Inventory/PO | F | E | V | F | V | V |
+| Customer | F | E | E | V | V | V |
+| Supplier | F | E | — | E | V | V |
+| Receivable/payable | F | E | E theo hạn mức | V | F | V |
+| Finance/cash | F | E | V giới hạn | V | F | V |
+| Tax/report/export | F | V | — | — | F | V |
+| Staff/role | F | E, không sửa owner cuối | — | — | — | — |
+| Shop settings | F | E giới hạn | — | — | — | — |
+| Audit log | F | V | — | — | V | — |
+| AI knowledge | F | E có duyệt | V | V | E | V |
+
+Đây là ma trận đề xuất; cần PO/Owner duyệt trước khi thay đổi code.
+
+## 5. Ma trận route hiện tại
+
+| Route group | Auth | Shop scope | Permission | Trạng thái |
+|---|---:|---:|---:|---|
+| `/sales-orders*` | Có | Có | `sales` | Đúng một phần do key UI lệch |
+| `/products*`, `/categories`, `/cost-types` | Có | Có | `products` | Đã gắn |
+| `/inventory/*`, `/purchase-orders`, `/stock-takes` | Có | Có | `inventory` | Đã gắn |
+| `/cash-*`, `/daily-closings`, finance `/invoices` | Có | Có | `finance` | Đã gắn nhưng route invoice trùng |
+| `/tax/*` | Có | Có | `finance` | Đã gắn |
+| `/shop-profile`, `/activity-logs`, `/configs` | Có | Có | `settings` | Đã gắn |
+| `/customers*` | Có | Có | Không | P0 |
+| `/suppliers*` | Có | Có | Không | P0 |
+| `/tags` | Có | Có | Không | P0 |
+| tax config route riêng | Có | Có | Không | P0 |
+| `/shop-members`, `/shop-roles` | Có | Có | `requireOwner` | Đúng một phần; cần test `all` |
+| `/profile`, `/my-shops`, notifications | Có | User scoped | N/A | Phải lọc theo user |
+
+## 6. Lỗ hổng `all shops`
+
+### 6.1 Frontend
+
+`ShopState.isOwner` trả true nếu `isAllShops`. `_selectAllShops` còn đặt trực tiếp
+`memberType: 'OWNER'` và permission rỗng, sau đó `hasPermission` trả true.
+
+### 6.2 Backend
+
+`authenticateJwt` nhận `x-shop-id: all`, lấy mọi membership active và đặt
+`req.isAllShops=true`.
+
+Trong `requirePermission`:
+
+- code kiểm tra có membership;
+- tính `req.isOwner` bằng “owner của ít nhất một shop”;
+- nhưng luôn `return next()` mà không kiểm tra permission của từng shop.
+
+Do đó employee hoặc user chỉ owner ở một shop có thể truy cập tổng hợp ngoài policy
+dự kiến. Mức ảnh hưởng: `Rất cao`, ưu tiên P0.
+
+### 6.3 Hành vi mục tiêu
+
+```mermaid
+flowchart TD
+    ALL["Request scope=all"] --> LIST["Lấy memberships active"]
+    LIST --> EACH["Với từng shop: kiểm tra permission"]
+    EACH --> ALLOWED["Danh sách shop được phép"]
+    ALLOWED --> EMPTY{"Rỗng?"}
+    EMPTY -->|Có| DENY["403"]
+    EMPTY -->|Không| QUERY["Query WHERE shop_id IN allowed"]
+```
+
+Không đặt `isOwner=true` chỉ vì scope là `all`.
+
+## 7. Quy tắc backend bắt buộc
+
+1. Auth → membership/scope → permission → controller.
+2. Controller/repository nhận `ShopScope`, không tự đọc shopId tùy ý.
+3. Ẩn menu chỉ là UX; không thay thế kiểm tra API.
+4. Mọi create/update/delete phải lấy `shop_id` từ scope đã xác minh, không từ body.
+5. Owner bypass chỉ áp dụng cho shop mà membership là OWNER.
+6. `full` phải được định nghĩa rõ cho delete/approve/export/config.
+7. Route mới không được merge nếu chưa có permission mapping và negative test.
+8. Thay đổi role/member phải ghi audit.
+
+## 8. Test bắt buộc trước khi đóng P0
+
+- Employee `none` gọi GET/POST/PUT/DELETE từng module → 403.
+- Employee `view` gọi GET → 200, ghi → 403.
+- Employee gửi shop không thuộc về → 403.
+- Employee gửi `all` → chỉ thấy shop được phép, không tăng cấp.
+- User owner shop A, employee shop B → quyền được tính riêng từng shop.
+- Customer/supplier/tag/tax-config có đủ negative tests.
+- Body/query cố chèn `shopId` khác không thay đổi scope.
+- Cache/refresh role không giữ quyền cũ sau revoke.
+
+Tham chiếu đầy đủ: [TC-RBAC](11_ACCEPTANCE_TEST_CATALOG.md#3-rbac-và-shop-scope).

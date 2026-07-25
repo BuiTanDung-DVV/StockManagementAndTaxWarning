@@ -1,260 +1,280 @@
-# ĐẶC TẢ YÊU CẦU HỆ THỐNG CHI TIẾT (SYSTEM REQUIREMENT SPECIFICATION - SRS)
-## Hệ thống SmartStock FinTech - Quản lý Bán hàng & Hỗ trợ Cảnh báo Thuế
+# System Requirement Specification (SRS)
 
----
+## 1. Baseline kiến trúc
 
-## 1. Kiểm soát phiên bản (Version Control)
+```mermaid
+flowchart LR
+    WEB["Flutter Web"] -->|HTTPS JSON| API["Express API /api"]
+    API --> AUTH["JWT + shop scope + permission"]
+    AUTH --> SVC["Controller / Service"]
+    SVC --> ORM["TypeORM"]
+    ORM --> DB["PostgreSQL"]
+    WEB --> LOCAL["Shared preferences / client state"]
+```
 
-| Phiên bản | Ngày | Người thực hiện | Nội dung thay đổi | Trạng thái |
-| :--- | :--- | :--- | :--- | :--- |
-| v1.0.0 | 2026-07-21 | Senior Business Analyst | Khởi tạo tài liệu SRS chi tiết các màn hình cốt lõi | Hoàn thành |
-| v1.1.0 | 2026-07-21 | Senior Business Analyst | Cập nhật 100% màn hình: Công nợ, Ví, Quỹ, OCR và XNT | Hoàn thành |
+Nguồn:
 
----
+- Router frontend: [`app_router.dart`](../lib/core/router/app_router.dart)
+- HTTP client: [`api_client.dart`](../lib/core/network/api_client.dart)
+- Route mount backend: [`index.ts`](../backend/src/index.ts)
+- Data source: [`db.config.ts`](../backend/src/config/db.config.ts)
 
-## 2. Đặc Tả Chi Tiết 7 Phân Hệ Giao Diện Hệ Thống (Frontend Screen Specifications)
+## 2. Actor
 
----
+| Actor | Mô tả |
+|---|---|
+| Guest | Đăng ký, gửi OTP, đăng nhập, quên/đặt lại mật khẩu |
+| Owner | Toàn quyền trong shop theo chính sách mục tiêu |
+| Employee | Quyền theo `shop_roles.permissions` |
+| Tax reviewer | Xác nhận rule/source và kết quả xuất |
+| Vercel runtime | Khởi tạo backend serverless và kết nối DB |
 
-### PHÂN HỆ 1: XÁC THỰC & BẢO MẬT (AUTHENTICATION)
+## 3. Route frontend thực tế
 
-#### 1.1. Màn hình Đăng Ký Tài Khoản (Register Screen)
-- **Đường dẫn file Flutter:** [register_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/auth/presentation/register_screen.dart)
-- **Đường dẫn Route GoRouter:** `/register`
-- **Địa chỉ API kết nối:** `POST /auth/send-otp` (Gửi mã OTP về email)
-- **Mô tả giao diện (UI Layout):**
-  - SegmentedButton chọn vai trò đăng ký: *"Chủ cửa hàng (SHOP)"* hoặc *"Nhân viên (PERSONAL)"*.
-  - Các trường nhập liệu: *Họ và tên của bạn*, *Địa chỉ Email (Gmail)*, *Mật khẩu*, *Xác nhận mật khẩu*.
-  - Social Login Section: Nút liên kết nhanh qua Google (đỏ) và Facebook (xanh).
-  - Nút hành động chính: *Đăng Ký & Nhận Mã OTP*.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - **Kiểm tra định dạng Email:** Khớp Regex email tiêu chuẩn. Nếu sai, hiển thị báo lỗi: `"Địa chỉ Email không hợp lệ"`.
-  - **Thanh đo độ mạnh mật khẩu:**
-    - Gồm 5 thanh màu sắc nằm ngang và checklist 5 tiêu chí: *Từ 8 ký tự, Chữ hoa, Chữ thường, Chữ số, Ký tự đặc biệt*.
-    - Hệ thống tính toán điểm số (0 - 5). Điểm $\le 2$ báo đỏ (Yếu), điểm $3$ báo vàng (Trung bình), điểm $4$ báo xanh dương (Mạnh), điểm $5$ báo xanh lá (Cực mạnh).
-    - Nút Đăng ký chỉ khả dụng khi độ mạnh đạt $\ge 3$ điểm và độ dài $\ge 8$. Nếu không đạt, chặn lại và thông báo lỗi.
-  - **Chỉ báo khớp mật khẩu:**
-    - Đối chiếu real-time trường *Mật khẩu* và *Xác nhận mật khẩu*.
-    - Trùng khớp: Hiện badge màu xanh lá `✓ Mật khẩu xác nhận trùng khớp`.
-    - Lệch ký tự: Hiện badge màu đỏ `✗ Mật khẩu xác nhận chưa khớp`.
-  - **Chống click spam (Double Submit Guard):** Khi bấm nút, trạng thái `_isLoading = true` sẽ vô hiệu hóa tương tác nút và hiển thị hoạt ảnh tải tròn.
+### 3.1 Public
 
-#### 1.2. Màn hình Xác Thực Mã OTP (OTP Verification Screen)
-- **Đường dẫn file Flutter:** [otp_verification_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/auth/presentation/otp_verification_screen.dart)
-- **Đường dẫn Route GoRouter:** `/verify-otp` (GoRouter - nhận tham số qua `state.extra`)
-- **Địa chỉ API kết nối:** `POST /auth/register` (Hoàn tất đăng ký) và `POST /auth/send-otp` (Gửi lại OTP)
-- **Mô tả giao diện (UI Layout):**
-  - Tiêu đề màn hình "Xác Thực Tài Khoản" kèm icon hộp thư lớn màu xanh thương hiệu.
-  - Hiển thị văn bản chứa email người nhận: `"Mã xác thực gồm 6 chữ số đã được gửi đến hộp thư [email_của_bạn]"`.
-  - Ô nhập mã OTP gồm 6 ô số căn giữa, hỗ trợ tự động nhảy focus khi gõ.
-  - Bộ đếm ngược 60 giây. Khi đếm ngược về 0, cho phép bấm nút: `"Gửi lại mã ngay"`.
-  - Nút hành động: *Xác nhận & Hoàn tất*.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - **Bảo vệ rò rỉ trạng thái (Liveness Check):** Nếu người dùng tải lại trang khiến `state.extra` bị `null`, hệ thống lập tức điều hướng quay lại trang `/register` và hiển thị Toast báo lỗi mất dữ liệu phiên làm việc.
-  - **Tự động gửi khi đủ 6 chữ số:** Khi nhập đủ 6 chữ số, hệ thống tự động gọi hàm gửi yêu cầu đăng ký lên server mà không cần bấm nút xác nhận.
+`/login`, `/register`, `/verify-otp`, `/forgot-password`, `/onboarding`,
+`/waiting-approval`.
 
-#### 1.3. Màn hình Đổi Mật Khẩu (Change Password Screen)
-- **Đường dẫn file Flutter:** [change_password_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/settings/presentation/change_password_screen.dart)
-- **Đường dẫn Route GoRouter:** `/change-password`
-- **Địa chỉ API kết nối:** `PUT /profile/password`
-- **Mô tả giao diện (UI Layout):**
-  - Các trường nhập liệu: *Mật khẩu hiện tại*, *Mật khẩu mới*, *Xác nhận mật khẩu mới*.
-  - Nút hành động: *Cập nhật mật khẩu bảo mật*.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - Áp dụng đầy đủ thanh đo độ mạnh mật khẩu và chỉ báo đối chiếu trùng khớp giống màn hình Đăng ký.
-  - Kiểm tra mật khẩu mới không được trùng khớp với mật khẩu cũ đang sử dụng.
+### 3.2 Bán hàng và quan hệ khách hàng
 
----
+`/sales`, `/pos`, `/sales/:id`, `/sales/returns/:id`, `/customer-debts`,
+`/customers`, `/customers/form`, `/customers/:id`, `/suppliers`,
+`/suppliers/form`, `/suppliers/:id`.
 
-### PHÂN HỆ 2: CỬA HÀNG & NHÂN SỰ (SHOP & STAFF)
+### 3.3 Sản phẩm và kho
 
-#### 2.1. Thanh chuyển đổi cửa hàng (Shop Switcher)
-- **Đường dẫn file Flutter:** Tích hợp trong [settings_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/settings/presentation/settings_screen.dart)
-- **Địa chỉ API kết nối:** `GET /auth/user-shops` (Lấy danh sách shop mà user tham gia)
-- **Mô tả giao diện (UI Layout):**
-  - Một Dropdown/Popup danh sách ở đầu trang cài đặt hiển thị tên tất cả các shop.
-  - Dòng cuối cùng của danh sách hiển thị lựa chọn đặc biệt: `"Tất cả cửa hàng (Tổng quát)"`.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - Khi người dùng thay đổi lựa chọn shop, hệ thống lưu `shop_id` mới vào `SharedPreferences` và kích hoạt refetch dữ liệu của các provider Riverpod liên quan.
-  - **Chế độ Tổng quát:** Khi chọn Tất cả cửa hàng, header `x-shop-id` sẽ truyền giá trị là `'all'`. Backend sẽ thực hiện cộng dồn báo cáo thay vì lọc theo một ID cụ thể.
+`/products`, `/products/tags`, `/products/form`, `/products/:id`,
+`/inventory`, `/stock-take`, `/purchase-orders`, `/purchase-orders/detail`,
+`/xnt-report`.
 
-#### 2.2. Màn hình Quản Lý Danh Sách Nhân Viên & Duyệt Gia Nhập (Staff Management Screen)
-- **Đường dẫn file Flutter:** [staff_management_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/settings/presentation/staff_management_screen.dart)
-- **Đường dẫn Route GoRouter:** `/staff`
-- **Địa chỉ API kết nối:**
-  - `GET /shop-members/pending` (Lấy danh sách chờ duyệt)
-  - `PUT /shop-members/:id/approve` (Phê duyệt gia nhập và gán vai trò)
-  - `DELETE /shop-members/:id` (Xóa nhân viên khỏi shop)
-- **Mô tả giao diện (UI Layout):**
-  - Gồm 2 Tab: **"Danh sách nhân viên"** và **"Chờ duyệt"**.
-  - Tab "Chờ duyệt" hiển thị danh sách nhân viên chờ duyệt kèm 2 nút hành động: *Đồng ý* và *Từ chối*.
-  - Khi bấm *Đồng ý*, hiển thị Dialog chọn vai trò: *Quản lý (MANAGER)*, *Thủ kho (STOREKEEPER)*, *Thu ngân (CASHIER)*.
+### 3.4 Tài chính và thuế
 
----
+`/finance`, `/daily-closing`, `/profit-loss`, `/cashflow-forecast`,
+`/debt-aging`, `/invoices`, `/purchases-no-invoice`, `/tax-calculator`,
+`/expense-ledger`, `/tax-obligations`, `/salary-ledger`, `/tax-declaration`,
+`/transactions`, `/transactions/detail`, `/tax-estimate`.
 
-### PHÂN HỆ 3: DANH MỤC SẢN PHẨM & KHO VẬN (PRODUCTS & INVENTORY)
+### 3.5 Quản trị
 
-#### 3.1. Thêm mới & Chỉnh sửa sản phẩm
-- **Đường dẫn file Flutter:** [product_list_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/products/presentation/product_list_screen.dart) (Chứa Dialog thêm mới/sửa)
-- **Địa chỉ API kết nối:** `POST /products` (Thêm mới) và `PUT /products/:id` (Cập nhật)
-- **Ràng buộc & Logic nghiệp vụ:**
-  - **Độc nhất mã vạch (Unique Barcode constraint):** Hệ thống kiểm tra tính duy nhất của mã vạch trên phạm vi cửa hàng (`shop_id`). Nếu trùng mã vạch, API backend trả về lỗi HTTP 409: `"Mã vạch này đã tồn tại"`.
-  - **Phân loại thẻ nhãn (Tags):** Hỗ trợ đính kèm mảng các chuỗi thẻ phân loại (ví dụ: `["VIP", "Dễ vỡ"]`). Bộ lọc sản phẩm theo nhãn phải thực hiện truy vấn chuẩn xác (PostgreSQL array operators) để tránh trường hợp tìm kiếm nhãn `"VIP"` nhưng hiển thị cả sản phẩm chứa nhãn `"VIPER"`.
+`/settings`, `/settings/ai-knowledge`, `/activity-logs`, `/tax-config`,
+`/tax-support`, `/payment-config`, `/notifications`, `/staff`, `/employees`,
+`/roles`, `/profile`, `/change-password`, `/shop-profile`.
 
-#### 3.2. Quản lý Đơn Đặt Hàng Nhà Cung Cấp (Purchase Orders)
-- **Đường dẫn file Flutter:** [purchase_order_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/inventory/presentation/purchase_order_screen.dart)
-- **Đường dẫn Route GoRouter:** `/purchases`
-- **Địa chỉ API kết nối:** `GET /purchase-orders` và `PUT /purchase-orders/:id/approve`
-- **Mô tả giao diện (UI Layout):**
-  - Danh sách các thẻ Card hiển thị mã PO, nhà cung cấp, tổng giá trị, và trạng thái màu sắc (*Nháp*, *Đang chờ duyệt*, *Đã nhập kho*).
-  - Nhấp vào Card để mở trang chi tiết đơn đặt hàng PO.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - Đơn hàng PO khi tạo ở trạng thái Chờ duyệt không được làm thay đổi tồn kho sản phẩm.
-  - Khi chủ shop bấm nút **"Duyệt nhập kho"**, hệ thống gọi API duyệt, tự động cộng thêm số lượng sản phẩm trong đơn PO vào trường tồn kho (`stock_quantity`) của từng sản phẩm tương ứng trong cơ sở dữ liệu.
+Production dùng hash URL (`/#/route`) theo hành vi đã quan sát.
 
-#### 3.3. Màn hình Phiếu Kiểm Kho (Stocktake Screen)
-- **Đường dẫn file Flutter:** [stock_take_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/inventory/presentation/stock_take_screen.dart)
-- **Mô tả giao diện (UI Layout):**
-  - Bảng kê danh sách sản phẩm gồm: Tồn kho hệ thống, Số lượng kiểm thực tế, Số lượng chênh lệch (tự động tính).
-  - Nút hành động chính: *Lưu phiếu kiểm kho*.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - Hệ thống bắt buộc phải hiển thị Modal xác nhận cảnh báo an toàn màu đỏ trước khi lưu phiếu, do đây là tác vụ làm thay đổi trực tiếp và vĩnh viễn số lượng tồn kho trên DB.
+## 4. Nhóm endpoint backend thực tế
 
-#### 3.4. Báo cáo Xuất - Nhập - Tồn (XNT Report)
-- **Đường dẫn file Flutter:** [xnt_report_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/inventory/presentation/xnt_report_screen.dart)
-- **Địa chỉ API kết nối:** `GET /reports/xnt`
-- **Mô tả giao diện (UI Layout):**
-  - Bảng hiển thị các cột: *Mã hàng*, *Tên hàng*, *Tồn đầu kỳ*, *Nhập trong kỳ*, *Xuất trong kỳ*, *Tồn cuối kỳ*, *Giá trị tồn kho*.
-  - Bộ chọn khoảng thời gian (Từ ngày - Đến ngày) sử dụng widget CustomDateRangePicker.
-  - Nút *Xuất Excel Báo cáo XNT*.
+| Nhóm | Prefix/endpoint tiêu biểu | Middleware mong đợi |
+|---|---|---|
+| Auth | `/api/auth/*` | public hoặc JWT cho onboarding |
+| User scope | `/api/profile`, `/api/my-shops`, `/api/notifications` | JWT |
+| Sales | `/api/sales-orders*` | JWT + shop + sales permission |
+| Product | `/api/products*`, `/categories`, `/cost-types` | JWT + shop + products permission |
+| Inventory | `/api/inventory/*`, `/purchase-orders`, `/stock-takes` | JWT + shop + inventory permission |
+| Finance | `/api/cash-*`, `/daily-closings`, `/invoices`, `/tax-obligations` | JWT + shop + finance permission |
+| Customer | `/api/customers*` | Hiện thiếu permission middleware |
+| Supplier | `/api/suppliers*` | Hiện thiếu permission middleware |
+| Tag | `/api/tags` | Hiện thiếu permission middleware |
+| Tax | `/api/tax/config`, `/api/tax/estimate`, `/api/tax/export-htkk` | finance permission |
+| Tax config | `/api/tax/config` từ route config riêng | Hiện thiếu permission middleware ở một route set |
+| Shop role/member | `/api/shop-roles`, `/api/shop-members` | owner |
+| System | `/api/shop-profile`, `/activity-logs`, `/invoice-scans`, `/configs` | permission theo module |
 
----
+## 5. Use case và yêu cầu chức năng
 
-### PHÂN HỆ 4: BÁN HÀNG POS & GIAO DỊCH (POS SALES & TRANSACTION)
+### UC-AUTH-01 — Đăng ký bằng OTP
 
-#### 4.1. Màn hình Bán Hàng Tại Quầy (POS Screen)
-- **Đường dẫn file Flutter:** [pos_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/sales/presentation/pos_screen.dart)
-- **Đường dẫn Route GoRouter:** `/pos`
-- **Địa chỉ API kết nối:** `POST /orders` (Tạo hóa đơn bán hàng)
-- **Mô tả giao diện (UI Layout):**
-  - Bên trái: Thanh tìm kiếm sản phẩm & Danh mục sản phẩm dạng lưới hoặc list.
-  - Bên phải: Giỏ hàng hiện hành hiển thị Tên sản phẩm, Đơn giá, Thuế VAT động, Số lượng, và tổng thanh toán.
-  - Nút **"Tạo khách hàng mới"** (icon dấu cộng cạnh trường chọn khách hàng).
-  - Nút hành động chính: *Thanh toán* (màu xanh lá) và *Hủy đơn* (màu đỏ).
-- **Ràng buộc & Logic nghiệp vụ:**
-  - **Tạo nhanh khách hàng:** Bấm nút dấu cộng sẽ mở Dialog nhập thông tin khách hàng (Họ tên, SĐT, Địa chỉ). Sau khi tạo thành công qua API `POST /customers`, hệ thống tự động gán ID khách hàng mới vào đơn hàng hiện hành mà không được làm sạch (clear) giỏ hàng đang bán dở.
-  - **Mã QR Code động:** Khi chọn thanh toán bằng chuyển khoản, hệ thống tạo mã VietQR động chứa mã tài khoản nhận tiền của cửa hàng và số tiền chính xác đến từng chữ số của hóa đơn để tránh khách gõ sai số tiền.
+**Tiền điều kiện:** email chưa tồn tại.
 
----
+**Luồng chính:**
 
-### PHÂN HỆ 5: KHÁCH HÀNG & CÔNG NỢ (CUSTOMERS & DEBT)
+1. Guest nhập email.
+2. Hệ thống gửi OTP có thời hạn.
+3. Guest nhập OTP và thông tin đăng ký.
+4. Backend so khớp email, mã và hạn dùng.
+5. Backend tạo user và xóa OTP đã dùng.
 
-#### 5.1. Màn hình Sổ Nợ Khách Hàng (Customer Receivable List)
-- **Đường dẫn file Flutter:** [customer_list_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/customers/presentation/customer_list_screen.dart)
-- **Địa chỉ API kết nối:** `GET /customers/receivables`
-- **Mô tả giao diện (UI Layout):**
-  - Danh sách khách hàng kèm số dư công nợ (`balance`) hiện tại.
-  - Thanh tìm kiếm nhanh theo Tên hoặc Số điện thoại.
-  - Huy hiệu (Badge) cảnh báo đối với các khách hàng có số nợ vượt quá hạn mức tín dụng (`credit_limit`).
+**Ngoại lệ:** OTP thiếu/sai/hết hạn → 400; email tồn tại → 409.
 
-#### 5.2. Màn hình Lịch sử Giao dịch và Trả Nợ (Receivable Detail & Payments)
-- **Đường dẫn file Flutter:** [customer_detail_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/customers/presentation/customer_detail_screen.dart)
-- **Địa chỉ API kết nối:**
-  - `GET /customers/:id/payments` (Lấy lịch sử thanh toán nợ)
-  - `POST /receivables/:id/payments` (Ghi nhận lượt trả nợ mới)
-- **Mô tả giao diện (UI Layout):**
-  - Danh sách các khoản nợ phải thu của khách hàng kèm ngày hết hạn (Due Date).
-  - Bảng lịch sử thu hồi nợ (Ngày thanh toán, số tiền, phương thức, người ghi nhận).
-  - Dialog **"Ghi nhận thanh toán nợ"**: Ô nhập số tiền trả, phương thức thanh toán, ghi chú và trường tải lên ảnh minh chứng giao dịch (Hóa đơn ngân hàng).
+**Acceptance:**
 
-#### 5.3. Báo cáo Tuổi Nợ (Debt Aging Report)
-- **Đường dẫn file Flutter:** [debt_aging_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/finance/presentation/debt_aging_screen.dart)
-- **Địa chỉ API kết nối:** `GET /reports/debt-aging`
-- **Mô tả giao diện (UI Layout):**
-  - Biểu đồ cột biểu diễn phân bổ nợ theo các nhóm tuổi nợ: *Trong hạn*, *Quá hạn 1-30 ngày*, *Quá hạn 31-60 ngày*, *Quá hạn 61-90 ngày*, *Quá hạn trên 90 ngày*.
-  - Bảng danh sách chi tiết các khoản nợ quá hạn xếp theo thứ tự giảm dần của số tiền nợ.
+- Không trả OTP trong response production.
+- OTP không dùng lại được.
+- Có giới hạn gửi/thử và audit trong bản hardened.
 
----
+### UC-AUTH-02 — Đăng nhập và refresh
 
-### PHÂN HỆ 6: TÀI CHÍNH & QUỸ TIỀN (FINANCE & CASH)
+1. User gửi credential.
+2. Backend xác minh active status.
+3. Trả access/refresh token và memberships.
+4. Client chọn shop hợp lệ.
+5. Khi access hết hạn, client dùng refresh đúng một lần theo policy.
 
-#### 6.1. Bảng Kê Mua Hàng Không Hóa Đơn (Mẫu số 01/TNDN)
-- **Đường dẫn file Flutter:** [purchase_no_invoice_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/finance/presentation/purchase_no_invoice_screen.dart)
-- **Đường dẫn Route GoRouter:** `/purchases-no-invoice`
-- **Địa chỉ API kết nối:** `POST /purchases/no-invoice`
-- **Mô tả giao diện (UI Layout):**
-  - Form thông tin người bán: *Họ tên*, *Địa chỉ*, *SĐT/Số CCCD*.
-  - Bảng chi tiết mặt hàng thu mua gồm các dòng nhập liệu: Tên nông sản/dịch vụ, Số lượng, Đơn giá, Thành tiền.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - **Tự động hoàn thiện dòng đang nhập dở (Auto-Complete):** Khi người dùng đang nhập dở tên hoặc số lượng mặt hàng ở dòng cuối cùng nhưng chưa kịp bấm nút "Thêm vào bảng" mà đã nhấn nút lưu lớn ở cuối màn hình, hệ thống bắt buộc phải tự động nạp dòng đang nhập dở đó vào mảng danh sách trước khi gửi API lên server.
+Acceptance: refresh bị revoke/hết hạn trả 401; không lặp vô hạn.
 
-#### 6.2. Màn hình Chốt Sổ Hàng Ngày (Daily Closing Screen)
-- **Đường dẫn file Flutter:** [daily_closing_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/finance/presentation/daily_closing_screen.dart)
-- **Địa chỉ API kết nối:** `GET /daily-closing/status` và `POST /daily-closing/close`
-- **Mô tả giao diện (UI Layout):**
-  - Biểu mẫu đối chiếu dòng tiền mặt cuối ca/ngày:
-    - *Tiền mặt đầu ngày* (hệ thống tự lấy ca trước).
-    - *Doanh thu tiền mặt hệ thống* (tự động cộng dồn từ hóa đơn).
-    - *Chi phí tiền mặt hệ thống* (tự động trừ đi từ sổ quỹ chi).
-    - *Tiền mặt lý thuyết trên két* (Expected Cash).
-    - *Tiền mặt kiểm đếm thực tế* (Input field để thủ quỹ điền).
-    - *Chênh lệch tiền mặt* (Tự động tính: Thực tế - Lý thuyết).
-- **Ràng buộc & Logic nghiệp vụ:**
-  - Nếu số tiền chênh lệch khác 0, bắt buộc người dùng nhập trường **"Lý do chênh lệch"** trước khi bấm nút "Xác nhận chốt sổ".
-  - **Tự động điều chỉnh quỹ:** Khi phát sinh chênh lệch (thừa/thiếu), hệ thống sẽ tự động tạo một giao dịch điều chỉnh quỹ tương ứng (phân loại OTHER) để cộng tăng/giảm trực tiếp số dư tài khoản tiền mặt ảo, đảm bảo khớp số dư két thực tế.
+### UC-SALE-01 — Bán hàng
 
-#### 6.3. Quét và Nhận diện Hóa đơn bằng OCR
-- **Đường dẫn file Flutter:** [invoice_scan_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/finance/presentation/invoice_scan_screen.dart)
-- **Địa chỉ API kết nối:** `POST /finance/scan-ocr`
-- **Mô tả giao diện (UI Layout):**
-  - Khung camera chụp ảnh hóa đơn hoặc nút chọn ảnh từ thư viện thiết bị.
-  - Hoạt ảnh quét (Scanner line) trong khi backend chạy nhận diện OCR.
-  - Bảng hiển thị kết quả phân tích: *Số hóa đơn*, *Ngày lập*, *Mã số thuế bên bán*, *Mã số thuế bên mua*, *Tổng tiền*, và bảng chi tiết các dòng mặt hàng.
-  - Nút *Xác nhận thông tin & Nạp vào cơ sở dữ liệu*.
+1. User có `sales:edit/full`.
+2. Chọn hàng còn bán được.
+3. Chọn khách và phương thức thanh toán.
+4. Backend validate price, quantity, stock và tổng.
+5. Trong transaction: tạo order/item/payment, movement, COGS/công nợ.
+6. Trả order hoàn tất và ghi audit.
 
-#### 6.4. Biểu đồ Dự Phong Dòng Tiền (Cashflow Forecast Screen)
-- **Đường dẫn file Flutter:** [cashflow_forecast_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/finance/presentation/cashflow_forecast_screen.dart)
-- **Địa chỉ API kết nối:** `GET /reports/cashflow`
-- **Mô tả giao diện (UI Layout):**
-  - Biểu đồ đường (Line Chart) biểu diễn biến động quỹ tiền theo thời gian (các ngày trong tháng).
-  - Trục hoành biểu thị thời gian, trục tung biểu thị số dư quỹ (VND).
-- **Ràng buộc & Logic nghiệp vụ:**
-  - **Chốt chặn crash biểu đồ (fl_chart crash guard):** Nếu khoảng thời gian lọc chỉ trả về 1 điểm dữ liệu dòng tiền (Ví dụ: ngày hôm nay), hệ thống tự động gán giá trị biên $maxX = 1.0$ (với $minX = 0$), không được phép để $maxX == minX$ vì thư viện `fl_chart` sẽ ném ngoại lệ xác thực gây lỗi màn hình đỏ (Red Screen).
+Acceptance: client total không được tin tuyệt đối; retry không tạo đơn trùng.
 
----
+### UC-SALE-02 — Hoàn/hủy
 
-### PHÂN HỆ 7: BÁO CÁO THUẾ & TUÂN THỦ (TAX & COMPLIANCE)
+1. Kiểm tra đơn/trạng thái/quyền.
+2. Xác định quantity và payment cần đảo.
+3. Transaction tạo return, tăng tồn, điều chỉnh COGS/tiền/công nợ.
+4. Ghi lý do, actor và audit.
 
-#### 7.1. Màn hình Kê Khai Thuế Mẫu 01/CNKD & Xuất XML
-- **Đường dẫn file Flutter:** [tax_declaration_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/finance/presentation/tax_declaration_screen.dart)
-- **Địa chỉ API kết nối:** `GET /tax/declaration` và `GET /tax/export-xml`
-- **Mô tả giao diện (UI Layout):**
-  - Biểu mẫu mô phỏng 100% tờ khai thuế 01/CNKD của Tổng cục Thuế Việt Nam gồm các chỉ tiêu doanh thu và thuế GTGT, TNCN phân chia theo 4 nhóm ngành nghề:
-    1. Phân phối, cung cấp hàng hóa (tỷ lệ 1.5%).
-    2. Dịch vụ, xây dựng không bao thầu nguyên vật liệu (tỷ lệ 7.0%).
-    3. Sản xuất, vận tải, dịch vụ có gắn với hàng hóa, xây dựng có bao thầu (tỷ lệ 4.5%).
-    4. Hoạt động kinh doanh khác (tỷ lệ 3.0%).
-  - Nút *Kiểm tra dữ liệu tờ khai*.
-  - Nút *Xuất tờ khai XML nạp HTKK*.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - **Ngưỡng miễn thuế 100M/năm:** Hệ thống kiểm tra doanh thu lũy kế cả năm dương lịch hiện tại (`yearlyRevenue`). Nếu \(\le 100.000.000\) VNĐ, tiền thuế phát sinh thực tế phải trả về bằng `0`, và hiển thị trạng thái `Miễn thuế (taxExempt: true)`.
-  - **Cảnh báo tiệm cận:** Nếu doanh thu lũy kế năm đạt từ 90 triệu VNĐ trở lên và chưa vượt quá 100 triệu VNĐ, hệ thống hiển thị cảnh báo tiệm cận để chủ hộ kinh doanh có kế hoạch tài chính.
+Acceptance: tổng hoàn không vượt tổng đã bán; idempotent.
 
----
+### UC-INV-01 — Nhận hàng
 
-### PHÂN HỆ 8: CẤU HÌNH HỆ THỐNG ĐỘNG (DYNAMIC CONFIGURATIONS)
+1. PO hợp lệ và user có quyền.
+2. Nhập quantity, lot/expiry và chi phí.
+3. Transaction cập nhật PO item, stock, lot, movement và cost.
+4. Báo chênh lệch nếu thực nhận khác PO.
 
-#### 8.1. Màn hình Cài Đặt Hạn Mức & Luật Thuế Động
-- **Đường dẫn file Flutter:** [system_config_screen.dart](file:///d:/StockManagementAndTaxWarning/lib/features/settings/presentation/system_config_screen.dart) (Tích hợp trong trang quản trị Cài đặt nâng cao của Owner)
-- **Đường dẫn Route GoRouter:** `/configs`
-- **Địa chỉ API kết nối:** `GET /api/system/configs` và `POST /api/system/configs`
-- **Mô tả giao diện (UI Layout):**
-  - Danh sách các nhóm cấu hình gồm ô nhập số nhập liệu:
-    - *Ngưỡng miễn thuế năm dương lịch* (mặc định 100.000.000 VNĐ).
-    - *Hạn mức thanh toán tiền mặt Bảng kê 01/TNDN* (mặc định 20.000.000 VNĐ).
-    - *Ngưỡng doanh thu bắt đầu cảnh báo chịu thuế* (mặc định 90.000.000 VNĐ).
-  - Nút hành động chính: *Lưu Cấu Hình Hệ Thống*.
-- **Ràng buộc & Logic nghiệp vụ:**
-  - **Quyền truy cập:** Chỉ tài khoản có vai trò `OWNER` mới được quyền truy cập màn hình này và gọi API ghi nhận.
-  - **Tính hợp lệ:** Các ô nhập số bắt buộc phải lớn hơn 0 và đúng định dạng tiền tệ.
-  - Khi lưu thành công, hệ thống lập tức xóa cache lưu trữ cũ của server để các luồng tính thuế kế tiếp lấy giá trị mới lập tức.
+### UC-INV-02 — Kiểm kê
+
+1. Tạo stock take snapshot.
+2. Nhập số đếm thực tế.
+3. Tính chênh lệch.
+4. Người có quyền duyệt.
+5. Sinh movement điều chỉnh và audit.
+
+### UC-DEBT-01 — Thu nợ
+
+1. Chọn receivable thật.
+2. Nhập số tiền ≤ còn nợ.
+3. Transaction tạo payment history và cash transaction.
+4. Cập nhật trạng thái receivable.
+5. Xuất biên nhận nếu cần.
+
+### UC-TAX-01 — Ước tính và xuất
+
+1. Chọn kỳ/năm.
+2. Backend tải doanh thu đủ điều kiện và rule có hiệu lực.
+3. Tính theo rule/version; không tạo số âm không hợp lệ.
+4. UI hiển thị nguồn, hiệu lực, giả định và cảnh báo.
+5. Khi xuất, validate hồ sơ và schema.
+6. Lưu audit/checksum/version.
+
+Baseline chưa đạt đầy đủ UC này.
+
+## 6. Yêu cầu dữ liệu
+
+| ID | Yêu cầu |
+|---|---|
+| DR-01 | Mọi dữ liệu nghiệp vụ phải truy được về shop |
+| DR-02 | Giá trị tiền lưu kiểu chính xác, không dùng floating point không kiểm soát |
+| DR-03 | Timestamp lưu nhất quán; report áp dụng timezone công bố |
+| DR-04 | Soft delete/status phải được filter đồng nhất |
+| DR-05 | Tổng hợp phải có kỳ, trạng thái và `asOf` |
+| DR-06 | Dữ liệu mẫu không tồn tại trong production nghiệp vụ |
+| DR-07 | Entity/table phải có một chủ sở hữu rõ |
+| DR-08 | Schema chỉ thay đổi qua migration có version/checksum |
+
+## 7. Yêu cầu API
+
+### 7.1 Response contract mục tiêu
+
+Thành công:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "..."
+}
+```
+
+Lỗi:
+
+```json
+{
+  "success": false,
+  "message": "Thông báo an toàn",
+  "code": "STABLE_ERROR_CODE",
+  "details": {}
+}
+```
+
+`details` không chứa stack, SQL, secret hoặc dữ liệu cá nhân nhạy cảm.
+
+### 7.2 HTTP status
+
+| Tình huống | Status |
+|---|---|
+| Validation sai | 400 hoặc 422 theo contract được chọn |
+| Chưa đăng nhập/token sai | 401 |
+| Thiếu quyền/shop | 403 |
+| Không tìm thấy | 404 |
+| Conflict/idempotency | 409 |
+| Rate limit | 429 |
+| Lỗi không dự kiến | 500 |
+
+Baseline còn nhiều controller trả 500 cho validation/not-found; cần chuẩn hóa V1.1.
+
+## 8. Yêu cầu phi chức năng
+
+### 8.1 Bảo mật
+
+- Backend xác minh membership và permission cho mọi route.
+- Không tin role/permission do client gửi.
+- Access/refresh token tách policy, có rotation/revoke.
+- OTP có hash, expiry, attempt limit và rate limit.
+- Log redaction secret/token/PII nhạy cảm.
+- CORS chỉ cho origin đã cấu hình.
+
+### 8.2 Tính toàn vẹn
+
+- Sale/return/payment/stock/debt dùng transaction.
+- Idempotency cho request và callback có thể retry.
+- Reconciliation jobs phát hiện số liệu lệch.
+
+### 8.3 Hiệu năng mục tiêu đề xuất
+
+| Chỉ số | Mục tiêu |
+|---|---|
+| P95 API đọc thông thường | ≤ 800 ms ở tải mục tiêu |
+| P95 tạo đơn | ≤ 1.5 s chưa gồm payment ngoài |
+| Dashboard initial usable | ≤ 3 s trên mạng thử nghiệm đã định nghĩa |
+| Export 10.000 dòng | ≤ 30 s hoặc chạy background |
+
+Chưa có load test; các số trên là tiêu chí đề xuất.
+
+### 8.4 Khả dụng và quan sát
+
+- Health/readiness không phụ thuộc route nghiệp vụ.
+- Correlation ID từ frontend đến log DB/payment.
+- Metrics lỗi, latency, cold start, DB pool và failed exports.
+- DDL không chạy trong request/cold start.
+
+### 8.5 UX và accessibility
+
+- 390×844, 768×1024, 1440×900 không mất chức năng.
+- Loading/empty/error/retry nhất quán.
+- Keyboard, screen reader, contrast và zoom phải được kiểm thử trước khi công bố đạt.
+
+## 9. Yêu cầu deployment
+
+1. Build Flutter Web và backend TypeScript thành công.
+2. Lint/test chạy trong CI; nếu bị chặn phải dừng phát hành theo policy đã duyệt.
+3. Push `main` không force.
+4. Hai Vercel project phải dùng cùng commit.
+5. Smoke test đăng nhập/dashboard/POS/kho/tài chính/thuế/settings.
+6. Có rollback bằng deployment trước; migration phải backward-compatible trong cửa sổ rollout.
+
+## 10. Giới hạn baseline
+
+- Flutter automated tests chưa chạy được trong môi trường audit do native asset/toolchain.
+- Backend lint chưa chạy vì thiếu executable `eslint`.
+- Không có quyền thay đổi dữ liệu production cho test hoàn/hủy/QR.
+- Không có XSD/HTKK validation fixture.
+- Không có accessibility test chuyên biệt.
