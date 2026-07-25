@@ -22,9 +22,11 @@ export class AuthService {
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
 
         if (isPhone) {
-            dto.phone = identifier;
+            throw new Error('Đăng ký bằng Số điện thoại hiện không được hỗ trợ. Vui lòng sử dụng địa chỉ Email.');
         } else if (isEmail) {
             dto.email = identifier;
+        } else {
+            throw new Error('Định dạng tài khoản không hợp lệ. Vui lòng sử dụng địa chỉ Email.');
         }
         (dto as any).isOnboarded = false;
 
@@ -171,12 +173,16 @@ export class AuthService {
         return { access_token: newAccessToken, refresh_token: newRefreshToken };
     }
 
-    async sendOtp(dto: { phone?: string; identifier?: string; checkExists?: boolean }) {
+    async sendOtp(dto: { phone?: string; identifier?: string; checkExists?: boolean; isRegistration?: boolean }) {
         const identifier = (dto?.identifier || dto?.phone || '').toString().trim();
         if (!identifier) throw new Error('Thiếu số điện thoại hoặc email');
 
         const isPhone = /^(0|\+84)\d{8,11}$/.test(identifier);
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+
+        if (isPhone && dto.isRegistration) {
+            throw new Error('Đăng ký bằng Số điện thoại hiện không được hỗ trợ. Vui lòng sử dụng địa chỉ Email.');
+        }
         
         if (!isPhone && !isEmail) throw new Error('Định dạng Số điện thoại hoặc Email không hợp lệ');
 
