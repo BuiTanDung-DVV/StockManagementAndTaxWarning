@@ -1,11 +1,10 @@
 import { AppDataSource } from '../config/db.config';
 import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
 import { Invoice } from '../system/entities';
-import { JournalEntry, JournalLine } from '../finance/ledger.entity';
+import { JournalLine } from '../finance/ledger.entity';
 import { ActivityLog } from '../system/entities';
 import { EntityManager } from 'typeorm';
 import { SystemService } from './system.service';
-import { InventoryService } from './inventory.service';
 import { COGSService } from './cogs.service';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
 import { PostingService } from './posting.service';
@@ -133,7 +132,7 @@ export class FinanceService {
         return { success: true };
     }
 
-    async getCashFlowSummary(shopId: number | number[], period?: string, from?: string, to?: string, userId?: number, isOwner?: boolean) {
+    async getCashFlowSummary(shopId: number | number[], period?: string, from?: string, to?: string) {
         const now = new Date();
         let fromDate: Date;
         let toDate: Date = new Date();
@@ -676,7 +675,6 @@ export class FinanceService {
         const updated = await this.purchaseNoInvRepo.save(record);
 
         if (input.decision === 'APPROVED') {
-            const inventoryService = new InventoryService();
             const cogsService = new COGSService();
 
             // Lấy chi tiết items

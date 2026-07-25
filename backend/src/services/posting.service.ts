@@ -1,5 +1,5 @@
 import { AppDataSource } from '../config/db.config';
-import { JournalEntry, JournalLine } from '../finance/ledger.entity';
+import { JournalEntry } from '../finance/ledger.entity';
 import { EntityManager } from 'typeorm';
 
 export class PostingService {

@@ -66,7 +66,7 @@ async function seed() {
   }
 
   // Link Owner
-  let ownerMember = await memberRepo.findOne({ where: { userId: owner.id, shopId: shop.id } });
+  const ownerMember = await memberRepo.findOne({ where: { userId: owner.id, shopId: shop.id } });
   if (!ownerMember) {
     await memberRepo.save(memberRepo.create({
       shopId: shop.id,
@@ -121,7 +121,7 @@ async function seed() {
         }));
       }
       
-      let member = await memberRepo.findOne({ where: { userId: staff.id, shopId: shop.id } });
+      const member = await memberRepo.findOne({ where: { userId: staff.id, shopId: shop.id } });
       if (!member) {
         await memberRepo.save(memberRepo.create({
           shopId: shop.id,
@@ -158,7 +158,7 @@ async function seed() {
   if (prodCount < 100) {
     const products = [];
     let pIdx = 1;
-    for (let cat of savedCategories) {
+    for (const cat of savedCategories) {
       // Create 10 products per category
       for (let i = 1; i <= 10; i++) {
         const isBuilding = ['Xi măng', 'Sắt thép xây dựng', 'Cát đá', 'Gạch ốp lát', 'Sơn nước'].includes(cat.name);

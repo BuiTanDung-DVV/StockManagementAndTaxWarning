@@ -33,7 +33,7 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
   try {
     decoded = jwt.verify(token, config.jwtSecret);
     req.user = decoded;
-  } catch (error) {
+  } catch {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
 

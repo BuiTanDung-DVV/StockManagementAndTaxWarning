@@ -43,7 +43,7 @@ export class TagController {
     static async update(req: Request, res: Response) {
         try {
             const shopId = (req as any).shopId!;
-            const id = parseInt(req.params.id);
+            const id = parseInt(req.params.id as string);
             const { name, color, type } = req.body;
             const tagType = type || 'product';
 
@@ -75,7 +75,7 @@ export class TagController {
     static async delete(req: Request, res: Response) {
         try {
             const shopId = (req as any).shopId!;
-            const id = parseInt(req.params.id);
+            const id = parseInt(req.params.id as string);
             
             const repo = AppDataSource.getRepository(Tag);
             const result = await repo.delete({ id, shopId });

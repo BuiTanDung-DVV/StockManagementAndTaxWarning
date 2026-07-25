@@ -34,7 +34,7 @@ async function seed() {
   let acct = await acctRepo.findOneBy({ name: 'Quỹ tiền mặt' });
   if (!acct) {
     acct = acctRepo.create({ name: 'Quỹ tiền mặt', accountType: 'CASH', balance: 50000000 });
-    acct = await acctRepo.save(acct);
+    await acctRepo.save(acct);
     console.log('  ➜ CashAccount created');
   }
 
