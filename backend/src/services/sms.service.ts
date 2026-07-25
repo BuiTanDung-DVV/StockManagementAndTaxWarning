@@ -1,4 +1,3 @@
-import { config } from '../config/env.config';
 
 export class SmsService {
     async sendOtp(phone: string, otpCode: string): Promise<boolean> {

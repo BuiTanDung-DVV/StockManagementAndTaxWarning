@@ -6,7 +6,6 @@ import { SalesService } from '../services/sales.service';
 import { FinanceService } from '../services/finance.service';
 import { Product } from '../product/entities';
 import { Customer } from '../customer/entities';
-import { SalesOrder } from '../sales/entities';
 
 async function seed() {
   await AppDataSource.initialize();

@@ -64,7 +64,10 @@ export class ProductService {
         }
         const openingQty = Number(dto.currentStock ?? dto.openingStock ?? 0);
         const providedWarehouseId = Number(dto.warehouseId || 0);
-        const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
+        const productPayload = { ...dto };
+        delete productPayload.currentStock;
+        delete productPayload.openingStock;
+        delete productPayload.warehouseId;
 
         const product = this.productRepo.create({ ...productPayload, sku, shopId });
         let saved: Product;

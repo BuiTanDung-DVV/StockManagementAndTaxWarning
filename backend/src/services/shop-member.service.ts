@@ -243,7 +243,11 @@ export class ShopMemberService {
             if (m.memberType === 'OWNER') {
                 permissions = { _owner: 'true' }; // special flag
             } else if (m.status === 'ACTIVE' && m.role?.permissions) {
-                try { permissions = JSON.parse(m.role.permissions); } catch {}
+                try {
+                    permissions = JSON.parse(m.role.permissions);
+                } catch {
+                    permissions = {};
+                }
             }
             return {
                 shopId: m.shopId,

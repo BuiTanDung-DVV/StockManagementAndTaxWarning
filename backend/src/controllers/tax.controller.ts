@@ -49,7 +49,7 @@ export const updateConfig = async (req: Request, res: Response) => {
         const { businessSector } = req.body;
         
         const shopRepo = AppDataSource.getRepository(ShopProfile);
-        let shop = await shopRepo.findOne({ where: { shopId } });
+        const shop = await shopRepo.findOne({ where: { shopId } });
         
         if (shop) {
             if (businessSector !== undefined) shop.businessSector = businessSector;

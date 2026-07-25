@@ -5,7 +5,7 @@
 import 'reflect-metadata';
 import { AppDataSource } from '../config/db.config';
 import { User } from '../auth/entities';
-import { ShopProfile, Invoice, InvoiceItem, ActivityLog } from '../system/entities';
+import { ShopProfile, Invoice, ActivityLog } from '../system/entities';
 import { Product } from '../product/entities';
 import { Customer } from '../customer/entities';
 import { Supplier } from '../supplier/entities';

@@ -99,7 +99,7 @@ export class AuthService {
             { expiresIn: '7d' } as jwt.SignOptions,
         );
 
-        let shops: any[] = [];
+        let shops: any[];
         try {
             const memberships = await this.memberRepo.find({
                 where: { userId: user.id }, // Get all to check PENDING status
@@ -124,7 +124,7 @@ export class AuthService {
                     permissions,
                 };
             });
-        } catch (e: any) {
+        } catch {
             shops = [];
         }
 
@@ -151,7 +151,7 @@ export class AuthService {
         let decoded: any;
         try {
             decoded = jwt.verify(refreshToken, config.jwtSecret as jwt.Secret);
-        } catch (e) {
+        } catch {
             throw new Error('Invalid refresh token');
         }
 
@@ -207,15 +207,16 @@ export class AuthService {
         `, [identifier, otpCode]);
 
         // Send actual SMS or Email
-        let sent = false;
+        let sent: boolean;
         if (isEmail) {
             sent = await this.emailService.sendOtp(identifier, otpCode);
         } else {
             sent = await this.smsService.sendOtp(identifier, otpCode);
         }
         
-        // In sandbox mode, return otp for testing, else don't return it
-        const isSandbox = !process.env.SMTP_USER || process.env.SMTP_USER === 'your-email@gmail.com';
+        const exposeOtp =
+            process.env.NODE_ENV !== 'production' &&
+            process.env.OTP_DEBUG_RESPONSE === 'true';
         
         if (!sent) {
             throw new Error('Không thể gửi OTP do lỗi hệ thống hoặc cấu hình chưa đúng.');
@@ -224,7 +225,7 @@ export class AuthService {
         return { 
             success: true, 
             message: 'Đã gửi OTP thành công', 
-            otp: isSandbox ? otpCode : undefined 
+            otp: exposeOtp ? otpCode : undefined
         };
     }
 

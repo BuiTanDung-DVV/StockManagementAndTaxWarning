@@ -55,7 +55,7 @@ export class SalesService {
         return { items, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
     }
     
-    async summary(shopId: number | number[], from?: string, to?: string, userId?: number, isOwner?: boolean) {
+    async summary(shopId: number | number[], from?: string, to?: string) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
@@ -185,7 +185,7 @@ export class SalesService {
         };
     }
 
-    async getTopProducts(shopId: number | number[], from?: string, to?: string, userId?: number, isOwner?: boolean) {
+    async getTopProducts(shopId: number | number[], from?: string, to?: string) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
@@ -217,7 +217,7 @@ export class SalesService {
         }));
     }
 
-    async paymentMethodSummary(shopId: number | number[], from?: string, to?: string, userId?: number, isOwner?: boolean) {
+    async paymentMethodSummary(shopId: number | number[], from?: string, to?: string) {
         const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const toDate = to ? new Date(to) : new Date();
         toDate.setHours(23, 59, 59, 999);
