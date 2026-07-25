@@ -34,21 +34,21 @@ class MainShell extends ConsumerWidget {
         route: '/',
         prefixes: ['/'],
       ),
-      if (shop.hasPermission('pos') || shop.hasPermission('sales_view'))
+      if (!shop.isAllShops && shop.hasPermission('sales'))
         _NavDef(
           icon: HugeIcons.strokeRoundedShoppingCart01,
           label: AppStrings.navSales,
           route: '/sales',
           prefixes: ['/sales', '/pos'],
         ),
-      if (shop.hasPermission('inventory'))
+      if (!shop.isAllShops && shop.hasPermission('inventory'))
         _NavDef(
           icon: HugeIcons.strokeRoundedPackage,
           label: AppStrings.navInventory,
           route: '/inventory',
           prefixes: ['/inventory', '/purchase-orders', '/stock', '/xnt'],
         ),
-      if (shop.hasPermission('finance'))
+      if (!shop.isAllShops && shop.hasPermission('finance'))
         _NavDef(
           icon: HugeIcons.strokeRoundedCoinsDollar,
           label: AppStrings.navFinance,

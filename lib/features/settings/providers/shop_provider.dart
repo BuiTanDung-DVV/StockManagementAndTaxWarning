@@ -26,7 +26,7 @@ class ShopState {
     this.isAllShops = false,
   });
 
-  bool get isOwner => isAllShops || memberType == 'OWNER' || userShops.isEmpty;
+  bool get isOwner => !isAllShops && memberType == 'OWNER';
   bool get isPending => status == 'PENDING';
   bool get isRejected => status == 'REJECTED';
   bool get isActive =>
@@ -34,14 +34,50 @@ class ShopState {
 
   /// Check if user has permission. Owners and users with no shop config always return true.
   bool hasPermission(String key, [String level = 'view']) {
-    if (isAllShops) return true;
+    if (isAllShops) {
+      if (level != 'view' ||
+          !const {'sales', 'inventory', 'finance'}.contains(key)) {
+        return false;
+      }
+      return userShops
+          .where((shop) => shop['status'] == 'ACTIVE')
+          .any((shop) => _shopHasPermission(shop, key, level));
+    }
     // No RBAC configured yet → full access (legacy/admin mode)
-    if (userShops.isEmpty) return true;
+    if (userShops.isEmpty) return false;
     if (memberType == 'OWNER') return true;
-    final perm = permissions[key];
+    final perm = _permissionLevel(permissions, key);
     if (perm == null || perm == 'none') return false;
     const hierarchy = ['none', 'view', 'edit', 'full'];
     return hierarchy.indexOf(perm) >= hierarchy.indexOf(level);
+  }
+
+  bool _shopHasPermission(Map<String, dynamic> shop, String key, String level) {
+    if (shop['memberType'] == 'OWNER') return true;
+    final raw = shop['permissions'];
+    final shopPermissions = <String, String>{};
+    if (raw is Map) {
+      raw.forEach((k, v) {
+        shopPermissions[k.toString()] = v.toString();
+      });
+    }
+    final permission = _permissionLevel(shopPermissions, key);
+    if (permission == null) return false;
+    const hierarchy = ['none', 'view', 'edit', 'full'];
+    return hierarchy.indexOf(permission) >= hierarchy.indexOf(level);
+  }
+
+  String? _permissionLevel(Map<String, String> source, String key) {
+    final direct = source[key];
+    if (direct != null && direct != 'none') return direct;
+    if (key != 'sales') return direct;
+
+    const hierarchy = ['none', 'view', 'edit', 'full'];
+    final pos = source['pos'] ?? 'none';
+    final salesView = source['sales_view'] == null ? 'none' : 'view';
+    return hierarchy.indexOf(pos) >= hierarchy.indexOf(salesView)
+        ? pos
+        : salesView;
   }
 
   ShopState copyWith({
@@ -136,7 +172,7 @@ class ShopNotifier extends Notifier<ShopState> {
       currentShopId: null,
       currentShopName: 'Tất cả cửa hàng (Tổng quát)',
       shopCode: null,
-      memberType: 'OWNER',
+      memberType: null,
       status: 'ACTIVE',
       permissions: const {},
       userShops: shops,

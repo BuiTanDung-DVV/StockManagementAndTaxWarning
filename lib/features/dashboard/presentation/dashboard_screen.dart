@@ -1,7 +1,3 @@
-import 'dart:ui';
-
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -338,7 +334,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   clipBehavior: Clip.none,
                   child: Row(
                     children: [
-                      if (shopState.isOwner || shopState.hasPermission('pos'))
+                      if (shopState.isOwner || shopState.hasPermission('sales'))
                         Padding(
                           padding: const EdgeInsets.only(right: 12),
                           child: QuickAction(
@@ -549,7 +545,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                             radius: 16,
                                           ),
                                         ),
-                                        error: (_, __) => const SummaryCard(
+                                        error: (_, _) => const SummaryCard(
                                           'Sổ quỹ tiền mặt',
                                           '?',
                                           null,
@@ -588,7 +584,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                             radius: 16,
                                           ),
                                         ),
-                                        error: (_, __) => const SummaryCard(
+                                        error: (_, _) => const SummaryCard(
                                           'Doanh thu lũy kế (YTD)',
                                           '?',
                                           null,
