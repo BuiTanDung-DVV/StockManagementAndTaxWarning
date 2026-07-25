@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/chart_widgets.dart';
@@ -396,14 +397,9 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     ThemeData theme,
   ) {
     final now = DateTime.now();
-    final monthFrom = DateTime(
-      now.year,
-      now.month,
-      1,
-    ).toIso8601String().split('T')[0];
-    final monthTo = now.toIso8601String().split('T')[0];
+    final period = currentMonthReportingPeriod(now);
     final summaryAsync = ref.watch(
-      salesSummaryProvider((from: monthFrom, to: monthTo)),
+      salesSummaryProvider((from: period.from, to: period.to)),
     );
 
     return summaryAsync.when(

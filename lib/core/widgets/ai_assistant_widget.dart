@@ -30,6 +30,12 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
     'Nội quy chốt két tiền mặt cuối ngày?',
   ];
 
+  @override
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
+  }
+
   void _handleSend(String question) {
     final query = question.trim();
     if (query.isEmpty) return;

@@ -347,7 +347,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ),
                 if (cart.items.isNotEmpty)
                   Container(
-                    margin: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    // MainShell uses a floating mobile navigation bar. Reserve
+                    // its footprint so the critical checkout CTA is never
+                    // rendered underneath it.
+                    margin: const EdgeInsets.fromLTRB(16, 4, 16, 104),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 16,

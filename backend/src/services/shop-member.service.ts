@@ -77,6 +77,12 @@ export class ShopMemberService {
 
         const existing = await this.memberRepo.findOne({ where: { shopId, userId: user.id } });
         if (existing) throw new Error('Người dùng đã là thành viên của shop');
+        const role = roleId
+            ? await this.roleRepo.findOne({ where: { id: roleId, shopId } })
+            : null;
+        if (roleId && !role) {
+            throw new Error('Vai trò không thuộc cửa hàng này');
+        }
 
         const member = this.memberRepo.create({
             shopId,
@@ -90,9 +96,7 @@ export class ShopMemberService {
 
         // Get shop name for notification
         const shop = await this.shopRepo.findOne({ where: { id: shopId } });
-        const roleName = roleId
-            ? (await this.roleRepo.findOne({ where: { id: roleId } }))?.name || 'Nhân viên'
-            : 'Nhân viên';
+        const roleName = role?.name || 'Nhân viên';
 
         // Send notification to the invited user
         const notif = this.notifRepo.create({
@@ -166,11 +170,17 @@ export class ShopMemberService {
     /** Change a member's role */
     async updateRole(shopId: number, memberId: number, roleId: number) {
         const member = await this.memberRepo.findOneByOrFail({ id: memberId, shopId });
+        if (member.memberType === 'OWNER') {
+            throw new Error('Không thể thay đổi vai trò của chủ cửa hàng');
+        }
+        const role = await this.roleRepo.findOne({ where: { id: roleId, shopId } });
+        if (!role) {
+            throw new Error('Vai trò không thuộc cửa hàng này');
+        }
         member.roleId = roleId;
         const saved = await this.memberRepo.save(member);
 
         // Notify user of role change
-        const role = await this.roleRepo.findOne({ where: { id: roleId } });
         const shop = await this.shopRepo.findOne({ where: { id: member.shopId } });
         const notif = this.notifRepo.create({
             userId: member.userId,
@@ -240,9 +250,14 @@ export class ShopMemberService {
             const shop = shopMap.get(m.shopId);
             // Parse permissions from role
             let permissions: Record<string, string> = {};
-            if (m.memberType === 'OWNER') {
+            if (m.memberType === 'OWNER' && m.status === 'ACTIVE' && m.isActive) {
                 permissions = { _owner: 'true' }; // special flag
-            } else if (m.status === 'ACTIVE' && m.role?.permissions) {
+            } else if (
+                m.status === 'ACTIVE' &&
+                m.isActive &&
+                m.role?.shopId === m.shopId &&
+                m.role.permissions
+            ) {
                 try {
                     permissions = JSON.parse(m.role.permissions);
                 } catch {
@@ -255,6 +270,7 @@ export class ShopMemberService {
                 shopCode: shop?.shopCode,
                 memberType: m.memberType,
                 status: m.status,
+                isActive: m.isActive,
                 role: m.role ? { id: m.role.id, name: m.role.name } : null,
                 permissions,
             };

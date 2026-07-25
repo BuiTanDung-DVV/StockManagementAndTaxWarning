@@ -25,6 +25,7 @@ class MainShell extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final primaryColor = Theme.of(context).colorScheme.primary;
     final shop = ref.watch(shopProvider);
+    final location = GoRouterState.of(context).uri.path;
 
     // Build visible tabs based on permissions
     final allTabs = <_NavDef>[
@@ -349,13 +350,35 @@ class MainShell extends ConsumerWidget {
               },
             ),
           ),
-          const Positioned.fill(
-            child: IgnorePointer(ignoring: false, child: AiAssistantWidget()),
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (!shouldShowAiAssistant(
+                  location: location,
+                  viewportWidth: constraints.maxWidth,
+                )) {
+                  return const SizedBox.shrink();
+                }
+                return const IgnorePointer(
+                  ignoring: false,
+                  child: AiAssistantWidget(),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+bool shouldShowAiAssistant({
+  required String location,
+  required double viewportWidth,
+}) {
+  final isMobile = viewportWidth < 800;
+  final isPos = location == '/pos' || location.startsWith('/pos/');
+  return !(isMobile && isPos);
 }
 
 // ── Nav tab definition ──

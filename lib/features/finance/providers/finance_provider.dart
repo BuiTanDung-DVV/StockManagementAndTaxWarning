@@ -250,6 +250,16 @@ final expensesByCategoryProvider = FutureProvider<Map<String, dynamic>>((ref) {
   return ref.watch(financeRepoProvider).getExpensesByCategory();
 });
 
+final expensesByCategoryForPeriodProvider =
+    FutureProvider.family<Map<String, dynamic>, ({String from, String to})>((
+      ref,
+      args,
+    ) {
+      return ref
+          .watch(financeRepoProvider)
+          .getExpensesByCategory(from: args.from, to: args.to);
+    });
+
 final dailyClosingProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, date) {
       return ref.watch(financeRepoProvider).getDailyClosing(date);

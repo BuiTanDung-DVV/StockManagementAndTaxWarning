@@ -9,6 +9,10 @@ import { COGSService } from './cogs.service';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
 import { PostingService } from './posting.service';
 import { calculateNetAmount } from '../sales/sales-metric.utils';
+import {
+    calculateOutstandingTax,
+    normalizeNonNegative,
+} from '../tax/tax-policy';
 
 export class FinanceService {
     private cashTxRepo = AppDataSource.getRepository(CashTransaction);
@@ -512,9 +516,15 @@ export class FinanceService {
             .where('i.shop_id = :shopId AND i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { shopId, fromDate, toDate })
             .getRawOne();
 
-        const vatIn = Number(result?.vatIn || 0);
-        const vatOut = Number(result?.vatOut || 0);
-        return { vatIn, vatOut, vatOwed: vatOut - vatIn };
+        const vatIn = normalizeNonNegative(Number(result?.vatIn || 0));
+        const vatOut = normalizeNonNegative(Number(result?.vatOut || 0));
+        const vatBalance = calculateOutstandingTax(vatOut, vatIn);
+        return {
+            vatIn,
+            vatOut,
+            vatOwed: vatBalance.owed,
+            vatCredit: vatBalance.overpaid,
+        };
     }
     async getInvoiceById(shopId: number, id: number) {
         const invoice = await this.invoiceRepo.findOne({
@@ -534,11 +544,30 @@ export class FinanceService {
     // Tax Obligations
     async getTaxObligations(shopId: number) {
         const items = await this.taxObRepo.find({ where: { shopId }, order: { period: 'DESC' } });
-        const totalVat = items.reduce((s, i) => s + Number(i.vatDeclared), 0);
-        const totalPit = items.reduce((s, i) => s + Number(i.pitDeclared), 0);
-        const totalPaidVat = items.reduce((s, i) => s + Number(i.vatPaid), 0);
-        const totalPaidPit = items.reduce((s, i) => s + Number(i.pitPaid), 0);
-        return { items, totalVat, totalPit, totalPaidVat, totalPaidPit, totalOwed: (totalVat + totalPit) - (totalPaidVat + totalPaidPit) };
+        const safeItems = items.map((item) => ({
+            ...item,
+            vatDeclared: normalizeNonNegative(Number(item.vatDeclared)),
+            pitDeclared: normalizeNonNegative(Number(item.pitDeclared)),
+            vatPaid: normalizeNonNegative(Number(item.vatPaid)),
+            pitPaid: normalizeNonNegative(Number(item.pitPaid)),
+        }));
+        const totalVat = safeItems.reduce((s, i) => s + i.vatDeclared, 0);
+        const totalPit = safeItems.reduce((s, i) => s + i.pitDeclared, 0);
+        const totalPaidVat = safeItems.reduce((s, i) => s + i.vatPaid, 0);
+        const totalPaidPit = safeItems.reduce((s, i) => s + i.pitPaid, 0);
+        const balance = calculateOutstandingTax(
+            totalVat + totalPit,
+            totalPaidVat + totalPaidPit,
+        );
+        return {
+            items: safeItems,
+            totalVat,
+            totalPit,
+            totalPaidVat,
+            totalPaidPit,
+            totalOwed: balance.owed,
+            totalOverpaid: balance.overpaid,
+        };
     }
     async createTaxObligation(shopId: number, dto: Partial<TaxObligation>) {
         return this.taxObRepo.save(this.taxObRepo.create({ ...this.normalizeTaxObligationDto(dto), shopId }));
@@ -758,6 +787,11 @@ export class FinanceService {
         }
         if (normalized.pitPaid === undefined && normalized.paidPitAmount !== undefined) {
             normalized.pitPaid = normalized.paidPitAmount;
+        }
+        for (const field of ['vatDeclared', 'pitDeclared', 'vatPaid', 'pitPaid']) {
+            if (normalized[field] !== undefined) {
+                normalized[field] = normalizeNonNegative(Number(normalized[field]));
+            }
         }
         delete normalized.vatAmount;
         delete normalized.pitAmount;

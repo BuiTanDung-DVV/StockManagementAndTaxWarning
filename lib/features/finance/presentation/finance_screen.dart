@@ -10,6 +10,7 @@ import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/utils/reporting_period.dart';
 import '../providers/finance_provider.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -17,13 +18,6 @@ final _currFmt = NumberFormat.currency(
   symbol: '₫',
   decimalDigits: 0,
 );
-final _today = DateTime.now();
-final _from = DateTime(
-  _today.year,
-  _today.month,
-  1,
-).toIso8601String().split('T')[0];
-final _to = _today.toIso8601String().split('T')[0];
 
 class FinanceScreen extends ConsumerWidget {
   const FinanceScreen({super.key});
@@ -32,9 +26,13 @@ class FinanceScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final summaryAsync = ref.watch(cashSummaryProvider((from: _from, to: _to)));
+    final today = DateTime.now();
+    final period = currentMonthReportingPeriod(today);
+    final from = period.from;
+    final to = period.to;
+    final summaryAsync = ref.watch(cashSummaryProvider((from: from, to: to)));
     final txAsync = ref.watch(
-      transactionsProvider((page: 1, type: null, from: _from, to: _to)),
+      transactionsProvider((page: 1, type: null, from: from, to: to)),
     );
 
     return Scaffold(
@@ -349,7 +347,9 @@ class FinanceScreen extends ConsumerWidget {
               // ── Chart 2: Top Expense Categories ──
               Builder(
                 builder: (context) {
-                  final expCatAsync = ref.watch(expensesByCategoryProvider);
+                  final expCatAsync = ref.watch(
+                    expensesByCategoryForPeriodProvider((from: from, to: to)),
+                  );
                   return expCatAsync.when(
                     data: (data) {
                       final categories =
@@ -426,7 +426,8 @@ class FinanceScreen extends ConsumerWidget {
                     ),
                     error: (_, _) => AppInlineError(
                       message: 'Không thể tải phân loại chi phí.',
-                      onRetry: () => ref.invalidate(expensesByCategoryProvider),
+                      onRetry: () =>
+                          ref.invalidate(expensesByCategoryForPeriodProvider),
                     ),
                   );
                 },

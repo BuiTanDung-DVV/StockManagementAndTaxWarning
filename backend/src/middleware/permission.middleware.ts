@@ -27,18 +27,21 @@ export const requirePermission = (
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         try {
             const userId = req.user?.sub;
-            const headerShopId = req.headers['x-shop-id'];
-            const queryShopId = req.query.shopId;
-            const rawShopId = headerShopId || queryShopId;
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Unauthorized',
+                });
+            }
 
-            if (!rawShopId) {
+            if (!req.isAllShops && !req.shopId) {
                 return res.status(400).json({ success: false, message: 'Thiếu thông tin cửa hàng (shopId)' });
             }
 
             const memberRepo = AppDataSource.getRepository(ShopMember);
             const keys = Array.isArray(key) ? key : [key];
             
-            if (rawShopId === 'all') {
+            if (req.isAllShops) {
                 if (!options.allowAllShops || level !== 'view') {
                     return res.status(403).json({
                         success: false,
@@ -47,11 +50,23 @@ export const requirePermission = (
                 }
 
                 const members = await memberRepo.find({
-                    where: { userId, isActive: true },
+                    where: {
+                        userId,
+                        isActive: true,
+                        status: 'ACTIVE',
+                    },
                     relations: ['role'],
                 });
-                const allowedMembers = members.filter((member) =>
-                    membershipHasAnyPermission(member, keys, level),
+                const authenticatedShopIds = new Set(req.shopIds || []);
+                const allowedMembers = members.filter(
+                    (member) =>
+                        authenticatedShopIds.has(member.shopId) &&
+                        membershipHasAnyPermission(
+                            member,
+                            keys,
+                            level,
+                            member.shopId,
+                        ),
                 );
 
                 if (!allowedMembers.length) {
@@ -72,9 +87,14 @@ export const requirePermission = (
                 return next();
             }
 
-            const shopId = +(rawShopId);
+            const shopId = req.shopId!;
             const member = await memberRepo.findOne({
-                where: { userId, shopId, isActive: true },
+                where: {
+                    userId,
+                    shopId,
+                    isActive: true,
+                    status: 'ACTIVE',
+                },
                 relations: ['role'],
             });
 
@@ -88,7 +108,7 @@ export const requirePermission = (
             // Owners have full access
             if (member.memberType === 'OWNER') return next();
 
-            if (!membershipHasAnyPermission(member, keys, level)) {
+            if (!membershipHasAnyPermission(member, keys, level, shopId)) {
                 return res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập chức năng này' });
             }
 
@@ -105,21 +125,26 @@ export const requirePermission = (
 export const requireOwner = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const userId = req.user?.sub;
-        const shopId = req.shopId || req.query.shopId || req.headers['x-shop-id'];
+        const shopId = req.shopId;
 
-        if (!shopId) {
-            return res.status(400).json({ success: false, message: 'Thiếu thông tin cửa hàng' });
-        }
-        if (req.isAllShops || shopId === 'all') {
+        if (req.isAllShops) {
             return res.status(403).json({
                 success: false,
                 message: 'Chức năng này yêu cầu chọn một cửa hàng cụ thể',
             });
         }
+        if (!shopId) {
+            return res.status(400).json({ success: false, message: 'Thiếu thông tin cửa hàng' });
+        }
 
         const memberRepo = AppDataSource.getRepository(ShopMember);
         const member = await memberRepo.findOne({
-            where: { userId, shopId: +shopId, isActive: true }
+            where: {
+                userId,
+                shopId,
+                isActive: true,
+                status: 'ACTIVE',
+            }
         });
 
         if (!member || member.memberType !== 'OWNER') {
