@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,11 +29,20 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   String? _status;
   bool _searching = false;
   final _searchCtrl = TextEditingController();
+  Timer? _searchDebounce;
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String _) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) setState(() => _page = 1);
+    });
   }
 
   @override
@@ -39,7 +50,12 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final listAsync = ref.watch(
-      salesListProvider((page: _page, status: _status, customerId: null)),
+      salesListProvider((
+        page: _page,
+        status: _status,
+        customerId: null,
+        search: _searchCtrl.text,
+      )),
     );
 
     return Scaffold(
@@ -63,7 +79,10 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             ),
             onPressed: () => setState(() {
               _searching = !_searching;
-              if (!_searching) _searchCtrl.clear();
+              if (!_searching) {
+                _searchCtrl.clear();
+                _page = 1;
+              }
             }),
           ),
           const SizedBox(width: 8),
@@ -77,6 +96,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
               child: TextField(
                 controller: _searchCtrl,
                 autofocus: true,
+                onChanged: _onSearchChanged,
                 style: GoogleFonts.inter(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Tìm theo mã đơn, khách hàng...',
@@ -183,7 +203,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                       parent: BouncingScrollPhysics(),
                     ),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => Divider(
+                    separatorBuilder: (_, _) => Divider(
                       height: 1,
                       color: c.divider.withValues(alpha: 0.15),
                     ),
@@ -404,9 +424,11 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           ),
         ),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (data) {
-        final totalOrders = (data['totalOrders'] ?? data['count'] ?? 0) as num;
+        final totalOrders =
+            (data['orderCount'] ?? data['totalOrders'] ?? data['count'] ?? 0)
+                as num;
         final totalRevenue =
             double.tryParse(
               data['totalRevenue']?.toString() ??
@@ -451,6 +473,18 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           margin: const EdgeInsets.only(left: 16, right: 16, bottom: 10),
           child: Column(
             children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Tổng quan tháng này',
+                  style: GoogleFonts.outfit(
+                    color: c.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               // 3 stat cards
               Row(
                 children: [

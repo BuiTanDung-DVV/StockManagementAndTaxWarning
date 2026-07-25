@@ -11,7 +11,7 @@
         "lint": "eslint src/**/*.ts",
         "test:permissions": "npm run build && node --test test/permission.utils.test.js",
         "test:tax": "npm run build && node --test test/tax-policy.test.js",
-        "test:p0": "npm run build && node --test test/permission.utils.test.js test/tax-policy.test.js test/debt.utils.test.js"
+        "test:p0": "npm run build && node --test test/permission.utils.test.js test/tax-policy.test.js test/debt.utils.test.js test/sales-metric.utils.test.js"
     },
     "dependencies": {
         "bcrypt": "^5.1.1",

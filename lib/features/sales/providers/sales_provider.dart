@@ -11,10 +11,14 @@ class SalesRepository {
     int limit = 20,
     String? status,
     int? customerId,
+    String? search,
   }) async {
     final params = <String, dynamic>{'page': '$page', 'limit': '$limit'};
     if (status != null) params['status'] = status;
     if (customerId != null) params['customerId'] = '$customerId';
+    if (search != null && search.trim().isNotEmpty) {
+      params['search'] = search.trim();
+    }
     return await _api.get('/sales-orders', params: params);
   }
 
@@ -61,7 +65,7 @@ final salesRepoProvider = Provider<SalesRepository>((ref) {
 final salesListProvider =
     FutureProvider.family<
       Map<String, dynamic>,
-      ({int page, String? status, int? customerId})
+      ({int page, String? status, int? customerId, String? search})
     >((ref, args) {
       return ref
           .watch(salesRepoProvider)
@@ -69,6 +73,7 @@ final salesListProvider =
             page: args.page,
             status: args.status,
             customerId: args.customerId,
+            search: args.search,
           );
     });
 

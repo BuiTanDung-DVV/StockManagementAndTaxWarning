@@ -155,10 +155,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final ytdSalesAsync = hasFinance && shopState.userShops.isNotEmpty
         ? ref.watch(salesSummaryProvider((from: ytdFrom, to: ytdTo)))
         : null;
-    final cashAccountsAsync = hasFinance && shopState.userShops.isNotEmpty
-        ? ref.watch(cashAccountsProvider)
-        : null;
-
     if (shopState.userShops.isEmpty) {
       return Scaffold(
         backgroundColor: c.bg,
@@ -488,24 +484,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       assetPath: 'assets/icon/orders_icon.svg',
                                     ),
                                   ),
-                                  if (hasFinance && cashAccountsAsync != null)
+                                  if (hasFinance && cashFlowAsync != null)
                                     SizedBox(
                                       width: cardWidth,
-                                      child: cashAccountsAsync.when(
-                                        data: (accounts) {
-                                          final totalCash = accounts
-                                              .where((a) => a['type'] == 'CASH')
-                                              .fold<double>(
-                                                0.0,
-                                                (sum, a) =>
-                                                    sum +
-                                                    (num.tryParse(
-                                                          a['balance']
-                                                                  ?.toString() ??
-                                                              '0',
-                                                        )?.toDouble() ??
-                                                        0.0),
-                                              );
+                                      child: cashFlowAsync.when(
+                                        data: (data) {
+                                          final totalCash =
+                                              num.tryParse(
+                                                data['cashBalance']
+                                                        ?.toString() ??
+                                                    '0',
+                                              )?.toDouble() ??
+                                              0.0;
                                           return SummaryCard(
                                             'Sổ quỹ tiền mặt',
                                             _currFmt.format(totalCash),
@@ -830,11 +820,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ],
 
-                if (hasFinance && salesAsync != null) ...[
+                if (hasFinance && ytdSalesAsync != null) ...[
                   const SizedBox(height: 20),
 
                   // Revenue threshold warning (Glow progress meter)
-                  salesAsync.whenOrNull(
+                  ytdSalesAsync.whenOrNull(
                         data: (data) {
                           final revenue =
                               num.tryParse(

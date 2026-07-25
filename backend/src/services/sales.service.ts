@@ -14,6 +14,7 @@ import { JournalEntry } from '../finance/ledger.entity';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
 import { InventoryLot } from '../inventory/lot.entity';
 import { EntityManager } from 'typeorm';
+import { normalizeSalesStatusFilter } from '../sales/sales-metric.utils';
 
 export class SalesService {
     private orderRepo = AppDataSource.getRepository(SalesOrder);
@@ -29,19 +30,29 @@ export class SalesService {
     private financeService = new FinanceService();
     private postingService = new PostingService();
 
-    async findAll(shopId: number, page = 1, limit = 20, customerId?: number) {
-        const whereClause: any = { shopId };
-        if (customerId) {
-            whereClause.customer = { id: customerId };
+    async findAll(shopId: number, page = 1, limit = 20, customerId?: number, status?: string, search?: string) {
+        const safePage = Math.max(Number(page) || 1, 1);
+        const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+        const statuses = normalizeSalesStatusFilter(status);
+        const qb = this.orderRepo.createQueryBuilder('o')
+            .leftJoinAndSelect('o.customer', 'customer')
+            .where('o.shop_id = :shopId', { shopId });
+
+        if (customerId) qb.andWhere('customer.id = :customerId', { customerId });
+        if (statuses) qb.andWhere('o.status IN (:...statuses)', { statuses });
+        if (search?.trim()) {
+            qb.andWhere(
+                '(LOWER(o.order_code) LIKE :search OR LOWER(COALESCE(customer.name, \'\')) LIKE :search OR LOWER(COALESCE(customer.phone, \'\')) LIKE :search)',
+                { search: `%${search.trim().toLowerCase()}%` },
+            );
         }
-        const [items, total] = await this.orderRepo.findAndCount({ 
-            where: whereClause, 
-            relations: ['customer'],
-            skip: (page - 1) * limit, 
-            take: limit, 
-            order: { createdAt: 'DESC' } 
-        });
-        return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+
+        const [items, total] = await qb
+            .orderBy('o.created_at', 'DESC')
+            .skip((safePage - 1) * safeLimit)
+            .take(safeLimit)
+            .getManyAndCount();
+        return { items, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
     }
     
     async summary(shopId: number | number[], from?: string, to?: string, userId?: number, isOwner?: boolean) {
@@ -51,13 +62,32 @@ export class SalesService {
 
         const shopCondition = Array.isArray(shopId) ? 'o.shop_id IN (:...shopIds)' : 'o.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
-        const userCondition = !isOwner && userId ? ' AND o.created_by = :userId' : '';
-
         const result = await this.orderRepo.createQueryBuilder('o')
             .select('COALESCE(SUM(o.total_amount), 0)', 'totalRevenue')
             .addSelect('COALESCE(SUM(o.total_cogs), 0)', 'totalCogs')
             .addSelect('COUNT(o.id)', 'orderCount')
-            .where(`${shopCondition}${userCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate, userId })
+            .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
+            .getRawOne();
+
+        const returnShopCondition = Array.isArray(shopId)
+            ? 'r.shop_id IN (:...shopIds)'
+            : 'r.shop_id = :shopId';
+        const returnResult = await this.returnRepo.createQueryBuilder('r')
+            .select('COALESCE(SUM(r.refund_amount), 0)', 'refundAmount')
+            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND r.status != 'CANCELLED'`, {
+                ...shopParams,
+                fromDate,
+                toDate,
+            })
+            .getRawOne();
+        const returnedCogsResult = await this.returnRepo.createQueryBuilder('r')
+            .innerJoin('r.order', 'ro')
+            .select('COALESCE(SUM(ro.total_cogs), 0)', 'returnedCogs')
+            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND r.status != 'CANCELLED'`, {
+                ...shopParams,
+                fromDate,
+                toDate,
+            })
             .getRawOne();
 
         const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
@@ -67,17 +97,38 @@ export class SalesService {
             .select(`TO_CHAR(o.order_date, '${dateFormat}')`, 'date')
             .addSelect('COALESCE(SUM(o.total_amount), 0)', 'revenue')
             .addSelect('COUNT(o.id)', 'orderCount')
-            .where(`${shopCondition}${userCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate, userId })
+            .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
             .groupBy(`TO_CHAR(o.order_date, '${dateFormat}')`)
             .orderBy(`TO_CHAR(o.order_date, '${dateFormat}')`, 'ASC')
             .getRawMany();
+        const dailyReturns = await this.returnRepo.createQueryBuilder('r')
+            .select(`TO_CHAR(r.return_date, '${dateFormat}')`, 'date')
+            .addSelect('COALESCE(SUM(r.refund_amount), 0)', 'refundAmount')
+            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND r.status != 'CANCELLED'`, {
+                ...shopParams,
+                fromDate,
+                toDate,
+            })
+            .groupBy(`TO_CHAR(r.return_date, '${dateFormat}')`)
+            .getRawMany();
+        const dailyReturnMap = new Map(
+            dailyReturns.map((row) => [row.date, Number(row.refundAmount || 0)]),
+        );
 
         const dailyMap = new Map();
         daily.forEach(d => {
             dailyMap.set(d.date, {
-                revenue: Number(d.revenue || 0),
+                revenue: Number(d.revenue || 0) - (dailyReturnMap.get(d.date) || 0),
                 orderCount: Number(d.orderCount || 0)
             });
+        });
+        dailyReturns.forEach((row) => {
+            if (!dailyMap.has(row.date)) {
+                dailyMap.set(row.date, {
+                    revenue: -Number(row.refundAmount || 0),
+                    orderCount: 0,
+                });
+            }
         });
 
         const filledDaily = [];
@@ -113,12 +164,24 @@ export class SalesService {
             }
         }
 
+        const grossRevenue = Number(result?.totalRevenue || 0);
+        const refundAmount = Number(returnResult?.refundAmount || 0);
+        const grossCogs = Number(result?.totalCogs || 0);
+        const returnedCogs = Number(returnedCogsResult?.returnedCogs || 0);
+        const totalRevenue = grossRevenue - refundAmount;
+        const totalCogs = Math.max(grossCogs - returnedCogs, 0);
         return {
-            totalRevenue: Number(result?.totalRevenue || 0),
-            totalCogs: Number(result?.totalCogs || 0),
-            grossProfit: Number(result?.totalRevenue || 0) - Number(result?.totalCogs || 0),
+            grossRevenue,
+            refundAmount,
+            totalRevenue,
+            grossCogs,
+            returnedCogs,
+            totalCogs,
+            grossProfit: totalRevenue - totalCogs,
             orderCount: Number(result?.orderCount || 0),
-            daily: filledDaily
+            daily: filledDaily,
+            period: { from: fromDate, to: toDate },
+            scope: 'SHOP',
         };
     }
 
@@ -129,10 +192,7 @@ export class SalesService {
 
         const isArray = Array.isArray(shopId);
         const shopCondition = isArray ? 'o.shop_id = ANY($1)' : 'o.shop_id = $1';
-        const userCondition = !isOwner && userId ? ' AND o.created_by = $4' : '';
-
-        const params: any[] = isArray ? [shopId, fromDate, toDate] : [shopId, fromDate, toDate];
-        if (!isOwner && userId) params.push(userId);
+        const params: any[] = [shopId, fromDate, toDate];
 
         // Query top 5 selling products by revenue
         const topProducts = await AppDataSource.query(`
@@ -145,7 +205,6 @@ export class SalesService {
             WHERE ${shopCondition} 
               AND o.order_date >= $2 
               AND o.order_date <= $3 
-              ${userCondition}
               AND o.status != 'CANCELLED'
             GROUP BY p.id, p.name
             ORDER BY value DESC
@@ -165,14 +224,13 @@ export class SalesService {
 
         const shopCondition = Array.isArray(shopId) ? 'o.shop_id IN (:...shopIds)' : 'o.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
-        const userCondition = !isOwner && userId ? ' AND o.created_by = :userId' : '';
-
-        const methods = await this.orderRepo.createQueryBuilder('o')
-            .select('o.payment_method', 'method')
-            .addSelect('COUNT(o.id)', 'count')
-            .addSelect('COALESCE(SUM(o.total_amount), 0)', 'total')
-            .where(`${shopCondition}${userCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate, userId })
-            .groupBy('o.payment_method')
+        const methods = await this.paymentRepo.createQueryBuilder('p')
+            .innerJoin('p.order', 'o')
+            .select('p.method', 'method')
+            .addSelect('COUNT(p.id)', 'count')
+            .addSelect('COALESCE(SUM(p.amount), 0)', 'total')
+            .where(`${shopCondition} AND p.paid_at >= :fromDate AND p.paid_at <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
+            .groupBy('p.method')
             .getRawMany();
 
         return methods.map(m => ({
@@ -266,7 +324,13 @@ export class SalesService {
             const taxAmount = Number(dto.taxAmount || 0);
             const totalAmount = subtotal - discountAmount + taxAmount;
             const paidAmount = Number(dto.paidAmount || 0);
+            if (paidAmount < 0 || paidAmount > totalAmount) {
+                throw new Error('Validation: Paid amount must be between 0 and order total');
+            }
             const unpaidAmount = Math.max(totalAmount - paidAmount, 0);
+            if (unpaidAmount > 0 && !customer) {
+                throw new Error('Validation: Customer is required for an unpaid order');
+            }
 
             if (customer && Number(customer.creditLimit || 0) > 0) {
                 const existingDebtRaw = await manager.createQueryBuilder(Receivable, 'r')
@@ -290,7 +354,7 @@ export class SalesService {
                 shopId,
                 orderCode: dto.orderCode || 'SO' + Date.now().toString().slice(-6),
                 orderDate,
-                status: dto.status || 'PENDING',
+                status: paidAmount >= totalAmount ? 'DELIVERED' : 'PENDING',
                 subtotal,
                 discountAmount,
                 taxAmount,
@@ -408,7 +472,7 @@ export class SalesService {
         }
     }
 
-    async cancel(shopId: number, id: number) {
+    async cancel(shopId: number, id: number, createdBy?: number) {
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -417,6 +481,9 @@ export class SalesService {
             const manager = queryRunner.manager;
             const order = await manager.findOne(SalesOrder, { where: { id, shopId } });
             if (!order) throw new Error('Order not found');
+            if (order.status === 'CANCELLED') {
+                throw new Error('Validation: Order is already cancelled');
+            }
             
             order.status = 'CANCELLED';
             await manager.save(SalesOrder, order);
@@ -492,6 +559,23 @@ export class SalesService {
                 await journalEntryRepo.save(originalEntry);
             }
 
+            const refundAmount = Number(order.paidAmount || 0);
+            if (refundAmount > 0) {
+                await this.financeService.createCashTransaction(shopId, {
+                    amount: refundAmount,
+                    type: 'EXPENSE',
+                    category: 'REFUND',
+                    paymentMethod: order.paymentMethod || 'CASH',
+                    referenceType: 'SALES_ORDER_CANCEL',
+                    referenceId: order.id,
+                    referenceCode: order.orderCode,
+                    description: `Hoàn tiền do hủy đơn ${order.orderCode}`,
+                    transactionDate: new Date(),
+                    status: 'COMPLETED',
+                    createdBy,
+                } as any, manager);
+            }
+
             await queryRunner.commitTransaction();
             return this.findById(shopId, id);
         } catch (error) {
@@ -505,8 +589,10 @@ export class SalesService {
     async updateOrder(shopId: number, id: number, dto: Partial<SalesOrder>) {
         const order = await this.orderRepo.findOne({ where: { id, shopId } });
         if (!order) throw new Error('Order not found');
-        // Only allow updating non-financial fields after creation
-        const allowedFields: (keyof SalesOrder)[] = ['status', 'notes', 'invoiceNumber', 'paymentMethod'];
+        if (dto.status !== undefined || dto.paymentMethod !== undefined) {
+            throw new Error('Validation: Financial fields must use the payment or cancellation workflow');
+        }
+        const allowedFields: (keyof SalesOrder)[] = ['notes', 'invoiceNumber'];
         for (const field of allowedFields) {
             if (dto[field] !== undefined) {
                 (order as any)[field] = dto[field];
@@ -525,6 +611,12 @@ export class SalesService {
             const manager = queryRunner.manager;
             const order = await manager.findOne(SalesOrder, { where: { id: orderId, shopId } });
             if (!order) throw new Error('Order not found');
+            if (order.status === 'CANCELLED') {
+                throw new Error('Validation: Cannot pay a cancelled order');
+            }
+            if (order.returnStatus && order.returnStatus !== 'NONE') {
+                throw new Error('Validation: Cannot pay a returned order');
+            }
             const amount = Number(dto.amount || 0);
             if (amount <= 0) throw new Error('Validation: Payment amount must be greater than 0');
             const currentPaid = Number(order.paidAmount || 0);
@@ -619,17 +711,54 @@ export class SalesService {
 
         try {
             const manager = queryRunner.manager;
-            const order = await manager.findOne(SalesOrder, { where: { id: orderId, shopId } });
+            const order = await manager.findOne(SalesOrder, {
+                where: { id: orderId, shopId },
+                relations: ['items', 'items.product'],
+            });
             if (!order) throw new Error('Order not found');
             if (order.status === 'CANCELLED') throw new Error('Cannot return a cancelled order');
+            if (order.returnStatus && order.returnStatus !== 'NONE') {
+                throw new Error('Validation: Order has already been returned');
+            }
 
             const returnDate = dto.returnDate ? new Date(dto.returnDate) : new Date();
 
             const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
+            if (rawItems.length === 0) {
+                throw new Error('Validation: Return items are required');
+            }
+            const soldItems = new Map(
+                order.items.map((item) => [item.product?.id, item]),
+            );
+            let returnedCogs = 0;
+            let returnedQuantity = 0;
+            for (const rawItem of rawItems) {
+                const productId = Number(rawItem.productId);
+                const quantity = Number(rawItem.quantity || 0);
+                const soldItem = soldItems.get(productId);
+                if (!soldItem || quantity <= 0 || quantity > Number(soldItem.quantity)) {
+                    throw new Error('Validation: Return quantity exceeds sold quantity');
+                }
+                returnedQuantity += quantity;
+                returnedCogs += quantity * Number(soldItem.costPrice || 0);
+            }
+            const soldQuantity = order.items.reduce(
+                (sum, item) => sum + Number(item.quantity || 0),
+                0,
+            );
+            if (
+                returnedQuantity !== soldQuantity ||
+                rawItems.length !== order.items.length
+            ) {
+                throw new Error('Validation: Partial returns are not supported yet');
+            }
             let refundAmount = Number(dto.refundAmount || 0);
 
-            if (!refundAmount && rawItems.length) {
+            if (dto.refundAmount == null && rawItems.length) {
                 refundAmount = rawItems.reduce((sum: number, i: any) => sum + Number(i.subtotal || (Number(i.quantity || 0) * Number(i.unitPrice || 0))), 0);
+            }
+            if (refundAmount < 0 || refundAmount > Number(order.paidAmount || 0)) {
+                throw new Error('Validation: Refund amount exceeds the amount paid');
             }
 
             const entity = manager.create(SalesReturn, {
@@ -640,7 +769,7 @@ export class SalesService {
                 reason: dto.reason || '',
                 refundAmount,
                 refundMethod: dto.refundMethod || 'CASH',
-                status: dto.status || 'PENDING',
+                status: 'COMPLETED',
                 notes: dto.notes,
             } as any);
 
@@ -667,6 +796,26 @@ export class SalesService {
 
             order.returnStatus = 'RETURNED';
             await manager.save(SalesOrder, order);
+
+            const receivable = await manager.findOne(Receivable, {
+                where: { shopId, orderId } as any,
+                relations: ['customer'],
+            });
+            if (receivable && receivable.status !== 'CANCELLED') {
+                const unpaidAmount = Math.max(
+                    Number(receivable.amount) - Number(receivable.paidAmount || 0),
+                    0,
+                );
+                receivable.status = 'CANCELLED';
+                await manager.save(Receivable, receivable);
+                if (unpaidAmount > 0 && receivable.customer) {
+                    receivable.customer.balance = Math.max(
+                        Number(receivable.customer.balance || 0) - unpaidAmount,
+                        0,
+                    );
+                    await manager.save(Customer, receivable.customer);
+                }
+            }
 
             // === Hoàn trả Inventory Stocks & Lots (Reverse FIFO) ===
             const lotDeductionRepo = manager.getRepository(SalesOrderLotDeduction);
@@ -747,14 +896,37 @@ export class SalesService {
                 } as any, manager);
 
                 // === Journal Ledger: Hoàn tiền trả hàng (Nợ TK 511 / Có TK 111) ===
+                const returnJournalLines: {
+                    accountCode: string;
+                    amount: number;
+                    entryType: 'DEBIT' | 'CREDIT';
+                }[] = [
+                    { accountCode: '511', amount: refundAmount, entryType: 'DEBIT' },
+                    { accountCode: '111', amount: refundAmount, entryType: 'CREDIT' },
+                ];
+                if (returnedCogs > 0) {
+                    returnJournalLines.push(
+                        { accountCode: '156', amount: returnedCogs, entryType: 'DEBIT' },
+                        { accountCode: '632', amount: returnedCogs, entryType: 'CREDIT' },
+                    );
+                }
+                await this.postingService.postJournal(
+                    shopId,
+                    'SALES_RETURN',
+                    savedReturn.id,
+                    `Trả hàng - ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
+                    returnJournalLines,
+                    manager
+                );
+            } else if (returnedCogs > 0) {
                 await this.postingService.postJournal(
                     shopId,
                     'SALES_RETURN',
                     savedReturn.id,
                     `Trả hàng - ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
                     [
-                        { accountCode: '511', amount: refundAmount, entryType: 'DEBIT' },
-                        { accountCode: '111', amount: refundAmount, entryType: 'CREDIT' },
+                        { accountCode: '156', amount: returnedCogs, entryType: 'DEBIT' },
+                        { accountCode: '632', amount: returnedCogs, entryType: 'CREDIT' },
                     ],
                     manager
                 );

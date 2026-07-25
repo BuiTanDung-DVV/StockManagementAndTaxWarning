@@ -30,7 +30,12 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     final ref = this.ref;
     final customerAsync = ref.watch(customerDetailProvider(widget.id));
     final ordersAsync = ref.watch(
-      salesListProvider((page: 1, status: null, customerId: widget.id)),
+      salesListProvider((
+        page: 1,
+        status: null,
+        customerId: widget.id,
+        search: null,
+      )),
     );
 
     return Scaffold(
@@ -146,7 +151,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                   ),
                   data: (d) {
                     final items = (d['items'] as List?) ?? [];
-                    if (items.isEmpty)
+                    if (items.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
@@ -154,6 +159,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                           style: TextStyle(color: Colors.grey, fontSize: 13),
                         ),
                       );
+                    }
                     return ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -241,7 +247,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 cancel();
                 BotToast.showText(text: 'Xóa khách hàng thành công');
                 ref.invalidate(customerListProvider);
-                if (mounted) context.pop();
+                if (context.mounted) context.pop();
               } catch (e) {
                 cancel();
                 BotToast.showText(text: 'Lỗi: $e');
