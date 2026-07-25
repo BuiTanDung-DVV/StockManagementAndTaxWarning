@@ -34,7 +34,13 @@ export const findAll = async (req: Request, res: Response) => {
             ),
         });
     }
-    catch (e: any) { sendServiceError(res, e); }
+    catch (e: any) {
+        console.error('Sales order list query failed:', validationMessage(e));
+        res.status(500).json({
+            success: false,
+            message: 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.',
+        });
+    }
 };
 
 const getShopId = (req: any) => req.isAllShops ? req.shopIds : req.shopId;
