@@ -75,6 +75,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       ref.invalidate(productListProvider);
       ref.invalidate(lowStockProvider);
       ref.invalidate(taxObligationsProvider);
+      ref.invalidate(cashAccountsProvider);
 
       // TTS announcement
       final amountText = _formatAmountForSpeech(widget.totalAmount);

@@ -84,7 +84,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (pass.contains(RegExp(r'[A-Z]'))) score++;
     if (pass.contains(RegExp(r'[a-z]'))) score++;
     if (pass.contains(RegExp(r'[0-9]'))) score++;
-    if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]'))) score++;
+    if (pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]')))
+      score++;
     return score;
   }
 
@@ -116,7 +117,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     final strengthScore = _calculatePasswordStrength(pass);
     if (pass.length < 8 || strengthScore < 3) {
-      setState(() => _error = 'Mật khẩu chưa đạt tiêu chuẩn bảo quốc tế (cần tối thiểu 8 ký tự kết hợp chữ hoa, chữ thường, số hoặc ký tự đặc biệt)');
+      setState(
+        () => _error =
+            'Mật khẩu chưa đạt tiêu chuẩn bảo quốc tế (cần tối thiểu 8 ký tự kết hợp chữ hoa, chữ thường, số hoặc ký tự đặc biệt)',
+      );
       return;
     }
 
@@ -129,7 +133,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final api = ref.read(apiClientProvider);
-      await api.post('/auth/send-otp', data: {'identifier': email});
+      await api.post(
+        '/auth/send-otp',
+        data: {'identifier': email, 'isRegistration': true},
+      );
 
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -242,7 +249,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   icon: Icons.facebook_rounded,
                                   iconColor: Colors.blueAccent,
                                   label: 'Facebook',
-                                  onTap: () => _handleSocialRegister('Facebook'),
+                                  onTap: () =>
+                                      _handleSocialRegister('Facebook'),
                                   c: c,
                                 ),
                               ),
@@ -253,7 +261,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             children: [
                               Expanded(child: Divider(color: c.divider)),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
                                 child: Text(
                                   'HOẶC ĐĂNG KÝ BẰNG EMAIL',
                                   style: GoogleFonts.outfit(
@@ -426,7 +436,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _isLoading ? null : _proceedToOtpVerification,
+                              onPressed: _isLoading
+                                  ? null
+                                  : _proceedToOtpVerification,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
@@ -495,7 +507,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final hasUpper = pass.contains(RegExp(r'[A-Z]'));
     final hasLower = pass.contains(RegExp(r'[a-z]'));
     final hasDigit = pass.contains(RegExp(r'[0-9]'));
-    final hasSpecial = pass.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]'));
+    final hasSpecial = pass.contains(
+      RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]'),
+    );
 
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 4),
@@ -559,7 +573,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          met ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+          met
+              ? Icons.check_circle_rounded
+              : Icons.radio_button_unchecked_rounded,
           size: 14,
           color: met ? AppColors.success : c.textMuted,
         ),
@@ -592,7 +608,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           const SizedBox(width: 6),
           Text(
-            match ? 'Mật khẩu xác nhận trùng khớp' : 'Mật khẩu xác nhận chưa khớp',
+            match
+                ? 'Mật khẩu xác nhận trùng khớp'
+                : 'Mật khẩu xác nhận chưa khớp',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

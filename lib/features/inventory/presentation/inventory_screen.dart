@@ -409,7 +409,7 @@ class InventoryScreen extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (e, s) => const SizedBox.shrink(),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 88), // UI Breathing Room Padding
             ],
           ),
         ),

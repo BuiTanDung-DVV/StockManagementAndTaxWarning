@@ -296,6 +296,16 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ], c),
 
+            // AI Knowledge Base Management
+            _SettingGroup('Trợ Lý AI & Tri Thức', [
+              _SettingItem(
+                HugeIcons.strokeRoundedSmartPhone01,
+                'Quản lý kho tài liệu AI (RAG)',
+                () => context.push('/settings/ai-knowledge'),
+                c,
+              ),
+            ], c),
+
             // Appearance theme toggles
             _SettingGroup('Giao diện ứng dụng', [_BrandColorTile(c: c)], c),
 
@@ -475,7 +485,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 88), // UI Breathing Room Padding
           ],
         ),
       ),
@@ -519,7 +529,9 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              if (shopState.userShops.any((s) => s['memberType'] == 'OWNER')) ...[
+              if (shopState.userShops.any(
+                (s) => s['memberType'] == 'OWNER',
+              )) ...[
                 ListTile(
                   leading: HugeIcon(
                     icon: HugeIcons.strokeRoundedFolder01,
@@ -529,7 +541,9 @@ class SettingsScreen extends ConsumerWidget {
                   title: Text(
                     'Tất cả cửa hàng (Tổng quát)',
                     style: GoogleFonts.outfit(
-                      fontWeight: shopState.isAllShops ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: shopState.isAllShops
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       fontSize: 14,
                     ),
                   ),
@@ -554,12 +568,16 @@ class SettingsScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  tileColor: shopState.isAllShops ? primaryColor.withValues(alpha: 0.08) : null,
+                  tileColor: shopState.isAllShops
+                      ? primaryColor.withValues(alpha: 0.08)
+                      : null,
                 ),
                 const SizedBox(height: 8),
               ],
               ...shopState.userShops.map((shop) {
-                final isActive = shop['shopId'] == shopState.currentShopId && !shopState.isAllShops;
+                final isActive =
+                    shop['shopId'] == shopState.currentShopId &&
+                    !shopState.isAllShops;
                 return ListTile(
                   leading: HugeIcon(
                     icon: HugeIcons.strokeRoundedStore01,
@@ -742,9 +760,7 @@ class _BrandColorTile extends ConsumerWidget {
                   final isSelected = item == current;
                   return GestureDetector(
                     onTap: () {
-                      ref
-                          .read(brandColorProvider.notifier)
-                          .setBrandColor(item);
+                      ref.read(brandColorProvider.notifier).setBrandColor(item);
                       Navigator.pop(ctx);
                     },
                     child: SizedBox(

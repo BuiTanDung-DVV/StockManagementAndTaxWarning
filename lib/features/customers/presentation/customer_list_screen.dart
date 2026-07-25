@@ -91,10 +91,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                     onRefresh: () async => ref.invalidate(customerListProvider),
                     child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
                       itemCount: items.length,
                       separatorBuilder: (_, __) => Divider(
                         height: 1,

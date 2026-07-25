@@ -634,6 +634,7 @@ class FinanceScreen extends ConsumerWidget {
                 loading: () => const ShimmerList(count: 3),
                 error: (e, s) => const SizedBox.shrink(),
               ),
+              const SizedBox(height: 88), // UI Breathing Room Padding
             ],
           ),
         ),

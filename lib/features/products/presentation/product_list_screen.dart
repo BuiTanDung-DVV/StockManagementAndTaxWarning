@@ -213,10 +213,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                   onRefresh: () async => ref.invalidate(productListProvider),
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                     itemCount: items.length,
                     separatorBuilder: (_, __) => Divider(
                       height: 1,

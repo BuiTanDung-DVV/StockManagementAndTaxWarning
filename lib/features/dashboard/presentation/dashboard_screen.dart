@@ -49,10 +49,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _showJoinShopDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => const JoinShopDialog(),
-    );
+    showDialog(context: context, builder: (_) => const JoinShopDialog());
   }
 
   @override
@@ -83,17 +80,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       label1 = 'Tuần này';
       label2 = 'Tuần trước';
     } else if (filter == 'month') {
-      from1 = DateTime(today.year, today.month, 1).toIso8601String().split('T')[0];
+      from1 = DateTime(
+        today.year,
+        today.month,
+        1,
+      ).toIso8601String().split('T')[0];
       to1 = today.toIso8601String().split('T')[0];
-      from2 = DateTime(today.year, today.month - 1, 1).toIso8601String().split('T')[0];
-      to2 = DateTime(today.year, today.month, 0).toIso8601String().split('T')[0];
+      from2 = DateTime(
+        today.year,
+        today.month - 1,
+        1,
+      ).toIso8601String().split('T')[0];
+      to2 = DateTime(
+        today.year,
+        today.month,
+        0,
+      ).toIso8601String().split('T')[0];
       label1 = 'Tháng này';
       label2 = 'Tháng trước';
     } else if (filter == '6_months') {
-      from1 = DateTime(today.year, today.month - 5, 1).toIso8601String().split('T')[0];
+      from1 = DateTime(
+        today.year,
+        today.month - 5,
+        1,
+      ).toIso8601String().split('T')[0];
       to1 = today.toIso8601String().split('T')[0];
-      from2 = DateTime(today.year, today.month - 11, 1).toIso8601String().split('T')[0];
-      to2 = DateTime(today.year, today.month - 5, 0).toIso8601String().split('T')[0];
+      from2 = DateTime(
+        today.year,
+        today.month - 11,
+        1,
+      ).toIso8601String().split('T')[0];
+      to2 = DateTime(
+        today.year,
+        today.month - 5,
+        0,
+      ).toIso8601String().split('T')[0];
       label1 = '6 tháng qua';
       label2 = '6 tháng trước';
     } else {
@@ -181,7 +202,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -301,6 +325,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                const DashboardHeroHeader(),
+                const SizedBox(height: 14),
+                const UrgentBusinessPulseHeader(),
+                const SizedBox(height: 18),
 
                 // Quick Actions Bar
                 SingleChildScrollView(
@@ -338,6 +367,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             () => context.push('/customers'),
                           ),
                         ),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: QuickAction(
+                          HugeIcons.strokeRoundedBookOpen01,
+                          'Sổ Nợ Khách',
+                          () => context.push('/customer-debts'),
+                        ),
+                      ),
                       if (shopState.isOwner ||
                           shopState.hasPermission('finance'))
                         Padding(
@@ -396,10 +433,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           LayoutBuilder(
                             builder: (context, constraints) {
                               final w = constraints.maxWidth;
-                              // Determine number of columns based on width
+                              // Determine number of columns based on width (1 col for mobile < 500px)
                               int crossAxisCount = w > 1300
                                   ? 4
-                                  : (w > 900 ? 3 : 2);
+                                  : (w > 900 ? 3 : (w < 500 ? 1 : 2));
 
                               final cardWidth =
                                   (w - (crossAxisCount - 1) * 16) /
@@ -414,9 +451,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     child: SummaryCard(
                                       'Doanh thu',
                                       _currFmt.format(revenue),
-                                      HugeIcons.strokeRoundedChartIncrease,
+                                      null,
                                       theme.colorScheme.primary,
                                       isHero: true,
+                                      assetPath: 'assets/icon/revenue_icon.svg',
+                                      badgeText: 'Mục tiêu',
                                     ),
                                   ),
                                   SizedBox(
@@ -424,8 +463,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     child: SummaryCard(
                                       'Đơn hàng',
                                       '$orders',
-                                      HugeIcons.strokeRoundedInvoice03,
+                                      null,
                                       AppColors.success,
+                                      assetPath: 'assets/icon/orders_icon.svg',
+                                      badgeText: 'Mới',
                                     ),
                                   ),
                                   SizedBox(
@@ -433,8 +474,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     child: SummaryCard(
                                       'Lợi nhuận gộp',
                                       _currFmt.format(grossProfit),
-                                      HugeIcons.strokeRoundedMoney04,
+                                      null,
                                       Colors.purple,
+                                      assetPath: 'assets/icon/profit_icon.svg',
+                                      badgeText: 'Lợi nhuận',
                                     ),
                                   ),
                                   SizedBox(
@@ -442,8 +485,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     child: SummaryCard(
                                       AppStrings.dashboardAvgOrder,
                                       _currFmt.format(avgOrder),
-                                      HugeIcons.strokeRoundedAnalytics01,
+                                      null,
                                       AppColors.info,
+                                      assetPath: 'assets/icon/orders_icon.svg',
                                     ),
                                   ),
                                   if (hasFinance)
@@ -452,8 +496,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       child: SummaryCard(
                                         'Ước tính VAT (10%)',
                                         _currFmt.format(grossProfit * 0.1),
-                                        HugeIcons.strokeRoundedTaskDone01,
+                                        null,
                                         Colors.orange,
+                                        assetPath: 'assets/icon/tax_icon.svg',
+                                        badgeText: 'Thuế',
                                       ),
                                     ),
                                   if (hasFinance)
@@ -462,8 +508,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       child: SummaryCard(
                                         'Thuế TNDN tạm tính',
                                         _currFmt.format(grossProfit * 0.2),
-                                        HugeIcons.strokeRoundedBank,
+                                        null,
                                         Colors.redAccent,
+                                        assetPath: 'assets/icon/tax_icon.svg',
+                                        badgeText: 'TNDN',
                                       ),
                                     ),
                                   if (hasFinance && cashAccountsAsync != null)
@@ -474,28 +522,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                           final totalCash = accounts
                                               .where((a) => a['type'] == 'CASH')
                                               .fold<double>(
-                                                  0.0,
-                                                  (sum, a) =>
-                                                      sum +
-                                                      (num.tryParse(a['balance']?.toString() ?? '0')?.toDouble() ?? 0.0));
+                                                0.0,
+                                                (sum, a) =>
+                                                    sum +
+                                                    (num.tryParse(
+                                                          a['balance']
+                                                                  ?.toString() ??
+                                                              '0',
+                                                        )?.toDouble() ??
+                                                        0.0),
+                                              );
                                           return SummaryCard(
                                             'Sổ quỹ tiền mặt',
                                             _currFmt.format(totalCash),
-                                            HugeIcons.strokeRoundedWallet01,
+                                            null,
                                             Colors.teal,
+                                            assetPath:
+                                                'assets/icon/cash_icon.svg',
+                                            badgeText: 'Tiền mặt',
                                           );
                                         },
-                                        loading: () => const SummaryCard(
-                                          'Sổ quỹ tiền mặt',
-                                          '...',
-                                          HugeIcons.strokeRoundedWallet01,
-                                          Colors.teal,
+                                        loading: () => const AppShimmer(
+                                          child: ShimmerBox(
+                                            width: double.infinity,
+                                            height: 75,
+                                            radius: 16,
+                                          ),
                                         ),
                                         error: (_, __) => const SummaryCard(
                                           'Sổ quỹ tiền mặt',
                                           '?',
-                                          HugeIcons.strokeRoundedWallet01,
+                                          null,
                                           Colors.teal,
+                                          assetPath:
+                                              'assets/icon/cash_icon.svg',
                                         ),
                                       ),
                                     ),
@@ -504,27 +564,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       width: cardWidth,
                                       child: ytdSalesAsync.when(
                                         data: (ytdData) {
-                                          final ytdRevenue = num.tryParse(
-                                                ytdData['totalRevenue']?.toString() ?? '0',
-                                              )?.toDouble() ?? 0.0;
+                                          final ytdRevenue =
+                                              num.tryParse(
+                                                ytdData['totalRevenue']
+                                                        ?.toString() ??
+                                                    '0',
+                                              )?.toDouble() ??
+                                              0.0;
                                           return SummaryCard(
                                             'Doanh thu lũy kế (YTD)',
                                             _currFmt.format(ytdRevenue),
-                                            HugeIcons.strokeRoundedCalendar03,
+                                            null,
                                             Colors.blueAccent,
+                                            assetPath:
+                                                'assets/icon/revenue_icon.svg',
+                                            badgeText: 'Lũy kế',
                                           );
                                         },
-                                        loading: () => const SummaryCard(
-                                          'Doanh thu lũy kế (YTD)',
-                                          '...',
-                                          HugeIcons.strokeRoundedCalendar03,
-                                          Colors.blueAccent,
+                                        loading: () => const AppShimmer(
+                                          child: ShimmerBox(
+                                            width: double.infinity,
+                                            height: 75,
+                                            radius: 16,
+                                          ),
                                         ),
                                         error: (_, __) => const SummaryCard(
                                           'Doanh thu lũy kế (YTD)',
                                           '?',
-                                          HugeIcons.strokeRoundedCalendar03,
+                                          null,
                                           Colors.blueAccent,
+                                          assetPath:
+                                              'assets/icon/revenue_icon.svg',
                                         ),
                                       ),
                                     ),
@@ -535,16 +605,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         data: (items) => SummaryCard(
                                           AppStrings.dashboardLowStock,
                                           '${items.length}',
-                                          HugeIcons.strokeRoundedAlert02,
+                                          null,
                                           items.isEmpty
                                               ? AppColors.success
                                               : AppColors.danger,
+                                          assetPath:
+                                              'assets/icon/inventory_icon.svg',
+                                          badgeText: items.isEmpty
+                                              ? 'An toàn'
+                                              : 'Cảnh báo',
                                         ),
-                                        loading: () => SummaryCard(
-                                          AppStrings.dashboardLowStock,
-                                          '...',
-                                          HugeIcons.strokeRoundedAlert02,
-                                          AppColors.warning,
+                                        loading: () => const AppShimmer(
+                                          child: ShimmerBox(
+                                            width: double.infinity,
+                                            height: 75,
+                                            radius: 16,
+                                          ),
                                         ),
                                         error: (_, _) => SummaryCard(
                                           AppStrings.dashboardLowStock,
@@ -634,8 +710,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     builder: (context, constraints) {
                       final isDesktop = constraints.maxWidth > 800;
 
-                      final topProductsWidget = (hasFinance &&
-                              topProductsAsync != null)
+                      final topProductsWidget =
+                          (hasFinance && topProductsAsync != null)
                           ? topProductsAsync.when(
                               data: (data) => data.isEmpty
                                   ? EmptyChartPlaceholder(
@@ -661,8 +737,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             )
                           : null;
 
-                      final inventoryDonutWidget = (hasInventory &&
-                              inventoryCatAsync != null)
+                      final inventoryDonutWidget =
+                          (hasInventory && inventoryCatAsync != null)
                           ? inventoryCatAsync.when(
                               data: (data) => data.isEmpty
                                   ? EmptyChartPlaceholder(
@@ -923,219 +999,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const TaxObligationReminder(),
                 ],
 
-                if (hasFinance && recentTransactionsAsync != null) ...[
-                  const SizedBox(height: 28),
-                  Text(
-                    'Giao dịch gần đây',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+                if (hasFinance && recentTransactionsAsync != null)
                   recentTransactionsAsync.when(
-                    data: (transactions) {
-                      if (transactions.isEmpty) {
-                        return const Center(
-                          child: Text('Chưa có giao dịch nào'),
-                        );
-                      }
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: c.card,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: c.divider, width: 1),
-                        ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: transactions.length,
-                          separatorBuilder: (_, __) =>
-                              Divider(color: c.divider),
-                          itemBuilder: (context, index) {
-                            final t = transactions[index];
-                            final id = t['id'];
-                            final total =
-                                num.tryParse(
-                                  t['totalAmount']?.toString() ?? '0',
-                                )?.toDouble() ??
-                                0.0;
-                            final dateStr = t['orderDate'] ?? '';
-                            final date = DateTime.tryParse(dateStr);
-                            final formattedDate = date != null
-                                ? DateFormat('dd/MM HH:mm').format(date)
-                                : '';
-                            final customerName =
-                                t['customer']?['name'] ?? 'Khách lẻ';
-
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 8,
-                              ),
-                              leading: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: HugeIcon(
-                                  icon: HugeIcons.strokeRoundedInvoice03,
-                                  size: 20,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                              title: Text(
-                                customerName,
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600,
-                                  color: c.textPrimary,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              subtitle: Text(
-                                'HD-$id • $formattedDate',
-                                style: TextStyle(
-                                  color: c.textSecondary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              trailing: Text(
-                                _currFmt.format(total),
-                                style: GoogleFonts.outfit(
-                                  fontWeight: FontWeight.w700,
-                                  color: c.textPrimary,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              onTap: () => context.push('/sales/$id'),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, trace) => Center(
-                      child: Text(
-                        'Lỗi tải GD: $e',
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
+                    data: (transactions) => RecentOrdersDataTable(transactions),
+                    loading: () => const SizedBox.shrink(),
+                    error: (e, _) => const SizedBox.shrink(),
                   ),
-                ],
 
                 const SizedBox(height: 28),
                 // Low stock warnings
                 if (hasInventory && lowStockAsync != null)
                   lowStockAsync.when(
-                    data: (items) {
-                      if (items.isEmpty) return const SizedBox.shrink();
-                      final display = items.take(5).toList();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.warning_amber_rounded,
-                                    color: AppColors.danger,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Dưới định mức tối thiểu',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.danger,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              TextButton.icon(
-                                onPressed: () => context.push('/inventory'),
-                                icon: const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 14,
-                                ),
-                                label: const Text(
-                                  'Xem tất cả',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          ...display.map(
-                            (item) => Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                              decoration: BoxDecoration(
-                                color: c.card,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: c.divider.withValues(alpha: 0.4),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      item['product']?['name'] ??
-                                          item['productName'] ??
-                                          'Sản phẩm',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: c.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.warning.withValues(
-                                        alpha: 0.12,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      'Tồn: ${item['currentQuantity'] ?? item['quantity'] ?? 0}',
-                                      style: const TextStyle(
-                                        color: AppColors.warning,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                    data: (items) => LowStockTableWidget(items),
                     loading: () => const SizedBox.shrink(),
                     error: (_, _) => const SizedBox.shrink(),
                   ),
                 if (hasFinance) const RecentDailyClosingsWidget(),
-                const SizedBox(height: 32),
+                const SizedBox(height: 88), // UI Breathing Room Padding
               ],
             ),
           ),

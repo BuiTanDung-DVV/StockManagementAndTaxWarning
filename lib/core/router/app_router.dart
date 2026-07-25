@@ -11,6 +11,7 @@ import '../../features/shell/main_shell.dart';
 import '../../features/sales/presentation/sales_list_screen.dart';
 import '../../features/sales/presentation/pos_screen.dart';
 import '../../features/sales/presentation/order_detail_screen.dart';
+import '../../features/sales/presentation/customer_debt_screen.dart';
 import '../../features/products/presentation/product_list_screen.dart';
 import '../../features/products/presentation/product_detail_screen.dart';
 import '../../features/products/presentation/tag_management_screen.dart';
@@ -50,6 +51,7 @@ import '../../features/settings/presentation/staff_management_screen.dart';
 import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/settings/presentation/shop_profile_screen.dart';
 import '../../features/settings/presentation/change_password_screen.dart';
+import '../../features/settings/presentation/ai_knowledge_management_screen.dart';
 import '../../features/tax/screens/tax_estimate_screen.dart';
 import '../../features/products/presentation/product_form_screen.dart';
 import '../../features/customers/presentation/customer_form_screen.dart';
@@ -235,10 +237,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                 OrderDetailScreen(id: int.parse(state.pathParameters['id']!)),
           ),
           GoRoute(
-            path: '/returns/detail',
+            path: '/sales/returns/:id',
             builder: (_, state) => ReturnDetailScreen(
               returnInfo: state.extra as Map<dynamic, dynamic>? ?? {},
             ),
+          ),
+          GoRoute(
+            path: '/customer-debts',
+            builder: (_, _) => const CustomerDebtScreen(),
           ),
           // Products
           GoRoute(
@@ -379,6 +385,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           // Settings
           GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+          GoRoute(
+            path: '/settings/ai-knowledge',
+            builder: (_, _) => const AiKnowledgeManagementScreen(),
+          ),
           GoRoute(
             path: '/activity-logs',
             builder: (_, _) => const ActivityLogScreen(),
