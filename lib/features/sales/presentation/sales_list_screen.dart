@@ -248,8 +248,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                 '0',
                           ) ??
                           0.0;
+                      final rawCustomerName =
+                          order['customer']?['name']?.toString() ??
+                          'Khách mua lẻ';
                       final customerName =
-                          order['customer']?['name'] ?? 'Khách mua lẻ';
+                          rawCustomerName.startsWith('Simulated Customer')
+                          ? 'Khách hàng thử nghiệm'
+                          : rawCustomerName;
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 0),
