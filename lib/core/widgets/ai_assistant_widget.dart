@@ -106,9 +106,14 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
     final c = AppThemeColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final media = MediaQuery.of(context);
+    final location = GoRouterState.of(context).uri.path;
     final isMobile = media.size.width < 700;
-    final mobileBottomOffset = 84.0 + media.padding.bottom;
-    final panelBottom = isMobile ? mobileBottomOffset + 68 : 80.0;
+    final hasPageFloatingAction =
+        location == '/products' || location == '/customers';
+    final navigationOffset = isMobile ? 84.0 + media.padding.bottom : 20.0;
+    final triggerBottom =
+        navigationOffset + (hasPageFloatingAction ? 68.0 : 0.0);
+    final panelBottom = triggerBottom + 68;
     final panelHeight = (media.size.height - panelBottom - 24)
         .clamp(320.0, 490.0)
         .toDouble();
@@ -335,10 +340,11 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
 
         // Floating Trigger Button
         Positioned(
-          bottom: isMobile ? mobileBottomOffset : 20,
+          bottom: triggerBottom,
           right: 16,
           child: isMobile
               ? FloatingActionButton(
+                  heroTag: 'smartstock-ai-assistant',
                   onPressed: () => setState(() => _isOpen = !_isOpen),
                   backgroundColor: AppColors.primary,
                   tooltip: 'Hỏi AI Tri Thức',
@@ -348,6 +354,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                   ),
                 )
               : FloatingActionButton.extended(
+                  heroTag: 'smartstock-ai-assistant',
                   onPressed: () => setState(() => _isOpen = !_isOpen),
                   backgroundColor: AppColors.primary,
                   icon: const Icon(

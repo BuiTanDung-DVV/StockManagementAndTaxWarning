@@ -16,4 +16,17 @@ void main() {
     expect(navigationModeForWidth(1100), MainShellNavigationMode.sidebar);
     expect(navigationModeForWidth(1440), MainShellNavigationMode.sidebar);
   });
+
+  test('shows AI assistant except on mobile POS', () {
+    expect(shouldShowAiAssistant(location: '/', viewportWidth: 390), isTrue);
+    expect(
+      shouldShowAiAssistant(location: '/pos', viewportWidth: 390),
+      isFalse,
+    );
+    expect(
+      shouldShowAiAssistant(location: '/pos/checkout', viewportWidth: 799),
+      isFalse,
+    );
+    expect(shouldShowAiAssistant(location: '/pos', viewportWidth: 800), isTrue);
+  });
 }

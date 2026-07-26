@@ -6,6 +6,21 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 
 final _compactFmt = NumberFormat.compact(locale: 'vi_VN');
+final _axisDecimalFmt = NumberFormat('0.#', 'vi_VN');
+
+String compactVietnameseAmount(num value) {
+  final absolute = value.abs();
+  if (absolute >= 1000000000) {
+    return '${_axisDecimalFmt.format(value / 1000000000)} tỷ';
+  }
+  if (absolute >= 1000000) {
+    return '${_axisDecimalFmt.format(value / 1000000)} triệu';
+  }
+  if (absolute >= 1000) {
+    return '${_axisDecimalFmt.format(value / 1000)} nghìn';
+  }
+  return _axisDecimalFmt.format(value);
+}
 
 // ─────────────────────────────────────────────
 // ChartCard — Unified container for all charts
@@ -259,13 +274,13 @@ class MiniAreaChart extends StatelessWidget {
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 36,
+                        reservedSize: 60,
                         getTitlesWidget: (v, m) {
                           if (v == m.max || v == m.min) {
                             return const SizedBox.shrink();
                           }
                           return Text(
-                            _compactFmt.format(v),
+                            compactVietnameseAmount(v),
                             style: AppTheme.tabularStyle(
                               context,
                               fontSize: 9,
