@@ -63,7 +63,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
       backgroundColor: c.bg,
       appBar: AppBar(
         title: Text(
-          'Lịch Sử Đơn Hàng',
+          'Lịch sử đơn hàng',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -199,7 +199,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(salesListProvider),
                   child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 136),
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
@@ -369,24 +369,12 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/pos'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 3,
-        icon: const Icon(
+        tooltip: 'Mở màn hình bán hàng',
+        child: const Icon(
           Icons.point_of_sale_rounded,
-          color: Colors.white,
-          size: 20,
         ),
-        label: Text(
-          'Màn POS Bán Hàng',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontSize: 14,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
       ),
     );
   }

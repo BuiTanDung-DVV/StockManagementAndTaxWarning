@@ -20,12 +20,8 @@ class SupplierListScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
         title: Text(
-          'Danh Sách Nhà Cung Cấp',
+          'Danh sách nhà cung cấp',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -48,7 +44,7 @@ class SupplierListScreen extends ConsumerWidget {
           size: 20,
         ),
         label: Text(
-          'Thêm Đối Tác',
+          'Thêm đối tác',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: Colors.white,

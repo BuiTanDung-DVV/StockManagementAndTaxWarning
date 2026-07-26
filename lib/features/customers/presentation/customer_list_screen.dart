@@ -41,10 +41,6 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     return Scaffold(
       backgroundColor: tc.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
         title: Text(
           'Danh sách khách hàng',
           style: GoogleFonts.outfit(

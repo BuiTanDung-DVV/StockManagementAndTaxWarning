@@ -23,12 +23,8 @@ class InventoryScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         title: Text(
-          'Quản lý Kho',
+          'Quản lý kho',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 20,

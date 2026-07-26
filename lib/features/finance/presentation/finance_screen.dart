@@ -38,12 +38,8 @@ class FinanceScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
         title: Text(
-          'Tài chính & Số cái',
+          'Tài chính & sổ cái',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -66,7 +62,7 @@ class FinanceScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Balance Card (Luxury Gradient)
+              // Operational cash summary
               summaryAsync.when(
                 data: (data) {
                   final balance = asDouble(
@@ -83,38 +79,31 @@ class FinanceScreen extends ConsumerWidget {
                   return Container(
                     padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.2,
-                          ),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(color: c.divider),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Số dư quỹ tiền mặt',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: c.textSecondary,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            letterSpacing: 0.5,
                           ),
                         ),
                         const SizedBox(height: 8),
                         FittedBox(
                           fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
                           child: Text(
                             _currFmt.format(balance),
                             style: GoogleFonts.outfit(
-                              color: Colors.white,
+                              color: c.textPrimary,
                               fontSize: 32,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -127,10 +116,12 @@ class FinanceScreen extends ConsumerWidget {
                             vertical: 12,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(16),
+                            color: c.surface,
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.control,
+                            ),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: c.divider,
                               width: 1,
                             ),
                           ),
@@ -152,23 +143,21 @@ class FinanceScreen extends ConsumerWidget {
                                             decoration: BoxDecoration(
                                               color: const Color(
                                                 0xFF6BE8A0,
-                                              ).withValues(alpha: 0.25),
+                                              ).withValues(alpha: 0.12),
                                               borderRadius:
                                                   BorderRadius.circular(6),
                                             ),
                                             child: const Icon(
                                               Icons.arrow_downward_rounded,
                                               size: 12,
-                                              color: Color(0xFFA5F3C4),
+                                              color: AppColors.success,
                                             ),
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
                                             'Tổng thu',
                                             style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.85,
-                                              ),
+                                              color: c.textSecondary,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w500,
                                             ),
@@ -181,8 +170,8 @@ class FinanceScreen extends ConsumerWidget {
                                         child: Text(
                                           _currFmt.format(income),
                                           style: GoogleFonts.outfit(
-                                            color: const Color(0xFFA5F3C4),
-                                            fontWeight: FontWeight.w800,
+                                            color: c.textPrimary,
+                                            fontWeight: FontWeight.w700,
                                             fontSize: 16,
                                           ),
                                         ),
@@ -194,7 +183,7 @@ class FinanceScreen extends ConsumerWidget {
                                 // Elegant vertical divider line
                                 Container(
                                   width: 1,
-                                  color: Colors.white.withValues(alpha: 0.2),
+                                  color: c.divider,
                                 ),
 
                                 // Expense Flow
@@ -212,23 +201,21 @@ class FinanceScreen extends ConsumerWidget {
                                             decoration: BoxDecoration(
                                               color: const Color(
                                                 0xFFFF8A80,
-                                              ).withValues(alpha: 0.25),
+                                              ).withValues(alpha: 0.12),
                                               borderRadius:
                                                   BorderRadius.circular(6),
                                             ),
                                             child: const Icon(
                                               Icons.arrow_upward_rounded,
                                               size: 12,
-                                              color: Color(0xFFFFB4AB),
+                                              color: AppColors.danger,
                                             ),
                                           ),
                                           const SizedBox(width: 6),
                                           Text(
                                             'Tổng chi',
                                             style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.85,
-                                              ),
+                                              color: c.textSecondary,
                                               fontSize: 12,
                                               fontWeight: FontWeight.w500,
                                             ),
@@ -241,8 +228,8 @@ class FinanceScreen extends ConsumerWidget {
                                         child: Text(
                                           _currFmt.format(expense),
                                           style: GoogleFonts.outfit(
-                                            color: const Color(0xFFFFB4AB),
-                                            fontWeight: FontWeight.w800,
+                                            color: c.textPrimary,
+                                            fontWeight: FontWeight.w700,
                                             fontSize: 16,
                                           ),
                                         ),
@@ -263,7 +250,7 @@ class FinanceScreen extends ConsumerWidget {
                     height: 170,
                     decoration: BoxDecoration(
                       color: Colors.grey,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
                     ),
                   ),
                 ),
