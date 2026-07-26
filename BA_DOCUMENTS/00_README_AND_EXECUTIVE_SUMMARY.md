@@ -89,6 +89,7 @@ Các vấn đề trên được mô tả với bằng chứng và tiêu chí ngh
 | [11 - Acceptance Tests](11_ACCEPTANCE_TEST_CATALOG.md) | Danh mục kiểm thử nghiệm thu cho bản tiếp theo |
 | [12 - UI/UX Visual Upgrade Plan](12_UI_UX_VISUAL_UPGRADE_MASTER_PLAN.md) | Kế hoạch nâng cấp giao diện theo Material 3 và nguyên tắc Taste |
 | [13 - Production UI/UX vòng 2](13_PRODUCTION_UI_REVIEW_ROUND_2.md) | Audit 25 viewport/màn, phát hiện, bản vá và backlog tiếp theo |
+| [14 - Responsive fill layout](14_RESPONSIVE_FILL_LAYOUT_UPGRADE.md) | Quy tắc, thành phần và kiểm thử cho bố cục tự co giãn theo vùng chứa |
 
 ## 5. Nguồn bằng chứng
 
@@ -98,7 +99,7 @@ Các vấn đề trên được mô tả với bằng chứng và tiêu chí ngh
 - Ảnh production: [`assets/production-audit-2026-07-25/`](assets/production-audit-2026-07-25/)
 - Ảnh production vòng 2: [`assets/production-ui-audit-2026-07-26-round2/`](assets/production-ui-audit-2026-07-26-round2/)
 - Baseline trước bản vá: Flutter Web release và backend TypeScript build thành công.
-- Sau bản vá local: Flutter analyze đạt, Flutter test `23/23`, Flutter Web release
+- Sau bản vá responsive: Flutter analyze đạt, Flutter test `26/26`, Flutter Web release
   build đạt; backend build/lint và P0 suite `28/28` thành công.
 
 ## 6. Quy tắc quản trị tài liệu
