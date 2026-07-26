@@ -109,7 +109,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
     final location = GoRouterState.of(context).uri.path;
     final isMobile = media.size.width < 700;
     final hasPageFloatingAction =
-        location == '/products' || location == '/customers';
+        location == '/customers' || (!isMobile && location == '/products');
     final navigationOffset = isMobile ? 84.0 + media.padding.bottom : 20.0;
     final triggerBottom =
         navigationOffset + (hasPageFloatingAction ? 68.0 : 0.0);
