@@ -86,5 +86,21 @@ hoặc accessibility đã đạt.
 | Backend P0 tests | Đạt 28/28 |
 | npm audit mức high | 0 lỗ hổng |
 
-Ảnh sau sửa phải được bổ sung sau khi Vercel deploy đúng commit mới; ảnh trong tài
-liệu này hiện là bằng chứng As-Is để so sánh.
+## 8. Xác minh production sau sửa
+
+Mã giao diện cuối được xác minh tại commit `dcac203e`. Frontend và backend đều
+`READY`, dùng cùng commit; alias production không báo lỗi. Trình duyệt không ghi
+nhận `warn` hoặc `error` trong các màn xác minh cuối.
+
+| Màn | Kết quả sau sửa | Bằng chứng |
+|---|---|---|
+| Tài chính desktop/mobile | Bỏ gradient, dùng bề mặt trung tính; số dư, thu và chi vẫn hiển thị đầy đủ | [Desktop](assets/production-ui-audit-2026-07-26-after/01-finance-desktop-after.png), [Mobile](assets/production-ui-audit-2026-07-26-after/05-finance-mobile-after.png) |
+| Lịch sử đơn hàng | CTA POS chuyển lên app bar; không che số tiền; dữ liệu mô phỏng được ghi “Khách hàng thử nghiệm” | [Desktop](assets/production-ui-audit-2026-07-26-after/02-sales-desktop-after.png) |
+| Sản phẩm | Không lộ `sim_tag_*`; hết hàng không lặp nhãn; mobile chuyển nút thêm lên app bar | [Desktop](assets/production-ui-audit-2026-07-26-after/03-products-desktop-after.png), [Mobile](assets/production-ui-audit-2026-07-26-after/08-products-mobile-after.png) |
+| Hóa đơn trống | Chỉ còn một CTA; trạng thái trống trung tính | [Desktop](assets/production-ui-audit-2026-07-26-after/04-invoices-desktop-after.png) |
+| POS mobile | Không lộ tag kỹ thuật; tổng tiền giữ một dòng; CTA không che navigation | [Mobile](assets/production-ui-audit-2026-07-26-after/06-pos-mobile-after.png) |
+| Thiết lập mobile | Tiêu đề sentence case; navigation không che nội dung hiện tại | [Mobile](assets/production-ui-audit-2026-07-26-after/07-settings-mobile-after.png) |
+
+Vấn đề chưa đóng: nhãn trục biểu đồ tài chính còn dày ở mép phải trên viewport
+390×844; dữ liệu mô phỏng vẫn tồn tại trong database dù đã được nhận diện rõ trên
+các màn chính. Hai mục này tiếp tục ở backlog P1/P0 tương ứng.
