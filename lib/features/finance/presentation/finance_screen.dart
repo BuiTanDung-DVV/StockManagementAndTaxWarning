@@ -339,9 +339,14 @@ class FinanceScreen extends ConsumerWidget {
                           (data['items'] as List?) ??
                           [];
                       if (categories.isEmpty) {
-                        return const EmptyChartPlaceholder(
-                          message: 'Chưa có dữ liệu chi phí theo danh mục',
-                          icon: Icons.category_rounded,
+                        return SizedBox(
+                          width: double.infinity,
+                          child: EmptyChartPlaceholder(
+                            message: 'Chưa có dữ liệu chi phí theo danh mục',
+                            icon: Icons.category_rounded,
+                            actionLabel: 'Thêm khoản chi',
+                            onAction: () => context.push('/expense-ledger'),
+                          ),
                         );
                       }
                       const catColors = [

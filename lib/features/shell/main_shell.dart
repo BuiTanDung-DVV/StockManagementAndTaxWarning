@@ -5,6 +5,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/ai_assistant_widget.dart';
 import '../settings/providers/shop_provider.dart';
 
 enum MainShellNavigationMode { bottomBar, rail, sidebar }
@@ -17,6 +18,15 @@ MainShellNavigationMode navigationModeForWidth(double width) {
     return MainShellNavigationMode.rail;
   }
   return MainShellNavigationMode.sidebar;
+}
+
+bool shouldShowAiAssistant({
+  required String location,
+  required double viewportWidth,
+}) {
+  final isMobile = viewportWidth < AppBreakpoints.compactNavigation;
+  final isPos = location == '/pos' || location.startsWith('/pos/');
+  return !(isMobile && isPos);
 }
 
 class MainShell extends ConsumerWidget {
@@ -103,9 +113,11 @@ class MainShell extends ConsumerWidget {
       builder: (context, constraints) {
         final mode = navigationModeForWidth(constraints.maxWidth);
         final content = ColoredBox(color: colors.bg, child: child);
+        final location = GoRouterState.of(context).uri.path;
+        late final Widget navigationShell;
 
         if (mode == MainShellNavigationMode.sidebar) {
-          return Scaffold(
+          navigationShell = Scaffold(
             backgroundColor: colors.bg,
             body: Row(
               children: [
@@ -119,10 +131,8 @@ class MainShell extends ConsumerWidget {
               ],
             ),
           );
-        }
-
-        if (mode == MainShellNavigationMode.rail) {
-          return Scaffold(
+        } else if (mode == MainShellNavigationMode.rail) {
+          navigationShell = Scaffold(
             backgroundColor: colors.bg,
             body: Row(
               children: [
@@ -132,15 +142,27 @@ class MainShell extends ConsumerWidget {
               ],
             ),
           );
+        } else {
+          navigationShell = Scaffold(
+            backgroundColor: colors.bg,
+            body: content,
+            bottomNavigationBar: _MobileNavigationBar(
+              tabs: tabs,
+              currentIndex: currentIndex,
+            ),
+          );
         }
 
-        return Scaffold(
-          backgroundColor: colors.bg,
-          body: content,
-          bottomNavigationBar: _MobileNavigationBar(
-            tabs: tabs,
-            currentIndex: currentIndex,
-          ),
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            navigationShell,
+            if (shouldShowAiAssistant(
+              location: location,
+              viewportWidth: constraints.maxWidth,
+            ))
+              const Positioned.fill(child: AiAssistantWidget()),
+          ],
         );
       },
     );
