@@ -105,6 +105,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
+          if (isCompact)
+            IconButton(
+              onPressed: () => context.push('/products/form'),
+              icon: const Icon(Icons.add_rounded),
+              tooltip: 'Thêm sản phẩm',
+            ),
           if (ref.watch(authProvider).isShopOwner)
             IconButton(
               icon: HugeIcon(
@@ -119,11 +125,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         ],
       ),
       floatingActionButton: isCompact
-          ? FloatingActionButton(
-              onPressed: () => context.push('/products/form'),
-              tooltip: 'Thêm sản phẩm',
-              child: const Icon(Icons.add_rounded),
-            )
+          ? null
           : FloatingActionButton.extended(
               onPressed: () => context.push('/products/form'),
               icon: const Icon(Icons.add_box_rounded),
