@@ -322,30 +322,38 @@ class AppSectionHeader extends StatelessWidget {
     }
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: iconWidget,
               ),
-              child: iconWidget,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: GoogleFonts.outfit(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: c.textPrimary,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        ?trailing,
+        if (trailing != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(child: trailing!),
+        ],
       ],
     );
   }

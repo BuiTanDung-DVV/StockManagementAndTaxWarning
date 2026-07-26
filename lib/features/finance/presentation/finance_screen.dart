@@ -8,6 +8,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/reporting_period.dart';
@@ -120,10 +121,7 @@ class FinanceScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(
                               AppRadius.control,
                             ),
-                            border: Border.all(
-                              color: c.divider,
-                              width: 1,
-                            ),
+                            border: Border.all(color: c.divider, width: 1),
                           ),
                           child: IntrinsicHeight(
                             child: Row(
@@ -181,10 +179,7 @@ class FinanceScreen extends ConsumerWidget {
                                 ),
 
                                 // Elegant vertical divider line
-                                Container(
-                                  width: 1,
-                                  color: c.divider,
-                                ),
+                                Container(width: 1, color: c.divider),
 
                                 // Expense Flow
                                 Expanded(
@@ -432,65 +427,72 @@ class FinanceScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              _NavCard(
-                'Báo cáo KQKD (Lãi/Lỗ)',
-                HugeIcons.strokeRoundedAnalytics01,
-                () => context.push('/profit-loss'),
-              ),
-              _NavCard(
-                'Phân tích Tuổi nợ',
-                HugeIcons.strokeRoundedChartIncrease,
-                () => context.push('/debt-aging'),
-              ),
-              _NavCard(
-                'Quản lý Chứng từ',
-                HugeIcons.strokeRoundedInvoice01,
-                () => context.push('/invoices'),
-              ),
-              _NavCard(
-                'Bảng kê mua không HĐ',
-                HugeIcons.strokeRoundedInvoice03,
-                () => context.push('/purchases-no-invoice'),
-              ),
-              _NavCard(
-                'Dự báo dòng tiền',
-                HugeIcons.strokeRoundedChartIncrease,
-                () => context.push('/cashflow-forecast'),
-              ),
-              _NavCard(
-                'Chốt sổ cuối ngày',
-                HugeIcons.strokeRoundedCheckmarkCircle02,
-                () => context.push('/daily-closing'),
-              ),
-              _NavCard(
-                'Tính thuế HKD',
-                HugeIcons.strokeRoundedCalculator01,
-                () => context.push('/tax-calculator'),
-              ),
-              _NavCard(
-                'Sổ chi phí SXKD',
-                HugeIcons.strokeRoundedCoinsDollar,
-                () => context.push('/expense-ledger'),
-              ),
-              _NavCard(
-                'Theo dõi nghĩa vụ thuế',
-                HugeIcons.strokeRoundedFlag01,
-                () => context.push('/tax-obligations'),
-              ),
-              _NavCard(
-                'Sổ lương nhân viên',
-                HugeIcons.strokeRoundedUserMultiple,
-                () => context.push('/salary-ledger'),
-              ),
-              _NavCard(
-                'Ước Tính & Xuất Thuế HTKK',
-                HugeIcons.strokeRoundedCalculator01,
-                () => context.push('/tax-estimate'),
-              ),
-              _NavCard(
-                'Kê khai thuế',
-                HugeIcons.strokeRoundedInvoice01,
-                () => context.push('/tax-declaration'),
+              AppFillGrid(
+                minItemWidth: 280,
+                maxColumns: 3,
+                itemHeight: 72,
+                children: [
+                  _NavCard(
+                    'Báo cáo KQKD (Lãi/Lỗ)',
+                    HugeIcons.strokeRoundedAnalytics01,
+                    () => context.push('/profit-loss'),
+                  ),
+                  _NavCard(
+                    'Phân tích Tuổi nợ',
+                    HugeIcons.strokeRoundedChartIncrease,
+                    () => context.push('/debt-aging'),
+                  ),
+                  _NavCard(
+                    'Quản lý Chứng từ',
+                    HugeIcons.strokeRoundedInvoice01,
+                    () => context.push('/invoices'),
+                  ),
+                  _NavCard(
+                    'Bảng kê mua không HĐ',
+                    HugeIcons.strokeRoundedInvoice03,
+                    () => context.push('/purchases-no-invoice'),
+                  ),
+                  _NavCard(
+                    'Dự báo dòng tiền',
+                    HugeIcons.strokeRoundedChartIncrease,
+                    () => context.push('/cashflow-forecast'),
+                  ),
+                  _NavCard(
+                    'Chốt sổ cuối ngày',
+                    HugeIcons.strokeRoundedCheckmarkCircle02,
+                    () => context.push('/daily-closing'),
+                  ),
+                  _NavCard(
+                    'Tính thuế HKD',
+                    HugeIcons.strokeRoundedCalculator01,
+                    () => context.push('/tax-calculator'),
+                  ),
+                  _NavCard(
+                    'Sổ chi phí SXKD',
+                    HugeIcons.strokeRoundedCoinsDollar,
+                    () => context.push('/expense-ledger'),
+                  ),
+                  _NavCard(
+                    'Theo dõi nghĩa vụ thuế',
+                    HugeIcons.strokeRoundedFlag01,
+                    () => context.push('/tax-obligations'),
+                  ),
+                  _NavCard(
+                    'Sổ lương nhân viên',
+                    HugeIcons.strokeRoundedUserMultiple,
+                    () => context.push('/salary-ledger'),
+                  ),
+                  _NavCard(
+                    'Ước Tính & Xuất Thuế HTKK',
+                    HugeIcons.strokeRoundedCalculator01,
+                    () => context.push('/tax-estimate'),
+                  ),
+                  _NavCard(
+                    'Kê khai thuế',
+                    HugeIcons.strokeRoundedInvoice01,
+                    () => context.push('/tax-declaration'),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 24),
@@ -657,7 +659,6 @@ class _NavCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: c.card,

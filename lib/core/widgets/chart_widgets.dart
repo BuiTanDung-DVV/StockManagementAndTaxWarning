@@ -202,105 +202,116 @@ class MiniAreaChart extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: LineChart(
-            LineChartData(
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                getDrawingHorizontalLine: (v) => FlLine(
-                  color: c.divider.withValues(alpha: 0.2),
-                  strokeWidth: 1,
-                ),
-              ),
-              titlesData: FlTitlesData(
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: xLabels != null,
-                    reservedSize: 22,
-                    interval: (maxLen > 7)
-                        ? (maxLen / 5).ceil().toDouble()
-                        : 1.0,
-                    getTitlesWidget: (v, m) {
-                      final idx = v.round();
-                      if (xLabels == null ||
-                          idx < 0 ||
-                          idx >= xLabels!.length) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          xLabels![idx],
-                          style: TextStyle(
-                            color: c.textMuted,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 36,
-                    getTitlesWidget: (v, m) {
-                      if (v == m.max || v == m.min) {
-                        return const SizedBox.shrink();
-                      }
-                      return Text(
-                        _compactFmt.format(v),
-                        style: AppTheme.tabularStyle(
-                          context,
-                          fontSize: 9,
-                          color: c.textMuted,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.right,
-                      );
-                    },
-                  ),
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              minX: 0,
-              maxX: (maxLen - 1).toDouble(),
-              minY: 0,
-              maxY: maxY * 1.15,
-              lineBarsData: [
-                LineChartBarData(
-                  spots: spots1,
-                  isCurved: true,
-                  color: color1,
-                  barWidth: 2,
-                  isStrokeCapRound: true,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final targetLabelCount = constraints.maxWidth < 420
+                  ? 3
+                  : constraints.maxWidth < 760
+                  ? 5
+                  : 7;
+              final labelInterval = maxLen > targetLabelCount
+                  ? (maxLen / targetLabelCount).ceil().toDouble()
+                  : 1.0;
+
+              return LineChart(
+                LineChartData(
+                  gridData: FlGridData(
                     show: true,
-                    color: color1.withValues(alpha: 0.08),
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (v) => FlLine(
+                      color: c.divider.withValues(alpha: 0.2),
+                      strokeWidth: 1,
+                    ),
                   ),
-                ),
-                LineChartBarData(
-                  spots: spots2,
-                  isCurved: true,
-                  color: color2,
-                  barWidth: 2,
-                  isStrokeCapRound: true,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: color2.withValues(alpha: 0.08),
+                  titlesData: FlTitlesData(
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: xLabels != null,
+                        reservedSize: 22,
+                        interval: labelInterval,
+                        getTitlesWidget: (v, m) {
+                          final idx = v.round();
+                          if (xLabels == null ||
+                              idx < 0 ||
+                              idx >= xLabels!.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              xLabels![idx],
+                              style: TextStyle(
+                                color: c.textMuted,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 36,
+                        getTitlesWidget: (v, m) {
+                          if (v == m.max || v == m.min) {
+                            return const SizedBox.shrink();
+                          }
+                          return Text(
+                            _compactFmt.format(v),
+                            style: AppTheme.tabularStyle(
+                              context,
+                              fontSize: 9,
+                              color: c.textMuted,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.right,
+                          );
+                        },
+                      ),
+                    ),
                   ),
+                  borderData: FlBorderData(show: false),
+                  minX: 0,
+                  maxX: (maxLen - 1).toDouble(),
+                  minY: 0,
+                  maxY: maxY * 1.15,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots1,
+                      isCurved: true,
+                      color: color1,
+                      barWidth: 2,
+                      isStrokeCapRound: true,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: color1.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    LineChartBarData(
+                      spots: spots2,
+                      isCurved: true,
+                      color: color2,
+                      barWidth: 2,
+                      isStrokeCapRound: true,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: color2.withValues(alpha: 0.08),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ],
