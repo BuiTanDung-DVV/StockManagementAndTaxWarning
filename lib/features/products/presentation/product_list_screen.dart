@@ -422,9 +422,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     }
 
     // Auto Tags Mechanism
-    if (stock <= 0) {
-      if (!tags.contains('Hết hàng')) tags.insert(0, 'Hết hàng');
-    } else if (stock <= 10) {
+    if (stock > 0 && stock <= 10) {
       if (!tags.contains('Sắp hết')) tags.insert(0, 'Sắp hết');
     }
 
