@@ -13,11 +13,17 @@ void main() {
       apiClient = ApiClient();
     });
 
-    test('baseUrl should point to vercel deployment', () {
+    test('baseUrl should be valid for the current platform', () {
+      final uri = Uri.parse(ApiClient.baseUrl);
+
+      expect(uri.hasScheme, true);
+      expect(uri.host, isNotEmpty);
+      expect(uri.path.endsWith('/api/'), true);
       expect(
-        ApiClient.baseUrl.contains('vercel.app'),
-        true,
-        reason: 'API URL phải được cấu hình trỏ về Vercel',
+        uri.host,
+        anyOf('stock-management-and-tax-warning.vercel.app', '10.0.2.2'),
+        reason:
+            'Web phải dùng backend Vercel, còn Android local dùng địa chỉ máy chủ giả lập.',
       );
     });
 

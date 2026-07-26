@@ -6,10 +6,10 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_strings.dart';
-import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/global_search_delegate.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
@@ -238,167 +238,102 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 32, top: 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                AppPageHeader(
+                  title:
+                      'Tổng quan ${ref.watch(authProvider).user?['fullName'] ?? 'cửa hàng'}',
+                  subtitle:
+                      '${shopState.memberType == 'OWNER' ? 'Chủ cửa hàng' : (shopState.memberType ?? 'Nhân viên')} • ${shopState.currentShopName ?? 'Tổng quát'} • $label1',
+                  action: Wrap(
+                    spacing: AppSpacing.xs,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Chào bạn, ${ref.watch(authProvider).user?['fullName'] ?? 'Chủ shop'} 👋',
-                              style: theme.textTheme.headlineMedium?.copyWith(
-                                color: c.textPrimary,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Chức vụ: ${shopState.memberType == 'OWNER' ? 'Chủ cửa hàng' : (shopState.memberType ?? 'Nhân viên')} - ${shopState.currentShopName ?? 'Tổng quát'}',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tổng quan hôm nay',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: c.textSecondary,
-                              ),
-                            ),
-                          ],
+                      IconButton.filledTonal(
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedSearch01,
+                          size: 20,
                         ),
+                        onPressed: () {
+                          showSearch(
+                            context: context,
+                            delegate: GlobalSearchDelegate(),
+                          );
+                        },
+                        tooltip: 'Tìm kiếm toàn hệ thống',
                       ),
-                      const SizedBox(width: 16),
-                      featureGuideButton(context, 'dashboard'),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: c.cardAlt.withValues(alpha: 0.5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: HugeIcon(
-                            icon: HugeIcons.strokeRoundedSearch01,
-                            color: c.textPrimary,
-                            size: 20,
+                      if (shopState.isOwner || shopState.hasPermission('sales'))
+                        FilledButton.icon(
+                          onPressed: () => context.push('/pos'),
+                          icon: const HugeIcon(
+                            icon: HugeIcons.strokeRoundedStore01,
+                            color: Colors.white,
+                            size: 18,
                           ),
-                          onPressed: () {
-                            showSearch(
-                              context: context,
-                              delegate: GlobalSearchDelegate(),
-                            );
-                          },
-                          tooltip: 'Tìm kiếm toàn cầu',
+                          label: const Text('Bán hàng'),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: c.cardAlt.withValues(alpha: 0.5),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: HugeIcon(
-                            icon: HugeIcons.strokeRoundedNotification03,
-                            color: c.textPrimary,
-                            size: 20,
-                          ),
-                          onPressed: () => context.push('/notifications'),
-                          tooltip: 'Thông báo',
-                        ),
-                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                const DashboardHeroHeader(),
-                const SizedBox(height: 14),
                 const UrgentBusinessPulseHeader(),
                 const SizedBox(height: 18),
 
-                // Quick Actions Bar
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  clipBehavior: Clip.none,
-                  child: Row(
-                    children: [
-                      if (shopState.isOwner || shopState.hasPermission('sales'))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: QuickAction(
-                            HugeIcons.strokeRoundedStore01,
-                            'Bán hàng',
-                            () => context.push('/pos'),
-                          ),
-                        ),
-                      if (shopState.isOwner ||
-                          shopState.hasPermission('products'))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: QuickAction(
-                            HugeIcons.strokeRoundedPackage,
-                            'Sản phẩm',
-                            () => context.push('/products'),
-                          ),
-                        ),
-                      if (shopState.isOwner ||
-                          shopState.hasPermission('customers'))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: QuickAction(
-                            HugeIcons.strokeRoundedUserGroup,
-                            'Khách hàng',
-                            () => context.push('/customers'),
-                          ),
-                        ),
-                      if (shopState.isOwner ||
-                          shopState.hasPermission('customers'))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: QuickAction(
-                            HugeIcons.strokeRoundedBookOpen01,
-                            'Sổ Nợ Khách',
-                            () => context.push('/customer-debts'),
-                          ),
-                        ),
-                      if (shopState.isOwner ||
-                          shopState.hasPermission('finance'))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: QuickAction(
-                            HugeIcons.strokeRoundedInvoice01,
-                            'Đơn hàng',
-                            () => context.push('/sales'),
-                          ),
-                        ),
-                      if (shopState.isOwner ||
-                          shopState.hasPermission('inventory'))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: QuickAction(
-                            HugeIcons.strokeRoundedTask01,
-                            'Kiểm kê',
-                            () => context.push('/stock-take'),
-                          ),
-                        ),
-                      if (shopState.isOwner ||
-                          shopState.hasPermission('finance'))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: QuickAction(
-                            HugeIcons.strokeRoundedAnalytics01,
-                            'Lãi/Lỗ',
-                            () => context.push('/profit-loss'),
-                          ),
-                        ),
-                    ],
+                Text(
+                  'Thao tác nhanh',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: c.textPrimary,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    if (shopState.isOwner || shopState.hasPermission('sales'))
+                      QuickAction(
+                        HugeIcons.strokeRoundedStore01,
+                        'Bán hàng',
+                        () => context.push('/pos'),
+                      ),
+                    if (shopState.isOwner ||
+                        shopState.hasPermission('products'))
+                      QuickAction(
+                        HugeIcons.strokeRoundedPackage,
+                        'Sản phẩm',
+                        () => context.push('/products'),
+                      ),
+                    if (shopState.isOwner ||
+                        shopState.hasPermission('customers'))
+                      QuickAction(
+                        HugeIcons.strokeRoundedUserGroup,
+                        'Khách hàng',
+                        () => context.push('/customers'),
+                      ),
+                    if (shopState.isOwner ||
+                        shopState.hasPermission('customers'))
+                      QuickAction(
+                        HugeIcons.strokeRoundedBookOpen01,
+                        'Sổ nợ khách',
+                        () => context.push('/customer-debts'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('finance'))
+                      QuickAction(
+                        HugeIcons.strokeRoundedInvoice01,
+                        'Đơn hàng',
+                        () => context.push('/sales'),
+                      ),
+                    if (shopState.isOwner ||
+                        shopState.hasPermission('inventory'))
+                      QuickAction(
+                        HugeIcons.strokeRoundedTask01,
+                        'Kiểm kê',
+                        () => context.push('/stock-take'),
+                      ),
+                    if (shopState.isOwner || shopState.hasPermission('finance'))
+                      QuickAction(
+                        HugeIcons.strokeRoundedAnalytics01,
+                        'Lãi/lỗ',
+                        () => context.push('/profit-loss'),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 32),
 
@@ -425,10 +360,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           LayoutBuilder(
                             builder: (context, constraints) {
                               final w = constraints.maxWidth;
-                              // Determine number of columns based on width (1 col for mobile < 500px)
-                              int crossAxisCount = w > 1300
+                              final crossAxisCount = w > 1300
                                   ? 4
-                                  : (w > 900 ? 3 : (w < 500 ? 1 : 2));
+                                  : (w > 900 ? 3 : (w < 360 ? 1 : 2));
 
                               final cardWidth =
                                   (w - (crossAxisCount - 1) * 16) /
@@ -441,41 +375,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   SizedBox(
                                     width: cardWidth,
                                     child: SummaryCard(
-                                      'Doanh thu',
+                                      'Doanh thu • $label1',
                                       _currFmt.format(revenue),
                                       null,
                                       theme.colorScheme.primary,
-                                      isHero: true,
                                       assetPath: 'assets/icon/revenue_icon.svg',
-                                      badgeText: 'Mục tiêu',
                                     ),
                                   ),
                                   SizedBox(
                                     width: cardWidth,
                                     child: SummaryCard(
-                                      'Đơn hàng',
+                                      'Đơn hàng • $label1',
                                       '$orders',
                                       null,
                                       AppColors.success,
                                       assetPath: 'assets/icon/orders_icon.svg',
-                                      badgeText: 'Mới',
                                     ),
                                   ),
                                   SizedBox(
                                     width: cardWidth,
                                     child: SummaryCard(
-                                      'Lợi nhuận gộp',
+                                      'Lợi nhuận gộp • $label1',
                                       _currFmt.format(grossProfit),
                                       null,
-                                      Colors.purple,
+                                      AppColors.warning,
                                       assetPath: 'assets/icon/profit_icon.svg',
-                                      badgeText: 'Lợi nhuận',
                                     ),
                                   ),
                                   SizedBox(
                                     width: cardWidth,
                                     child: SummaryCard(
-                                      AppStrings.dashboardAvgOrder,
+                                      '${AppStrings.dashboardAvgOrder} • $label1',
                                       _currFmt.format(avgOrder),
                                       null,
                                       AppColors.info,
@@ -495,13 +425,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                               )?.toDouble() ??
                                               0.0;
                                           return SummaryCard(
-                                            'Sổ quỹ tiền mặt',
+                                            'Sổ quỹ • ${DateFormat('dd/MM/yyyy').format(today)}',
                                             _currFmt.format(totalCash),
                                             null,
                                             Colors.teal,
                                             assetPath:
                                                 'assets/icon/cash_icon.svg',
-                                            badgeText: 'Tiền mặt',
                                           );
                                         },
                                         loading: () => const AppShimmer(

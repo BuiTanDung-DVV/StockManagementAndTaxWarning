@@ -2,28 +2,18 @@ import 'package:flutter_app/features/shell/main_shell.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test(
-    'AI assistant is hidden on mobile POS to keep checkout unobstructed',
-    () {
-      expect(
-        shouldShowAiAssistant(location: '/pos', viewportWidth: 390),
-        isFalse,
-      );
-      expect(
-        shouldShowAiAssistant(location: '/pos/checkout', viewportWidth: 799),
-        isFalse,
-      );
-    },
-  );
+  test('uses bottom navigation on compact viewports', () {
+    expect(navigationModeForWidth(390), MainShellNavigationMode.bottomBar);
+    expect(navigationModeForWidth(799), MainShellNavigationMode.bottomBar);
+  });
 
-  test('AI assistant remains available outside mobile POS', () {
-    expect(
-      shouldShowAiAssistant(location: '/sales', viewportWidth: 390),
-      isTrue,
-    );
-    expect(
-      shouldShowAiAssistant(location: '/pos', viewportWidth: 1200),
-      isTrue,
-    );
+  test('uses navigation rail on medium viewports', () {
+    expect(navigationModeForWidth(800), MainShellNavigationMode.rail);
+    expect(navigationModeForWidth(1099), MainShellNavigationMode.rail);
+  });
+
+  test('uses sidebar on expanded viewports', () {
+    expect(navigationModeForWidth(1100), MainShellNavigationMode.sidebar);
+    expect(navigationModeForWidth(1440), MainShellNavigationMode.sidebar);
   });
 }

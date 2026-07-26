@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class AppPageHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -16,54 +18,74 @@ class AppPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (breadcrumbs != null && breadcrumbs!.isNotEmpty) ...[
-                  Row(
-                    children:
-                        breadcrumbs!
-                            .expand(
-                              (widget) => [
-                                widget,
-                                const Icon(
-                                  Icons.chevron_right,
-                                  size: 16,
-                                  color: Colors.grey,
-                                ),
-                              ],
-                            )
-                            .toList()
-                          ..removeLast(),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle!,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                ],
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (breadcrumbs != null && breadcrumbs!.isNotEmpty) ...[
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (var index = 0; index < breadcrumbs!.length; index++) ...[
+                breadcrumbs![index],
+                if (index < breadcrumbs!.length - 1)
+                  Icon(Icons.chevron_right, size: 16, color: colors.textMuted),
               ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        Text(
+          title,
+          style: textTheme.headlineSmall?.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            subtitle!,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.textSecondary,
+              height: 1.45,
             ),
           ),
-          ?action,
         ],
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 600 && action != null) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                heading,
+                const SizedBox(height: AppSpacing.md),
+                Align(alignment: Alignment.centerLeft, child: action),
+              ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: heading),
+              if (action != null) ...[
+                const SizedBox(width: AppSpacing.md),
+                action!,
+              ],
+            ],
+          );
+        },
       ),
     );
   }
