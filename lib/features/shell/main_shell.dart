@@ -1,20 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:ui';
 import 'package:go_router/go_router.dart';
+import 'package:hugeicons/hugeicons.dart';
+
+import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_theme.dart';
 import '../settings/providers/shop_provider.dart';
-import '../../core/constants/app_strings.dart';
-import '../../core/widgets/ai_assistant_widget.dart';
+
+enum MainShellNavigationMode { bottomBar, rail, sidebar }
+
+MainShellNavigationMode navigationModeForWidth(double width) {
+  if (width < AppBreakpoints.compactNavigation) {
+    return MainShellNavigationMode.bottomBar;
+  }
+  if (width < AppBreakpoints.expandedNavigation) {
+    return MainShellNavigationMode.rail;
+  }
+  return MainShellNavigationMode.sidebar;
+}
 
 class MainShell extends ConsumerWidget {
   final Widget child;
+
   const MainShell({super.key, required this.child});
 
   int _currentIndex(BuildContext context, List<_NavDef> visibleTabs) {
     final location = GoRouterState.of(context).uri.toString();
-    for (int i = 0; i < visibleTabs.length; i++) {
+    for (var i = 0; i < visibleTabs.length; i++) {
       if (visibleTabs[i].matchesRoute(location)) return i;
     }
     return 0;
@@ -22,39 +34,35 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final c = AppThemeColors.of(context);
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final colors = AppThemeColors.of(context);
     final shop = ref.watch(shopProvider);
-    final location = GoRouterState.of(context).uri.path;
-
-    // Build visible tabs based on permissions
-    final allTabs = <_NavDef>[
+    final tabs = <_NavDef>[
       _NavDef(
         icon: HugeIcons.strokeRoundedHome01,
         label: AppStrings.navHome,
         route: '/',
-        prefixes: ['/'],
+        prefixes: const ['/'],
       ),
       if (!shop.isAllShops && shop.hasPermission('sales'))
         _NavDef(
           icon: HugeIcons.strokeRoundedShoppingCart01,
           label: AppStrings.navSales,
           route: '/sales',
-          prefixes: ['/sales', '/pos'],
+          prefixes: const ['/sales', '/pos'],
         ),
       if (!shop.isAllShops && shop.hasPermission('inventory'))
         _NavDef(
           icon: HugeIcons.strokeRoundedPackage,
           label: AppStrings.navInventory,
           route: '/inventory',
-          prefixes: ['/inventory', '/purchase-orders', '/stock', '/xnt'],
+          prefixes: const ['/inventory', '/purchase-orders', '/stock', '/xnt'],
         ),
       if (!shop.isAllShops && shop.hasPermission('finance'))
         _NavDef(
           icon: HugeIcons.strokeRoundedCoinsDollar,
           label: AppStrings.navFinance,
           route: '/finance',
-          prefixes: [
+          prefixes: const [
             '/finance',
             '/daily',
             '/profit',
@@ -75,7 +83,7 @@ class MainShell extends ConsumerWidget {
         icon: HugeIcons.strokeRoundedSettings02,
         label: AppStrings.navSettings,
         route: '/settings',
-        prefixes: [
+        prefixes: const [
           '/settings',
           '/activity',
           '/tax-config',
@@ -89,366 +97,189 @@ class MainShell extends ConsumerWidget {
         ],
       ),
     ];
+    final currentIndex = _currentIndex(context, tabs);
 
-    final idx = _currentIndex(context, allTabs);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mode = navigationModeForWidth(constraints.maxWidth);
+        final content = ColoredBox(color: colors.bg, child: child);
 
-    return Scaffold(
-      backgroundColor: c.bg,
-      body: Stack(
-        children: [
-          Positioned(
-            top: -150,
-            left: -150,
-            child: Container(
-              width: 500,
-              height: 500,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: primaryColor.withValues(alpha: 0.05),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.05),
-                    blurRadius: 150,
-                    spreadRadius: 50,
-                  ),
-                ],
-              ),
+        if (mode == MainShellNavigationMode.sidebar) {
+          return Scaffold(
+            backgroundColor: colors.bg,
+            body: Row(
+              children: [
+                _DesktopSidebar(
+                  tabs: tabs,
+                  currentIndex: currentIndex,
+                  shopName: shop.currentShopName,
+                ),
+                VerticalDivider(width: 1, color: colors.divider),
+                Expanded(child: content),
+              ],
             ),
+          );
+        }
+
+        if (mode == MainShellNavigationMode.rail) {
+          return Scaffold(
+            backgroundColor: colors.bg,
+            body: Row(
+              children: [
+                _TabletNavigationRail(tabs: tabs, currentIndex: currentIndex),
+                VerticalDivider(width: 1, color: colors.divider),
+                Expanded(child: content),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: colors.bg,
+          body: content,
+          bottomNavigationBar: _MobileNavigationBar(
+            tabs: tabs,
+            currentIndex: currentIndex,
           ),
-          Positioned.fill(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isDesktop = constraints.maxWidth >= 800;
+        );
+      },
+    );
+  }
+}
 
-                if (isDesktop) {
-                  return Row(
-                    children: [
-                      Container(
-                        width: 260,
-                        decoration: BoxDecoration(
-                          color: c.surface,
-                          border: Border(
-                            right: BorderSide(
-                              color: c.divider.withValues(alpha: 0.3),
-                            ),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                24,
-                                32,
-                                24,
-                                24,
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: primaryColor,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const HugeIcon(
-                                      icon: HugeIcons.strokeRoundedStore01,
-                                      color: Colors.white,
-                                      size: 26,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Text(
-                                      'SmartStock',
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: c.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Expanded(
-                              child: ListView.builder(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                itemCount: allTabs.length,
-                                itemBuilder: (context, i) {
-                                  final isActive = i == idx;
-                                  final color = isActive
-                                      ? primaryColor
-                                      : c.textSecondary;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: Semantics(
-                                        button: true,
-                                        label:
-                                            'Điều hướng đến ${allTabs[i].label}',
-                                        selected: isActive,
-                                        child: InkWell(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          onTap: () =>
-                                              context.go(allTabs[i].route),
-                                          hoverColor: c.divider.withValues(
-                                            alpha: 0.1,
-                                          ),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                              milliseconds: 200,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 12,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isActive
-                                                  ? primaryColor.withValues(
-                                                      alpha: 0.08,
-                                                    )
-                                                  : Colors.transparent,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                AnimatedContainer(
-                                                  duration: const Duration(
-                                                    milliseconds: 200,
-                                                  ),
-                                                  width: 4,
-                                                  height: isActive ? 20 : 0,
-                                                  decoration: BoxDecoration(
-                                                    color: primaryColor,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          2,
-                                                        ),
-                                                  ),
-                                                ),
-                                                SizedBox(
-                                                  width: isActive ? 12 : 16,
-                                                ),
-                                                HugeIcon(
-                                                  icon: allTabs[i].icon,
-                                                  color: color,
-                                                  size: 24,
-                                                ),
-                                                const SizedBox(width: 14),
-                                                Text(
-                                                  allTabs[i].label,
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: isActive
-                                                        ? FontWeight.bold
-                                                        : FontWeight.w500,
-                                                    color: color,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(color: c.bg, child: child),
-                      ),
-                    ],
-                  );
-                }
+class _DesktopSidebar extends StatelessWidget {
+  final List<_NavDef> tabs;
+  final int currentIndex;
+  final String? shopName;
 
-                return Stack(
+  const _DesktopSidebar({
+    required this.tabs,
+    required this.currentIndex,
+    required this.shopName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return ColoredBox(
+      color: colors.surface,
+      child: SafeArea(
+        right: false,
+        child: SizedBox(
+          width: 248,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                child: Row(
                   children: [
-                    Positioned.fill(
-                      child: ClipRRect(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            color: c.bg.withValues(alpha: 0.4),
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 480,
-                                ),
-                                child: child,
-                              ),
-                            ),
-                          ),
-                        ),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: primary,
+                        borderRadius: BorderRadius.circular(AppRadius.control),
+                      ),
+                      alignment: Alignment.center,
+                      child: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedStore01,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: SafeArea(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(24),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: c.card.withValues(alpha: 0.7),
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(
-                                    color: c.divider.withValues(alpha: 0.5),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: primaryColor.withValues(
-                                        alpha: 0.05,
-                                      ),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 10),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    for (int i = 0; i < allTabs.length; i++)
-                                      _NavItem(
-                                        icon: allTabs[i].icon,
-                                        label: allTabs[i].label,
-                                        isActive: i == idx,
-                                        onTap: () =>
-                                            context.go(allTabs[i].route),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'SmartStock',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            shopName?.trim().isNotEmpty == true
+                                ? shopName!
+                                : 'Quản lý cửa hàng',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.textMuted),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                );
-              },
-            ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: tabs.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 4),
+                  itemBuilder: (context, index) => _SidebarNavItem(
+                    definition: tabs[index],
+                    selected: index == currentIndex,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                child: _SidebarSupportLink(
+                  onTap: () => context.push('/settings/ai-knowledge'),
+                ),
+              ),
+            ],
           ),
-          Positioned.fill(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                if (!shouldShowAiAssistant(
-                  location: location,
-                  viewportWidth: constraints.maxWidth,
-                )) {
-                  return const SizedBox.shrink();
-                }
-                return const IgnorePointer(
-                  ignoring: false,
-                  child: AiAssistantWidget(),
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-bool shouldShowAiAssistant({
-  required String location,
-  required double viewportWidth,
-}) {
-  final isMobile = viewportWidth < 800;
-  final isPos = location == '/pos' || location.startsWith('/pos/');
-  return !(isMobile && isPos);
-}
+class _SidebarNavItem extends StatelessWidget {
+  final _NavDef definition;
+  final bool selected;
 
-// ── Nav tab definition ──
-class _NavDef {
-  final dynamic icon; // HugeIcons path data
-  final String label;
-  final String route;
-  final List<String> prefixes;
-  const _NavDef({
-    required this.icon,
-    required this.label,
-    required this.route,
-    required this.prefixes,
-  });
-
-  bool matchesRoute(String location) {
-    // Home is special: only exact match
-    if (route == '/') return location == '/';
-    return prefixes.any((p) => location.startsWith(p));
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final dynamic icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
+  const _SidebarNavItem({required this.definition, required this.selected});
 
   @override
   Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
-    final color = isActive ? AppColors.primary : c.textMuted;
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    final foreground = selected ? primary : colors.textSecondary;
 
     return Semantics(
-      label: label,
-      selected: isActive,
       button: true,
+      selected: selected,
+      label: 'Điều hướng đến ${definition.label}',
       child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        color: selected ? primary.withValues(alpha: 0.1) : Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.control),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? AppColors.primary.withValues(alpha: 0.15)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          onTap: () => context.go(definition.route),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
               children: [
-                HugeIcon(icon: icon, color: color, size: 22),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                    color: color,
+                HugeIcon(icon: definition.icon, color: foreground, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    definition.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: foreground,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -457,5 +288,191 @@ class _NavItem extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _SidebarSupportLink extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _SidebarSupportLink({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.control),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              HugeIcon(
+                icon: HugeIcons.strokeRoundedBookOpen01,
+                color: colors.textMuted,
+                size: 21,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Nguồn hướng dẫn',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(color: colors.textMuted),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabletNavigationRail extends StatelessWidget {
+  final List<_NavDef> tabs;
+  final int currentIndex;
+
+  const _TabletNavigationRail({required this.tabs, required this.currentIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return ColoredBox(
+      color: colors.surface,
+      child: SafeArea(
+        right: false,
+        child: SizedBox(
+          width: 88,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 8),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: primary,
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                  ),
+                  alignment: Alignment.center,
+                  child: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedStore01,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: NavigationRail(
+                  backgroundColor: colors.surface,
+                  selectedIndex: currentIndex,
+                  labelType: NavigationRailLabelType.all,
+                  groupAlignment: -0.75,
+                  onDestinationSelected: (index) =>
+                      context.go(tabs[index].route),
+                  destinations: [
+                    for (final tab in tabs)
+                      NavigationRailDestination(
+                        icon: HugeIcon(
+                          icon: tab.icon,
+                          color: colors.textMuted,
+                          size: 22,
+                        ),
+                        selectedIcon: HugeIcon(
+                          icon: tab.icon,
+                          color: primary,
+                          size: 22,
+                        ),
+                        label: Text(tab.label),
+                      ),
+                  ],
+                ),
+              ),
+              Tooltip(
+                message: 'Nguồn hướng dẫn',
+                child: IconButton(
+                  onPressed: () => context.push('/settings/ai-knowledge'),
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedBookOpen01,
+                    color: colors.textMuted,
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileNavigationBar extends StatelessWidget {
+  final List<_NavDef> tabs;
+  final int currentIndex;
+
+  const _MobileNavigationBar({required this.tabs, required this.currentIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return ColoredBox(
+      color: colors.surface,
+      child: SafeArea(
+        top: false,
+        child: NavigationBar(
+          height: 72,
+          backgroundColor: colors.surface,
+          selectedIndex: currentIndex,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (index) => context.go(tabs[index].route),
+          destinations: [
+            for (final tab in tabs)
+              NavigationDestination(
+                tooltip: tab.label,
+                icon: HugeIcon(
+                  icon: tab.icon,
+                  color: colors.textMuted,
+                  size: 22,
+                ),
+                selectedIcon: HugeIcon(
+                  icon: tab.icon,
+                  color: primary,
+                  size: 22,
+                ),
+                label: tab.label,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavDef {
+  final dynamic icon;
+  final String label;
+  final String route;
+  final List<String> prefixes;
+
+  const _NavDef({
+    required this.icon,
+    required this.label,
+    required this.route,
+    required this.prefixes,
+  });
+
+  bool matchesRoute(String location) {
+    if (route == '/') return location == '/';
+    return prefixes.any(location.startsWith);
   }
 }

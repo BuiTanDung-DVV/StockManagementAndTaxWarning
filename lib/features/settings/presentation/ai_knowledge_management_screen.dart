@@ -55,7 +55,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              'Nạp Tài Liệu Mới Cho AI',
+                              'Thêm nguồn tham khảo',
                               style: GoogleFonts.outfit(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -73,7 +73,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                     TextField(
                       controller: titleCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'Tiêu đề tài liệu / Quy định',
+                        labelText: 'Tiêu đề tài liệu hoặc quy định',
                         hintText:
                             'VD: Thông tư 40/2021/TT-BTC, Quy định chiết khấu...',
                       ),
@@ -87,19 +87,19 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                       items: const [
                         DropdownMenuItem(
                           value: 'Thuế HKD',
-                          child: Text('Thuế Hộ Kinh Doanh'),
+                          child: Text('Thuế hộ kinh doanh'),
                         ),
                         DropdownMenuItem(
                           value: 'Bán Hàng & Sổ Nợ',
-                          child: Text('Bán Hàng & Sổ Nợ'),
+                          child: Text('Bán hàng và sổ nợ'),
                         ),
                         DropdownMenuItem(
                           value: 'Kho & Tài Chính',
-                          child: Text('Kho & Quản Lý Tiền Mặt'),
+                          child: Text('Kho và quản lý tiền mặt'),
                         ),
                         DropdownMenuItem(
                           value: 'Cửa Hàng',
-                          child: Text('Quy Định Cửa Hàng'),
+                          child: Text('Quy định cửa hàng'),
                         ),
                       ],
                       onChanged: (v) {
@@ -111,9 +111,9 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                       controller: contentCtrl,
                       maxLines: 6,
                       decoration: const InputDecoration(
-                        labelText: 'Nội dung chi tiết tài liệu (Dữ liệu gốc)',
+                        labelText: 'Nội dung tài liệu',
                         hintText:
-                            'Nhập nội dung quy định, điều khoản hoặc số liệu chính xác để AI học...',
+                            'Nhập nội dung cần dùng làm nguồn tham khảo...',
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -124,7 +124,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'Vui lòng nhập đầy đủ tiêu đề và nội dung tài liệu!',
+                                'Vui lòng nhập đầy đủ tiêu đề và nội dung tài liệu.',
                               ),
                               backgroundColor: Colors.orange,
                             ),
@@ -141,9 +141,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'Đã nạp tài liệu mới vào kho trí tuệ AI thành công!',
-                            ),
+                            content: Text('Đã thêm nguồn tài liệu.'),
                             backgroundColor: AppColors.success,
                           ),
                         );
@@ -153,7 +151,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                         color: Colors.white,
                       ),
                       label: Text(
-                        'LƯU & NẠP VÀO AI',
+                        'Lưu nguồn',
                         style: GoogleFonts.outfit(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -187,7 +185,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Quản Lý Kho Tài Liệu AI (RAG)',
+          'Nguồn tài liệu tham khảo',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -220,7 +218,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Kiểm Soát Tri Thức Trợ Lý AI 100%',
+                          'Nguồn đang được sử dụng',
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
@@ -229,7 +227,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'AI chỉ trả lời từ các tài liệu đang bật bên dưới. Khi gỡ bỏ tài liệu, AI lập tức quên thông tin đó và từ chối trả lời bịa đặt.',
+                          'Tính năng tra cứu chỉ tìm trong các tài liệu đang bật bên dưới. Hãy kiểm tra nội dung và ngày hiệu lực trước khi sử dụng.',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: c.textSecondary,
@@ -248,14 +246,14 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 AppSectionHeader(
-                  title: 'Danh Sách Tài Liệu Đã Nạp',
+                  title: 'Danh sách tài liệu',
                   icon: HugeIcons.strokeRoundedFolder01,
                   iconColor: AppColors.primary,
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _showAddDocumentModal(context, ref),
                   icon: const Icon(Icons.note_add_rounded, size: 16),
-                  label: const Text('Nạp Tài Liệu'),
+                  label: const Text('Thêm tài liệu'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -390,10 +388,10 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                                 onPressed: () async {
                                   final confirm = await AppConfirmModal.show(
                                     context,
-                                    title: 'Gỡ Bỏ Tài Liệu Vĩnh Viễn?',
+                                    title: 'Xóa tài liệu?',
                                     message:
-                                        'Bạn có chắc chắn muốn gỡ bỏ "${doc.title}"? AI sẽ không thể truy cập tài liệu này nữa.',
-                                    confirmText: 'Gỡ Bỏ (Xóa)',
+                                        'Bạn có chắc chắn muốn xóa "${doc.title}" khỏi nguồn tham khảo?',
+                                    confirmText: 'Xóa tài liệu',
                                     isDestructive: true,
                                   );
                                   if (confirm == true) {
@@ -406,7 +404,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Đã gỡ bỏ tài liệu "${doc.title}" khỏi AI!',
+                                            'Đã xóa tài liệu "${doc.title}".',
                                           ),
                                           backgroundColor: AppColors.danger,
                                         ),
@@ -420,7 +418,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                                   color: AppColors.danger,
                                 ),
                                 label: const Text(
-                                  'Gỡ Bỏ (Xóa)',
+                                  'Xóa',
                                   style: TextStyle(
                                     color: AppColors.danger,
                                     fontWeight: FontWeight.bold,

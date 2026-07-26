@@ -204,25 +204,10 @@ class SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final bgGradient = isHero
-        ? LinearGradient(
-            colors: [color, color.withAlpha(220)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          )
-        : null;
-
-    final bgColor = isHero ? null : c.card;
-    final textColor = isHero ? Colors.white : c.textPrimary;
-    final subTextColor = isHero
-        ? Colors.white.withValues(alpha: 0.9)
-        : c.textSecondary;
-    final iconBg = isHero
-        ? Colors.white.withValues(alpha: 0.2)
-        : color.withValues(alpha: 0.15);
-    final iconColor = isHero ? Colors.white : color;
+    final textColor = c.textPrimary;
+    final subTextColor = c.textSecondary;
+    final iconBg = color.withValues(alpha: 0.12);
+    final iconColor = color;
 
     Widget iconWidget;
     if (assetPath != null && assetPath!.endsWith('.svg')) {
@@ -240,22 +225,9 @@ class SummaryCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: bgColor,
-        gradient: bgGradient,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isHero
-              ? Colors.white.withValues(alpha: 0.2)
-              : color.withValues(alpha: isDark ? 0.35 : 0.25),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: isHero ? 0.3 : 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: c.card,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -274,9 +246,8 @@ class SummaryCard extends StatelessWidget {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: iconBg,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: color.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(
+                            AppRadius.control,
                           ),
                         ),
                         child: iconWidget,
@@ -297,7 +268,7 @@ class SummaryCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (badgeText != null)
+                if (badgeText != null && badgeText!.trim().isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -2803,52 +2774,65 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
   Widget _chip({
     required VoidCallback onTap,
     required Color color,
-    required String icon,
+    required IconData icon,
     required String label,
     String? action,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color, width: 1.5),
-        ),
-        child: Row(
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: color,
+    return Builder(
+      builder: (context) {
+        final colors = AppThemeColors.of(context);
+        return Material(
+          color: colors.card,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(color: colors.divider),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppRadius.control),
+                    ),
+                    child: Icon(icon, size: 20, color: color),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (action != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      action,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: AppSpacing.xxs),
+                  Icon(Icons.chevron_right, size: 18, color: colors.textMuted),
+                ],
               ),
             ),
-            if (action != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  action,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -2873,20 +2857,22 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
           loading: () => _chip(
             onTap: () => context.push('/customer-debts'),
             color: Colors.blueGrey,
-            icon: '📒',
+            icon: Icons.menu_book_outlined,
             label: 'Sổ nợ: Đang tải dữ liệu',
           ),
           error: (_, _) => _chip(
             onTap: () => context.push('/customer-debts'),
             color: Colors.blueGrey,
-            icon: '📒',
+            icon: Icons.menu_book_outlined,
             label: 'Sổ nợ: Chưa tải được',
             action: 'Thử lại',
           ),
           data: (items) => _chip(
             onTap: () => context.push('/customer-debts'),
             color: items.isEmpty ? AppColors.success : Colors.orange,
-            icon: items.isEmpty ? '✅' : '🚨',
+            icon: items.isEmpty
+                ? Icons.check_circle_outline
+                : Icons.schedule_outlined,
             label: items.isEmpty
                 ? 'Sổ nợ: Không có nợ quá hạn'
                 : 'Sổ nợ: ${items.length} khoản quá hạn',
@@ -2903,20 +2889,22 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
           loading: () => _chip(
             onTap: () => context.push('/inventory'),
             color: Colors.blueGrey,
-            icon: '📦',
+            icon: Icons.inventory_2_outlined,
             label: 'Kho hàng: Đang tải dữ liệu',
           ),
           error: (_, _) => _chip(
             onTap: () => context.push('/inventory'),
             color: Colors.blueGrey,
-            icon: '📦',
+            icon: Icons.inventory_2_outlined,
             label: 'Kho hàng: Chưa tải được',
             action: 'Thử lại',
           ),
           data: (items) => _chip(
             onTap: () => context.push('/inventory'),
             color: items.isEmpty ? AppColors.success : AppColors.danger,
-            icon: items.isEmpty ? '✅' : '⚠️',
+            icon: items.isEmpty
+                ? Icons.check_circle_outline
+                : Icons.warning_amber_rounded,
             label: items.isEmpty
                 ? 'Kho hàng: Không có hàng dưới định mức'
                 : 'Kho hàng: ${items.length} SP dưới định mức',
@@ -2940,13 +2928,13 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
           loading: () => _chip(
             onTap: () => context.push('/tax-calculator'),
             color: Colors.blueGrey,
-            icon: '🏛️',
+            icon: Icons.account_balance_outlined,
             label: 'Thuế HKD 2026: Đang tải doanh thu',
           ),
           error: (_, _) => _chip(
             onTap: () => context.push('/tax-calculator'),
             color: Colors.blueGrey,
-            icon: '🏛️',
+            icon: Icons.account_balance_outlined,
             label: 'Thuế HKD 2026: Chưa tải được',
             action: 'Kiểm tra',
           ),
@@ -2960,7 +2948,7 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
             return _chip(
               onTap: () => context.push('/tax-calculator'),
               color: color,
-              icon: '🏛️',
+              icon: Icons.account_balance_outlined,
               label: 'Thuế HKD 2026: ${thresholds.getTierLabel(revenue)}',
               action: 'Chi tiết',
             );
@@ -2969,17 +2957,14 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
       );
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: [
-          for (var index = 0; index < chips.length; index++) ...[
-            if (index > 0) const SizedBox(width: 10),
-            chips[index],
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var index = 0; index < chips.length; index++) ...[
+          if (index > 0) const SizedBox(height: AppSpacing.xs),
+          chips[index],
         ],
-      ),
+      ],
     );
   }
 }

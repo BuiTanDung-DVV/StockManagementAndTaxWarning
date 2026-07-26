@@ -36,19 +36,42 @@ class CartItem {
   final String name;
   final double price;
   final int quantity;
+  final int? availableStock;
+
   const CartItem({
     required this.productId,
     required this.name,
     required this.price,
     this.quantity = 1,
+    this.availableStock,
   });
+
   double get subtotal => price * quantity;
-  CartItem copyWith({int? quantity}) => CartItem(
+
+  CartItem copyWith({int? quantity, int? availableStock}) => CartItem(
     productId: productId,
     name: name,
     price: price,
     quantity: quantity ?? this.quantity,
+    availableStock: availableStock ?? this.availableStock,
   );
+}
+
+int? availableStockOf(Map<String, dynamic> product) {
+  final raw =
+      product['currentStock'] ??
+      product['stockQuantity'] ??
+      product['stock_quantity'];
+  if (raw is num) return raw.floor();
+  if (raw is String) return double.tryParse(raw)?.floor();
+  return null;
+}
+
+bool canIncreaseQuantity({
+  required int currentQuantity,
+  required int? availableStock,
+}) {
+  return availableStock == null || currentQuantity < availableStock;
 }
 
 /// Cart state
@@ -119,6 +142,7 @@ class CartNotifier extends Notifier<CartState> {
                 name: e['name'],
                 price: (e['price'] as num).toDouble(),
                 quantity: e['quantity'],
+                availableStock: e['availableStock'] as int?,
               ),
             )
             .toList();
@@ -151,6 +175,7 @@ class CartNotifier extends Notifier<CartState> {
                 'name': e.name,
                 'price': e.price,
                 'quantity': e.quantity,
+                'availableStock': e.availableStock,
               },
             )
             .toList(),
@@ -161,42 +186,76 @@ class CartNotifier extends Notifier<CartState> {
     }
   }
 
-  void add(int productId, String name, double price) {
+  bool add(int productId, String name, double price, {int? availableStock}) {
     final existing = state.items
         .where((i) => i.productId == productId)
         .firstOrNull;
     if (existing != null) {
+      final stockLimit = availableStock ?? existing.availableStock;
+      if (!canIncreaseQuantity(
+        currentQuantity: existing.quantity,
+        availableStock: stockLimit,
+      )) {
+        return false;
+      }
       state = state.copyWith(
         items: state.items
             .map(
               (i) => i.productId == productId
-                  ? i.copyWith(quantity: i.quantity + 1)
+                  ? i.copyWith(
+                      quantity: i.quantity + 1,
+                      availableStock: stockLimit,
+                    )
                   : i,
             )
             .toList(),
       );
     } else {
+      if (!canIncreaseQuantity(
+        currentQuantity: 0,
+        availableStock: availableStock,
+      )) {
+        return false;
+      }
       state = state.copyWith(
         items: [
           ...state.items,
-          CartItem(productId: productId, name: name, price: price),
+          CartItem(
+            productId: productId,
+            name: name,
+            price: price,
+            availableStock: availableStock,
+          ),
         ],
       );
     }
     _saveToPrefs();
+    return true;
   }
 
-  void increment(int productId) {
+  bool increment(int productId, {int? availableStock}) {
+    final item = state.items.firstWhere((i) => i.productId == productId);
+    final stockLimit = availableStock ?? item.availableStock;
+    if (!canIncreaseQuantity(
+      currentQuantity: item.quantity,
+      availableStock: stockLimit,
+    )) {
+      return false;
+    }
     state = state.copyWith(
       items: state.items
           .map(
             (i) => i.productId == productId
-                ? i.copyWith(quantity: i.quantity + 1)
+                ? i.copyWith(
+                    quantity: i.quantity + 1,
+                    availableStock: stockLimit,
+                  )
                 : i,
           )
           .toList(),
     );
     _saveToPrefs();
+    return true;
   }
 
   void decrement(int productId) {
@@ -347,10 +406,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ),
                 if (cart.items.isNotEmpty)
                   Container(
-                    // MainShell uses a floating mobile navigation bar. Reserve
-                    // its footprint so the critical checkout CTA is never
-                    // rendered underneath it.
-                    margin: const EdgeInsets.fromLTRB(16, 4, 16, 104),
+                    // MainShell now reserves space for mobile navigation.
+                    margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 16,
@@ -549,12 +606,23 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         singleProduct['selling_price'] ??
                         0,
                   );
+                  final availableStock = availableStockOf(singleProduct);
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    ref.read(_cartProvider.notifier).add(id, name, price);
+                    final added = ref
+                        .read(_cartProvider.notifier)
+                        .add(id, name, price, availableStock: availableStock);
                     _searchCtrl.clear();
                     setState(() => _search = '');
-                    HapticFeedback.vibrate();
-                    _tts.speak('Đã thêm $name');
+                    if (added) {
+                      HapticFeedback.vibrate();
+                      _tts.speak('Đã thêm $name');
+                    } else {
+                      ToastService.showError(
+                        availableStock != null && availableStock <= 0
+                            ? '$name đã hết hàng'
+                            : '$name đã đạt số lượng tồn khả dụng',
+                      );
+                    }
                   });
                 }
               }
@@ -591,14 +659,23 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   final price = TypeParser.asDouble(
                     p['sellingPrice'] ?? p['selling_price'] ?? 0,
                   );
-                  final stock =
-                      p['currentStock'] ??
-                      p['stockQuantity'] ??
-                      p['stock_quantity'] ??
-                      '—';
+                  final availableStock = availableStockOf(p);
+                  final stockLabel = availableStock == null
+                      ? 'Chưa rõ tồn'
+                      : availableStock <= 0
+                      ? 'Hết hàng'
+                      : 'Kho: $availableStock';
+                  final isOutOfStock =
+                      availableStock != null && availableStock <= 0;
                   final cartItem = cart.items
                       .where((ci) => ci.productId == id)
                       .firstOrNull;
+                  final reachedAvailableStock =
+                      cartItem != null &&
+                      !canIncreaseQuantity(
+                        currentQuantity: cartItem.quantity,
+                        availableStock: availableStock,
+                      );
 
                   return Container(
                     padding: const EdgeInsets.symmetric(
@@ -634,7 +711,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
@@ -650,9 +727,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                   ),
                                   const SizedBox(width: 10),
                                   AppBadge(
-                                    label: 'Kho: $stock',
-                                    color: (stock is num && stock <= 0)
+                                    label: stockLabel,
+                                    color: isOutOfStock
                                         ? AppColors.danger
+                                        : availableStock == null
+                                        ? AppColors.warning
                                         : AppColors.success,
                                   ),
                                 ],
@@ -684,9 +763,17 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               ),
                               _qtyButton(
                                 Icons.add,
-                                () => ref
-                                    .read(_cartProvider.notifier)
-                                    .increment(id),
+                                reachedAvailableStock
+                                    ? null
+                                    : () => ref
+                                          .read(_cartProvider.notifier)
+                                          .increment(
+                                            id,
+                                            availableStock: availableStock,
+                                          ),
+                                tooltip: reachedAvailableStock
+                                    ? 'Đã đạt tồn khả dụng'
+                                    : 'Tăng số lượng',
                               ),
                             ],
                           )
@@ -695,21 +782,35 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                             width: 44,
                             height: 44,
                             child: IconButton(
-                              onPressed: () {
-                                ref
-                                    .read(_cartProvider.notifier)
-                                    .add(id, name, price);
-                                HapticFeedback.lightImpact();
-                              },
+                              tooltip: isOutOfStock
+                                  ? 'Sản phẩm đã hết hàng'
+                                  : 'Thêm vào giỏ',
+                              onPressed: isOutOfStock
+                                  ? null
+                                  : () {
+                                      final added = ref
+                                          .read(_cartProvider.notifier)
+                                          .add(
+                                            id,
+                                            name,
+                                            price,
+                                            availableStock: availableStock,
+                                          );
+                                      if (added) {
+                                        HapticFeedback.lightImpact();
+                                      }
+                                    },
                               icon: Icon(
                                 Icons.add_shopping_cart,
-                                color: AppColors.primary,
+                                color: isOutOfStock
+                                    ? c.textMuted
+                                    : AppColors.primary,
                                 size: 20,
                               ),
                               style: IconButton.styleFrom(
-                                backgroundColor: AppColors.primary.withValues(
-                                  alpha: 0.08,
-                                ),
+                                backgroundColor: isOutOfStock
+                                    ? c.cardAlt
+                                    : AppColors.primary.withValues(alpha: 0.08),
                                 shape: const CircleBorder(),
                               ),
                             ),
@@ -851,9 +952,21 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                             ),
                             _qtyButton(
                               Icons.add,
-                              () => ref
-                                  .read(_cartProvider.notifier)
-                                  .increment(item.productId),
+                              canIncreaseQuantity(
+                                    currentQuantity: item.quantity,
+                                    availableStock: item.availableStock,
+                                  )
+                                  ? () => ref
+                                        .read(_cartProvider.notifier)
+                                        .increment(item.productId)
+                                  : null,
+                              tooltip:
+                                  canIncreaseQuantity(
+                                    currentQuantity: item.quantity,
+                                    availableStock: item.availableStock,
+                                  )
+                                  ? 'Tăng số lượng'
+                                  : 'Đã đạt tồn khả dụng',
                             ),
                           ],
                         ),
@@ -1075,18 +1188,30 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
   }
 
-  Widget _qtyButton(IconData icon, VoidCallback onTap) {
+  Widget _qtyButton(IconData icon, VoidCallback? onTap, {String? tooltip}) {
+    final enabled = onTap != null;
     return SizedBox(
       width: 44,
       height: 44,
       child: IconButton(
-        onPressed: () {
-          onTap();
-          HapticFeedback.lightImpact();
-        },
-        icon: Icon(icon, size: 20, color: AppColors.primary),
+        tooltip: tooltip,
+        onPressed: onTap == null
+            ? null
+            : () {
+                onTap();
+                HapticFeedback.lightImpact();
+              },
+        icon: Icon(
+          icon,
+          size: 20,
+          color: enabled
+              ? AppColors.primary
+              : AppThemeColors.of(context).textMuted,
+        ),
         style: IconButton.styleFrom(
-          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+          backgroundColor: enabled
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : AppThemeColors.of(context).cardAlt,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -1784,7 +1909,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       final orderId = result['id'] as int;
 
       if (method == 'CASH' || method == 'DEBT') {
-        // Cash or Debt payment — done immediately
+        // Cash or debt payment - done immediately.
         ref.read(_cartProvider.notifier).clear();
 
         // Trigger UI updates across the app (Inventory, Finance, Sales Summary, Sales List)
@@ -1823,7 +1948,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           );
         }
       } else if (method == 'BANK_TRANSFER') {
-        // Bank transfer — navigate to QR screen
+        // Bank transfer - navigate to QR screen.
         final shop = await ref.read(shopProfileProvider.future);
         final bankId = (shop['bankId'] ?? '').toString();
         final accountNo = (shop['bankAccount'] ?? '').toString();

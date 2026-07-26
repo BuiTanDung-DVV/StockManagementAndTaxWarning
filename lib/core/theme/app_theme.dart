@@ -150,17 +150,37 @@ class AppColors {
 // ThemeData builders
 // ─────────────────────────────────────────────
 
-class AppTheme {
-  // Taste-Skill: SHAPE CONSISTENCY LOCK
-  static const double _cardRadius = 24.0;
-  static const double _inputRadius = 14.0;
+abstract final class AppBreakpoints {
+  static const double compactNavigation = 800;
+  static const double expandedNavigation = 1100;
+}
 
-  // Taste-Skill: Diffusion shadow for Bento Grid premium feel
+abstract final class AppRadius {
+  static const double control = 12;
+  static const double card = 16;
+  static const double dialog = 20;
+}
+
+abstract final class AppSpacing {
+  static const double xxs = 4;
+  static const double xs = 8;
+  static const double sm = 12;
+  static const double md = 16;
+  static const double lg = 24;
+  static const double xl = 32;
+  static const double xxl = 40;
+  static const double xxxl = 48;
+}
+
+class AppTheme {
+  static const double _cardRadius = AppRadius.card;
+  static const double _inputRadius = AppRadius.control;
+
   static const diffusionShadow = BoxShadow(
-    color: Color(0x0D000000), // 5% opacity
-    blurRadius: 40,
-    offset: Offset(0, 20),
-    spreadRadius: -15,
+    color: Color(0x120F172A),
+    blurRadius: 24,
+    offset: Offset(0, 10),
+    spreadRadius: -12,
   );
 
   static TextStyle tabularStyle(
@@ -310,6 +330,36 @@ class AppTheme {
         type: BottomNavigationBarType.fixed,
         elevation: 0, // No shadow
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 72,
+        elevation: 0,
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: primaryColor.withValues(alpha: 0.12),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          return bodyTextTheme.labelSmall?.copyWith(
+            color: states.contains(WidgetState.selected)
+                ? primaryColor
+                : colors.textMuted,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w600
+                : FontWeight.w500,
+          );
+        }),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        elevation: 0,
+        backgroundColor: colors.surface,
+        indicatorColor: primaryColor.withValues(alpha: 0.12),
+        selectedLabelTextStyle: bodyTextTheme.labelSmall?.copyWith(
+          color: primaryColor,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelTextStyle: bodyTextTheme.labelSmall?.copyWith(
+          color: colors.textMuted,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colors.inputFill,
@@ -357,7 +407,7 @@ class AppTheme {
         elevation: 0,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(_cardRadius),
+            top: Radius.circular(AppRadius.dialog),
           ),
         ),
       ),
@@ -365,7 +415,7 @@ class AppTheme {
         backgroundColor: colors.card,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(_cardRadius),
+          borderRadius: BorderRadius.circular(AppRadius.dialog),
           side: BorderSide(color: colors.divider, width: 1),
         ),
       ),
@@ -373,7 +423,7 @@ class AppTheme {
         color: colors.card,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(_cardRadius),
+          borderRadius: BorderRadius.circular(AppRadius.dialog),
           side: BorderSide(color: colors.divider, width: 1),
         ),
       ),

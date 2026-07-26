@@ -296,11 +296,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ], c),
 
-            // AI Knowledge Base Management
-            _SettingGroup('Trợ Lý AI & Tri Thức', [
+            _SettingGroup('Trợ giúp nghiệp vụ', [
               _SettingItem(
-                HugeIcons.strokeRoundedSmartPhone01,
-                'Quản lý kho tài liệu AI (RAG)',
+                HugeIcons.strokeRoundedBookOpen01,
+                'Nguồn tài liệu tham khảo',
                 () => context.push('/settings/ai-knowledge'),
                 c,
               ),
@@ -577,58 +576,60 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
               ],
-              ...shopState.userShops.where(
-                (shop) =>
-                    shop['status'] == 'ACTIVE' && shop['isActive'] != false,
-              ).map((shop) {
-                final isActive =
-                    shop['shopId'] == shopState.currentShopId &&
-                    !shopState.isAllShops;
-                return ListTile(
-                  leading: HugeIcon(
-                    icon: HugeIcons.strokeRoundedStore01,
-                    color: isActive ? primaryColor : c.textMuted,
-                    size: 22,
-                  ),
-                  title: Text(
-                    shop['shopName'] ?? 'Shop #${shop['shopId']}',
-                    style: GoogleFonts.outfit(
-                      fontWeight: isActive
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      fontSize: 14,
-                    ),
-                  ),
-                  subtitle: Text(
-                    shop['memberType'] == 'OWNER'
-                        ? 'Chủ sở hữu'
-                        : (shop['role']?['name'] ?? 'Nhân viên'),
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: c.textSecondary,
-                    ),
-                  ),
-                  trailing: isActive
-                      ? HugeIcon(
-                          icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                          color: primaryColor,
-                          size: 20,
-                        )
-                      : null,
-                  onTap: () {
-                    ref
-                        .read(shopProvider.notifier)
-                        .switchShop(shop['shopId'] as int);
-                    Navigator.pop(ctx);
-                  },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  tileColor: isActive
-                      ? primaryColor.withValues(alpha: 0.08)
-                      : null,
-                );
-              }),
+              ...shopState.userShops
+                  .where(
+                    (shop) =>
+                        shop['status'] == 'ACTIVE' && shop['isActive'] != false,
+                  )
+                  .map((shop) {
+                    final isActive =
+                        shop['shopId'] == shopState.currentShopId &&
+                        !shopState.isAllShops;
+                    return ListTile(
+                      leading: HugeIcon(
+                        icon: HugeIcons.strokeRoundedStore01,
+                        color: isActive ? primaryColor : c.textMuted,
+                        size: 22,
+                      ),
+                      title: Text(
+                        shop['shopName'] ?? 'Shop #${shop['shopId']}',
+                        style: GoogleFonts.outfit(
+                          fontWeight: isActive
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Text(
+                        shop['memberType'] == 'OWNER'
+                            ? 'Chủ sở hữu'
+                            : (shop['role']?['name'] ?? 'Nhân viên'),
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: c.textSecondary,
+                        ),
+                      ),
+                      trailing: isActive
+                          ? HugeIcon(
+                              icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                              color: primaryColor,
+                              size: 20,
+                            )
+                          : null,
+                      onTap: () {
+                        ref
+                            .read(shopProvider.notifier)
+                            .switchShop(shop['shopId'] as int);
+                        Navigator.pop(ctx);
+                      },
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      tileColor: isActive
+                          ? primaryColor.withValues(alpha: 0.08)
+                          : null,
+                    );
+                  }),
               const SizedBox(height: 12),
             ],
           ),

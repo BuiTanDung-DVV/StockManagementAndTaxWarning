@@ -88,6 +88,7 @@ Các vấn đề trên được mô tả với bằng chứng và tiêu chí ngh
 | [09 - Verification Report](09_CURRENT_STATE_VERIFICATION_REPORT.md) | Đúng/sai/chưa đủ bằng chứng và mức ảnh hưởng |
 | [10 - Backlog & Roadmap](10_PRODUCT_BACKLOG_AND_RELEASE_ROADMAP.md) | P0, V1.1, V1.2, V2.0 |
 | [11 - Acceptance Tests](11_ACCEPTANCE_TEST_CATALOG.md) | Danh mục kiểm thử nghiệm thu cho bản tiếp theo |
+| [12 - UI/UX Visual Upgrade Plan](12_UI_UX_VISUAL_UPGRADE_MASTER_PLAN.md) | Kế hoạch nâng cấp giao diện theo Material 3 và nguyên tắc Taste |
 
 ## 5. Nguồn bằng chứng
 
