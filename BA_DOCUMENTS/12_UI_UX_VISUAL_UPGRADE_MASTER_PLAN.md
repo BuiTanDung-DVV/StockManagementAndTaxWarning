@@ -1,14 +1,14 @@
 # Kế hoạch tổng thể nâng cấp UI/UX SmartStock
 
-> Trạng thái: Đang triển khai vòng 1 - design system, app shell, dashboard và POS
+> Trạng thái: Đã triển khai production vòng 1 - design system, app shell, dashboard và POS
 > Ngày lập: 26/07/2026
-> Baseline production: `299f621f95c703ac40b51aa0edf08eed15ae92f3`
+> Commit ứng dụng production: `17dd84d4b46994c921d373d03273bb39b9787ac4`
 > Frontend: [smartstock-tax.vercel.app](https://smartstock-tax.vercel.app)
 > Phạm vi: Flutter Web và giao diện responsive desktop, tablet, mobile
 
 ## Tiến độ triển khai
 
-Đã hoàn thành ở mã nguồn, chờ commit và triển khai production:
+Đã hoàn thành và triển khai production:
 
 - Chuẩn hóa token spacing, radius và breakpoint responsive.
 - App shell dùng bottom navigation, navigation rail hoặc sidebar theo chiều rộng.
@@ -21,14 +21,24 @@
 Đã xác minh:
 
 - `flutter analyze`: đạt, không có lỗi.
-- 8 kiểm thử shell, POS và dashboard: đạt.
+- Toàn bộ 23 Flutter tests: đạt.
 - `flutter build web --release`: thành công.
-- Giao diện đăng nhập desktop và 390x844: không có lỗi console hoặc overflow quan sát được.
+- Backend lint/build và 28 P0 tests: đạt.
+- Frontend và backend Vercel cùng nhận commit ứng dụng, đều `READY`.
+- Dashboard desktop tải đúng user/shop và các KPI.
+- Sales desktop khớp dashboard ở 4 đơn, doanh thu 127.250đ và lợi nhuận -83.750đ.
+- Customer debt desktop hiển thị empty state thật, không còn dữ liệu mẫu.
+- Dashboard và POS trên viewport 390×844 không có lỗi console hoặc overflow
+  quan sát được; POS hiển thị rõ giỏ hàng và CTA thanh toán.
+- Vercel frontend không ghi nhận runtime error trong cửa sổ kiểm tra 1 giờ.
 
-Chưa xác minh:
+Chưa xác minh hoặc cần kiểm thử chuyên biệt:
 
-- Dashboard/POS sau đăng nhập trên trình duyệt local vì phiên local không có tài khoản đăng nhập.
-- Screenshot regression toàn bộ route sẽ thực hiện sau khi phiên bản này được deploy.
+- Thanh toán, hoàn/hủy và QR vì smoke test không được phép tạo giao dịch production.
+- Bàn phím ảo và thiết bị vật lý; vòng này mới xác minh viewport 390×844.
+- Accessibility, screenshot regression tự động và dark mode toàn bộ route.
+- Backend còn cảnh báo deprecation `DEP0169` liên quan `url.parse()`; chưa thấy
+  gián đoạn nhưng cần truy nguồn dependency trước khi nâng cấp.
 
 ## 1. Mục tiêu
 

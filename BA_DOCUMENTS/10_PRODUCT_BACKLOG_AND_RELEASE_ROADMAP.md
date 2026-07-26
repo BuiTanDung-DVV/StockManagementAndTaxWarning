@@ -1,7 +1,7 @@
 # Product Backlog và lộ trình nâng cấp
 
-> **Cập nhật backlog 25/07/2026:** các mục ghi `Đã sửa local` chưa được đóng.
-> Chỉ đóng sau commit, deploy và nghiệm thu production theo
+> **Cập nhật backlog 26/07/2026:** bản vá và UI vòng 1 đã deploy production.
+> Chỉ đóng hoàn toàn các mục có đủ kiểm thử dữ liệu, phân quyền hoặc giao dịch theo
 > [danh mục test](11_ACCEPTANCE_TEST_CATALOG.md).
 
 ## Trạng thái các finding sau bản vá local
@@ -13,14 +13,14 @@
 | Dashboard error state | Đã thay một số fallback bằng error/retry | Bao phủ toàn bộ màn chính, kiểm thử 4xx/5xx/timeout |
 | Invoice conflict | Đã hợp nhất entity/route và có metadata test | Smoke test CRUD, kiểm tra migration/data hiện hữu |
 | Thuế âm/MST placeholder | Đã sửa và có unit test | Deploy, smoke test; kiểm thử XML/XSD/HTKK riêng |
-| Customer debt/CSV | Đã nối API thật, chuẩn hóa remaining và CSV an toàn; test Flutter đã bổ sung nhưng chưa chạy lại | Đối soát API–DB–CSV; bổ sung kỳ xuất rõ |
-| Mobile POS/AI | Đã chừa CTA và ẩn AI trên POS mobile; test Flutter đã bổ sung nhưng chưa chạy lại | Test 390×844, bàn phím ảo, thiết bị thật |
+| Customer debt/CSV | Đã nối API thật, chuẩn hóa remaining và CSV an toàn; Flutter tests đạt; production hiển thị empty state thật | Đối soát API–DB–CSV khi có dữ liệu; bổ sung kỳ xuất rõ |
+| Mobile POS/AI | CTA/giỏ đã hiển thị ở 390×844, AI không che POS; Flutter tests đạt | Test bàn phím ảo và thiết bị thật |
 | Reporting period | Đã dùng helper chung ở dashboard/sales/finance | Chuẩn hóa timezone backend và thêm `period/asOf` vào response |
 
 ### Backlog còn mở sau bản vá
 
-1. `P0-VERIFY`: deploy cùng commit frontend/backend và chạy toàn bộ smoke/negative
-   test không phá dữ liệu.
+1. `P0-VERIFY`: đã deploy cùng commit và smoke test chỉ đọc; còn negative test
+   phân quyền/API không phá dữ liệu.
 2. `P0-RBAC-MAP`: thống nhất key permission cho tax-config/settings/finance và
    điều kiện hiển thị menu với kiểm tra API.
 3. `V1.1-METRIC-CONTRACT`: mọi summary trả `from`, `to`, timezone, filter,
@@ -62,7 +62,8 @@ khi chốt thiết kế kỹ thuật.
 | V11-03 | Mobile dashboard/POS/settings bị cắt/che | Row/chip không wrap; AI FAB và nav dùng vùng chồng lấp | Responsive layout theo breakpoint; safe area; chuyển FAB sang vị trí không che CTA | Hoàn tất luồng trên mobile | V1.1 | M | Thay đổi layout desktop | 390×844 không overflow; POS hoàn tất được; nội dung cuối trang cuộn lên trên nav |
 | V11-04 | Loading/empty/error không đồng nhất | Mỗi feature tự xử lý | Chuẩn hóa component và error model; retry có kiểm soát | Dễ hiểu khi lỗi mạng/dữ liệu rỗng | V1.1 | M | Che mất lỗi nghiệp vụ nếu map sai | Tất cả màn chính có loading/empty/error; lỗi 4xx giữ message an toàn |
 | V11-05 | Nhiều controller không hỗ trợ `all` | Chỉ sales/finance/inventory có helper scope | Chuẩn hóa `ShopScope` bắt buộc và repository helper | Ngăn query thiếu shopId | V1.1 | L | Query tổng hợp lớn/chậm | Mọi query shop-scoped có test shop đơn + nhiều shop, không trả ngoài scope |
-| V11-06 | Flutter test bị chặn bởi native hook `win32`; chưa có bằng chứng CI | Máy kiểm thử thiếu C++ compiler mà dependency native hook yêu cầu; CI chưa là cổng phát hành | Chuẩn hóa toolchain CI; pin dependency; lưu artifact test; giữ backend build/lint/P0 trong pipeline | Có cổng chất lượng lặp lại | V1.1 | M | Nâng package gây warning mới | CI chạy analyze, Flutter test, backend build/lint/P0 trên mỗi PR |
+| V11-06 | Bộ test chạy được trên máy hiện tại nhưng chưa là cổng CI bắt buộc | Toolchain local đã hoạt động; pipeline chưa lưu bằng chứng phát hành | Chuẩn hóa CI; pin dependency; lưu artifact test; giữ backend build/lint/P0 trong pipeline | Có cổng chất lượng lặp lại | V1.1 | M | Nâng package gây warning mới | CI chạy analyze, Flutter test, backend build/lint/P0 trên mỗi PR |
+| V11-07 | Backend phát cảnh báo Node `DEP0169` trên mỗi số lần gọi serverless | Một dependency còn dùng API `url.parse()` đã bị deprecate | Dùng trace ở staging để xác định package; nâng dependency nhỏ nhất, chạy lại P0 và smoke test | Giảm nợ kỹ thuật và rủi ro tương thích Node | V1.1 | S–M | Nâng transitive dependency có thể đổi hành vi kết nối | Production không còn `DEP0169`; 28 P0 tests và API smoke test đạt |
 
 ## 4. V1.2 – Hoàn thiện nghiệp vụ
 

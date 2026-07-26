@@ -1,28 +1,44 @@
 # Báo cáo xác minh tính chính xác hiện tại
 
-> **Cập nhật 25/07/2026:** báo cáo gốc là bằng chứng production trước bản vá.
-> Bảng dưới đây ghi kết quả local mới và không nâng trạng thái production khi
-> chưa deploy/smoke test.
+> **Cập nhật production 26/07/2026:** bản vá và vòng nâng cấp UI thứ nhất đã được
+> triển khai từ commit ứng dụng `17dd84d4b46994c921d373d03273bb39b9787ac4`.
+> Frontend và backend đều ở trạng thái `READY` trên Vercel.
 
-## Kết quả xác minh bản vá local
+## Kết quả xác minh bản production hiện tại
 
 | Finding cũ | Kết quả hiện tại | Bằng chứng | Trạng thái |
 |---|---|---|---|
-| All-shops có thể tăng quyền | Parser fail-closed; chỉ view mới được aggregate; membership/role phải active và cùng shop | permission/shop-scope code và tests | Đã xác minh code/test; production chưa xác minh |
-| Sales summary lệch list | Status `completed` bao gồm `COMPLETED`/`DELIVERED`; query list dùng property path đúng; kỳ tháng dùng helper chung | sales metric và reporting period tests | Đúng một phần; chưa đối soát production |
-| Dashboard che lỗi bằng số fallback | Nhiều vùng quan trọng chuyển sang error/retry hiển thị | source review | Đã xác minh code; chưa production |
-| Hai entity/route `invoices` | Chỉ còn một entity metadata và một nhóm route invoice | invoice metadata tests | Đã xác minh code/test; chưa CRUD production |
-| MST fallback | Fallback đã bỏ; placeholder cũ bị từ chối | tax policy tests | Đã xác minh code/test; chưa export production |
-| Thuế âm | Số phải nộp clamp 0; số nộp thừa trả riêng; item cũ âm được sanitize khi đọc | tax policy/finance service tests và review | Đã xác minh code/test; chưa production |
-| Sổ nợ hard-code | UI gọi `/customer-receivables`; remaining không âm; payment dùng sales payment API | debt tests và source review | Đã xác minh code; chưa đối soát production |
-| CSV nợ không kiểm soát | CSV dùng dữ liệu API, escape dấu nháy/dấu phẩy/formula, BOM UTF-8 và tổng còn nợ | Flutter test đã bổ sung + source review | Đã xác minh code; test chưa chạy lại; chưa tải production |
-| POS/AI che CTA mobile | CTA có safe margin, AI ẩn riêng trên POS mobile | layout test đã bổ sung + source review | Đã xác minh code; test chưa chạy lại; chưa viewport production |
-| Kỳ dashboard/sales/finance lệch nhau | Kỳ tháng hiện tại dùng helper chung; expense category nhận cùng from/to | reporting-period test đã bổ sung + source review | Đã xác minh code; test chưa chạy lại; chưa đối soát production |
+| All-shops có thể tăng quyền | Parser fail-closed; chỉ view mới được aggregate; membership/role phải active và cùng shop | Backend P0 tests đạt; code production cùng commit | Đúng một phần; chưa negative test bằng nhiều vai trò production |
+| Sales summary lệch list | Dashboard và sales cùng hiển thị 4 đơn, doanh thu tháng 127.250đ | Smoke test production desktop ngày 26/07/2026 | Đã xác minh với dữ liệu hiện có |
+| Dashboard che lỗi bằng số fallback | Các vùng quan trọng có error/retry; phiên smoke test tải dữ liệu thành công | Source review và production dashboard | Đúng một phần; chưa fault injection production |
+| Hai entity/route `invoices` | Chỉ còn một entity metadata và một nhóm route invoice | Metadata tests đạt; backend production cùng commit | Đúng một phần; chưa CRUD production |
+| MST fallback | Fallback đã bỏ; placeholder cũ bị từ chối | Tax policy tests đạt | Đúng một phần; chưa xuất XML production |
+| Thuế âm | Số phải nộp clamp 0; số nộp thừa trả riêng; item cũ âm được sanitize khi đọc | Tax policy/finance tests đạt | Đúng một phần; chưa có dataset thuế chuẩn để đối soát production |
+| Sổ nợ hard-code | Màn production lấy API, hiển thị empty state 0đ/0 khách thay vì dữ liệu mẫu | Smoke test `/customer-debts` | Đã xác minh hành vi hiển thị; chưa đối soát khi có công nợ |
+| CSV nợ không kiểm soát | CSV dùng dữ liệu API và có kiểm soát formula/escape/BOM; nút xuất bị vô hiệu khi không có dữ liệu | Flutter tests đạt; production empty state | Đúng một phần; chưa tải file có dữ liệu production |
+| POS/AI che CTA mobile | Mobile 390×844 hiển thị giỏ, tổng tiền, CTA `THANH TOÁN`; không có AI FAB che nội dung | Smoke test `/pos` và widget/layout tests | Đã xác minh bố cục; không tạo giao dịch |
+| Kỳ dashboard/sales/finance lệch nhau | Dashboard và sales cùng kỳ tháng, cùng 4 đơn/127.250đ; lợi nhuận cùng -83.750đ | Smoke test production và reporting-period tests | Đúng một phần; finance/DB chưa tái tính độc lập |
+| Lỗi runtime frontend | Không có error group trong cửa sổ kiểm tra 1 giờ | Vercel Runtime Errors | Đã xác minh tại thời điểm kiểm tra |
+| Cảnh báo runtime backend | Node ghi cảnh báo deprecation `DEP0169` từ luồng dùng `url.parse()` | 21 lần/1 giờ, route serverless `/src/index.ts`; không có bằng chứng gián đoạn | Đúng một phần; cần truy nguồn dependency và nâng cấp có kiểm soát |
+
+### Bằng chứng phát hành
+
+- GitHub `main`: commit ứng dụng `17dd84d4b46994c921d373d03273bb39b9787ac4`.
+- Frontend deployment `dpl_H2A15cYunhndkfbDHZwC5GEVt5dA`, alias
+  [smartstock-tax.vercel.app](https://smartstock-tax.vercel.app), trạng thái `READY`.
+- Backend deployment `dpl_EVVkwDdXsAfgFxBJt6L5vp5EedDh`, alias
+  [stock-management-and-tax-warning.vercel.app](https://stock-management-and-tax-warning.vercel.app),
+  trạng thái `READY`.
+- `flutter analyze`: đạt.
+- Flutter: 23/23 tests đạt; web release build thành công.
+- Backend: lint/build đạt; 28/28 P0 tests đạt; audit production dependencies không
+  phát hiện lỗ hổng mức high trở lên.
+- Smoke test chỉ đọc trên desktop và mobile 390×844: dashboard, sales, customer
+  debts và POS tải thành công; không thấy lỗi console ứng dụng.
 
 ### Phần vẫn bị chặn hoặc còn rủi ro
 
-- Chưa có commit/deployment chứa toàn bộ bản vá local tại thời điểm cập nhật.
-- Chưa chạy lại smoke test production desktop/mobile và kiểm thử lỗi API có chủ đích.
+- Chưa chạy kiểm thử lỗi API có chủ đích trên production để tránh ảnh hưởng dữ liệu.
 - Chưa có dataset chuẩn để chứng minh dashboard, sales, finance, kho và công nợ
   khớp tuyệt đối.
 - XML chưa được validate XSD/import HTKK.
@@ -48,6 +64,9 @@ thực hiện giao dịch ghi dữ liệu, hoàn tiền, xóa dữ liệu hoặc
 những luồng cần tạo dữ liệu được ghi `Bị chặn`.
 
 ## 2. Kết quả production baseline trước bản vá
+
+> Phần này được giữ làm bằng chứng lịch sử ngày 25/07/2026, không đại diện cho
+> trạng thái production hiện tại.
 
 | ID | Hạng mục | Trạng thái | Bằng chứng | Ảnh hưởng |
 |---|---|---|---|---|
