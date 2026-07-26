@@ -32,7 +32,7 @@ class SettingsScreen extends ConsumerWidget {
       backgroundColor: c.bg,
       appBar: AppBar(
         title: Text(
-          'Thiết Lập Hệ Thống',
+          'Thiết lập hệ thống',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 20,

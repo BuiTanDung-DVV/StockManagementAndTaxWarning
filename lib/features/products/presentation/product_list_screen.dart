@@ -68,6 +68,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
     final searchQuery = ref.watch(_productSearchQueryProvider);
     final tagQuery = ref.watch(_productTagFilterProvider);
     final listAsync = ref.watch(
@@ -93,10 +94,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
         title: Text(
           'Danh mục sản phẩm',
           style: GoogleFonts.outfit(
@@ -121,16 +118,22 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           featureGuideButton(context, 'product_list'),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/products/form'),
-        icon: const Icon(Icons.add_box_rounded),
-        label: Text(
-          'Thêm sản phẩm',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: isCompact
+          ? FloatingActionButton(
+              onPressed: () => context.push('/products/form'),
+              tooltip: 'Thêm sản phẩm',
+              child: const Icon(Icons.add_rounded),
+            )
+          : FloatingActionButton.extended(
+              onPressed: () => context.push('/products/form'),
+              icon: const Icon(Icons.add_box_rounded),
+              label: Text(
+                'Thêm sản phẩm',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
       body: Column(
         children: [
           FilterBar(
@@ -144,15 +147,18 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
               final tagsAsync = ref.watch(availableTagsProvider);
               return tagsAsync.when(
                 data: (tags) {
-                  if (tags.isEmpty) return const SizedBox.shrink();
+                  final visibleTags = tags
+                      .where((tag) => !_isInternalTag(tag.name))
+                      .toList();
+                  if (visibleTags.isEmpty) return const SizedBox.shrink();
                   return SizedBox(
                     height: 40,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: tags.length,
+                      itemCount: visibleTags.length,
                       itemBuilder: (ctx, i) {
-                        final t = tags[i];
+                        final t = visibleTags[i];
                         final isSelected = tagQuery == t.name;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
@@ -210,7 +216,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                   onRefresh: () async => ref.invalidate(productListProvider),
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 128),
                     itemCount: items.length,
                     separatorBuilder: (_, _) => Divider(
                       height: 1,
@@ -258,10 +264,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                     ),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(15),
-                                      child: Stack(
-                                        children: [
-                                          if (imageUrl.isNotEmpty)
-                                            CachedNetworkImage(
+                                      child: imageUrl.isNotEmpty
+                                          ? CachedNetworkImage(
                                               imageUrl: imageUrl,
                                               width: 70,
                                               height: 70,
@@ -274,27 +278,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                                         theme,
                                                       ),
                                             )
-                                          else
-                                            _buildImageFallback(theme),
-
-                                          // Out of stock glassy red tag overlay
-                                          if (isOutOfStock)
-                                            Container(
-                                              color: AppColors.danger
-                                                  .withValues(alpha: 0.35),
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                'HẾT HÀNG',
-                                                style: GoogleFonts.outfit(
-                                                  color: Colors.white,
-                                                  fontSize: 8.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  letterSpacing: 0.5,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
+                                          : _buildImageFallback(theme),
                                     ),
                                   ),
                                   const SizedBox(width: 14),
@@ -314,7 +298,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                             fontSize: 14,
                                             color: c.textPrimary,
                                           ),
-                                          maxLines: 1,
+                                          maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 2),
@@ -458,6 +442,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       }
     }
 
+    tags = tags.where((tag) => !_isInternalTag(tag)).toList();
+    final isDemoData =
+        p['name']?.toString().startsWith('Temp Product') == true ||
+        (tagsRaw?.toString().contains('sim_tag_') ?? false);
+    if (isDemoData) tags.insert(0, 'Dữ liệu thử nghiệm');
     if (tags.isEmpty) return const SizedBox.shrink();
 
     return SingleChildScrollView(
@@ -480,6 +469,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           } else if (t == 'Mới') {
             bgColor = Colors.blue.withValues(alpha: 0.1);
             textColor = Colors.blue;
+          } else if (t == 'Dữ liệu thử nghiệm') {
+            bgColor = c.textMuted.withValues(alpha: 0.12);
+            textColor = c.textSecondary;
           }
 
           return Container(
@@ -502,6 +494,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       ),
     );
   }
+
+  bool _isInternalTag(String tag) =>
+      tag.trim().toLowerCase().startsWith('sim_tag_');
 
   void _showFilterSheet() {
     final c = AppThemeColors.of(context);

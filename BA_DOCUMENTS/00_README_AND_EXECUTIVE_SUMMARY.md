@@ -1,10 +1,9 @@
 # Bộ tài liệu BA SmartStock
 
-> **Cập nhật bản vá local ngày 25/07/2026:** baseline production và ảnh chụp trong
-> bộ tài liệu này vẫn phản ánh bản đã deploy trước bản vá mới. Các kết luận ghi
-> `Đã xác minh qua code/test` bên dưới chỉ áp dụng cho working tree dựa trên
-> commit `bba0c5f5`; chưa được coi là `Đã xác minh production` cho đến khi
-> commit, push, deploy và smoke test lại frontend/backend.
+> **Cập nhật ngày 26/07/2026:** vòng đánh giá UI/UX thứ hai đã kiểm tra 18 màn
+> desktop và 7 màn mobile. Ảnh As-Is và các thay đổi giao diện mới được ghi tại
+> [Báo cáo UI/UX vòng 2](13_PRODUCTION_UI_REVIEW_ROUND_2.md). Thay đổi chỉ được
+> coi là đã xác minh production sau khi deploy đúng commit và smoke test lại.
 
 ### Tóm tắt trạng thái sau bản vá local
 
@@ -89,6 +88,7 @@ Các vấn đề trên được mô tả với bằng chứng và tiêu chí ngh
 | [10 - Backlog & Roadmap](10_PRODUCT_BACKLOG_AND_RELEASE_ROADMAP.md) | P0, V1.1, V1.2, V2.0 |
 | [11 - Acceptance Tests](11_ACCEPTANCE_TEST_CATALOG.md) | Danh mục kiểm thử nghiệm thu cho bản tiếp theo |
 | [12 - UI/UX Visual Upgrade Plan](12_UI_UX_VISUAL_UPGRADE_MASTER_PLAN.md) | Kế hoạch nâng cấp giao diện theo Material 3 và nguyên tắc Taste |
+| [13 - Production UI/UX vòng 2](13_PRODUCTION_UI_REVIEW_ROUND_2.md) | Audit 25 viewport/màn, phát hiện, bản vá và backlog tiếp theo |
 
 ## 5. Nguồn bằng chứng
 
@@ -96,11 +96,10 @@ Các vấn đề trên được mô tả với bằng chứng và tiêu chí ngh
 - Mã backend: [`../backend/src/`](../backend/src/)
 - Migration/SQL: [`../backend/database/`](../backend/database/)
 - Ảnh production: [`assets/production-audit-2026-07-25/`](assets/production-audit-2026-07-25/)
+- Ảnh production vòng 2: [`assets/production-ui-audit-2026-07-26-round2/`](assets/production-ui-audit-2026-07-26-round2/)
 - Baseline trước bản vá: Flutter Web release và backend TypeScript build thành công.
-- Sau bản vá local: backend build/lint và P0 suite `28/28` thành công.
-- Nhóm Flutter test mục tiêu đã được bổ sung nhưng lệnh chạy bị chặn trước khi
-  compile do native hook `win32` không tìm thấy C++ compiler; chưa ghi nhận
-  Flutter suite đạt. `flutter analyze` và Flutter Web release build vẫn đạt.
+- Sau bản vá local: Flutter analyze đạt, Flutter test `23/23`, Flutter Web release
+  build đạt; backend build/lint và P0 suite `28/28` thành công.
 
 ## 6. Quy tắc quản trị tài liệu
 

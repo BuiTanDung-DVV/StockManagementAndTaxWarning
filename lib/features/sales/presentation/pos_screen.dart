@@ -414,16 +414,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: c.card,
-                      border: Border(
-                        top: BorderSide(color: c.textPrimary, width: 3),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 0,
-                          offset: const Offset(0, -4),
-                        ),
-                      ],
+                      border: Border.all(color: c.divider),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
                     ),
                     child: SafeArea(
                       top: false,
@@ -449,13 +441,18 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  _currFmt.format(cart.total),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    color: c.textPrimary,
-                                    letterSpacing: -1.0,
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    _currFmt.format(cart.total),
+                                    maxLines: 1,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 23,
+                                      fontWeight: FontWeight.w800,
+                                      color: c.textPrimary,
+                                      letterSpacing: -0.6,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -471,22 +468,23 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               color: Colors.white,
                             ),
                             label: Text(
-                              'THANH TOÁN',
+                              'Thanh toán',
                               style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 16,
-                                letterSpacing: 1.0,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
                                 color: Colors.white,
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: c.textPrimary,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 24,
+                                horizontal: 20,
+                                vertical: 18,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.control,
+                                ),
                               ),
                             ),
                           ),

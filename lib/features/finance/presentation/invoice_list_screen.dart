@@ -351,16 +351,6 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text(
-          'Thêm Hóa Đơn',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
     );
   }
 
