@@ -537,15 +537,18 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             final tagsAsync = r.watch(availableTagsProvider);
             return tagsAsync.when(
               data: (tags) {
-                if (tags.isEmpty) return const SizedBox.shrink();
+                final visibleTags = tags
+                    .where((tag) => !_isInternalTag(tag.name))
+                    .toList();
+                if (visibleTags.isEmpty) return const SizedBox.shrink();
                 return SizedBox(
                   height: 40,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: tags.length,
+                    itemCount: visibleTags.length,
                     itemBuilder: (ctx, i) {
-                      final t = tags[i];
+                      final t = visibleTags[i];
                       final isSelected = _tag == t.name;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -653,7 +656,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 itemBuilder: (_, i) {
                   final p = products[i];
                   final id = p['id'] as int;
-                  final name = p['name'] ?? 'SP';
+                  final rawName = p['name']?.toString() ?? 'SP';
+                  final name = rawName.startsWith('Temp Product')
+                      ? 'Sản phẩm thử nghiệm'
+                      : rawName;
                   final price = TypeParser.asDouble(
                     p['sellingPrice'] ?? p['selling_price'] ?? 0,
                   );
@@ -828,6 +834,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ],
     );
   }
+
+  bool _isInternalTag(String tag) =>
+      tag.trim().toLowerCase().startsWith('sim_tag_');
 
   Widget _buildRightCartPanel(BuildContext context) {
     final c = AppThemeColors.of(context);
