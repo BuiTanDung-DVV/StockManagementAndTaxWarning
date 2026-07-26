@@ -72,6 +72,11 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            onPressed: () => context.push('/pos'),
+            icon: const Icon(Icons.point_of_sale_outlined),
+            tooltip: 'Mở màn hình bán hàng',
+          ),
           featureGuideButton(context, 'sales_list'),
           IconButton(
             icon: Icon(
@@ -368,13 +373,6 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/pos'),
-        tooltip: 'Mở màn hình bán hàng',
-        child: const Icon(
-          Icons.point_of_sale_rounded,
-        ),
       ),
     );
   }
