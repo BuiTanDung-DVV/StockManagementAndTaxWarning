@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Product } from '../product/entities';
 
 
@@ -116,6 +116,36 @@ export class ActivityLog {
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
+}
+
+@Entity('ai_knowledge_documents')
+export class AiKnowledgeDocument {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ name: 'shop_id' })
+    shopId: number;
+
+    @Column({ length: 200 })
+    title: string;
+
+    @Column({ length: 100 })
+    category: string;
+
+    @Column({ type: 'text' })
+    content: string;
+
+    @Column({ name: 'is_active', default: true })
+    isActive: boolean;
+
+    @Column({ name: 'created_by', nullable: true })
+    createdBy: number;
+
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
+
+    @UpdateDateColumn({ name: 'updated_at' })
+    updatedAt: Date;
 }
 
 @Entity('invoice_scans')

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/assets/app_assets.dart';
 import '../../core/constants/app_strings.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/ai_assistant_widget.dart';
 import '../../core/widgets/global_search_delegate.dart';
@@ -156,11 +157,16 @@ class MainShell extends ConsumerWidget {
                       compact: mode == MainShellNavigationMode.bottomBar,
                       shopName: shop.currentShopName,
                       canSell: canSell,
-                      onSearch: () {
-                        showSearch(
+                      onSearch: () async {
+                        final route = await showSearch<String>(
                           context: context,
-                          delegate: GlobalSearchDelegate(),
+                          delegate: GlobalSearchDelegate(
+                            api: ref.read(apiClientProvider),
+                          ),
                         );
+                        if (route != null && route.isNotEmpty && context.mounted) {
+                          context.push(route);
+                        }
                       },
                       onNotifications: () => context.push('/notifications'),
                       onSale: () => context.push('/pos'),

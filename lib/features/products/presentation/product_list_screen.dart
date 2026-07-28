@@ -442,10 +442,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     }
 
     tags = tags.where((tag) => !_isInternalTag(tag)).toList();
-    final isDemoData =
-        p['name']?.toString().startsWith('Temp Product') == true ||
-        (tagsRaw?.toString().contains('sim_tag_') ?? false);
-    if (isDemoData) tags.insert(0, 'Dữ liệu thử nghiệm');
     if (tags.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
@@ -468,9 +464,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         } else if (t == 'Mới') {
           bgColor = Colors.blue.withValues(alpha: 0.1);
           textColor = Colors.blue;
-        } else if (t == 'Dữ liệu thử nghiệm') {
-          bgColor = c.textMuted.withValues(alpha: 0.12);
-          textColor = c.textSecondary;
         }
 
         return Container(
