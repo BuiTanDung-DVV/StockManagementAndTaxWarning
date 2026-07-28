@@ -129,23 +129,37 @@ class MainShell extends ConsumerWidget {
 
         final page = ColoredBox(
           color: colors.bg,
-          child: Column(
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              if (showUtilityHeader)
-                _ShellUtilityHeader(
-                  compact: mode == MainShellNavigationMode.bottomBar,
-                  shopName: shop.currentShopName,
-                  canSell: canSell,
-                  onSearch: () {
-                    showSearch(
-                      context: context,
-                      delegate: GlobalSearchDelegate(),
-                    );
-                  },
-                  onAi: () => ref.read(aiAssistantOpenProvider.notifier).open(),
-                  onSale: () => context.push('/pos'),
+              Column(
+                children: [
+                  if (showUtilityHeader)
+                    _ShellUtilityHeader(
+                      compact: mode == MainShellNavigationMode.bottomBar,
+                      shopName: shop.currentShopName,
+                      canSell: canSell,
+                      onSearch: () {
+                        showSearch(
+                          context: context,
+                          delegate: GlobalSearchDelegate(),
+                        );
+                      },
+                      onSale: () => context.push('/pos'),
+                    ),
+                  Expanded(child: child),
+                ],
+              ),
+              if (showAi)
+                Positioned.fill(
+                  child: AiAssistantWidget(
+                    topSafeInset: showUtilityHeader
+                        ? mode == MainShellNavigationMode.bottomBar
+                              ? 56
+                              : 64
+                        : 0,
+                  ),
                 ),
-              Expanded(child: child),
             ],
           ),
         );
@@ -188,16 +202,7 @@ class MainShell extends ConsumerWidget {
           );
         }
 
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            navigationShell,
-            if (showAi)
-              Positioned.fill(
-                child: AiAssistantWidget(showLauncher: !showUtilityHeader),
-              ),
-          ],
-        );
+        return navigationShell;
       },
     );
   }
@@ -208,7 +213,6 @@ class _ShellUtilityHeader extends StatelessWidget {
   final String? shopName;
   final bool canSell;
   final VoidCallback onSearch;
-  final VoidCallback onAi;
   final VoidCallback onSale;
 
   const _ShellUtilityHeader({
@@ -216,7 +220,6 @@ class _ShellUtilityHeader extends StatelessWidget {
     required this.shopName,
     required this.canSell,
     required this.onSearch,
-    required this.onAi,
     required this.onSale,
   });
 
@@ -267,31 +270,8 @@ class _ShellUtilityHeader extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.md),
             ],
-            OutlinedButton(
-              onPressed: onAi,
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 10 : 14,
-                  vertical: 10,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const AppAssetIcon(
-                    assetPath: AppAssets.appIcon,
-                    size: 20,
-                    semanticLabel: 'Hỏi AI',
-                  ),
-                  const SizedBox(width: 7),
-                  const Text('Hỏi AI'),
-                ],
-              ),
-            ),
-            if (!compact && canSell) ...[
-              const SizedBox(width: AppSpacing.sm),
+            if (!compact && canSell)
               FilledButton(onPressed: onSale, child: const Text('Bán hàng')),
-            ],
           ],
         ),
       ),
