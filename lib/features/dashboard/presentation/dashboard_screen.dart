@@ -317,9 +317,9 @@ class _DashboardWorkspace extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              priorities,
-              const SizedBox(height: AppSpacing.lg),
               chart,
+              const SizedBox(height: AppSpacing.lg),
+              priorities,
               orders,
             ],
           );
@@ -331,9 +331,9 @@ class _DashboardWorkspace extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 2, child: chart),
+                Expanded(flex: 3, child: chart),
                 const SizedBox(width: AppSpacing.lg),
-                const SizedBox(width: 390, child: DashboardPriorityList()),
+                const SizedBox(width: 330, child: DashboardPriorityList()),
               ],
             ),
             orders,
@@ -398,7 +398,7 @@ class _ChartSkeleton extends StatelessWidget {
     return const AppShimmer(
       child: ShimmerBox(
         width: double.infinity,
-        height: 360,
+        height: 420,
         radius: AppRadius.card,
       ),
     );
@@ -459,7 +459,7 @@ class _DashboardMetricStrip extends StatelessWidget {
         }
 
         return Container(
-          height: 120,
+          height: 96,
           decoration: BoxDecoration(
             color: colors.surface,
             border: Border.all(color: colors.divider),
@@ -490,7 +490,10 @@ class _MetricCell extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -498,7 +501,7 @@ class _MetricCell extends StatelessWidget {
             children: [
               AppAssetIcon(
                 assetPath: metric.assetPath,
-                size: 18,
+                size: 16,
                 color: metric.color,
                 semanticLabel: metric.label,
               ),
@@ -515,7 +518,7 @@ class _MetricCell extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -524,12 +527,12 @@ class _MetricCell extends StatelessWidget {
               maxLines: 1,
               style: AppTheme.tabularStyle(
                 context,
-                fontSize: 21,
+                fontSize: 19,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 2),
           Text(
             metric.context,
             style: Theme.of(
@@ -552,12 +555,15 @@ class _MetricRow extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
           AppAssetIcon(
             assetPath: metric.assetPath,
-            size: 22,
+            size: 19,
             color: metric.color,
             semanticLabel: metric.label,
           ),
@@ -591,7 +597,7 @@ class _MetricRow extends StatelessWidget {
               textAlign: TextAlign.right,
               style: AppTheme.tabularStyle(
                 context,
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -629,7 +635,7 @@ class _MetricStripSkeleton extends StatelessWidget {
     return const AppShimmer(
       child: ShimmerBox(
         width: double.infinity,
-        height: 116,
+        height: 96,
         radius: AppRadius.card,
       ),
     );

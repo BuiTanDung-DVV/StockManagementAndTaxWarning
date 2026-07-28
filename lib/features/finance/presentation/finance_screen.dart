@@ -152,7 +152,7 @@ class FinanceScreen extends ConsumerWidget {
                   builder: (context, constraints) {
                     final chart = summaryAsync.when(
                       data: (data) => _CashFlowPanel(data: data),
-                      loading: () => const _PanelLoading(height: 326),
+                      loading: () => const _PanelLoading(height: 406),
                       error: (_, _) => AppInlineError(
                         message: 'Không thể tải biểu đồ dòng tiền.',
                         onRetry: () => ref.invalidate(cashSummaryProvider),
@@ -160,7 +160,7 @@ class FinanceScreen extends ConsumerWidget {
                     );
                     final categories = categoriesAsync.when(
                       data: (data) => _ExpenseCategoryPanel(data: data),
-                      loading: () => const _PanelLoading(height: 326),
+                      loading: () => const _PanelLoading(height: 406),
                       error: (_, _) => AppInlineError(
                         message: 'Không thể tải phân loại chi phí.',
                         onRetry: () =>
@@ -181,7 +181,7 @@ class FinanceScreen extends ConsumerWidget {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(flex: 2, child: chart),
+                        Expanded(flex: 3, child: chart),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(child: categories),
                       ],
@@ -255,7 +255,7 @@ class _FinanceMetricStrip extends StatelessWidget {
     return AppFillGrid(
       minItemWidth: 220,
       maxColumns: 4,
-      itemHeight: 112,
+      itemHeight: 96,
       children: [
         AppKpiCard(
           title: 'Số dư quỹ tiền mặt',
@@ -296,7 +296,7 @@ class _FinanceMetricLoading extends StatelessWidget {
     return AppFillGrid(
       minItemWidth: 220,
       maxColumns: 4,
-      itemHeight: 112,
+      itemHeight: 96,
       children: List.generate(
         4,
         (_) => AppShimmer(
@@ -320,6 +320,7 @@ class _CashFlowPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final chartHeight = MediaQuery.sizeOf(context).width < 600 ? 250.0 : 300.0;
     final dailyFlow = ((data['dailyFlow'] as List?) ?? const [])
         .whereType<Map>()
         .toList();
@@ -349,7 +350,7 @@ class _CashFlowPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           if (dailyFlow.isEmpty)
             SizedBox(
-              height: 220,
+              height: chartHeight,
               child: Center(
                 child: Text(
                   'Chưa có dữ liệu dòng tiền trong kỳ.',
@@ -359,7 +360,7 @@ class _CashFlowPanel extends StatelessWidget {
             )
           else
             SizedBox(
-              height: 220,
+              height: chartHeight,
               child: MiniAreaChart(
                 data1: incomeData,
                 data2: expenseData,
@@ -384,6 +385,7 @@ class _ExpenseCategoryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final chartHeight = MediaQuery.sizeOf(context).width < 600 ? 250.0 : 300.0;
     final categories =
         ((data['categories'] as List?) ?? (data['items'] as List?) ?? const [])
             .whereType<Map>()
@@ -406,7 +408,7 @@ class _ExpenseCategoryPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           if (categories.isEmpty)
             SizedBox(
-              height: 220,
+              height: chartHeight,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -424,7 +426,7 @@ class _ExpenseCategoryPanel extends StatelessWidget {
             )
           else
             SizedBox(
-              height: 220,
+              height: chartHeight,
               child: Column(
                 children: [
                   for (var index = 0; index < categories.length; index++) ...[

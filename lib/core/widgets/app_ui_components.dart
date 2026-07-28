@@ -75,13 +75,13 @@ class AppKpiCard extends StatelessWidget {
         ? null
         : AppAssetIcon(
             assetPath: assetPath!,
-            size: 19,
+            size: 17,
             color: color,
             semanticLabel: title,
           );
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(AppRadius.card),
@@ -138,14 +138,14 @@ class AppKpiCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
               value,
               style: GoogleFonts.jetBrainsMono(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w800,
                 color: c.textPrimary,
                 letterSpacing: -0.5,
