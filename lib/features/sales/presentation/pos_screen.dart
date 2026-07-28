@@ -651,10 +651,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 itemBuilder: (_, i) {
                   final p = products[i];
                   final id = p['id'] as int;
-                  final rawName = p['name']?.toString() ?? 'SP';
-                  final name = rawName.startsWith('Temp Product')
-                      ? 'Sản phẩm thử nghiệm'
-                      : rawName;
+                  final name = p['name']?.toString() ?? 'SP';
                   final price = TypeParser.asDouble(
                     p['sellingPrice'] ?? p['selling_price'] ?? 0,
                   );

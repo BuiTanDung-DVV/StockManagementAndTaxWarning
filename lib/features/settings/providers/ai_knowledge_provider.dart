@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+
+import '../../../core/network/api_client.dart';
+import 'shop_provider.dart';
 
 class AiDocument {
   final String id;
@@ -57,46 +58,28 @@ class AiDocument {
 }
 
 class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
-  static const _storageKey = 'smartstock_ai_knowledge_docs';
-
   @override
   List<AiDocument> build() {
-    _loadFromStorage();
-    return _defaultDocuments;
+    ref.watch(shopProvider);
+    _loadFromBackend();
+    return const [];
   }
 
-  Future<void> _loadFromStorage() async {
+  ApiClient get _api => ref.read(apiClientProvider);
+
+  Future<void> _loadFromBackend() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_storageKey);
-      if (raw != null && raw.isNotEmpty) {
-        final List list = jsonDecode(raw);
-        final currentTaxDocument = _defaultDocuments.firstWhere(
-          (document) => document.id == 'DOC_TAX_01',
-        );
-        state = list.map((e) {
-          final document = AiDocument.fromJson(e);
-          if (document.id == currentTaxDocument.id) {
-            return currentTaxDocument.copyWith(isActive: document.isActive);
-          }
-          return document;
-        }).toList();
-        await _saveToStorage();
-      } else {
-        state = _defaultDocuments;
-        await _saveToStorage();
+      final response = await _api.get('/ai-knowledge');
+      if (response is List) {
+        state = response
+            .whereType<Map>()
+            .map((item) => AiDocument.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
       }
-    } catch (_) {
-      state = _defaultDocuments;
+    } catch (error) {
+      // Keep the last successfully loaded database state. Do not replace it
+      // with local sample documents when the server is unavailable.
     }
-  }
-
-  Future<void> _saveToStorage() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = jsonEncode(state.map((e) => e.toJson()).toList());
-      await prefs.setString(_storageKey, raw);
-    } catch (_) {}
   }
 
   Future<void> addDocument({
@@ -104,75 +87,38 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
     required String category,
     required String content,
   }) async {
-    final doc = AiDocument(
-      id: 'DOC_${DateTime.now().millisecondsSinceEpoch}',
-      title: title.trim(),
-      category: category.trim(),
-      content: content.trim(),
-      isActive: true,
-      createdAt: DateTime.now(),
+    final response = await _api.post(
+      '/ai-knowledge',
+      data: {
+        'title': title.trim(),
+        'category': category.trim(),
+        'content': content.trim(),
+      },
     );
+    final doc = AiDocument.fromJson(Map<String, dynamic>.from(response as Map));
     state = [doc, ...state];
-    await _saveToStorage();
   }
 
   Future<void> removeDocument(String id) async {
+    await _api.delete('/ai-knowledge/$id');
     state = state.where((d) => d.id != id).toList();
-    await _saveToStorage();
   }
 
   Future<void> toggleDocument(String id) async {
+    final matches = state.where((document) => document.id == id);
+    if (matches.isEmpty) return;
+    final current = matches.first;
+    final response = await _api.put(
+      '/ai-knowledge/$id',
+      data: {'isActive': !current.isActive},
+    );
+    final updated = AiDocument.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
     state = state.map((d) {
-      if (d.id == id) {
-        return d.copyWith(isActive: !d.isActive);
-      }
-      return d;
+      return d.id == id ? updated : d;
     }).toList();
-    await _saveToStorage();
   }
-
-  static final List<AiDocument> _defaultDocuments = [
-    AiDocument(
-      id: 'DOC_TAX_01',
-      title: 'Nghị định 141/2026/NĐ-CP về Thuế Hộ Kinh Doanh',
-      category: 'Thuế HKD',
-      content: '''
-- Ngưỡng doanh thu hiện hành: Hộ, cá nhân kinh doanh có doanh thu năm từ 1 tỷ đồng trở xuống không phải nộp thuế GTGT và thuế TNCN.
-- Tỷ lệ thuế trên doanh thu ngành Thương mại (bán lẻ hàng hóa): 1% GTGT + 0.5% TNCN.
-- Tỷ lệ thuế ngành Dịch vụ: 5% GTGT + 2% TNCN.
-- Hóa đơn điện tử: Hộ, cá nhân kinh doanh có doanh thu năm trên 1 tỷ đồng thuộc diện phải áp dụng theo Nghị định 141/2026/NĐ-CP.
-- Nguồn chính thức: https://vanban.chinhphu.vn/?classid=1&docid=217960&pageid=27160&typegroupid=4
-- Nội dung chỉ hỗ trợ tham khảo; cần đối chiếu ngành nghề, phương pháp tính và hồ sơ thực tế trước khi kê khai.
-''',
-      isActive: true,
-      createdAt: DateTime.now(),
-    ),
-    AiDocument(
-      id: 'DOC_DEBT_01',
-      title: 'Quy Định Quản Lý Nợ Mua Thiếu & Nhắc Nợ Cửa Hàng',
-      category: 'Bán Hàng & Sổ Nợ',
-      content: '''
-- Khách quen mua thiếu phải được ghi rõ tên, SĐT và lý do nợ trên sổ nợ SmartStock POS.
-- Thời hạn nợ tối đa là 30 ngày kể từ ngày mua.
-- Đối với nợ quá 30 ngày: Sử dụng tính năng [Nhắc Nợ Zalo 1-Click] để gửi tin nhắn thông báo số dư công nợ lịch sự.
-- Thu nợ theo từng đợt: Ghi nhận chính xác số tiền khách trả và yêu cầu tải ảnh chụp biên nhận/chuyển khoản QR.
-''',
-      isActive: true,
-      createdAt: DateTime.now(),
-    ),
-    AiDocument(
-      id: 'DOC_STOCK_01',
-      title: 'Nội Quy Kiểm Kê Kho & Chốt Két Tiền Mặt Cuối Ngày',
-      category: 'Kho & Tài Chính',
-      content: '''
-- Kiểm kê kho định kỳ: Thực hiện kiểm kê thực tế hàng tuần. Sản phẩm dưới định mức tối thiểu phải lập đơn mua PO ngay.
-- Chốt két thu ngân cuối ngày: Kiểm tra tiền mặt thực tế trong két so với số dư lý thuyết trên phần mềm.
-- Trường hợp chênh lệch quỹ: Nếu thiếu tiền phải ghi rõ nguyên nhân vào sổ chốt ca trước khi bàn giao ca.
-''',
-      isActive: true,
-      createdAt: DateTime.now(),
-    ),
-  ];
 }
 
 final aiKnowledgeProvider =

@@ -16,9 +16,11 @@ router.get('/invoice-scans', requirePermission('finance', 'view'), systemCtrl.ge
 router.post('/invoice-scans', requirePermission('finance', 'edit'), systemCtrl.createInvoiceScan);
 router.put('/invoice-scans/:id', requirePermission('finance', 'edit'), systemCtrl.updateInvoiceScan);
 
-// Purchases without invoice
-router.get('/purchases-without-invoice', requirePermission('finance', 'view'), systemCtrl.getPurchasesWithoutInvoice);
-router.post('/purchases-without-invoice', requirePermission('finance', 'edit'), systemCtrl.createPurchaseWithoutInvoice);
+// AI knowledge base
+router.get('/ai-knowledge', requirePermission('settings', 'view'), systemCtrl.getAiKnowledgeDocuments);
+router.post('/ai-knowledge', requirePermission('settings', 'edit'), systemCtrl.createAiKnowledgeDocument);
+router.put('/ai-knowledge/:id', requirePermission('settings', 'edit'), systemCtrl.updateAiKnowledgeDocument);
+router.delete('/ai-knowledge/:id', requirePermission('settings', 'edit'), systemCtrl.deleteAiKnowledgeDocument);
 
 // Dynamic System Configurations
 router.get('/configs', requirePermission('settings', 'view'), systemCtrl.getConfigs);

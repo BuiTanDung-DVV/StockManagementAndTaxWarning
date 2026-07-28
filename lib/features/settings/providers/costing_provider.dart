@@ -41,7 +41,7 @@ class CostingNotifier extends Notifier<CostingState> {
   Future<bool> updateCostingMethod(String method) async {
     state = state.copyWith(isLoading: true);
     try {
-      await _api.put('/system/shop-profile/1', data: {'costingMethod': method});
+      await _api.post('/shop-profile', data: {'costingMethod': method});
       state = state.copyWith(method: method, isLoading: false);
       return true;
     } catch (e) {

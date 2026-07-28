@@ -47,8 +47,21 @@ export const openReceivables = async (req: Request, res: Response) => {
 };
 
 export const createReceivable = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: {} }); } // Stub
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    try {
+        res.json({
+            success: true,
+            data: await customerService.createReceivable(
+                (req as any).shopId,
+                +req.params.id,
+                req.body,
+            ),
+        });
+    }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(e.message === 'Customer not found' ? 404 : validation ? 400 : 500)
+            .json({ success: false, message: e.message });
+    }
 };
 
 export const overdueDebts = async (req: Request, res: Response) => {
@@ -67,6 +80,20 @@ export const getDebtEvidence = async (req: Request, res: Response) => {
 };
 
 export const addEvidence = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: {} }); } // Stub
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    try {
+        res.json({
+            success: true,
+            data: await customerService.addDebtEvidence(
+                (req as any).shopId,
+                +req.params.receivableId,
+                (req as any).user?.sub,
+                req.body,
+            ),
+        });
+    }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(e.message === 'Receivable not found' ? 404 : validation ? 400 : 500)
+            .json({ success: false, message: e.message });
+    }
 };

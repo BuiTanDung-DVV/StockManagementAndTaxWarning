@@ -46,6 +46,46 @@ export class CustomerService {
         return this.receivableRepo.find({ where: { shopId, customer: { id: customerId } }, relations: ['evidences', 'paymentHistory'] });
     }
 
+    async createReceivable(shopId: number, customerId: number, dto: Partial<Receivable>) {
+        const amount = Number(dto.amount);
+        const paidAmount = Number(dto.paidAmount || 0);
+        const dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+        if (!Number.isFinite(amount) || amount <= 0) {
+            throw new Error('Validation: Amount must be greater than zero');
+        }
+        if (!Number.isFinite(paidAmount) || paidAmount < 0 || paidAmount > amount) {
+            throw new Error('Validation: Paid amount is invalid');
+        }
+        if (!dueDate || Number.isNaN(dueDate.getTime())) {
+            throw new Error('Validation: Due date is required');
+        }
+
+        return AppDataSource.transaction(async (manager) => {
+            const customer = await manager.findOne(Customer, {
+                where: { id: customerId, shopId, isActive: true },
+            });
+            if (!customer) throw new Error('Customer not found');
+
+            const remaining = calculateRemainingDebt(amount, paidAmount);
+            const receivable = manager.create(Receivable, {
+                shopId,
+                customer,
+                amount,
+                paidAmount,
+                dueDate,
+                status: remaining <= 0 ? 'PAID' : dueDate < new Date() ? 'OVERDUE' : paidAmount > 0 ? 'PARTIAL' : 'UNPAID',
+                notes: dto.notes,
+                debtReason: dto.debtReason,
+                witnessName: dto.witnessName,
+                reminderEnabled: dto.reminderEnabled === true,
+            });
+            const saved = await manager.save(Receivable, receivable);
+            customer.balance = Number(customer.balance || 0) + remaining;
+            await manager.save(Customer, customer);
+            return saved;
+        });
+    }
+
     async getOpenReceivables(shopId: number) {
         const receivables = await this.receivableRepo.find({
             where: {
@@ -119,6 +159,36 @@ export class CustomerService {
 
     async getDebtEvidence(shopId: number, customerId: number) {
         return this.evidenceRepo.find({ where: { shopId, receivable: { customer: { id: customerId } } } });
+    }
+
+    async addDebtEvidence(
+        shopId: number,
+        receivableId: number,
+        uploadedBy: number | undefined,
+        dto: Partial<DebtEvidence>,
+    ) {
+        const type = String(dto.type || '').toUpperCase();
+        const fileUrl = String(dto.fileUrl || '').trim();
+        if (!['PHOTO', 'SIGNATURE', 'AUDIO', 'DOCUMENT', 'CONTRACT'].includes(type)) {
+            throw new Error('Validation: Evidence type is invalid');
+        }
+        if (!fileUrl || fileUrl.length > 1000) {
+            throw new Error('Validation: Evidence URL is required');
+        }
+        const receivable = await this.receivableRepo.findOne({
+            where: { id: receivableId, shopId },
+        });
+        if (!receivable) throw new Error('Receivable not found');
+        return this.evidenceRepo.save(this.evidenceRepo.create({
+            shopId,
+            receivable,
+            type,
+            fileUrl,
+            fileName: dto.fileName,
+            fileSize: dto.fileSize,
+            description: dto.description,
+            uploadedBy,
+        }));
     }
 
     async getDebtAging(shopId: number, asOf?: string) {

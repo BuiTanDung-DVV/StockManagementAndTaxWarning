@@ -509,11 +509,8 @@ class _OrderRow extends StatelessWidget {
               '0',
         ) ??
         0;
-    final rawCustomer =
+    final customer =
         order['customer']?['name']?.toString() ?? 'Khách mua lẻ';
-    final customer = rawCustomer.startsWith('Simulated Customer')
-        ? 'Khách hàng thử nghiệm'
-        : rawCustomer;
     final code = order['orderCode']?.toString() ?? 'DH-${order['id']}';
     final payment = paid >= total && paid > 0
         ? 'Đã thanh toán'

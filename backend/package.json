@@ -11,7 +11,12 @@
         "lint": "eslint \"src/**/*.ts\"",
         "test:permissions": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js",
         "test:tax": "npm run build && node --test test/tax-policy.test.js",
-        "test:p0": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js test/tax-policy.test.js test/debt.utils.test.js test/sales-metric.utils.test.js test/invoice-metadata.test.js"
+        "test:p0": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js test/tax-policy.test.js test/debt.utils.test.js test/sales-metric.utils.test.js test/invoice-metadata.test.js",
+        "seed:three-years": "tsx src/scripts/seed-three-year-store.ts",
+        "audit:data": "tsx src/scripts/audit-store-data.ts",
+        "validate:data": "tsx src/scripts/validate-store-data.ts",
+        "validate:migration": "tsx src/scripts/validate-ai-knowledge-migration.ts",
+        "migrate:20260728": "tsx src/scripts/apply-database-migrations.ts"
     },
     "dependencies": {
         "bcrypt": "^6.0.0",
