@@ -194,11 +194,13 @@ export class SalesService {
         const shopCondition = isArray ? 'o.shop_id = ANY($1)' : 'o.shop_id = $1';
         const params: any[] = [shopId, fromDate, toDate];
 
-        // Query top 5 selling products by revenue
+        // Rank the ten strongest products by gross revenue while exposing
+        // quantity as a secondary retail metric for the dashboard.
         const topProducts = await AppDataSource.query(`
             SELECT 
-                p.name, 
-                SUM(oi.subtotal) as value 
+                p.name,
+                SUM(oi.subtotal) as value,
+                SUM(oi.quantity) as quantity
             FROM sales_order_items oi
             JOIN sales_orders o ON oi.order_id = o.id
             JOIN products p ON oi.product_id = p.id
@@ -208,12 +210,13 @@ export class SalesService {
               AND o.status != 'CANCELLED'
             GROUP BY p.id, p.name
             ORDER BY value DESC
-            LIMIT 5
+            LIMIT 10
         `, params);
 
         return topProducts.map((p: any) => ({
             name: p.name,
-            value: Number(p.value)
+            value: Number(p.value),
+            quantity: Number(p.quantity)
         }));
     }
 
