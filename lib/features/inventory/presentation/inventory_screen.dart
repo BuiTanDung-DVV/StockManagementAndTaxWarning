@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../../core/guides/feature_guide_sheet.dart';
-import '../../../core/widgets/chart_widgets.dart';
-import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/app_shimmer.dart';
+
+import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../providers/inventory_provider.dart';
 
 class InventoryScreen extends ConsumerWidget {
@@ -14,432 +15,90 @@ class InventoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final c = AppThemeColors.of(context);
+    final colors = AppThemeColors.of(context);
     final stockAsync = ref.watch(stockProvider(null));
-    final lowAsync = ref.watch(lowStockProvider);
+    final lowStockAsync = ref.watch(lowStockProvider);
     final expiringAsync = ref.watch(expiringProductsProvider);
-    final slowAsync = ref.watch(slowMovingProvider);
+    final slowMovingAsync = ref.watch(slowMovingProvider);
+    final categoriesAsync = ref.watch(inventoryCategoriesSummaryProvider);
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        title: Text(
-          'Quản lý kho',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          featureGuideButton(context, 'inventory'),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(stockProvider);
-          ref.invalidate(lowStockProvider);
-          ref.invalidate(expiringProductsProvider);
-          ref.invalidate(slowMovingProvider);
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Beautiful Stats Cards (Bento style)
-              Row(
+      backgroundColor: colors.bg,
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(stockProvider);
+            ref.invalidate(lowStockProvider);
+            ref.invalidate(expiringProductsProvider);
+            ref.invalidate(slowMovingProvider);
+            ref.invalidate(inventoryCategoriesSummaryProvider);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: AppResponsiveContent(
+              maxWidth: 1440,
+              verticalPadding: AppSpacing.lg,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: stockAsync.when(
-                      data: (items) => _StatCard(
-                        'Tổng SP',
-                        '${items.length}',
-                        Icons.inventory_2_rounded,
-                        AppColors.primary,
-                      ),
-                      loading: () => _StatCard(
-                        'Tổng SP',
-                        '...',
-                        Icons.inventory_2_rounded,
-                        AppColors.primary,
-                      ),
-                      error: (e, s) => _StatCard(
-                        'Tổng SP',
-                        '?',
-                        Icons.inventory_2_rounded,
-                        AppColors.danger,
-                      ),
+                  AppPageHeader(
+                    title: 'Quản lý kho',
+                    subtitle:
+                        'Ưu tiên sản phẩm cần nhập, sắp hết hạn và tồn chậm luân chuyển.',
+                    action: Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => context.push('/stock-take'),
+                          child: const Text('Kiểm kê'),
+                        ),
+                        FilledButton(
+                          onPressed: () => context.push('/purchase-orders'),
+                          child: const Text('Nhập hàng'),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: lowAsync.when(
-                      data: (items) => _StatCard(
-                        'Dưới DMức',
-                        '${items.length}',
-                        Icons.warning_amber_rounded,
-                        items.isEmpty ? AppColors.success : AppColors.warning,
-                      ),
-                      loading: () => _StatCard(
-                        'Dưới DMức',
-                        '...',
-                        Icons.warning_amber_rounded,
-                        AppColors.warning,
-                      ),
-                      error: (e, s) => _StatCard(
-                        'Dưới DMức',
-                        '?',
-                        Icons.warning_amber_rounded,
-                        AppColors.danger,
+                  _InventoryMetricStrip(
+                    stock: stockAsync,
+                    lowStock: lowStockAsync,
+                    expiring: expiringAsync,
+                  ),
+                  if (stockAsync.hasError ||
+                      lowStockAsync.hasError ||
+                      expiringAsync.hasError)
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.sm),
+                      child: AppInlineError(
+                        message: 'Một phần số liệu tồn kho chưa tải được.',
+                        onRetry: () {
+                          ref.invalidate(stockProvider);
+                          ref.invalidate(lowStockProvider);
+                          ref.invalidate(expiringProductsProvider);
+                        },
                       ),
                     ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _InventoryActionWorkspace(
+                    lowStock: lowStockAsync,
+                    slowMoving: slowMovingAsync,
                   ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _CategoryDistribution(asyncValue: categoriesAsync),
+                  const SizedBox(height: AppSpacing.md),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () => context.push('/xnt-report'),
+                      child: const Text('Mở báo cáo xuất nhập tồn'),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: expiringAsync.when(
-                      data: (items) => _StatCard(
-                        'Sắp HSD',
-                        '${items.length}',
-                        Icons.schedule_rounded,
-                        items.isEmpty ? AppColors.success : AppColors.danger,
-                      ),
-                      loading: () => _StatCard(
-                        'Sắp HSD',
-                        '...',
-                        Icons.schedule_rounded,
-                        AppColors.warning,
-                      ),
-                      error: (e, s) => _StatCard(
-                        'Sắp HSD',
-                        '?',
-                        Icons.schedule_rounded,
-                        AppColors.danger,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: _StatCard(
-                      'Kho hàng',
-                      '1',
-                      Icons.warehouse_rounded,
-                      AppColors.info,
-                    ),
-                  ),
-                ],
-              ),
-              if (stockAsync.hasError || lowAsync.hasError)
-                AppInlineError(
-                  message: 'Một phần số liệu tồn kho chưa tải được.',
-                  onRetry: () {
-                    ref.invalidate(stockProvider);
-                    ref.invalidate(lowStockProvider);
-                  },
-                ),
-              const SizedBox(height: 20),
-
-              // ── Chart: Inventory by Category Donut ──
-              Builder(
-                builder: (context) {
-                  final catAsync = ref.watch(
-                    inventoryCategoriesSummaryProvider,
-                  );
-                  return catAsync.when(
-                    data: (items) {
-                      if (items.isEmpty) {
-                        return const EmptyChartPlaceholder(
-                          message: 'Chưa có dữ liệu danh mục tồn kho',
-                          icon: Icons.pie_chart_rounded,
-                        );
-                      }
-                      final donutColors = [
-                        AppColors.success,
-                        AppColors.info,
-                        AppColors.warning,
-                        AppColors.primary,
-                        AppColors.danger,
-                        Colors.purple,
-                        Colors.teal,
-                      ];
-                      final segments = items.asMap().entries.map((e) {
-                        final item = e.value as Map<String, dynamic>;
-                        return DonutSegment(
-                          item['name']?.toString() ?? 'Khác',
-                          (item['value'] ??
-                                  item['quantity'] ??
-                                  item['count'] ??
-                                  0)
-                              .toDouble(),
-                          donutColors[e.key % donutColors.length],
-                        );
-                      }).toList();
-                      return ChartCard(
-                        title: 'Tồn kho theo Danh mục',
-                        height: 220,
-                        child: MiniDonutChart(segments: segments),
-                      );
-                    },
-                    loading: () => const SizedBox(
-                      height: 220,
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    error: (_, _) => AppInlineError(
-                      message: 'Không thể tải phân bổ tồn kho.',
-                      onRetry: () =>
-                          ref.invalidate(inventoryCategoriesSummaryProvider),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Quick Actions section
-              Text(
-                'Thao tác nhanh',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: c.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _ActionTile(
-                'Kiểm kê kho',
-                Icons.fact_check_rounded,
-                () => context.push('/stock-take'),
-              ),
-              _ActionTile(
-                'Nhập hàng (Đơn mua)',
-                Icons.move_to_inbox_rounded,
-                () => context.push('/purchase-orders'),
-              ),
-              _ActionTile(
-                'Báo cáo xuất nhập tồn',
-                Icons.analytics_rounded,
-                () => context.push('/xnt-report'),
-              ),
-
-              // Low stock dynamic alerts list
-              lowAsync.when(
-                data: (items) {
-                  if (items.isEmpty) return const SizedBox.shrink();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.warning_amber_rounded,
-                            color: AppColors.danger,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Dưới định mức tối thiểu (${items.length})',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.danger,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ...items.take(5).map((item) {
-                        final prodName =
-                            item['product']?['name'] ??
-                            item['productName'] ??
-                            'Sản phẩm không tên';
-                        final qty =
-                            item['currentQuantity'] ?? item['quantity'] ?? 0;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: c.card,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: c.divider.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  prodName,
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w600,
-                                    color: c.textPrimary,
-                                    fontSize: 13,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.danger.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Tồn: $qty',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ],
-                  );
-                },
-                loading: () => const AppShimmer(
-                  child: ShimmerBox(
-                    width: double.infinity,
-                    height: 72,
-                    radius: 16,
-                  ),
-                ),
-                error: (e, _) => AppInlineError(
-                  message: 'Không thể tải danh sách sắp hết hạn.',
-                  onRetry: () => ref.invalidate(expiringProductsProvider),
-                ),
-              ),
-
-              // Slow moving list
-              slowAsync.when(
-                data: (items) {
-                  if (items.isEmpty) return const SizedBox.shrink();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.timer_off_outlined,
-                            color: AppColors.warning,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Chậm luân chuyển (Đọng vốn) (${items.length})',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.warning,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ...items.take(5).map((item) {
-                        final prodName =
-                            item['product']?['name'] ??
-                            item['productName'] ??
-                            'Sản phẩm không tên';
-                        final qty =
-                            item['currentQuantity'] ?? item['quantity'] ?? 0;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: c.card,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppColors.warning.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  prodName,
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w600,
-                                    color: c.textPrimary,
-                                    fontSize: 13,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warning.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Tồn vướng: $qty',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    color: AppColors.warning,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ],
-                  );
-                },
-                loading: () => const AppShimmer(
-                  child: ShimmerBox(
-                    width: double.infinity,
-                    height: 72,
-                    radius: 16,
-                  ),
-                ),
-                error: (e, _) => AppInlineError(
-                  message: 'Không thể tải danh sách tồn kho chậm luân chuyển.',
-                  onRetry: () => ref.invalidate(slowMovingProvider),
-                ),
-              ),
-              const SizedBox(height: 88), // UI Breathing Room Padding
-            ],
+            ),
           ),
         ),
       ),
@@ -447,61 +106,166 @@ class InventoryScreen extends ConsumerWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String title, value;
-  final IconData icon;
-  final Color color;
-  const _StatCard(this.title, this.value, this.icon, this.color);
+class _InventoryMetricStrip extends StatelessWidget {
+  final AsyncValue<List<dynamic>> stock;
+  final AsyncValue<List<dynamic>> lowStock;
+  final AsyncValue<List<dynamic>> expiring;
+
+  const _InventoryMetricStrip({
+    required this.stock,
+    required this.lowStock,
+    required this.expiring,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+    final metrics = [
+      _InventoryMetric(
+        label: 'Tổng sản phẩm',
+        value: stock.when(
+          data: (items) => '${items.length}',
+          loading: () => 'Đang tải',
+          error: (_, _) => 'Chưa tải',
+        ),
+        context: 'Trong kho hiện tại',
+        assetPath: AppAssets.inventory,
       ),
+      _InventoryMetric(
+        label: 'Dưới định mức',
+        value: lowStock.when(
+          data: (items) => '${items.length}',
+          loading: () => 'Đang tải',
+          error: (_, _) => 'Chưa tải',
+        ),
+        context: 'Cần kiểm tra nhập hàng',
+      ),
+      _InventoryMetric(
+        label: 'Sắp hết hạn',
+        value: expiring.when(
+          data: (items) => '${items.length}',
+          loading: () => 'Đang tải',
+          error: (_, _) => 'Chưa tải',
+        ),
+        context: 'Cần xử lý trước hạn',
+      ),
+      const _InventoryMetric(
+        label: 'Kho hoạt động',
+        value: '1',
+        context: 'Trong phạm vi cửa hàng',
+      ),
+    ];
+
+    return _SimpleMetricStrip(metrics: metrics);
+  }
+}
+
+class _SimpleMetricStrip extends StatelessWidget {
+  final List<_InventoryMetric> metrics;
+
+  const _SimpleMetricStrip({required this.metrics});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 700) {
+          return Container(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              border: Border.all(color: colors.divider),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            child: Column(
+              children: [
+                for (var index = 0; index < metrics.length; index++) ...[
+                  if (index > 0) Divider(height: 1, color: colors.divider),
+                  _InventoryMetricRow(metric: metrics[index]),
+                ],
+              ],
+            ),
+          );
+        }
+
+        return Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: colors.surface,
+            border: Border.all(color: colors.divider),
+            borderRadius: BorderRadius.circular(AppRadius.card),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < metrics.length; index++) ...[
+                if (index > 0) VerticalDivider(width: 1, color: colors.divider),
+                Expanded(child: _InventoryMetricCell(metric: metrics[index])),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _InventoryMetricCell extends StatelessWidget {
+  final _InventoryMetric metric;
+
+  const _InventoryMetricCell({required this.metric});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, size: 22, color: color),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.6),
-                  shape: BoxShape.circle,
+              if (metric.assetPath != null) ...[
+                AppAssetIcon(
+                  assetPath: metric.assetPath!,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                  semanticLabel: metric.label,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              Expanded(
+                child: Text(
+                  metric.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colors.textSecondary,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: c.textPrimary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 2),
+          const SizedBox(height: AppSpacing.sm),
           Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: c.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
+            metric.value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            style: AppTheme.tabularStyle(
+              context,
+              fontSize: 21,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            metric.context,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
           ),
         ],
       ),
@@ -509,60 +273,413 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final VoidCallback onTap;
-  const _ActionTile(this.title, this.icon, this.onTap);
+class _InventoryMetricRow extends StatelessWidget {
+  final _InventoryMetric metric;
+
+  const _InventoryMetricRow({required this.metric});
 
   @override
   Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
+    final colors = AppThemeColors.of(context);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: c.card,
-        borderRadius: BorderRadius.circular(20),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-              borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: [
+          if (metric.assetPath != null) ...[
+            AppAssetIcon(
+              assetPath: metric.assetPath!,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary,
+              semanticLabel: metric.label,
             ),
-            child: Row(
+            const SizedBox(width: AppSpacing.sm),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(icon, color: AppColors.primary, size: 20),
+                Text(
+                  metric.label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: c.textMuted,
-                  size: 14,
+                const SizedBox(height: 2),
+                Text(
+                  metric.context,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
                 ),
               ],
             ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            metric.value,
+            style: AppTheme.tabularStyle(
+              context,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _InventoryActionWorkspace extends StatelessWidget {
+  final AsyncValue<List<dynamic>> lowStock;
+  final AsyncValue<List<dynamic>> slowMoving;
+
+  const _InventoryActionWorkspace({
+    required this.lowStock,
+    required this.slowMoving,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final lowPanel = _InventoryIssuePanel(
+          title: 'Dưới định mức tồn',
+          emptyMessage: 'Không có sản phẩm dưới định mức.',
+          asyncValue: lowStock,
+          statusBuilder: (item) {
+            final quantity = item['currentQuantity'] ?? item['quantity'] ?? 0;
+            return 'Tồn $quantity';
+          },
+        );
+        final slowPanel = _InventoryIssuePanel(
+          title: 'Chậm luân chuyển',
+          emptyMessage: 'Không có sản phẩm chậm luân chuyển.',
+          asyncValue: slowMoving,
+          statusBuilder: (item) {
+            final quantity = item['currentQuantity'] ?? item['quantity'] ?? 0;
+            return 'Tồn $quantity';
+          },
+        );
+
+        if (constraints.maxWidth < 900) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              lowPanel,
+              const SizedBox(height: AppSpacing.md),
+              slowPanel,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: lowPanel),
+            const SizedBox(width: AppSpacing.lg),
+            Expanded(child: slowPanel),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _InventoryIssuePanel extends StatelessWidget {
+  final String title;
+  final String emptyMessage;
+  final AsyncValue<List<dynamic>> asyncValue;
+  final String Function(dynamic item) statusBuilder;
+
+  const _InventoryIssuePanel({
+    required this.title,
+    required this.emptyMessage,
+    required this.asyncValue,
+    required this.statusBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Divider(height: 1, color: colors.divider),
+          asyncValue.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: AppShimmer(
+                child: ShimmerBox(
+                  width: double.infinity,
+                  height: 120,
+                  radius: AppRadius.control,
+                ),
+              ),
+            ),
+            error: (_, _) => const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: AppInlineError(
+                message: 'Không thể tải danh sách cần xử lý.',
+              ),
+            ),
+            data: (items) {
+              if (items.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Text(
+                    emptyMessage,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                );
+              }
+              return Column(
+                children: [
+                  for (
+                    var index = 0;
+                    index < items.take(5).length;
+                    index++
+                  ) ...[
+                    if (index > 0) Divider(height: 1, color: colors.divider),
+                    _InventoryIssueRow(
+                      index: index + 1,
+                      item: items[index],
+                      status: statusBuilder(items[index]),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InventoryIssueRow extends StatelessWidget {
+  final int index;
+  final dynamic item;
+  final String status;
+
+  const _InventoryIssueRow({
+    required this.index,
+    required this.item,
+    required this.status,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final name =
+        item['product']?['name'] ??
+        item['productName'] ??
+        'Sản phẩm chưa có tên';
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$index',
+              style: AppTheme.tabularStyle(
+                context,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: colors.textMuted,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            status,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppColors.danger,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryDistribution extends StatelessWidget {
+  final AsyncValue<List<dynamic>> asyncValue;
+
+  const _CategoryDistribution({required this.asyncValue});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Text(
+              'Phân bổ tồn kho theo danh mục',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Divider(height: 1, color: colors.divider),
+          asyncValue.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: AppShimmer(
+                child: ShimmerBox(
+                  width: double.infinity,
+                  height: 120,
+                  radius: AppRadius.control,
+                ),
+              ),
+            ),
+            error: (_, _) => const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: AppInlineError(message: 'Không thể tải phân bổ tồn kho.'),
+            ),
+            data: (items) {
+              if (items.isEmpty) {
+                return const AppEmpty(
+                  message: 'Chưa có dữ liệu danh mục tồn kho',
+                );
+              }
+
+              final values = items
+                  .map<double>(
+                    (item) =>
+                        (item['value'] ??
+                                item['quantity'] ??
+                                item['count'] ??
+                                0)
+                            .toDouble(),
+                  )
+                  .toList();
+              final maximum = values.fold<double>(
+                0,
+                (current, value) => value > current ? value : current,
+              );
+
+              return Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  children: [
+                    for (var index = 0; index < items.length; index++) ...[
+                      if (index > 0) const SizedBox(height: AppSpacing.sm),
+                      _DistributionRow(
+                        label: items[index]['name']?.toString() ?? 'Khác',
+                        value: values[index],
+                        maximum: maximum,
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DistributionRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final double maximum;
+
+  const _DistributionRow({
+    required this.label,
+    required this.value,
+    required this.maximum,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final progress = maximum <= 0 ? 0.0 : value / maximum;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            Text(
+              value.toStringAsFixed(0),
+              style: AppTheme.tabularStyle(
+                context,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(
+          value: progress,
+          minHeight: 6,
+          borderRadius: BorderRadius.circular(3),
+          color: Theme.of(context).colorScheme.primary,
+          backgroundColor: colors.cardAlt,
+        ),
+      ],
+    );
+  }
+}
+
+class _InventoryMetric {
+  final String label;
+  final String value;
+  final String context;
+  final String? assetPath;
+
+  const _InventoryMetric({
+    required this.label,
+    required this.value,
+    required this.context,
+    this.assetPath,
+  });
 }

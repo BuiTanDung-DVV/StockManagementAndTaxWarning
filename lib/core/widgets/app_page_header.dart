@@ -33,7 +33,7 @@ class AppPageHeader extends StatelessWidget {
               for (var index = 0; index < breadcrumbs!.length; index++) ...[
                 breadcrumbs![index],
                 if (index < breadcrumbs!.length - 1)
-                  Icon(Icons.chevron_right, size: 16, color: colors.textMuted),
+                  Container(width: 1, height: 14, color: colors.divider),
               ],
             ],
           ),
@@ -44,7 +44,8 @@ class AppPageHeader extends StatelessWidget {
           style: textTheme.headlineSmall?.copyWith(
             color: colors.textPrimary,
             fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
+            letterSpacing: -0.35,
+            height: 1.2,
           ),
         ),
         if (subtitle != null) ...[

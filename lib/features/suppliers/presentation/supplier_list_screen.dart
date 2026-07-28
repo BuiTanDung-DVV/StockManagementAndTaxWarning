@@ -1,244 +1,499 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_ui_components.dart';
+import '../../../core/widgets/filter_bar.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../providers/supplier_provider.dart';
 
-class SupplierListScreen extends ConsumerWidget {
+class SupplierListScreen extends ConsumerStatefulWidget {
   const SupplierListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-    final listAsync = ref.watch(supplierListProvider((page: 1, search: null)));
+  ConsumerState<SupplierListScreen> createState() => _SupplierListScreenState();
+}
+
+class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final listAsync = ref.watch(
+      supplierListProvider((
+        page: 1,
+        search: _searchQuery.trim().isEmpty ? null : _searchQuery.trim(),
+      )),
+    );
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        title: Text(
-          'Danh sách nhà cung cấp',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          featureGuideButton(context, 'supplier_list'),
-          const SizedBox(width: 8),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/suppliers/form'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 3,
-        icon: const Icon(
-          Icons.domain_add_rounded,
-          color: Colors.white,
-          size: 20,
-        ),
-        label: Text(
-          'Thêm đối tác',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontSize: 14,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-      ),
-      body: listAsync.when(
-        data: (data) {
-          final items = (data['items'] as List?) ?? [];
-          if (items.isEmpty) {
-            return const AppEmpty(
-              message: 'Chưa có nhà cung cấp nào.',
+      backgroundColor: colors.bg,
+      body: AppResponsiveContent(
+        maxWidth: 1320,
+        verticalPadding: AppSpacing.lg,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppPageHeader(
+              title: 'Nhà cung cấp',
               subtitle:
-                  'Hãy đăng ký đối tác nhà cung cấp đầu tiên của bạn để nhập kho.',
-            );
-          }
-          return Container(
-            color: c.card,
-            child: RefreshIndicator(
-              onRefresh: () async => ref.invalidate(supplierListProvider),
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
-                itemCount: items.length,
-                separatorBuilder: (_, _) => Divider(
-                  height: 1,
-                  color: c.divider.withValues(alpha: 0.15),
-                ),
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                itemBuilder: (_, i) {
-                  final s = items[i];
-                  final name = s['name'] ?? 'Nhà cung cấp ẩn danh';
-                  final taxCode = s['taxCode'] ?? 'N/A';
-                  final term = s['paymentTermDays'];
+                  'Quản lý đối tác, thông tin thuế và điều khoản thanh toán.',
+              action: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  TextButton(
+                    onPressed: () => showFeatureGuide(context, 'supplier_list'),
+                    child: const Text('Hướng dẫn'),
+                  ),
+                  FilledButton(
+                    onPressed: () => context.push('/suppliers/form'),
+                    child: const Text('Thêm nhà cung cấp'),
+                  ),
+                ],
+              ),
+            ),
+            FilterBar(
+              searchHint: 'Tìm theo tên, mã số thuế hoặc số điện thoại',
+              onSearchChanged: (value) {
+                if (value != _searchQuery) {
+                  setState(() => _searchQuery = value);
+                }
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: listAsync.when(
+                data: (data) {
+                  final suppliers = ((data['items'] as List?) ?? const [])
+                      .whereType<Map>()
+                      .map((item) => Map<String, dynamic>.from(item))
+                      .toList();
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 0),
-                    decoration: const BoxDecoration(color: Colors.transparent),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () => context.push('/suppliers/${s['id']}'),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Row(
+                  return RefreshIndicator(
+                    onRefresh: () async => ref.invalidate(supplierListProvider),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (suppliers.isEmpty) {
+                          return ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: AppColors.info.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(14),
+                              AppCardContainer(
+                                child: AppEmpty(
+                                  message: _searchQuery.trim().isEmpty
+                                      ? 'Chưa có nhà cung cấp'
+                                      : 'Không tìm thấy nhà cung cấp phù hợp',
+                                  subtitle: _searchQuery.trim().isEmpty
+                                      ? 'Thêm đối tác để quản lý nhập hàng và điều khoản thanh toán.'
+                                      : 'Hãy kiểm tra lại tên, mã số thuế hoặc số điện thoại.',
+                                  action: _searchQuery.trim().isEmpty
+                                      ? FilledButton(
+                                          onPressed: () =>
+                                              context.push('/suppliers/form'),
+                                          child: const Text(
+                                            'Thêm nhà cung cấp đầu tiên',
+                                          ),
+                                        )
+                                      : null,
                                 ),
-                                child: const Icon(
-                                  Icons.business_rounded,
-                                  color: AppColors.info,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      name,
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: c.textPrimary,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'MST: $taxCode',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        color: c.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    if (term != null) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Hạn nợ: $term ngày',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          color: c.textMuted,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                    const SizedBox(height: 4),
-                                    if (s['tags'] != null ||
-                                        _isNew(s['createdAt']))
-                                      _buildTagsRow(s, c, theme),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                color: c.textMuted,
-                                size: 14,
                               ),
                             ],
+                          );
+                        }
+
+                        if (constraints.maxWidth < 760) {
+                          return ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: suppliers.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: AppSpacing.sm),
+                            itemBuilder: (context, index) =>
+                                _MobileSupplierCard(
+                                  supplier: suppliers[index],
+                                  onTap: () => context.push(
+                                    '/suppliers/${suppliers[index]['id']}',
+                                  ),
+                                ),
+                          );
+                        }
+
+                        return AppCardContainer(
+                          padding: EdgeInsets.zero,
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: suppliers.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == 0) {
+                                return const _SupplierTableHeader();
+                              }
+                              final supplier = suppliers[index - 1];
+                              return _DesktopSupplierRow(
+                                supplier: supplier,
+                                showDivider: index < suppliers.length,
+                                onTap: () => context.push(
+                                  '/suppliers/${supplier['id']}',
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   );
                 },
+                loading: () => const ShimmerList(),
+                error: (error, _) => AppError(
+                  message: 'Không thể tải danh sách nhà cung cấp: $error',
+                  onRetry: () => ref.invalidate(supplierListProvider),
+                ),
               ),
             ),
-          );
-        },
-        loading: () => const ShimmerList(),
-        error: (e, _) => AppError(
-          message: 'Lỗi tải dữ liệu: $e',
-          onRetry: () => ref.invalidate(supplierListProvider),
+          ],
         ),
       ),
     );
   }
+}
 
-  bool _isNew(dynamic createdAtRaw) {
-    if (createdAtRaw == null) return false;
-    final createdAt = DateTime.tryParse(createdAtRaw.toString());
-    if (createdAt == null) return false;
-    return DateTime.now().difference(createdAt).inDays <= 30;
-  }
+class _SupplierTableHeader extends StatelessWidget {
+  const _SupplierTableHeader();
 
-  Widget _buildTagsRow(
-    Map<String, dynamic> s,
-    AppThemeColors c,
-    ThemeData theme,
-  ) {
-    List<String> tags = [];
-    final tagsRaw = s['tags'];
-    if (tagsRaw is List) {
-      tags = tagsRaw.map((e) => e.toString()).toList();
-    } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
-      tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
-    }
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final style = TextStyle(
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+    );
 
-    // Auto tags
-    if (_isNew(s['createdAt'] ?? s['created_at'])) {
-      if (!tags.contains('Mới')) tags.insert(0, 'Mới');
-    }
-
-    if (tags.isEmpty) return const SizedBox.shrink();
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Container(
+      color: colors.cardAlt,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
-        children: tags.take(3).map((t) {
-          Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
-          Color textColor = theme.colorScheme.primary;
-
-          if (t == 'Mới') {
-            bgColor = Colors.blue.withValues(alpha: 0.1);
-            textColor = Colors.blue;
-          }
-
-          return Container(
-            margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(6),
-            ),
+        children: [
+          Expanded(flex: 4, child: Text('NHÀ CUNG CẤP', style: style)),
+          Expanded(flex: 3, child: Text('THÔNG TIN THUẾ', style: style)),
+          Expanded(
+            flex: 2,
             child: Text(
-              t,
-              style: GoogleFonts.inter(
-                fontSize: 9,
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
+              'HẠN THANH TOÁN',
+              textAlign: TextAlign.right,
+              style: style,
             ),
-          );
-        }).toList(),
+          ),
+          const SizedBox(width: 76),
+        ],
       ),
     );
   }
+}
+
+class _DesktopSupplierRow extends StatelessWidget {
+  final Map<String, dynamic> supplier;
+  final bool showDivider;
+  final VoidCallback onTap;
+
+  const _DesktopSupplierRow({
+    required this.supplier,
+    required this.showDivider,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final taxCode =
+        supplier['taxCode']?.toString() ??
+        supplier['tax_code']?.toString() ??
+        '';
+    final paymentTerm = supplier['paymentTermDays'] ?? supplier['paymentTerms'];
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          border: showDivider
+              ? Border(bottom: BorderSide(color: colors.divider))
+              : null,
+        ),
+        child: Row(
+          children: [
+            Expanded(flex: 4, child: _SupplierIdentity(supplier: supplier)),
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    taxCode.isEmpty ? 'Chưa cập nhật MST' : 'MST: $taxCode',
+                    style: TextStyle(
+                      color: taxCode.isEmpty
+                          ? colors.textMuted
+                          : colors.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if ((supplier['email']?.toString() ?? '').isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      supplier['email'].toString(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                paymentTerm == null || paymentTerm.toString().isEmpty
+                    ? '—'
+                    : '${paymentTerm.toString()} ngày',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 76,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(onPressed: onTap, child: const Text('Xem')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileSupplierCard extends StatelessWidget {
+  final Map<String, dynamic> supplier;
+  final VoidCallback onTap;
+
+  const _MobileSupplierCard({required this.supplier, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final taxCode =
+        supplier['taxCode']?.toString() ??
+        supplier['tax_code']?.toString() ??
+        '';
+    final paymentTerm = supplier['paymentTermDays'] ?? supplier['paymentTerms'];
+    final tags = _supplierTags(supplier);
+
+    return Material(
+      color: colors.card,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SupplierIdentity(supplier: supplier),
+              if (tags.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    for (final tag in tags.take(3))
+                      AppStatusBadge(
+                        label: tag,
+                        color: tag == 'Mới'
+                            ? AppColors.info
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _SupplierValue(
+                      label: 'Mã số thuế',
+                      value: taxCode.isEmpty ? 'Chưa cập nhật' : taxCode,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _SupplierValue(
+                      label: 'Hạn thanh toán',
+                      value:
+                          paymentTerm == null || paymentTerm.toString().isEmpty
+                          ? 'Chưa thiết lập'
+                          : '${paymentTerm.toString()} ngày',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: onTap,
+                  child: const Text('Xem hồ sơ'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SupplierIdentity extends StatelessWidget {
+  final Map<String, dynamic> supplier;
+
+  const _SupplierIdentity({required this.supplier});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final name = supplier['name']?.toString().trim();
+    final displayName = name == null || name.isEmpty ? 'Nhà cung cấp' : name;
+    final initial = displayName.characters.first.toUpperCase();
+    final phone = supplier['phone']?.toString() ?? '';
+
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.cardAlt,
+            borderRadius: BorderRadius.circular(AppRadius.control),
+            border: Border.all(color: colors.divider),
+          ),
+          child: Text(
+            initial,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                phone.isEmpty ? 'Chưa cập nhật số điện thoại' : phone,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: colors.textSecondary, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SupplierValue extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _SupplierValue({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(color: colors.textSecondary, fontSize: 11),
+        ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+List<String> _supplierTags(Map<String, dynamic> supplier) {
+  final tags = <String>[];
+  final rawTags = supplier['tags'];
+  if (rawTags is List) {
+    tags.addAll(rawTags.map((item) => item.toString().trim()));
+  } else if (rawTags is String && rawTags.trim().isNotEmpty) {
+    tags.addAll(
+      rawTags
+          .split(',')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty),
+    );
+  }
+
+  if (_isRecentSupplier(supplier['createdAt'] ?? supplier['created_at']) &&
+      !tags.contains('Mới')) {
+    tags.insert(0, 'Mới');
+  }
+  return tags.where((tag) => tag.isNotEmpty).toSet().toList();
+}
+
+bool _isRecentSupplier(dynamic value) {
+  if (value == null) return false;
+  final createdAt = DateTime.tryParse(value.toString());
+  if (createdAt == null) return false;
+  return DateTime.now().difference(createdAt).inDays <= 30;
 }

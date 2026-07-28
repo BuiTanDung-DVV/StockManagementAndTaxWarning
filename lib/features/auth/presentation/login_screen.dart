@@ -1,43 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
-import '../providers/auth_provider.dart';
-import '../../settings/providers/shop_provider.dart';
+import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/app_version_widget.dart';
+import '../../settings/providers/shop_provider.dart';
+import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
+
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _usernameCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _usernameFocus = FocusNode();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _passwordFocus = FocusNode();
-  bool _obscure = true;
-  bool _usernameHasFocus = false;
-  bool _passwordHasFocus = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _usernameFocus.addListener(() {
-      setState(() => _usernameHasFocus = _usernameFocus.hasFocus);
-    });
-    _passwordFocus.addListener(() {
-      setState(() => _passwordHasFocus = _passwordFocus.hasFocus);
-    });
-  }
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _usernameCtrl.dispose();
-    _passwordCtrl.dispose();
-    _usernameFocus.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     _passwordFocus.dispose();
     super.dispose();
   }
@@ -45,266 +33,352 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _login() async {
     final success = await ref
         .read(authProvider.notifier)
-        .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
-    if (success && mounted) {
-      final state = ref.read(authProvider);
-      if (!state.isOnboarded) {
-        context.go('/onboarding');
-      } else {
-        final shopState = ref.read(shopProvider);
-        if (shopState.isPending) {
-          context.go('/waiting-approval');
-        } else {
-          context.go('/');
-        }
-      }
+        .login(_usernameController.text.trim(), _passwordController.text);
+    if (!success || !mounted) return;
+
+    final auth = ref.read(authProvider);
+    if (!auth.isOnboarded) {
+      context.go('/onboarding');
+      return;
     }
+
+    final shopState = ref.read(shopProvider);
+    context.go(shopState.isPending ? '/waiting-approval' : '/');
   }
 
   @override
   Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-    final state = ref.watch(authProvider);
+    final colors = AppThemeColors.of(context);
+    final auth = ref.watch(authProvider);
+
     return Scaffold(
+      backgroundColor: colors.bg,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: LayoutBuilder(
-              builder: (context, viewportConstraints) {
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final desktop = constraints.maxWidth >= 900;
+            final form = _LoginForm(
+              usernameController: _usernameController,
+              passwordController: _passwordController,
+              passwordFocus: _passwordFocus,
+              obscurePassword: _obscurePassword,
+              loading: auth.isLoading,
+              error: auth.error,
+              onTogglePassword: () {
+                setState(() => _obscurePassword = !_obscurePassword);
+              },
+              onLogin: _login,
+              onForgotPassword: () => context.push('/forgot-password'),
+              onRegister: () => context.push('/register'),
+            );
+
+            if (!desktop) {
+              return Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: viewportConstraints.maxHeight - 64,
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: Column(
+                      children: [
+                        const _CompactBrandHeader(),
+                        const SizedBox(height: AppSpacing.lg),
+                        form,
+                      ],
                     ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // App Logo
-                          Container(
-                            width: 96,
-                            height: 96,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: theme.colorScheme.primary.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                  blurRadius: 24,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: Image.asset(
-                                'assets/icon/app_icon.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  // Fallback in case icon is missing
-                                  return Container(
-                                    color: theme.colorScheme.primary,
-                                    child: const Icon(
-                                      Icons.storefront,
-                                      size: 48,
-                                      color: Colors.white,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            'Quản lý Bán hàng',
-                            style: GoogleFonts.outfit(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                              color: c.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            '& Kho hàng',
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              color: c.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 40),
+                  ),
+                ),
+              );
+            }
 
-                          // Username Input with glowing border shadow
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                if (_usernameHasFocus)
-                                  BoxShadow(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    blurRadius: 12,
-                                    spreadRadius: 2,
-                                  ),
-                              ],
-                            ),
-                            child: TextField(
-                              controller: _usernameCtrl,
-                              focusNode: _usernameFocus,
-                              keyboardType: TextInputType.text,
-                              textInputAction: TextInputAction.next,
-                              onSubmitted: (_) => _passwordFocus.requestFocus(),
-                              decoration: InputDecoration(
-                                hintText: 'SĐT hoặc Tên đăng nhập',
-                                prefixIcon: Icon(
-                                  Icons.person_outline_rounded,
-                                  color: c.textMuted,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Password Input with glowing border shadow
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                if (_passwordHasFocus)
-                                  BoxShadow(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.15,
-                                    ),
-                                    blurRadius: 12,
-                                    spreadRadius: 2,
-                                  ),
-                              ],
-                            ),
-                            child: TextField(
-                              controller: _passwordCtrl,
-                              focusNode: _passwordFocus,
-                              obscureText: _obscure,
-                              textInputAction: TextInputAction.done,
-                              onSubmitted: (_) => _login(),
-                              decoration: InputDecoration(
-                                hintText: 'Mật khẩu',
-                                prefixIcon: Icon(
-                                  Icons.lock_outline_rounded,
-                                  color: c.textMuted,
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscure
-                                        ? Icons.visibility_off_rounded
-                                        : Icons.visibility_rounded,
-                                    color: c.textMuted,
-                                  ),
-                                  onPressed: () =>
-                                      setState(() => _obscure = !_obscure),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (state.error != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppColors.danger.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.error_outline,
-                                    color: AppColors.danger,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      state.error!,
-                                      style: const TextStyle(
-                                        color: AppColors.danger,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: state.isLoading ? null : _login,
-                              child: state.isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text('Đăng nhập'),
-                            ),
-                          ),
-                          SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              TextButton(
-                                onPressed: () =>
-                                    context.push('/forgot-password'),
-                                child: Text(
-                                  'Quên mật khẩu?',
-                                  style: TextStyle(
-                                    color: c.textSecondary,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              Text('•', style: TextStyle(color: c.textMuted)),
-                              TextButton(
-                                onPressed: () => context.push('/register'),
-                                child: Text(
-                                  'Đăng ký tài khoản',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 32),
-                          const AppVersionWidget(),
-                        ],
+            return Row(
+              children: [
+                const Expanded(flex: 5, child: _DesktopBrandPanel()),
+                Expanded(
+                  flex: 6,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: form,
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactBrandHeader extends StatelessWidget {
+  const _CompactBrandHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const AppAssetIcon(
+          assetPath: AppAssets.appIcon,
+          size: 42,
+          semanticLabel: 'SmartStock',
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'SmartStock',
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              'Quản lý cửa hàng',
+              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopBrandPanel extends StatelessWidget {
+  const _DesktopBrandPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Container(
+      height: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xxxl),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(right: BorderSide(color: colors.divider)),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppAssetIcon(
+                assetPath: AppAssets.appIcon,
+                size: 56,
+                semanticLabel: 'SmartStock',
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Vận hành cửa hàng trên một hệ thống thống nhất.',
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 30,
+                  height: 1.2,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Theo dõi bán hàng, tồn kho, dòng tiền và các cảnh báo nghiệp vụ cần xử lý.',
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontSize: 14,
+                  height: 1.55,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const _BrandCapability(index: '01', title: 'Bán hàng và công nợ'),
+              const _BrandCapability(
+                index: '02',
+                title: 'Nhập xuất tồn và giá vốn',
+              ),
+              const _BrandCapability(
+                index: '03',
+                title: 'Tài chính và hỗ trợ cảnh báo thuế',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandCapability extends StatelessWidget {
+  final String index;
+  final String title;
+
+  const _BrandCapability({required this.index, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 32,
+            child: Text(
+              index,
+              style: TextStyle(
+                color: colors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoginForm extends StatelessWidget {
+  final TextEditingController usernameController;
+  final TextEditingController passwordController;
+  final FocusNode passwordFocus;
+  final bool obscurePassword;
+  final bool loading;
+  final String? error;
+  final VoidCallback onTogglePassword;
+  final VoidCallback onLogin;
+  final VoidCallback onForgotPassword;
+  final VoidCallback onRegister;
+
+  const _LoginForm({
+    required this.usernameController,
+    required this.passwordController,
+    required this.passwordFocus,
+    required this.obscurePassword,
+    required this.loading,
+    required this.error,
+    required this.onTogglePassword,
+    required this.onLogin,
+    required this.onForgotPassword,
+    required this.onRegister,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return AppCardContainer(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: AutofillGroup(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Đăng nhập',
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.35,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Nhập thông tin tài khoản để tiếp tục làm việc.',
+              style: TextStyle(color: colors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            TextField(
+              controller: usernameController,
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.username],
+              onSubmitted: (_) => passwordFocus.requestFocus(),
+              decoration: const InputDecoration(
+                labelText: 'Số điện thoại hoặc tên đăng nhập',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: passwordController,
+              focusNode: passwordFocus,
+              obscureText: obscurePassword,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.password],
+              onSubmitted: (_) => onLogin(),
+              decoration: InputDecoration(
+                labelText: 'Mật khẩu',
+                suffixIcon: TextButton(
+                  onPressed: onTogglePassword,
+                  child: Text(obscurePassword ? 'Hiện' : 'Ẩn'),
+                ),
+              ),
+            ),
+            if (error != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
+                  border: Border.all(
+                    color: AppColors.danger.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Text(
+                  error!,
+                  style: const TextStyle(color: AppColors.danger, fontSize: 12),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            FilledButton(
+              onPressed: loading ? null : onLogin,
+              child: loading
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Đăng nhập'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
+              children: [
+                TextButton(
+                  onPressed: onForgotPassword,
+                  child: const Text('Quên mật khẩu'),
+                ),
+                TextButton(
+                  onPressed: onRegister,
+                  child: const Text('Đăng ký tài khoản'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const Center(child: AppVersionWidget()),
+          ],
         ),
       ),
     );

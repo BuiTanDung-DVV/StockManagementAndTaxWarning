@@ -3,17 +3,22 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/chart_widgets.dart';
+import '../../../core/widgets/filter_bar.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../providers/sales_provider.dart';
 
-final _currFmt = NumberFormat.currency(
+final _currencyFormat = NumberFormat.currency(
   locale: 'vi_VN',
   symbol: '₫',
   decimalDigits: 0,
@@ -21,6 +26,7 @@ final _currFmt = NumberFormat.currency(
 
 class SalesListScreen extends ConsumerStatefulWidget {
   const SalesListScreen({super.key});
+
   @override
   ConsumerState<SalesListScreen> createState() => _SalesListScreenState();
 }
@@ -28,611 +34,658 @@ class SalesListScreen extends ConsumerStatefulWidget {
 class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   int _page = 1;
   String? _status;
-  bool _searching = false;
-  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
   Timer? _searchDebounce;
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
-    _searchCtrl.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged(String _) {
+  void _onSearchChanged(String value) {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 350), () {
-      if (mounted) setState(() => _page = 1);
+      if (mounted) {
+        setState(() {
+          _searchQuery = value;
+          _page = 1;
+        });
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
+    final colors = AppThemeColors.of(context);
     final listAsync = ref.watch(
       salesListProvider((
         page: _page,
         status: _status,
         customerId: null,
-        search: _searchCtrl.text,
+        search: _searchQuery,
       )),
     );
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        title: Text(
-          'Lịch sử đơn hàng',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () => context.push('/pos'),
-            icon: const Icon(Icons.point_of_sale_outlined),
-            tooltip: 'Mở màn hình bán hàng',
-          ),
-          featureGuideButton(context, 'sales_list'),
-          IconButton(
-            icon: Icon(
-              _searching ? Icons.close_rounded : Icons.search_rounded,
-              color: c.textSecondary,
-            ),
-            onPressed: () => setState(() {
-              _searching = !_searching;
-              if (!_searching) {
-                _searchCtrl.clear();
-                _page = 1;
-              }
-            }),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (_searching)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: TextField(
-                controller: _searchCtrl,
-                autofocus: true,
-                onChanged: _onSearchChanged,
-                style: GoogleFonts.inter(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Tìm theo mã đơn, khách hàng...',
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: c.textMuted,
-                    size: 20,
-                  ),
-                  filled: true,
-                  fillColor: c.card,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: c.divider),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: c.divider),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.primary,
-                      width: 1.5,
+      backgroundColor: colors.bg,
+      body: SafeArea(
+        top: false,
+        child: AppResponsiveContent(
+          maxWidth: 1440,
+          verticalPadding: AppSpacing.lg,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppPageHeader(
+                title: 'Lịch sử đơn hàng',
+                subtitle:
+                    'Theo dõi trạng thái thanh toán và xử lý đơn bán hàng.',
+                action: Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => showFeatureGuide(context, 'sales_list'),
+                      child: const Text('Hướng dẫn'),
                     ),
+                    FilledButton(
+                      onPressed: () => context.push('/pos'),
+                      child: const Text('Mở POS'),
+                    ),
+                  ],
+                ),
+              ),
+              FilterBar(
+                searchHint: 'Tìm theo mã đơn hoặc khách hàng',
+                onSearchChanged: _onSearchChanged,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _SalesStatusFilter(
+                value: _status,
+                onChanged: (value) => setState(() {
+                  _status = value;
+                  _page = 1;
+                }),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _SalesSummarySection(
+                onRetry: () => ref.invalidate(salesSummaryProvider),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Expanded(
+                child: listAsync.when(
+                  data: (data) {
+                    final items = (data['items'] as List?) ?? const [];
+                    if (items.isEmpty) {
+                      return const AppEmpty(
+                        message: 'Không tìm thấy đơn hàng',
+                        subtitle:
+                            'Thử thay đổi bộ lọc hoặc tạo đơn mới từ màn hình POS.',
+                      );
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: () async =>
+                          ref.invalidate(salesListProvider),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final desktop = constraints.maxWidth >= 780;
+                          return ListView.separated(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.xl,
+                            ),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: items.length + (desktop ? 1 : 0),
+                            separatorBuilder: (_, index) => index == 0 && desktop
+                                ? const SizedBox.shrink()
+                                : Divider(height: 1, color: colors.divider),
+                            itemBuilder: (context, index) {
+                              if (desktop && index == 0) {
+                                return const _SalesTableHeader();
+                              }
+                              final itemIndex = desktop ? index - 1 : index;
+                              return _OrderRow(
+                                order: items[itemIndex],
+                                desktop: desktop,
+                                onTap: () => context.push(
+                                  '/sales/${items[itemIndex]['id']}',
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    );
+                  },
+                  loading: () => const ShimmerList(),
+                  error: (_, _) => AppError(
+                    message: 'Không thể tải danh sách đơn hàng.',
+                    onRetry: () => ref.invalidate(salesListProvider),
                   ),
                 ),
               ),
-            ),
-
-          // Stepper Chips for filtering states
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [null, 'PENDING', 'COMPLETED', 'CANCELLED'].map((s) {
-                final label = s == null
-                    ? 'Tất cả'
-                    : s == 'PENDING'
-                    ? 'Chờ xử lý'
-                    : s == 'COMPLETED'
-                    ? 'Hoàn thành'
-                    : 'Đã hủy';
-                final selected = _status == s;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(label),
-                    selected: selected,
-                    onSelected: (_) => setState(() {
-                      _status = s;
-                      _page = 1;
-                    }),
-                    selectedColor: theme.colorScheme.primary.withValues(
-                      alpha: 0.1,
-                    ),
-                    checkmarkColor: theme.colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    labelStyle: GoogleFonts.outfit(
-                      color: selected
-                          ? theme.colorScheme.primary
-                          : c.textSecondary,
-                      fontSize: 12,
-                      fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                    ),
-                    side: BorderSide(
-                      color: selected
-                          ? theme.colorScheme.primary
-                          : c.divider.withValues(alpha: 0.8),
-                      width: selected ? 1.5 : 1,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+            ],
           ),
-          const SizedBox(height: 8),
-
-          // ── Sales Summary + Chart ──
-          _buildSalesSummarySection(ref, c, theme),
-
-          Expanded(
-            child: listAsync.when(
-              data: (data) {
-                final items = (data['items'] as List?) ?? [];
-                if (items.isEmpty) {
-                  return const AppEmpty(
-                    message: 'Không tìm thấy đơn hàng nào.',
-                    subtitle:
-                        'Hãy bắt đầu tạo đơn hàng mới từ màn hình máy POS bán hàng.',
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(salesListProvider),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 136),
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    itemCount: items.length,
-                    separatorBuilder: (_, _) => Divider(
-                      height: 1,
-                      color: c.divider.withValues(alpha: 0.15),
-                    ),
-                    itemBuilder: (_, i) {
-                      final order = items[i];
-                      final orderStatus = order['status'] ?? 'PENDING';
-
-                      Color statusColor;
-                      String statusLabel;
-                      switch (orderStatus) {
-                        case 'COMPLETED':
-                        case 'DELIVERED':
-                          statusColor = AppColors.success;
-                          statusLabel = 'Hoàn thành';
-                          break;
-                        case 'PENDING':
-                          statusColor = AppColors.warning;
-                          statusLabel = 'Chờ xử lý';
-                          break;
-                        case 'CANCELLED':
-                        default:
-                          statusColor = AppColors.danger;
-                          statusLabel = 'Đã hủy';
-                          break;
-                      }
-
-                      final total =
-                          double.tryParse(
-                            order['totalAmount']?.toString() ?? '0',
-                          ) ??
-                          0.0;
-                      final paid =
-                          double.tryParse(
-                            order['amountPaid']?.toString() ??
-                                order['paidAmount']?.toString() ??
-                                '0',
-                          ) ??
-                          0.0;
-                      final rawCustomerName =
-                          order['customer']?['name']?.toString() ??
-                          'Khách mua lẻ';
-                      final customerName =
-                          rawCustomerName.startsWith('Simulated Customer')
-                          ? 'Khách hàng thử nghiệm'
-                          : rawCustomerName;
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 0),
-                        decoration: const BoxDecoration(
-                          color: Colors.transparent,
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () => context.push('/sales/${order['id']}'),
-                            child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary
-                                          .withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(
-                                      Icons.receipt_long_rounded,
-                                      color: theme.colorScheme.primary,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          'Mã: ${order['orderCode'] ?? 'DH-${order['id']}'}',
-                                          style: GoogleFonts.outfit(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: c.textPrimary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          customerName,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            color: c.textSecondary,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        _buildTagsRow(
-                                          order,
-                                          paid,
-                                          total,
-                                          c,
-                                          theme,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        _currFmt.format(total),
-                                        style: GoogleFonts.outfit(
-                                          fontWeight: FontWeight.w800,
-                                          color: theme.colorScheme.primary,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withValues(
-                                            alpha: 0.1,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          statusLabel,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            color: statusColor,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-              loading: () => const ShimmerList(),
-              error: (e, _) => AppError(
-                message: 'Lỗi tải dữ liệu: $e',
-                onRetry: () => ref.invalidate(salesListProvider),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildSalesSummarySection(
-    WidgetRef ref,
-    AppThemeColors c,
-    ThemeData theme,
-  ) {
-    final now = DateTime.now();
-    final period = currentMonthReportingPeriod(now);
+class _SalesStatusFilter extends StatelessWidget {
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  const _SalesStatusFilter({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    final options = <(String?, String)>[
+      (null, 'Tất cả'),
+      ('PENDING', 'Chờ xử lý'),
+      ('COMPLETED', 'Hoàn thành'),
+      ('CANCELLED', 'Đã hủy'),
+    ];
+
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        for (final option in options)
+          TextButton(
+            onPressed: () => onChanged(option.$1),
+            style: TextButton.styleFrom(
+              foregroundColor: value == option.$1
+                  ? primary
+                  : colors.textSecondary,
+              backgroundColor: value == option.$1
+                  ? primary.withValues(alpha: 0.08)
+                  : Colors.transparent,
+              side: BorderSide(
+                color: value == option.$1 ? primary : colors.divider,
+              ),
+            ),
+            child: Text(option.$2),
+          ),
+      ],
+    );
+  }
+}
+
+class _SalesSummarySection extends ConsumerWidget {
+  final VoidCallback onRetry;
+
+  const _SalesSummarySection({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppThemeColors.of(context);
+    final period = currentMonthReportingPeriod(DateTime.now());
     final summaryAsync = ref.watch(
       salesSummaryProvider((from: period.from, to: period.to)),
     );
 
     return summaryAsync.when(
-      loading: () => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: Container(
-          height: 60,
-          decoration: BoxDecoration(
-            color: c.card,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
+      loading: () => const AppShimmer(
+        child: ShimmerBox(
+          width: double.infinity,
+          height: 104,
+          radius: AppRadius.card,
         ),
       ),
       error: (_, _) => AppInlineError(
         message: 'Không thể tải tổng quan bán hàng tháng này.',
-        onRetry: () => ref.invalidate(salesSummaryProvider),
+        onRetry: onRetry,
       ),
       data: (data) {
-        final totalOrders =
-            (data['orderCount'] ?? data['totalOrders'] ?? data['count'] ?? 0)
-                as num;
-        final totalRevenue =
+        final orderCount =
+            data['orderCount'] ?? data['totalOrders'] ?? data['count'] ?? 0;
+        final revenue =
             double.tryParse(
               data['totalRevenue']?.toString() ??
                   data['revenue']?.toString() ??
                   '0',
             ) ??
-            0.0;
+            0;
         final grossProfit =
             double.tryParse(
               data['grossProfit']?.toString() ??
                   data['profit']?.toString() ??
                   '0',
             ) ??
-            0.0;
-        final daily = (data['daily'] as List?) ?? [];
-
-        // Last 7 entries for bar chart
-        final last7 = daily.length > 7
+            0;
+        final daily = (data['daily'] as List?) ?? const [];
+        final lastSeven = daily.length > 7
             ? daily.sublist(daily.length - 7)
             : daily;
-        final barValues = last7
+        final barValues = lastSeven
             .map<double>(
-              (d) =>
+              (item) =>
                   double.tryParse(
-                    d['revenue']?.toString() ??
-                        d['totalRevenue']?.toString() ??
+                    item['revenue']?.toString() ??
+                        item['totalRevenue']?.toString() ??
                         '0',
                   ) ??
-                  0.0,
+                  0,
             )
             .toList();
-        final barLabels = last7.map<String>((d) {
-          final dateStr = d['date']?.toString() ?? '';
-          if (dateStr.length >= 10) {
-            final parts = dateStr.split('-');
-            return '${parts[2]}/${parts[1]}';
-          }
-          return dateStr;
+        final barLabels = lastSeven.map<String>((item) {
+          final date = item['date']?.toString() ?? '';
+          final parts = date.split('-');
+          return parts.length >= 3 ? '${parts[2]}/${parts[1]}' : date;
         }).toList();
 
-        return Container(
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 10),
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Tổng quan tháng này',
-                  style: GoogleFonts.outfit(
-                    color: c.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+        final metrics = [
+          _SalesMetric(
+            label: 'Đơn hàng',
+            value: '$orderCount',
+            assetPath: AppAssets.orders,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          _SalesMetric(
+            label: 'Doanh thu',
+            value: _currencyFormat.format(revenue),
+            assetPath: AppAssets.revenue,
+            color: AppColors.success,
+          ),
+          _SalesMetric(
+            label: 'Lợi nhuận gộp',
+            value: _currencyFormat.format(grossProfit),
+            assetPath: AppAssets.profit,
+            color: grossProfit < 0 ? AppColors.danger : AppColors.success,
+          ),
+        ];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: colors.surface,
+                border: Border.all(color: colors.divider),
+                borderRadius: BorderRadius.circular(AppRadius.card),
               ),
-              const SizedBox(height: 8),
-              // 3 stat cards
-              Row(
-                children: [
-                  _statCard(
-                    'Đơn hàng',
-                    '$totalOrders',
-                    Icons.receipt_long_rounded,
-                    theme.colorScheme.primary,
-                    c,
-                  ),
-                  const SizedBox(width: 8),
-                  _statCard(
-                    'Doanh thu',
-                    _currFmt.format(totalRevenue),
-                    Icons.trending_up_rounded,
-                    AppColors.success,
-                    c,
-                  ),
-                  const SizedBox(width: 8),
-                  _statCard(
-                    'Lợi nhuận',
-                    _currFmt.format(grossProfit),
-                    Icons.account_balance_wallet_rounded,
-                    AppColors.info,
-                    c,
-                  ),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 620) {
+                    return Column(
+                      children: [
+                        for (
+                          var index = 0;
+                          index < metrics.length;
+                          index++
+                        ) ...[
+                          if (index > 0)
+                            Divider(height: 1, color: colors.divider),
+                          _SalesMetricRow(metric: metrics[index]),
+                        ],
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      for (
+                        var index = 0;
+                        index < metrics.length;
+                        index++
+                      ) ...[
+                        if (index > 0)
+                          VerticalDivider(width: 1, color: colors.divider),
+                        Expanded(
+                          child: _SalesMetricCell(metric: metrics[index]),
+                        ),
+                      ],
+                    ],
+                  );
+                },
               ),
-              if (barValues.isNotEmpty && barValues.any((v) => v > 0)) ...[
-                const SizedBox(height: 10),
-                ChartCard(
+            ),
+            if (barValues.length >= 3 && barValues.any((value) => value > 0))
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.md),
+                child: ChartCard(
                   title: 'Doanh thu 7 ngày gần nhất',
-                  height: 160,
+                  height: 150,
                   child: MiniBarChart(
                     values: barValues,
                     labels: barLabels,
-                    barColor: theme.colorScheme.primary,
+                    barColor: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-              ],
-            ],
-          ),
+              ),
+          ],
         );
       },
     );
   }
+}
 
-  Widget _statCard(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-    AppThemeColors c,
-  ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.divider.withValues(alpha: 0.4)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: c.textPrimary,
+class _SalesMetricCell extends StatelessWidget {
+  final _SalesMetric metric;
+
+  const _SalesMetricCell({required this.metric});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AppAssetIcon(
+                assetPath: metric.assetPath,
+                size: 18,
+                color: metric.color,
+                semanticLabel: metric.label,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 9,
-                color: c.textMuted,
-                fontWeight: FontWeight.w600,
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                metric.label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              metric.value,
+              style: AppTheme.tabularStyle(
+                context,
+                fontSize: 19,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Tháng này',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildTagsRow(
-    Map<String, dynamic> order,
-    double paid,
-    double total,
-    AppThemeColors c,
-    ThemeData theme,
-  ) {
-    List<String> tags = [];
-    final tagsRaw = order['tags'];
-    if (tagsRaw is List) {
-      tags = tagsRaw.map((e) => e.toString()).toList();
-    } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
-      tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
-    }
+class _SalesMetricRow extends StatelessWidget {
+  final _SalesMetric metric;
 
-    // Auto tags
-    if (order['status'] != 'CANCELLED') {
-      if (paid < total) {
-        if (!tags.contains('Còn nợ')) tags.insert(0, 'Còn nợ');
-      } else if (paid > 0 && paid >= total) {
-        if (!tags.contains('Đã TT')) tags.insert(0, 'Đã TT');
-      }
-    }
+  const _SalesMetricRow({required this.metric});
 
-    if (order['customer'] == null) {
-      if (!tags.contains('Khách lẻ')) tags.insert(0, 'Khách lẻ');
-    }
-
-    if (tags.isEmpty) return const SizedBox.shrink();
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
-        children: tags.take(3).map((t) {
-          Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
-          Color textColor = theme.colorScheme.primary;
-
-          if (t == 'Còn nợ') {
-            bgColor = AppColors.warning.withValues(alpha: 0.1);
-            textColor = AppColors.warning;
-          } else if (t == 'Khách lẻ') {
-            bgColor = Colors.blueGrey.withValues(alpha: 0.1);
-            textColor = Colors.blueGrey;
-          } else if (t == 'Đã TT') {
-            bgColor = AppColors.success.withValues(alpha: 0.1);
-            textColor = AppColors.success;
-          }
-
-          return Container(
-            margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(6),
-            ),
+        children: [
+          AppAssetIcon(
+            assetPath: metric.assetPath,
+            size: 20,
+            color: metric.color,
+            semanticLabel: metric.label,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
             child: Text(
-              t,
-              style: GoogleFonts.inter(
-                fontSize: 9,
-                color: textColor,
-                fontWeight: FontWeight.bold,
+              '${metric.label} • Tháng này',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colors.textSecondary,
               ),
             ),
-          );
-        }).toList(),
+          ),
+          Flexible(
+            child: Text(
+              metric.value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTheme.tabularStyle(
+                context,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
+
+class _SalesTableHeader extends StatelessWidget {
+  const _SalesTableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Container(
+      color: colors.cardAlt,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: const Row(
+        children: [
+          Expanded(flex: 2, child: Text('Mã đơn')),
+          Expanded(flex: 3, child: Text('Khách hàng')),
+          Expanded(flex: 2, child: Text('Thanh toán')),
+          Expanded(flex: 2, child: Text('Trạng thái')),
+          Expanded(
+            flex: 2,
+            child: Text('Tổng tiền', textAlign: TextAlign.right),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderRow extends StatelessWidget {
+  final Map<String, dynamic> order;
+  final bool desktop;
+  final VoidCallback onTap;
+
+  const _OrderRow({
+    required this.order,
+    required this.desktop,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final status = _OrderStatus.from(order['status']?.toString());
+    final total =
+        double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0;
+    final paid =
+        double.tryParse(
+          order['amountPaid']?.toString() ??
+              order['paidAmount']?.toString() ??
+              '0',
+        ) ??
+        0;
+    final rawCustomer =
+        order['customer']?['name']?.toString() ?? 'Khách mua lẻ';
+    final customer = rawCustomer.startsWith('Simulated Customer')
+        ? 'Khách hàng thử nghiệm'
+        : rawCustomer;
+    final code = order['orderCode']?.toString() ?? 'DH-${order['id']}';
+    final payment = paid >= total && paid > 0
+        ? 'Đã thanh toán'
+        : paid > 0
+        ? 'Thanh toán một phần'
+        : 'Chưa thanh toán';
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 14,
+        ),
+        child: desktop
+            ? Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      code,
+                      style: AppTheme.tabularStyle(
+                        context,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      customer,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      payment,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: AppStatusBadge(
+                        label: status.label,
+                        color: status.color,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      _currencyFormat.format(total),
+                      textAlign: TextAlign.right,
+                      style: AppTheme.tabularStyle(
+                        context,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              code,
+                              style: AppTheme.tabularStyle(
+                                context,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              customer,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        _currencyFormat.format(total),
+                        style: AppTheme.tabularStyle(
+                          context,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      AppStatusBadge(
+                        label: status.label,
+                        color: status.color,
+                      ),
+                      Text(
+                        payment,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _SalesMetric {
+  final String label;
+  final String value;
+  final String assetPath;
+  final Color color;
+
+  const _SalesMetric({
+    required this.label,
+    required this.value,
+    required this.assetPath,
+    required this.color,
+  });
+}
+
+class _OrderStatus {
+  final String label;
+  final Color color;
+
+  const _OrderStatus(this.label, this.color);
+
+  factory _OrderStatus.from(String? value) {
+    switch (value) {
+      case 'COMPLETED':
+      case 'DELIVERED':
+        return const _OrderStatus('Hoàn thành', AppColors.success);
+      case 'PENDING':
+        return const _OrderStatus('Chờ xử lý', AppColors.warning);
+      default:
+        return const _OrderStatus('Đã hủy', AppColors.danger);
+    }
   }
 }

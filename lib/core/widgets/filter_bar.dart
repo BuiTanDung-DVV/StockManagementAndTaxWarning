@@ -1,6 +1,4 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class FilterBar extends StatelessWidget {
@@ -29,48 +27,27 @@ class FilterBar extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final searchField = ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.control),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: c.inputFill.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(AppRadius.control),
-                  border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-                ),
-                child: TextField(
-                  onChanged: onSearchChanged,
-                  style: GoogleFonts.outfit(color: c.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: searchHint,
-                    hintStyle: GoogleFonts.outfit(color: c.textMuted),
-                    prefixIcon: Icon(Icons.search, color: c.textMuted),
-                    border: InputBorder.none,
-                    filled: false,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
+          final searchField = TextField(
+            onChanged: onSearchChanged,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: c.textPrimary),
+            decoration: InputDecoration(
+              hintText: searchHint,
+              hintStyle: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: c.textMuted),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 13,
               ),
             ),
           );
           final filterButton = onFilterTap == null
               ? null
-              : Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: c.divider),
-                    borderRadius: BorderRadius.circular(AppRadius.control),
-                    color: c.surface,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.filter_list_rounded),
-                    onPressed: onFilterTap,
-                    color: c.textSecondary,
-                    tooltip: 'Lọc',
-                  ),
+              : OutlinedButton(
+                  onPressed: onFilterTap,
+                  child: const Text('Bộ lọc'),
                 );
 
           if (constraints.maxWidth < 520 && trailing != null) {
