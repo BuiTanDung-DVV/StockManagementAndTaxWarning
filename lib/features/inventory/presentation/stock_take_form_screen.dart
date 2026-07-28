@@ -466,6 +466,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
 
           if (_items.isEmpty)
             const AppEmpty(
+              visual: AppEmptyVisual.inventory,
               message:
                   'Chưa có sản phẩm nào được chọn. Nhấp "Thêm dòng" ở trên để bắt đầu!',
             ),

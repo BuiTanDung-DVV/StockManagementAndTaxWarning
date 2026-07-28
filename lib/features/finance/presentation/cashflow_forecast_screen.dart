@@ -57,6 +57,7 @@ class CashflowForecastScreen extends ConsumerWidget {
             data: (budgets) {
               if (forecasts.isEmpty && budgets.isEmpty) {
                 return AppEmpty(
+                  visual: AppEmptyVisual.finance,
                   message: 'Chưa có dữ liệu dự báo',
                   action: ElevatedButton.icon(
                     icon: const Icon(Icons.trending_up_rounded),

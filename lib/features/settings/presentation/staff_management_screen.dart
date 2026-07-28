@@ -566,6 +566,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                             children: const [
                               SizedBox(height: 100),
                               AppEmpty(
+                                visual: AppEmptyVisual.people,
                                 message: 'Chưa có nhân viên nào',
                                 subtitle:
                                     'Nhấn "Thêm nhân viên" để thêm trực tiếp',
@@ -592,6 +593,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                             children: const [
                               SizedBox(height: 100),
                               AppEmpty(
+                                visual: AppEmptyVisual.people,
                                 message: 'Không có yêu cầu chờ duyệt',
                                 subtitle:
                                     'Nhân viên mới điền mã shop sẽ xuất hiện tại đây',
@@ -1152,6 +1154,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _roles.isEmpty
           ? const AppEmpty(
+              visual: AppEmptyVisual.people,
               message: 'Chưa có vai trò nào',
               subtitle: 'Tạo vai trò để phân quyền nhân viên',
             )

@@ -109,7 +109,10 @@ class StockTakeScreen extends ConsumerWidget {
         ),
         data: (items) {
           if (items.isEmpty) {
-            return const AppEmpty(message: 'Chưa có dữ liệu tồn kho');
+            return const AppEmpty(
+              visual: AppEmptyVisual.inventory,
+              message: 'Chưa có dữ liệu tồn kho',
+            );
           }
           return Container(
             color: c.card,

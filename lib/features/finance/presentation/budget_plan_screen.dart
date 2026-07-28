@@ -23,7 +23,10 @@ class BudgetPlanScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (items) {
           if (items.isEmpty) {
-            return const AppEmpty(message: 'Chưa có kế hoạch ngân sách nào');
+            return const AppEmpty(
+              visual: AppEmptyVisual.finance,
+              message: 'Chưa có kế hoạch ngân sách nào',
+            );
           }
           return ListView.builder(
             padding: const EdgeInsets.all(16),

@@ -625,6 +625,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
               if (products.isEmpty) {
                 return AppEmpty(
+                  visual: AppEmptyVisual.inventory,
                   message: _search.isEmpty
                       ? 'Chưa có sản phẩm'
                       : 'Không tìm thấy "$_search"',
@@ -869,6 +870,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         Expanded(
           child: cart.items.isEmpty
               ? const AppEmpty(
+                  visual: AppEmptyVisual.sales,
                   message: 'Giỏ hàng đang trống',
                   subtitle: 'Chọn sản phẩm từ danh sách để bắt đầu đơn hàng.',
                   size: 64,

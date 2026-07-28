@@ -36,6 +36,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
 
           if (categories.isEmpty && recentItems.isEmpty) {
             return AppEmpty(
+              visual: AppEmptyVisual.finance,
               message: 'Chưa có chi phí nào',
               action: ElevatedButton.icon(
                 icon: const Icon(Icons.money_off),

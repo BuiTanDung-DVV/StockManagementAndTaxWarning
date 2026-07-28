@@ -107,7 +107,10 @@ class PurchaseOrderScreen extends ConsumerWidget {
         data: (data) {
           final items = (data['items'] as List?) ?? [];
           if (items.isEmpty) {
-            return const AppEmpty(message: 'Chưa có đơn mua hàng nào được tạo');
+            return const AppEmpty(
+              visual: AppEmptyVisual.document,
+              message: 'Chưa có đơn mua hàng nào được tạo',
+            );
           }
           return Container(
             color: c.card,

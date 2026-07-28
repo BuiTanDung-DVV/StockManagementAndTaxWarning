@@ -49,6 +49,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
 
           if (items.isEmpty) {
             return AppEmpty(
+              visual: AppEmptyVisual.finance,
               message: 'Chưa có chi lương nào',
               action: ElevatedButton.icon(
                 icon: const Icon(Icons.payments),

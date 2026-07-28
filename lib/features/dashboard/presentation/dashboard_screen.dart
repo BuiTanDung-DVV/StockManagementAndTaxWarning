@@ -855,6 +855,7 @@ class _DashboardChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (currentSales == null || comparisonSales == null) {
       return const AppEmpty(
+        visual: AppEmptyVisual.finance,
         message: 'Không có quyền xem doanh thu',
         subtitle: 'Các ưu tiên kho và công nợ vẫn được hiển thị theo quyền.',
       );

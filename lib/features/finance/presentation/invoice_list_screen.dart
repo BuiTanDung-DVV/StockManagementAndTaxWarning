@@ -185,6 +185,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
                 if (items.isEmpty)
                   AppEmpty(
+                    visual: AppEmptyVisual.document,
                     message: 'Chưa có hóa đơn nào',
                     action: ElevatedButton.icon(
                       icon: const Icon(Icons.receipt),

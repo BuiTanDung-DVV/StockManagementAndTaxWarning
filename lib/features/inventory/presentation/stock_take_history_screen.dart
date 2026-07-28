@@ -65,7 +65,10 @@ class StockTakeHistoryScreen extends ConsumerWidget {
         data: (data) {
           final items = (data['items'] as List?) ?? [];
           if (items.isEmpty) {
-            return const AppEmpty(message: 'Chưa có phiếu kiểm kê nào');
+            return const AppEmpty(
+              visual: AppEmptyVisual.document,
+              message: 'Chưa có phiếu kiểm kê nào',
+            );
           }
           return Container(
             color: c.card,

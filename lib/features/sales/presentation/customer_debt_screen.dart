@@ -180,6 +180,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                       if (_debts.isEmpty)
                         AppCardContainer(
                           child: AppEmpty(
+                            visual: AppEmptyVisual.finance,
                             message: 'Không có khoản công nợ cần thu',
                             subtitle:
                                 'Các đơn bán chịu hoặc thanh toán chưa đủ sẽ xuất hiện tại đây.',

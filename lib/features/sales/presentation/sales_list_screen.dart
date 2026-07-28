@@ -119,6 +119,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                     final items = (data['items'] as List?) ?? const [];
                     if (items.isEmpty) {
                       return const AppEmpty(
+                        visual: AppEmptyVisual.sales,
                         message: 'Không tìm thấy đơn hàng',
                         subtitle:
                             'Thử thay đổi bộ lọc hoặc tạo đơn mới từ màn hình POS.',
@@ -126,8 +127,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                     }
 
                     return RefreshIndicator(
-                      onRefresh: () async =>
-                          ref.invalidate(salesListProvider),
+                      onRefresh: () async => ref.invalidate(salesListProvider),
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final desktop = constraints.maxWidth >= 780;
@@ -137,7 +137,8 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                             ),
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: items.length + (desktop ? 1 : 0),
-                            separatorBuilder: (_, index) => index == 0 && desktop
+                            separatorBuilder: (_, index) =>
+                                index == 0 && desktop
                                 ? const SizedBox.shrink()
                                 : Divider(height: 1, color: colors.divider),
                             itemBuilder: (context, index) {
@@ -177,10 +178,7 @@ class _SalesStatusFilter extends StatelessWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
 
-  const _SalesStatusFilter({
-    required this.value,
-    required this.onChanged,
-  });
+  const _SalesStatusFilter({required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -330,11 +328,7 @@ class _SalesSummarySection extends ConsumerWidget {
                   }
                   return Row(
                     children: [
-                      for (
-                        var index = 0;
-                        index < metrics.length;
-                        index++
-                      ) ...[
+                      for (var index = 0; index < metrics.length; index++) ...[
                         if (index > 0)
                           VerticalDivider(width: 1, color: colors.divider),
                         Expanded(
@@ -390,9 +384,9 @@ class _SalesMetricCell extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Text(
                 metric.label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colors.textSecondary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: colors.textSecondary),
               ),
             ],
           ),
@@ -444,9 +438,9 @@ class _SalesMetricRow extends StatelessWidget {
           Expanded(
             child: Text(
               '${metric.label} • Tháng này',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colors.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
             ),
           ),
           Flexible(
@@ -507,8 +501,7 @@ class _OrderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final status = _OrderStatus.from(order['status']?.toString());
-    final total =
-        double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0;
+    final total = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0;
     final paid =
         double.tryParse(
           order['amountPaid']?.toString() ??
@@ -638,10 +631,7 @@ class _OrderRow extends StatelessWidget {
                     runSpacing: AppSpacing.xs,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      AppStatusBadge(
-                        label: status.label,
-                        color: status.color,
-                      ),
+                      AppStatusBadge(label: status.label, color: status.color),
                       Text(
                         payment,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
