@@ -47,8 +47,8 @@ class ChartCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider.withValues(alpha: 0.9)),
         boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: Column(
@@ -61,9 +61,9 @@ class ChartCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: c.textSecondary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: c.textPrimary,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -72,7 +72,7 @@ class ChartCard extends StatelessWidget {
               ?trailing,
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Expanded(child: child),
         ],
       ),
@@ -105,8 +105,8 @@ class EmptyChartPlaceholder extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider.withValues(alpha: 0.8)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

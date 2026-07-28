@@ -11,6 +11,14 @@ import '../settings/providers/shop_provider.dart';
 
 enum MainShellNavigationMode { bottomBar, rail, sidebar }
 
+abstract final class _ShellPalette {
+  static const navy = Color(0xFF102A43);
+  static const navyRaised = Color(0xFF173B5E);
+  static const cyan = Color(0xFF38BDF8);
+  static const text = Color(0xFFF4F8FC);
+  static const muted = Color(0xFFAAC0D4);
+}
+
 MainShellNavigationMode navigationModeForWidth(double width) {
   if (width < AppBreakpoints.compactNavigation) {
     return MainShellNavigationMode.bottomBar;
@@ -155,8 +163,8 @@ class MainShell extends ConsumerWidget {
                   child: AiAssistantWidget(
                     topSafeInset: showUtilityHeader
                         ? mode == MainShellNavigationMode.bottomBar
-                              ? 56
-                              : 64
+                              ? 60
+                              : 68
                         : 0,
                   ),
                 ),
@@ -233,45 +241,101 @@ class _ShellUtilityHeader extends StatelessWidget {
     return Material(
       color: colors.surface,
       child: Container(
-        height: compact ? 56 : 64,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 24),
+        height: compact ? 60 : 68,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 24),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: colors.divider)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0D17324D),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
             if (compact) ...[
-              const AppAssetIcon(
-                assetPath: AppAssets.appIcon,
-                size: 30,
-                semanticLabel: 'SmartStock',
+              Container(
+                width: 36,
+                height: 36,
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: colors.cardAlt,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: colors.divider),
+                ),
+                child: const AppAssetIcon(
+                  assetPath: AppAssets.appIcon,
+                  size: 26,
+                  semanticLabel: 'SmartStock',
+                ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 11),
             ],
             Expanded(
-              child: Text(
-                resolvedShop,
-                maxLines: compact ? 1 : 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!compact)
+                    Text(
+                      'CỬA HÀNG ĐANG CHỌN',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors.textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  Text(
+                    compact ? 'SmartStock · $resolvedShop' : resolvedShop,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
             if (!compact) ...[
-              TextButton(onPressed: onSearch, child: const Text('Tìm kiếm')),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                'Thông báo',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(color: colors.textSecondary),
+              OutlinedButton(
+                onPressed: onSearch,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(220, 40),
+                  alignment: Alignment.centerLeft,
+                  foregroundColor: colors.textMuted,
+                  backgroundColor: colors.cardAlt,
+                  side: BorderSide(color: colors.divider),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                ),
+                child: const Text('Tìm sản phẩm, đơn hàng...'),
               ),
-              const SizedBox(width: AppSpacing.md),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.cardAlt,
+                  borderRadius: BorderRadius.circular(AppRadius.control),
+                  border: Border.all(color: colors.divider),
+                ),
+                child: Text(
+                  'Thông báo',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
             ],
             if (!compact && canSell)
-              FilledButton(onPressed: onSale, child: const Text('Bán hàng')),
+              FilledButton(onPressed: onSale, child: const Text('Tạo đơn bán')),
           ],
         ),
       ),
@@ -292,27 +356,34 @@ class _DesktopSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-
     return ColoredBox(
-      color: colors.surface,
+      color: _ShellPalette.navy,
       child: SafeArea(
         right: false,
         child: SizedBox(
-          width: 216,
+          width: 252,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                padding: const EdgeInsets.fromLTRB(20, 20, 18, 18),
                 child: Row(
                   children: [
-                    const AppAssetIcon(
-                      assetPath: AppAssets.appIcon,
-                      size: 38,
-                      semanticLabel: 'SmartStock',
+                    Container(
+                      width: 42,
+                      height: 42,
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const AppAssetIcon(
+                        assetPath: AppAssets.appIcon,
+                        size: 30,
+                        semanticLabel: 'SmartStock',
+                      ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,7 +392,12 @@ class _DesktopSidebar extends StatelessWidget {
                             'SmartStock',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  color: _ShellPalette.text,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.35,
+                                ),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -331,7 +407,7 @@ class _DesktopSidebar extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: colors.textMuted),
+                                ?.copyWith(color: _ShellPalette.muted),
                           ),
                         ],
                       ),
@@ -339,31 +415,66 @@ class _DesktopSidebar extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                child: Text(
+                  'ĐIỀU HƯỚNG',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: _ShellPalette.muted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
               Expanded(
                 child: ListView.separated(
-                  padding: EdgeInsets.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   itemCount: tabs.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 2),
+                  separatorBuilder: (_, _) => const SizedBox(height: 6),
                   itemBuilder: (context, index) => _SidebarNavItem(
                     definition: tabs[index],
                     selected: index == currentIndex,
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
-                child: TextButton(
-                  onPressed: () => context.push('/settings/ai-knowledge'),
-                  style: TextButton.styleFrom(
-                    alignment: Alignment.centerLeft,
-                    foregroundColor: colors.textMuted,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 10,
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 8, 12, 14),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                decoration: BoxDecoration(
+                  color: _ShellPalette.navyRaised,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Trung tâm trợ giúp',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: _ShellPalette.text,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  child: const Text('Nguồn hướng dẫn'),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Quy trình bán hàng, kho và thuế',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _ShellPalette.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextButton(
+                      onPressed: () => context.push('/settings/ai-knowledge'),
+                      style: TextButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        foregroundColor: _ShellPalette.cyan,
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(44, 36),
+                      ),
+                      child: const Text('Quản lý nguồn hướng dẫn'),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -382,9 +493,6 @@ class _SidebarNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Semantics(
       button: true,
       selected: selected,
@@ -394,17 +502,15 @@ class _SidebarNavItem extends StatelessWidget {
         child: InkWell(
           onTap: () => context.go(definition.route),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            constraints: const BoxConstraints(minHeight: 46),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
               color: selected
-                  ? primary.withValues(alpha: 0.07)
+                  ? Colors.white.withValues(alpha: 0.12)
                   : Colors.transparent,
-              border: Border(
-                left: BorderSide(
-                  color: selected ? primary : Colors.transparent,
-                  width: 3,
-                ),
+              borderRadius: BorderRadius.circular(AppRadius.control),
+              border: Border.all(
+                color: selected ? Colors.white12 : Colors.transparent,
               ),
             ),
             alignment: Alignment.centerLeft,
@@ -413,8 +519,8 @@ class _SidebarNavItem extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: selected ? primary : colors.textSecondary,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? _ShellPalette.text : _ShellPalette.muted,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ),
@@ -432,26 +538,34 @@ class _TabletNavigationRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-
     return ColoredBox(
-      color: colors.surface,
+      color: _ShellPalette.navy,
       child: SafeArea(
         right: false,
         child: SizedBox(
-          width: 104,
+          width: 92,
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: AppAssetIcon(
-                  assetPath: AppAssets.appIcon,
-                  size: 36,
-                  semanticLabel: 'SmartStock',
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const AppAssetIcon(
+                    assetPath: AppAssets.appIcon,
+                    size: 30,
+                    semanticLabel: 'SmartStock',
+                  ),
                 ),
               ),
               Expanded(
                 child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   itemCount: tabs.length,
                   itemBuilder: (context, index) => _RailNavItem(
                     definition: tabs[index],
@@ -461,7 +575,10 @@ class _TabletNavigationRail extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () => context.push('/settings/ai-knowledge'),
-                child: const Text('Hướng dẫn', textAlign: TextAlign.center),
+                style: TextButton.styleFrom(
+                  foregroundColor: _ShellPalette.cyan,
+                ),
+                child: const Text('Trợ giúp', textAlign: TextAlign.center),
               ),
               const SizedBox(height: 8),
             ],
@@ -480,28 +597,21 @@ class _RailNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Semantics(
       button: true,
       selected: selected,
       label: definition.label,
       child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.control),
         onTap: () => context.go(definition.route),
         child: Container(
           constraints: const BoxConstraints(minHeight: 56),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           decoration: BoxDecoration(
             color: selected
-                ? primary.withValues(alpha: 0.07)
+                ? Colors.white.withValues(alpha: 0.12)
                 : Colors.transparent,
-            border: Border(
-              left: BorderSide(
-                color: selected ? primary : Colors.transparent,
-                width: 3,
-              ),
-            ),
+            borderRadius: BorderRadius.circular(AppRadius.control),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -510,8 +620,8 @@ class _RailNavItem extends StatelessWidget {
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected ? primary : colors.textSecondary,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              color: selected ? _ShellPalette.text : _ShellPalette.muted,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ),
@@ -536,9 +646,17 @@ class _MobileNavigationBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-          height: 62,
+          height: 68,
+          padding: const EdgeInsets.fromLTRB(8, 7, 8, 6),
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: colors.divider)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1417324D),
+                blurRadius: 14,
+                offset: Offset(0, -5),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -549,20 +667,19 @@ class _MobileNavigationBar extends StatelessWidget {
                     selected: index == currentIndex,
                     label: tabs[index].label,
                     child: InkWell(
+                      borderRadius: BorderRadius.circular(AppRadius.control),
                       onTap: () => context.go(tabs[index].route),
                       child: Container(
                         decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(
-                              color: index == currentIndex
-                                  ? primary
-                                  : Colors.transparent,
-                              width: 3,
-                            ),
+                          color: index == currentIndex
+                              ? primary.withValues(alpha: 0.09)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(
+                            AppRadius.control,
                           ),
                         ),
                         alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
                         child: Text(
                           tabs[index].label,
                           maxLines: 1,

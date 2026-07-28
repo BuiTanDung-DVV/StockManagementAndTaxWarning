@@ -5,13 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _kColorKey = 'brand_color';
 
 enum AppBrandColor {
-  luminaBlue('Xanh Hoàng Gia', Color(0xFF2563EB), false),
-  emeraldWealth('Lục Thịnh Vượng', Color(0xFF059669), false),
-  sunsetCopper('Đồng Hoàng Hôn', Color(0xFFEA580C), false),
-  orchidMajesty('Tím Thượng Uyển', Color(0xFF7C3AED), false),
-  crimsonRose('Đỏ Hồng Hoa', Color(0xFFDC2626), false),
-  steelSlate('Xanh Thạch Bản', Color(0xFF475569), false),
-  darkObsidian('Tối Obsidian', Color(0xFF818CF8), true);
+  luminaBlue('Xanh SmartStock', Color(0xFF1769AA), false),
+  emeraldWealth('Xanh vận hành', Color(0xFF167A5B), false),
+  sunsetCopper('Cam bán lẻ', Color(0xFFC65D18), false),
+  orchidMajesty('Tím trung tính', Color(0xFF6B5AA6), false),
+  crimsonRose('Đỏ thương hiệu', Color(0xFFB73E49), false),
+  steelSlate('Xám xanh', Color(0xFF526779), false),
+  darkObsidian('Nền tối', Color(0xFF5A9BD5), true);
 
   final String label;
   final Color color;

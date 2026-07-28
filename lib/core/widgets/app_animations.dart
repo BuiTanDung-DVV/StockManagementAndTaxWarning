@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+
+import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
 
 /// ─── Reusable Lottie-based animation widgets ───
@@ -35,12 +37,14 @@ class AppEmpty extends StatelessWidget {
   final String? subtitle;
   final double size;
   final Widget? action;
+  final String assetPath;
   const AppEmpty({
     super.key,
     required this.message,
     this.subtitle,
-    this.size = 72,
+    this.size = 56,
     this.action,
+    this.assetPath = AppAssets.appIcon,
   });
 
   @override
@@ -54,17 +58,27 @@ class AppEmpty extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Lottie.asset(
-                'assets/lottie/empty.json',
-                width: size,
-                height: size,
-                repeat: false,
+              Container(
+                width: size + 20,
+                height: size + 20,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(color: c.divider),
+                ),
+                child: AppAssetIcon(
+                  assetPath: assetPath,
+                  size: size,
+                  semanticLabel: message,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
                 message,
-                style: TextStyle(
-                  fontSize: 16,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: c.textPrimary,
                 ),
@@ -74,8 +88,7 @@ class AppEmpty extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   subtitle!,
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: c.textSecondary,
                     height: 1.45,
                   ),

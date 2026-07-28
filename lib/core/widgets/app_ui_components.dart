@@ -35,7 +35,11 @@ class AppCardContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor ?? c.card,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: borderColor ?? c.divider, width: 1),
+        border: Border.all(
+          color: borderColor ?? c.divider.withValues(alpha: 0.9),
+          width: 1,
+        ),
+        boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: child,
     );
@@ -85,7 +89,8 @@ class AppKpiCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: c.divider),
+        border: Border.all(color: c.divider.withValues(alpha: 0.9)),
+        boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,7 +103,16 @@ class AppKpiCard extends StatelessWidget {
                 child: Row(
                   children: [
                     if (iconWidget != null) ...[
-                      iconWidget,
+                      Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: iconWidget,
+                      ),
                       const SizedBox(width: 10),
                     ],
                     Expanded(
@@ -106,7 +120,7 @@ class AppKpiCard extends StatelessWidget {
                         title,
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           color: c.textSecondary,
                         ),
                         maxLines: 1,
@@ -145,7 +159,7 @@ class AppKpiCard extends StatelessWidget {
             child: Text(
               value,
               style: GoogleFonts.jetBrainsMono(
-                fontSize: 20,
+                fontSize: 21,
                 fontWeight: FontWeight.w800,
                 color: c.textPrimary,
                 letterSpacing: -0.5,
