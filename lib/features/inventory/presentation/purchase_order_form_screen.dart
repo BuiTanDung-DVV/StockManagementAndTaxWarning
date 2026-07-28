@@ -600,7 +600,10 @@ class _PurchaseOrderFormScreenState
         if (_items.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
-            child: AppEmpty(message: 'Chưa có sản phẩm nào được chọn.'),
+            child: AppEmpty(
+              visual: AppEmptyVisual.inventory,
+              message: 'Chưa có sản phẩm nào được chọn.',
+            ),
           ),
 
         ..._items.asMap().entries.map((entry) {

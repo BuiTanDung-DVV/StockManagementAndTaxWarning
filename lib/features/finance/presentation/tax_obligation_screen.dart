@@ -54,6 +54,7 @@ class TaxObligationScreen extends ConsumerWidget {
 
           if (items.isEmpty) {
             return AppEmpty(
+              visual: AppEmptyVisual.tax,
               message: 'Chưa phát sinh dữ liệu nghĩa vụ thuế',
               action: ElevatedButton.icon(
                 icon: const Icon(Icons.account_balance_rounded),

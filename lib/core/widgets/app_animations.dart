@@ -32,20 +32,44 @@ class AppLoading extends StatelessWidget {
   }
 }
 
+enum AppEmptyVisual {
+  generic,
+  inventory,
+  sales,
+  people,
+  finance,
+  document,
+  tax,
+}
+
 class AppEmpty extends StatelessWidget {
   final String message;
   final String? subtitle;
   final double size;
   final Widget? action;
-  final String assetPath;
+  final String? assetPath;
+  final AppEmptyVisual visual;
   const AppEmpty({
     super.key,
     required this.message,
     this.subtitle,
     this.size = 56,
     this.action,
-    this.assetPath = AppAssets.appIcon,
+    this.assetPath,
+    this.visual = AppEmptyVisual.generic,
   });
+
+  String get _resolvedAssetPath =>
+      assetPath ??
+      switch (visual) {
+        AppEmptyVisual.generic => AppAssets.emptyGeneric,
+        AppEmptyVisual.inventory => AppAssets.emptyInventory,
+        AppEmptyVisual.sales => AppAssets.emptySales,
+        AppEmptyVisual.people => AppAssets.emptyPeople,
+        AppEmptyVisual.finance => AppAssets.emptyFinance,
+        AppEmptyVisual.document => AppAssets.emptyDocument,
+        AppEmptyVisual.tax => AppAssets.emptyTax,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +94,7 @@ class AppEmpty extends StatelessWidget {
                   border: Border.all(color: c.divider),
                 ),
                 child: AppAssetIcon(
-                  assetPath: assetPath,
+                  assetPath: _resolvedAssetPath,
                   size: size,
                   semanticLabel: message,
                 ),

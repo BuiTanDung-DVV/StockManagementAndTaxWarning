@@ -587,6 +587,7 @@ class _CategoryDistribution extends StatelessWidget {
             data: (items) {
               if (items.isEmpty) {
                 return const AppEmpty(
+                  visual: AppEmptyVisual.inventory,
                   message: 'Chưa có dữ liệu danh mục tồn kho',
                 );
               }

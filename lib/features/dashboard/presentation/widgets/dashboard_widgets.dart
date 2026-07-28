@@ -468,6 +468,7 @@ class ComparisonBarChart extends StatelessWidget {
           border: Border.all(color: c.divider),
         ),
         child: const AppEmpty(
+          visual: AppEmptyVisual.finance,
           message: 'Chưa có dữ liệu giao dịch',
           subtitle: 'Biểu đồ sẽ xuất hiện khi có dữ liệu trong kỳ.',
         ),
@@ -3210,6 +3211,7 @@ class DashboardRecentOrdersList extends StatelessWidget {
       return const Padding(
         padding: EdgeInsets.only(top: AppSpacing.lg),
         child: AppEmpty(
+          visual: AppEmptyVisual.sales,
           message: 'Chưa có đơn hàng gần đây',
           subtitle: 'Đơn hàng mới sẽ xuất hiện tại đây sau khi bán hàng.',
         ),

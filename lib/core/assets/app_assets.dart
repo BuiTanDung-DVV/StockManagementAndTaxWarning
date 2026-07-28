@@ -18,6 +18,13 @@ abstract final class AppAssets {
   static const String settings = 'assets/icon/settings_icon.svg';
   static const String notification = 'assets/icon/notification_icon.svg';
   static const String search = 'assets/icon/search_icon.svg';
+  static const String emptyGeneric = 'assets/icon/empty_generic.svg';
+  static const String emptyInventory = 'assets/icon/empty_inventory.svg';
+  static const String emptySales = 'assets/icon/empty_sales.svg';
+  static const String emptyPeople = 'assets/icon/empty_people.svg';
+  static const String emptyFinance = 'assets/icon/empty_finance.svg';
+  static const String emptyDocument = 'assets/icon/empty_document.svg';
+  static const String emptyTax = 'assets/icon/empty_tax.svg';
 }
 
 class AppAssetIcon extends StatelessWidget {

@@ -86,6 +86,7 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
                             children: [
                               AppCardContainer(
                                 child: AppEmpty(
+                                  visual: AppEmptyVisual.people,
                                   message: _searchQuery.trim().isEmpty
                                       ? 'Chưa có nhà cung cấp'
                                       : 'Không tìm thấy nhà cung cấp phù hợp',

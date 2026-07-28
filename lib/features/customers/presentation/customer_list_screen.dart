@@ -93,6 +93,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                             children: [
                               AppCardContainer(
                                 child: AppEmpty(
+                                  visual: AppEmptyVisual.people,
                                   message: _searchQuery.trim().isEmpty
                                       ? 'Chưa có khách hàng'
                                       : 'Không tìm thấy khách hàng phù hợp',
