@@ -70,21 +70,29 @@ class MainShell extends ConsumerWidget {
     final colors = AppThemeColors.of(context);
     final shop = ref.watch(shopProvider);
     final tabs = <_NavDef>[
-      _NavDef(label: AppStrings.navHome, route: '/', prefixes: const ['/']),
+      _NavDef(
+        assetPath: AppAssets.home,
+        label: AppStrings.navHome,
+        route: '/',
+        prefixes: const ['/'],
+      ),
       if (!shop.isAllShops && shop.hasPermission('sales'))
         _NavDef(
+          assetPath: AppAssets.orders,
           label: AppStrings.navSales,
           route: '/sales',
           prefixes: const ['/sales', '/pos'],
         ),
       if (!shop.isAllShops && shop.hasPermission('inventory'))
         _NavDef(
+          assetPath: AppAssets.inventory,
           label: AppStrings.navInventory,
           route: '/inventory',
           prefixes: const ['/inventory', '/purchase-orders', '/stock', '/xnt'],
         ),
       if (!shop.isAllShops && shop.hasPermission('finance'))
         _NavDef(
+          assetPath: AppAssets.cash,
           label: AppStrings.navFinance,
           route: '/finance',
           prefixes: const [
@@ -105,6 +113,7 @@ class MainShell extends ConsumerWidget {
           ],
         ),
       _NavDef(
+        assetPath: AppAssets.settings,
         label: AppStrings.navSettings,
         route: '/settings',
         prefixes: const [
@@ -153,6 +162,7 @@ class MainShell extends ConsumerWidget {
                           delegate: GlobalSearchDelegate(),
                         );
                       },
+                      onNotifications: () => context.push('/notifications'),
                       onSale: () => context.push('/pos'),
                     ),
                   Expanded(child: child),
@@ -221,6 +231,7 @@ class _ShellUtilityHeader extends StatelessWidget {
   final String? shopName;
   final bool canSell;
   final VoidCallback onSearch;
+  final VoidCallback onNotifications;
   final VoidCallback onSale;
 
   const _ShellUtilityHeader({
@@ -228,6 +239,7 @@ class _ShellUtilityHeader extends StatelessWidget {
     required this.shopName,
     required this.canSell,
     required this.onSearch,
+    required this.onNotifications,
     required this.onSale,
   });
 
@@ -300,6 +312,14 @@ class _ShellUtilityHeader extends StatelessWidget {
                 ],
               ),
             ),
+            if (compact) ...[
+              const SizedBox(width: AppSpacing.xs),
+              _HeaderAssetButton(
+                assetPath: AppAssets.notification,
+                semanticLabel: 'Mở thông báo',
+                onPressed: onNotifications,
+              ),
+            ],
             if (!compact) ...[
               OutlinedButton(
                 onPressed: onSearch,
@@ -311,32 +331,79 @@ class _ShellUtilityHeader extends StatelessWidget {
                   side: BorderSide(color: colors.divider),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                 ),
-                child: const Text('Tìm sản phẩm, đơn hàng...'),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppAssetIcon(
+                      assetPath: AppAssets.search,
+                      size: 17,
+                      semanticLabel: 'Tìm kiếm',
+                    ),
+                    SizedBox(width: 9),
+                    Text('Tìm sản phẩm, đơn hàng...'),
+                  ],
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.cardAlt,
-                  borderRadius: BorderRadius.circular(AppRadius.control),
-                  border: Border.all(color: colors.divider),
-                ),
-                child: Text(
-                  'Thông báo',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              _HeaderAssetButton(
+                assetPath: AppAssets.notification,
+                semanticLabel: 'Mở thông báo',
+                onPressed: onNotifications,
               ),
               const SizedBox(width: AppSpacing.sm),
             ],
             if (!compact && canSell)
               FilledButton(onPressed: onSale, child: const Text('Tạo đơn bán')),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderAssetButton extends StatelessWidget {
+  final String assetPath;
+  final String semanticLabel;
+  final VoidCallback onPressed;
+
+  const _HeaderAssetButton({
+    required this.assetPath,
+    required this.semanticLabel,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Tooltip(
+        message: semanticLabel,
+        child: Material(
+          color: colors.cardAlt,
+          borderRadius: BorderRadius.circular(AppRadius.control),
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(AppRadius.control),
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                border: Border.all(color: colors.divider),
+              ),
+              child: AppAssetIcon(
+                assetPath: assetPath,
+                size: 19,
+                color: primary,
+                semanticLabel: semanticLabel,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -514,14 +581,29 @@ class _SidebarNavItem extends StatelessWidget {
               ),
             ),
             alignment: Alignment.centerLeft,
-            child: Text(
-              definition.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: selected ? _ShellPalette.text : _ShellPalette.muted,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
+            child: Row(
+              children: [
+                AppAssetIcon(
+                  assetPath: definition.assetPath,
+                  size: 20,
+                  color: selected ? _ShellPalette.cyan : _ShellPalette.muted,
+                  semanticLabel: definition.label,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    definition.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: selected
+                          ? _ShellPalette.text
+                          : _ShellPalette.muted,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -605,7 +687,7 @@ class _RailNavItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.control),
         onTap: () => context.go(definition.route),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 56),
+          constraints: const BoxConstraints(minHeight: 64),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           decoration: BoxDecoration(
             color: selected
@@ -614,15 +696,27 @@ class _RailNavItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.control),
           ),
           alignment: Alignment.center,
-          child: Text(
-            definition.label,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected ? _ShellPalette.text : _ShellPalette.muted,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppAssetIcon(
+                assetPath: definition.assetPath,
+                size: 20,
+                color: selected ? _ShellPalette.cyan : _ShellPalette.muted,
+                semanticLabel: definition.label,
+              ),
+              const SizedBox(height: 5),
+              Text(
+                definition.label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: selected ? _ShellPalette.text : _ShellPalette.muted,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -679,21 +773,36 @@ class _MobileNavigationBar extends StatelessWidget {
                           ),
                         ),
                         alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                        child: Text(
-                          tabs[index].label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: index == currentIndex
-                                    ? primary
-                                    : colors.textMuted,
-                                fontWeight: index == currentIndex
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                              ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppAssetIcon(
+                              assetPath: tabs[index].assetPath,
+                              size: 19,
+                              color: index == currentIndex
+                                  ? primary
+                                  : colors.textMuted,
+                              semanticLabel: tabs[index].label,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              tabs[index].label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    fontSize: 10,
+                                    color: index == currentIndex
+                                        ? primary
+                                        : colors.textMuted,
+                                    fontWeight: index == currentIndex
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -708,11 +817,13 @@ class _MobileNavigationBar extends StatelessWidget {
 }
 
 class _NavDef {
+  final String assetPath;
   final String label;
   final String route;
   final List<String> prefixes;
 
   const _NavDef({
+    required this.assetPath,
     required this.label,
     required this.route,
     required this.prefixes,

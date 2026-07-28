@@ -344,9 +344,19 @@ class AppDataTable<T> extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Container(
+            height: 3,
+            decoration: BoxDecoration(
+              color: iconColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.card - 1),
+              ),
+            ),
+          ),
           // Section Title Header
-          Padding(
-            padding: const EdgeInsets.all(18),
+          Container(
+            color: c.cardAlt.withValues(alpha: 0.34),
+            padding: const EdgeInsets.fromLTRB(18, 15, 18, 14),
             child: AppSectionHeader(
               title: title,
               icon: icon,
@@ -366,10 +376,10 @@ class AppDataTable<T> extends StatelessWidget {
                 children: [
                   // Table Columns Fill Header
                   Container(
-                    color: c.cardAlt.withValues(alpha: 0.5),
+                    color: c.cardAlt,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
-                      vertical: 12,
+                      vertical: 13,
                     ),
                     child: Row(
                       children: columns.map((col) {
@@ -420,7 +430,7 @@ class AppDataTable<T> extends StatelessWidget {
                         final item = items[index];
                         return Container(
                           color: index % 2 == 1
-                              ? c.cardAlt.withValues(alpha: 0.2)
+                              ? c.cardAlt.withValues(alpha: 0.42)
                               : Colors.transparent,
                           child: rowBuilder(context, item, index),
                         );

@@ -9,6 +9,7 @@ import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/presentation/widgets/join_shop_dialog.dart';
 import '../../finance/providers/finance_provider.dart';
@@ -52,6 +53,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final colors = AppThemeColors.of(context);
     final shopState = ref.watch(shopProvider);
     final hasFinance = shopState.isOwner || shopState.hasPermission('finance');
+    final hasSalesInsights =
+        shopState.isOwner ||
+        shopState.hasPermission('sales') ||
+        shopState.hasPermission('dashboard');
     final hasInventory =
         shopState.isOwner || shopState.hasPermission('inventory');
     final filter = ref.watch(_dashboardTimeFilterProvider);
@@ -85,6 +90,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final recentTransactionsAsync = hasFinance && shopState.userShops.isNotEmpty
         ? ref.watch(recentTransactionsProvider)
         : null;
+    final topProductsAsync = hasSalesInsights && shopState.userShops.isNotEmpty
+        ? ref.watch(
+            topProductsProvider((
+              from: periods.currentFrom,
+              to: periods.currentTo,
+            )),
+          )
+        : null;
 
     if (shopState.userShops.isEmpty) {
       return Scaffold(
@@ -104,6 +117,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         top: false,
         child: RefreshIndicator(
           onRefresh: () async {
+            if (hasSalesInsights) {
+              ref.invalidate(topProductsProvider);
+            }
             if (hasFinance) {
               ref.invalidate(salesSummaryProvider);
               ref.invalidate(cashSummaryProvider);
@@ -179,6 +195,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     currentSales: salesAsync,
                     comparisonSales: comparisonAsync,
                     recentTransactions: recentTransactionsAsync,
+                    topProducts: topProductsAsync,
                     currentLabel: periods.currentLabel,
                     previousLabel: periods.previousLabel,
                     filter: filter,
@@ -477,6 +494,7 @@ class _DashboardWorkspace extends StatelessWidget {
   final AsyncValue<Map<String, dynamic>>? currentSales;
   final AsyncValue<Map<String, dynamic>>? comparisonSales;
   final AsyncValue<List<dynamic>>? recentTransactions;
+  final AsyncValue<List<dynamic>>? topProducts;
   final String currentLabel;
   final String previousLabel;
   final String filter;
@@ -486,6 +504,7 @@ class _DashboardWorkspace extends StatelessWidget {
     required this.currentSales,
     required this.comparisonSales,
     required this.recentTransactions,
+    required this.topProducts,
     required this.currentLabel,
     required this.previousLabel,
     required this.filter,
@@ -503,6 +522,26 @@ class _DashboardWorkspace extends StatelessWidget {
       onFilterChanged: onFilterChanged,
     );
     final priorities = const DashboardPriorityList();
+    final products =
+        topProducts?.when(
+          data: (items) =>
+              _TopProductsRevenueChart(items: items, period: currentLabel),
+          loading: () => const Padding(
+            padding: EdgeInsets.only(top: AppSpacing.lg),
+            child: AppShimmer(
+              child: ShimmerBox(
+                width: double.infinity,
+                height: 320,
+                radius: AppRadius.card,
+              ),
+            ),
+          ),
+          error: (_, _) => const Padding(
+            padding: EdgeInsets.only(top: AppSpacing.lg),
+            child: AppInlineError(message: 'Không thể tải sản phẩm bán chạy.'),
+          ),
+        ) ??
+        const SizedBox.shrink();
     final orders =
         recentTransactions?.when(
           data: (items) => DashboardRecentOrdersList(items),
@@ -530,6 +569,7 @@ class _DashboardWorkspace extends StatelessWidget {
               chart,
               const SizedBox(height: AppSpacing.lg),
               priorities,
+              products,
               orders,
             ],
           );
@@ -546,10 +586,79 @@ class _DashboardWorkspace extends StatelessWidget {
                 const SizedBox(width: 330, child: DashboardPriorityList()),
               ],
             ),
+            products,
             orders,
           ],
         );
       },
+    );
+  }
+}
+
+class _TopProductsRevenueChart extends StatelessWidget {
+  final List<dynamic> items;
+  final String period;
+
+  const _TopProductsRevenueChart({required this.items, required this.period});
+
+  String _axisLabel(String value) {
+    final normalized = value.trim();
+    if (normalized.length <= 11) return normalized;
+    return '${normalized.substring(0, 10)}…';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    final products = items.take(5).toList();
+    final names = products
+        .map((item) => item['name']?.toString() ?? 'Chưa rõ')
+        .toList();
+    final values = products
+        .map(
+          (item) =>
+              num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0,
+        )
+        .toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      child: ChartCard(
+        title: 'Sản phẩm bán chạy theo doanh thu',
+        height: 320,
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(
+            color: colors.cardAlt,
+            borderRadius: BorderRadius.circular(AppRadius.control),
+            border: Border.all(color: colors.divider),
+          ),
+          child: Text(
+            period,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        child: products.isEmpty
+            ? const EmptyChartPlaceholder(
+                message: 'Chưa có doanh thu sản phẩm trong kỳ này.',
+              )
+            : MiniBarChart(
+                values: values,
+                labels: names.map(_axisLabel).toList(),
+                tooltipLabels: names,
+                barColors: [
+                  primary,
+                  primary.withValues(alpha: 0.88),
+                  primary.withValues(alpha: 0.76),
+                  primary.withValues(alpha: 0.64),
+                  primary.withValues(alpha: 0.52),
+                ],
+              ),
+      ),
     );
   }
 }

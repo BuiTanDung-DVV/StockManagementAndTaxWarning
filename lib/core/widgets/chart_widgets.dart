@@ -493,6 +493,7 @@ class DonutSegment {
 class MiniBarChart extends StatelessWidget {
   final List<double> values;
   final List<String>? labels;
+  final List<String>? tooltipLabels;
   final Color? barColor;
   final List<Color>? barColors;
 
@@ -500,6 +501,7 @@ class MiniBarChart extends StatelessWidget {
     super.key,
     required this.values,
     this.labels,
+    this.tooltipLabels,
     this.barColor,
     this.barColors,
   });
@@ -529,8 +531,12 @@ class MiniBarChart extends StatelessWidget {
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (group) => c.surface,
             getTooltipItem: (group, gIdx, rod, rIdx) {
+              final label =
+                  tooltipLabels != null && group.x < tooltipLabels!.length
+                  ? '${tooltipLabels![group.x]}\n'
+                  : '';
               return BarTooltipItem(
-                _compactFmt.format(rod.toY),
+                '$label${_compactFmt.format(rod.toY)}',
                 AppTheme.tabularStyle(
                   context,
                   color: theme.colorScheme.primary,

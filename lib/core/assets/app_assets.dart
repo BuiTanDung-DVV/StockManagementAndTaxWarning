@@ -14,6 +14,10 @@ abstract final class AppAssets {
   static const String profit = 'assets/icon/profit_icon.svg';
   static const String cash = 'assets/icon/cash_icon.svg';
   static const String tax = 'assets/icon/tax_icon.svg';
+  static const String home = 'assets/icon/home_icon.svg';
+  static const String settings = 'assets/icon/settings_icon.svg';
+  static const String notification = 'assets/icon/notification_icon.svg';
+  static const String search = 'assets/icon/search_icon.svg';
 }
 
 class AppAssetIcon extends StatelessWidget {
