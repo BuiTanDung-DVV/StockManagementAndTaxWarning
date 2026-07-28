@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 /// bộ nhận diện của ứng dụng.
 abstract final class AppAssets {
   static const String appIcon = 'assets/icon/app_icon.png';
+  static const String aiMascot = 'assets/icon/ai_mascot.png';
   static const String revenue = 'assets/icon/revenue_icon.svg';
   static const String orders = 'assets/icon/orders_icon.svg';
   static const String inventory = 'assets/icon/inventory_icon.svg';

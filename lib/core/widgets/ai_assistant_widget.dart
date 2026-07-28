@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/settings/providers/ai_knowledge_provider.dart';
 import '../assets/app_assets.dart';
@@ -21,15 +24,25 @@ final aiAssistantOpenProvider = NotifierProvider<AiAssistantOpenNotifier, bool>(
 
 class AiAssistantWidget extends ConsumerStatefulWidget {
   final bool showLauncher;
+  final double topSafeInset;
 
-  const AiAssistantWidget({super.key, this.showLauncher = true});
+  const AiAssistantWidget({
+    super.key,
+    this.showLauncher = true,
+    this.topSafeInset = 0,
+  });
 
   @override
   ConsumerState<AiAssistantWidget> createState() => _AiAssistantWidgetState();
 }
 
 class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
+  static const _launcherXKey = 'ai_assistant_launcher_x';
+  static const _launcherYKey = 'ai_assistant_launcher_y';
+
   final TextEditingController _queryController = TextEditingController();
+  Offset? _normalizedLauncherPosition;
+  bool _isDraggingLauncher = false;
   final List<_AssistantMessage> _messages = const [
     _AssistantMessage(
       fromUser: false,
@@ -45,12 +58,69 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _restoreLauncherPosition();
+  }
+
+  @override
   void dispose() {
     _queryController.dispose();
     super.dispose();
   }
 
   void _close() => ref.read(aiAssistantOpenProvider.notifier).close();
+
+  Future<void> _restoreLauncherPosition() async {
+    final preferences = await SharedPreferences.getInstance();
+    final x = preferences.getDouble(_launcherXKey);
+    final y = preferences.getDouble(_launcherYKey);
+    if (!mounted || x == null || y == null) return;
+
+    setState(() {
+      _normalizedLauncherPosition = Offset(x.clamp(0, 1), y.clamp(0, 1));
+    });
+  }
+
+  Future<void> _saveLauncherPosition() async {
+    final position = _normalizedLauncherPosition;
+    if (position == null) return;
+
+    final preferences = await SharedPreferences.getInstance();
+    await Future.wait([
+      preferences.setDouble(_launcherXKey, position.dx),
+      preferences.setDouble(_launcherYKey, position.dy),
+    ]);
+  }
+
+  Offset _resolveLauncherPosition(Rect bounds) {
+    final normalized = _normalizedLauncherPosition ?? const Offset(1, 1);
+    return Offset(
+      bounds.left + (bounds.width * normalized.dx),
+      bounds.top + (bounds.height * normalized.dy),
+    );
+  }
+
+  Offset _normalizeLauncherPosition(Offset position, Rect bounds) {
+    final x = bounds.width == 0
+        ? 0.0
+        : (position.dx - bounds.left) / bounds.width;
+    final y = bounds.height == 0
+        ? 0.0
+        : (position.dy - bounds.top) / bounds.height;
+    return Offset(x.clamp(0, 1), y.clamp(0, 1));
+  }
+
+  void _moveLauncher(DragUpdateDetails details, Rect bounds) {
+    final current = _resolveLauncherPosition(bounds);
+    final next = Offset(
+      (current.dx + details.delta.dx).clamp(bounds.left, bounds.right),
+      (current.dy + details.delta.dy).clamp(bounds.top, bounds.bottom),
+    );
+    setState(() {
+      _normalizedLauncherPosition = _normalizeLauncherPosition(next, bounds);
+    });
+  }
 
   void _handleSend(String question) {
     final query = question.trim();
@@ -111,66 +181,108 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
     final isOpen = ref.watch(aiAssistantOpenProvider);
     final media = MediaQuery.of(context);
     final isMobile = media.size.width < 700;
-    final launcherBottom = isMobile ? 76.0 + media.padding.bottom : 16.0;
 
-    return IgnorePointer(
-      ignoring: !isOpen && !widget.showLauncher,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (isOpen)
-            if (isMobile)
-              Positioned.fill(
-                child: Material(
-                  color: Colors.black.withValues(alpha: 0.22),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      child: _AssistantPanel(
-                        messages: _messages,
-                        quickQuestions: _quickQuestions,
-                        queryController: _queryController,
-                        onClose: _close,
-                        onManageSources: () {
-                          _close();
-                          context.push('/settings/ai-knowledge');
-                        },
-                        onSend: _handleSend,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final launcherSize = Size(isMobile ? 68 : 144, 68);
+        const margin = 12.0;
+        final minimumTop = math.min(
+          widget.topSafeInset + margin,
+          math.max(
+            margin,
+            constraints.maxHeight - launcherSize.height - margin,
+          ),
+        );
+        final maximumLeft = math.max(
+          margin,
+          constraints.maxWidth - launcherSize.width - margin,
+        );
+        final maximumTop = math.max(
+          minimumTop,
+          constraints.maxHeight - launcherSize.height - margin,
+        );
+        final launcherBounds = Rect.fromLTRB(
+          margin,
+          minimumTop,
+          maximumLeft,
+          maximumTop,
+        );
+        final launcherPosition = _resolveLauncherPosition(launcherBounds);
+
+        return IgnorePointer(
+          ignoring: !isOpen && !widget.showLauncher,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (isOpen)
+                if (isMobile)
+                  Positioned.fill(
+                    child: Material(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          child: _AssistantPanel(
+                            messages: _messages,
+                            quickQuestions: _quickQuestions,
+                            queryController: _queryController,
+                            onClose: _close,
+                            onManageSources: () {
+                              _close();
+                              context.push('/settings/ai-knowledge');
+                            },
+                            onSend: _handleSend,
+                          ),
+                        ),
                       ),
+                    ),
+                  )
+                else
+                  Positioned(
+                    top: math.max(80, widget.topSafeInset + 16),
+                    right: 16,
+                    bottom: 16,
+                    width: 408,
+                    child: _AssistantPanel(
+                      messages: _messages,
+                      quickQuestions: _quickQuestions,
+                      queryController: _queryController,
+                      onClose: _close,
+                      onManageSources: () {
+                        _close();
+                        context.push('/settings/ai-knowledge');
+                      },
+                      onSend: _handleSend,
+                    ),
+                  ),
+              if (widget.showLauncher && !isOpen)
+                Positioned(
+                  left: launcherPosition.dx,
+                  top: launcherPosition.dy,
+                  width: launcherSize.width,
+                  height: launcherSize.height,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () =>
+                        ref.read(aiAssistantOpenProvider.notifier).open(),
+                    onPanStart: (_) =>
+                        setState(() => _isDraggingLauncher = true),
+                    onPanUpdate: (details) =>
+                        _moveLauncher(details, launcherBounds),
+                    onPanEnd: (_) {
+                      setState(() => _isDraggingLauncher = false);
+                      _saveLauncherPosition();
+                    },
+                    child: _AssistantLauncher(
+                      compact: isMobile,
+                      dragging: _isDraggingLauncher,
                     ),
                   ),
                 ),
-              )
-            else
-              Positioned(
-                top: 80,
-                right: 16,
-                bottom: widget.showLauncher ? 76 : 16,
-                width: 408,
-                child: _AssistantPanel(
-                  messages: _messages,
-                  quickQuestions: _quickQuestions,
-                  queryController: _queryController,
-                  onClose: _close,
-                  onManageSources: () {
-                    _close();
-                    context.push('/settings/ai-knowledge');
-                  },
-                  onSend: _handleSend,
-                ),
-              ),
-          if (widget.showLauncher && !isOpen)
-            Positioned(
-              right: 16,
-              bottom: launcherBottom,
-              child: _AssistantLauncher(
-                compact: isMobile,
-                onPressed: () =>
-                    ref.read(aiAssistantOpenProvider.notifier).open(),
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -213,7 +325,7 @@ class _AssistantPanel extends StatelessWidget {
               child: Row(
                 children: [
                   const AppAssetIcon(
-                    assetPath: AppAssets.appIcon,
+                    assetPath: AppAssets.aiMascot,
                     size: 30,
                     semanticLabel: 'Trợ giúp nghiệp vụ',
                   ),
@@ -378,38 +490,83 @@ class _MessageBlock extends StatelessWidget {
 
 class _AssistantLauncher extends StatelessWidget {
   final bool compact;
-  final VoidCallback onPressed;
+  final bool dragging;
 
-  const _AssistantLauncher({required this.compact, required this.onPressed});
+  const _AssistantLauncher({required this.compact, required this.dragging});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
 
-    return Material(
-      color: colors.surface,
-      elevation: 4,
-      borderRadius: BorderRadius.circular(AppRadius.control),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppRadius.control),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 46),
-          padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 14),
-          decoration: BoxDecoration(
-            border: Border.all(color: colors.divider),
-            borderRadius: BorderRadius.circular(AppRadius.control),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const AppAssetIcon(
-                assetPath: AppAssets.appIcon,
-                size: 24,
-                semanticLabel: 'Hỏi AI',
+    return Semantics(
+      button: true,
+      label: 'Hỏi AI. Có thể kéo để đổi vị trí.',
+      child: Tooltip(
+        message: 'Kéo để đổi vị trí • Nhấn để hỏi AI',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.move,
+          child: AnimatedScale(
+            scale: dragging ? 1.04 : 1,
+            duration: const Duration(milliseconds: 140),
+            child: Material(
+              color: colors.surface,
+              elevation: dragging ? 12 : 8,
+              shadowColor: primary.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(22),
+              clipBehavior: Clip.antiAlias,
+              child: Container(
+                padding: EdgeInsets.fromLTRB(
+                  compact ? 8 : 7,
+                  7,
+                  compact ? 8 : 12,
+                  7,
+                ),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.04),
+                  border: Border.all(
+                    color: primary.withValues(alpha: dragging ? 0.5 : 0.28),
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AppAssetIcon(
+                      assetPath: AppAssets.aiMascot,
+                      size: compact ? 48 : 52,
+                      semanticLabel: 'Stocky, trợ lý SmartStock',
+                    ),
+                    if (!compact) ...[
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hỏi AI',
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    color: colors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                            Text(
+                              'Kéo để đặt vị trí',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: colors.textMuted),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-              if (!compact) ...[const SizedBox(width: 8), const Text('Hỏi AI')],
-            ],
+            ),
           ),
         ),
       ),
