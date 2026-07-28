@@ -90,25 +90,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return Scaffold(
         backgroundColor: colors.bg,
         body: SafeArea(
-          child: AppEmpty(
-            message: 'Chưa có cửa hàng',
-            subtitle:
-                'Tạo cửa hàng mới hoặc gửi yêu cầu gia nhập để bắt đầu quản lý.',
-            action: Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              alignment: WrapAlignment.center,
-              children: [
-                FilledButton(
-                  onPressed: () => _showJoinShopDialog(context),
-                  child: const Text('Tìm và xin gia nhập'),
-                ),
-                OutlinedButton(
-                  onPressed: () => ref.invalidate(shopProvider),
-                  child: const Text('Tải lại'),
-                ),
-              ],
-            ),
+          child: _NoShopWorkspace(
+            onJoin: () => _showJoinShopDialog(context),
+            onReload: () => ref.invalidate(shopProvider),
           ),
         ),
       );
@@ -260,6 +244,232 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         color: Theme.of(context).colorScheme.primary,
       ),
     ];
+  }
+}
+
+class _NoShopWorkspace extends StatelessWidget {
+  final VoidCallback onJoin;
+  final VoidCallback onReload;
+
+  const _NoShopWorkspace({required this.onJoin, required this.onReload});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return SingleChildScrollView(
+      child: AppResponsiveContent(
+        maxWidth: 1080,
+        verticalPadding: AppSpacing.xl,
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(AppRadius.dialog),
+            border: Border.all(color: colors.divider),
+            boxShadow: const [AppTheme.diffusionShadow],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 760;
+              final intro = Padding(
+                padding: EdgeInsets.all(compact ? 24 : 40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: primary.withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: primary.withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: const AppAssetIcon(
+                        assetPath: AppAssets.appIcon,
+                        size: 40,
+                        semanticLabel: 'SmartStock',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'Chưa có cửa hàng',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: primary,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Bắt đầu không gian quản lý',
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.6,
+                          ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Tài khoản của bạn chưa thuộc cửa hàng nào. Gửi yêu cầu gia nhập để sử dụng bán hàng, kho, công nợ và báo cáo thuế.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: colors.textSecondary,
+                        height: 1.55,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        FilledButton(
+                          onPressed: onJoin,
+                          child: const Text('Tìm cửa hàng'),
+                        ),
+                        OutlinedButton(
+                          onPressed: onReload,
+                          child: const Text('Kiểm tra lại'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+
+              final checklist = Container(
+                color: colors.cardAlt,
+                padding: EdgeInsets.all(compact ? 24 : 36),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quy trình kích hoạt',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const _ActivationStep(
+                      number: '01',
+                      title: 'Tìm đúng cửa hàng',
+                      description:
+                          'Tra cứu theo tên hoặc mã được chủ cửa hàng cung cấp.',
+                    ),
+                    const _ActivationStep(
+                      number: '02',
+                      title: 'Gửi yêu cầu gia nhập',
+                      description:
+                          'Chủ cửa hàng kiểm tra và cấp vai trò phù hợp.',
+                    ),
+                    const _ActivationStep(
+                      number: '03',
+                      title: 'Bắt đầu vận hành',
+                      description:
+                          'Dữ liệu và chức năng hiển thị theo quyền được cấp.',
+                      showDivider: false,
+                    ),
+                  ],
+                ),
+              );
+
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [intro, checklist],
+                );
+              }
+
+              return IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(flex: 6, child: intro),
+                    Expanded(flex: 4, child: checklist),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivationStep extends StatelessWidget {
+  final String number;
+  final String title;
+  final String description;
+  final bool showDivider;
+
+  const _ActivationStep({
+    required this.number,
+    required this.title,
+    required this.description,
+    this.showDivider = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            number,
+            style: AppTheme.tabularStyle(
+              context,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: primary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.only(bottom: showDivider ? AppSpacing.md : 0),
+              decoration: BoxDecoration(
+                border: showDivider
+                    ? Border(bottom: BorderSide(color: colors.divider))
+                    : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                      height: 1.45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -436,6 +646,7 @@ class _DashboardMetricStrip extends StatelessWidget {
               color: colors.surface,
               border: Border.all(color: colors.divider),
               borderRadius: BorderRadius.circular(AppRadius.card),
+              boxShadow: const [AppTheme.diffusionShadow],
             ),
             child: Column(
               children: [
@@ -464,6 +675,7 @@ class _DashboardMetricStrip extends StatelessWidget {
             color: colors.surface,
             border: Border.all(color: colors.divider),
             borderRadius: BorderRadius.circular(AppRadius.card),
+            boxShadow: const [AppTheme.diffusionShadow],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,

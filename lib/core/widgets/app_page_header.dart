@@ -41,11 +41,11 @@ class AppPageHeader extends StatelessWidget {
         ],
         Text(
           title,
-          style: textTheme.headlineSmall?.copyWith(
+          style: textTheme.headlineMedium?.copyWith(
             color: colors.textPrimary,
             fontWeight: FontWeight.w700,
-            letterSpacing: -0.35,
-            height: 1.2,
+            letterSpacing: -0.55,
+            height: 1.15,
           ),
         ),
         if (subtitle != null) ...[
@@ -61,8 +61,8 @@ class AppPageHeader extends StatelessWidget {
       ],
     );
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+    return Container(
+      padding: const EdgeInsets.only(top: AppSpacing.xs, bottom: AppSpacing.lg),
       child: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 600 && action != null) {

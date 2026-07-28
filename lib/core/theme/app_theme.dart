@@ -33,32 +33,32 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
   static AppThemeColors of(BuildContext context) =>
       Theme.of(context).extension<AppThemeColors>()!;
 
-  // ── High Contrast Dark Palette (Deep Midnight FinTech) ──
+  // Deep navy palette for long operational sessions.
   static const dark = AppThemeColors(
-    bg: Color(0xFF0E1420),
-    surface: Color(0xFF141C29),
-    card: Color(0xFF182230),
-    cardAlt: Color(0xFF202B3B),
+    bg: Color(0xFF0B1420),
+    surface: Color(0xFF111D2B),
+    card: Color(0xFF172536),
+    cardAlt: Color(0xFF1E3044),
     textPrimary: Color(0xFFF8FAFC),
-    textSecondary: Color(0xFFCBD5E1),
-    textMuted: Color(0xFF94A3B8),
-    divider: Color(0xFF2C394B),
-    inputFill: Color(0xFF141C29),
-    inputBorder: Color(0xFF3A485B),
+    textSecondary: Color(0xFFD0DAE6),
+    textMuted: Color(0xFF91A3B8),
+    divider: Color(0xFF2A3C50),
+    inputFill: Color(0xFF101C29),
+    inputBorder: Color(0xFF3B5067),
   );
 
-  // ── High Contrast Light Palette (Crisp Porcelain FinTech) ──
+  // Cool neutral palette used by established retail and finance products.
   static const light = AppThemeColors(
-    bg: Color(0xFFF6F8FB),
+    bg: Color(0xFFF2F5F8),
     surface: Color(0xFFFFFFFF),
     card: Color(0xFFFFFFFF),
-    cardAlt: Color(0xFFF1F4F8),
-    textPrimary: Color(0xFF101828),
-    textSecondary: Color(0xFF475467),
-    textMuted: Color(0xFF667085),
-    divider: Color(0xFFDDE2EA),
+    cardAlt: Color(0xFFF7F9FB),
+    textPrimary: Color(0xFF172B3A),
+    textSecondary: Color(0xFF435667),
+    textMuted: Color(0xFF718295),
+    divider: Color(0xFFDFE6ED),
     inputFill: Color(0xFFFFFFFF),
-    inputBorder: Color(0xFFD0D5DD),
+    inputBorder: Color(0xFFCBD6E0),
   );
 
   static AppThemeColors createLight(Color primary) => light;
@@ -111,9 +111,9 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 // ─────────────────────────────────────────────
 
 class AppColors {
-  static Color primary = const Color(0xFF155EEF);
-  static Color primaryLight = const Color(0xFF2970FF);
-  static Color primaryDark = const Color(0xFF004EEB);
+  static Color primary = const Color(0xFF1769AA);
+  static Color primaryLight = const Color(0xFF2E83C4);
+  static Color primaryDark = const Color(0xFF0D4F82);
 
   // Semantic
   static const success = Color(0xFF10B981); // Emerald 500
@@ -156,7 +156,7 @@ abstract final class AppBreakpoints {
 
 abstract final class AppRadius {
   static const double control = 8;
-  static const double card = 10;
+  static const double card = 12;
   static const double dialog = 16;
 }
 
@@ -176,10 +176,10 @@ class AppTheme {
   static const double _inputRadius = AppRadius.control;
 
   static const diffusionShadow = BoxShadow(
-    color: Color(0x0F101828),
-    blurRadius: 12,
-    offset: Offset(0, 4),
-    spreadRadius: -4,
+    color: Color(0x1A17324D),
+    blurRadius: 20,
+    offset: Offset(0, 8),
+    spreadRadius: -12,
   );
 
   static TextStyle tabularStyle(
@@ -316,10 +316,12 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colors.card,
-        elevation: 0,
+        elevation: 1,
+        shadowColor: const Color(0x2417324D),
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_cardRadius),
-          side: BorderSide(color: colors.divider, width: 1),
+          side: BorderSide(color: colors.divider.withValues(alpha: 0.9)),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -331,7 +333,7 @@ class AppTheme {
         elevation: 0, // No shadow
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 64,
+        height: 68,
         elevation: 0,
         backgroundColor: colors.surface,
         surfaceTintColor: Colors.transparent,
@@ -376,6 +378,10 @@ class AppTheme {
           borderSide: BorderSide(color: primaryLight, width: 2),
         ),
         hintStyle: TextStyle(color: colors.textMuted),
+        labelStyle: TextStyle(
+          color: colors.textSecondary,
+          fontWeight: FontWeight.w500,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
@@ -463,11 +469,41 @@ class AppTheme {
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: colors.card,
-        elevation: 0,
+        elevation: 8,
+        shadowColor: const Color(0x2617324D),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.dialog),
           side: BorderSide(color: colors.divider, width: 1),
         ),
+      ),
+      dataTableTheme: DataTableThemeData(
+        headingRowColor: WidgetStatePropertyAll(colors.cardAlt),
+        headingTextStyle: bodyTextTheme.labelSmall?.copyWith(
+          color: colors.textSecondary,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.35,
+        ),
+        dataTextStyle: bodyTextTheme.bodyMedium?.copyWith(
+          color: colors.textPrimary,
+        ),
+        dividerThickness: 1,
+        horizontalMargin: 18,
+        columnSpacing: 24,
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: const WidgetStatePropertyAll(6),
+        radius: const Radius.circular(6),
+        thumbColor: WidgetStatePropertyAll(
+          colors.textMuted.withValues(alpha: 0.35),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: colors.textPrimary,
+          borderRadius: BorderRadius.circular(AppRadius.control),
+        ),
+        textStyle: bodyTextTheme.bodySmall?.copyWith(color: colors.bg),
+        waitDuration: const Duration(milliseconds: 450),
       ),
     );
   }
