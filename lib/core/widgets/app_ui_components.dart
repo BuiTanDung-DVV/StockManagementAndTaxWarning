@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hugeicons/hugeicons.dart';
 
+import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
 import 'chart_widgets.dart';
 
@@ -24,27 +23,19 @@ class AppCardContainer extends StatelessWidget {
     this.margin,
     this.borderColor,
     this.backgroundColor,
-    this.borderRadius = 20,
+    this.borderRadius = AppRadius.card,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
         color: backgroundColor ?? c.card,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color:
-              borderColor ??
-              (isDark ? c.divider : c.divider.withValues(alpha: 0.8)),
-          width: 1.5,
-        ),
-        boxShadow: const [AppTheme.diffusionShadow],
+        border: Border.all(color: borderColor ?? c.divider, width: 1),
       ),
       child: child,
     );
@@ -79,64 +70,22 @@ class AppKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    Widget iconWidget;
-    if (assetPath != null && assetPath!.endsWith('.svg')) {
-      iconWidget = SvgPicture.asset(
-        assetPath!,
-        width: 18,
-        height: 18,
-        colorFilter: ColorFilter.mode(
-          isHero ? Colors.white : color,
-          BlendMode.srcIn,
-        ),
-      );
-    } else if (icon is IconData) {
-      iconWidget = Icon(
-        icon as IconData,
-        size: 18,
-        color: isHero ? Colors.white : color,
-      );
-    } else if (icon != null) {
-      iconWidget = HugeIcon(
-        icon: icon,
-        size: 18,
-        color: isHero ? Colors.white : color,
-      );
-    } else {
-      iconWidget = Icon(
-        Icons.analytics_rounded,
-        size: 18,
-        color: isHero ? Colors.white : color,
-      );
-    }
+    final iconWidget = assetPath == null
+        ? null
+        : AppAssetIcon(
+            assetPath: assetPath!,
+            size: 19,
+            color: color,
+            semanticLabel: title,
+          );
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
       decoration: BoxDecoration(
-        color: isHero ? null : c.card,
-        gradient: isHero
-            ? LinearGradient(
-                colors: [color, color.withAlpha(220)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isHero
-              ? Colors.white.withValues(alpha: 0.2)
-              : color.withValues(alpha: isDark ? 0.35 : 0.25),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: isHero ? 0.3 : 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: c.card,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,27 +97,17 @@ class AppKpiCard extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isHero
-                            ? Colors.white.withValues(alpha: 0.2)
-                            : color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: color.withValues(alpha: 0.3)),
-                      ),
-                      child: iconWidget,
-                    ),
-                    const SizedBox(width: 10),
+                    if (iconWidget != null) ...[
+                      iconWidget,
+                      const SizedBox(width: 10),
+                    ],
                     Expanded(
                       child: Text(
                         title,
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: isHero
-                              ? Colors.white.withValues(alpha: 0.9)
-                              : c.textSecondary,
+                          color: c.textSecondary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -184,22 +123,16 @@ class AppKpiCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: isHero
-                        ? Colors.white.withValues(alpha: 0.25)
-                        : color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isHero
-                          ? Colors.white
-                          : color.withValues(alpha: 0.4),
-                    ),
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: color.withValues(alpha: 0.25)),
                   ),
                   child: Text(
                     badgeText!,
                     style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
-                      color: isHero ? Colors.white : color,
+                      color: color,
                     ),
                   ),
                 ),
@@ -214,7 +147,7 @@ class AppKpiCard extends StatelessWidget {
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: isHero ? Colors.white : c.textPrimary,
+                color: c.textPrimary,
                 letterSpacing: -0.5,
                 height: 1.1,
                 fontFeatures: const [FontFeature.tabularFigures()],
@@ -224,11 +157,7 @@ class AppKpiCard extends StatelessWidget {
           ),
           if (sparklineData != null && sparklineData!.isNotEmpty) ...[
             const SizedBox(height: 8),
-            CompactSparkline(
-              values: sparklineData!,
-              color: isHero ? Colors.white : color,
-              height: 28,
-            ),
+            CompactSparkline(values: sparklineData!, color: color, height: 28),
           ],
         ],
       ),
@@ -266,19 +195,15 @@ class AppStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 1),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.24), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-          ],
           Text(
             label,
             style: GoogleFonts.inter(
@@ -299,13 +224,15 @@ class AppStatusBadge extends StatelessWidget {
 class AppSectionHeader extends StatelessWidget {
   final String title;
   final dynamic icon;
+  final String? assetPath;
   final Color iconColor;
   final Widget? trailing;
 
   const AppSectionHeader({
     super.key,
     required this.title,
-    this.icon = HugeIcons.strokeRoundedGrid,
+    this.icon,
+    this.assetPath,
     this.iconColor = const Color(0xFF2563EB),
     this.trailing,
   });
@@ -314,27 +241,20 @@ class AppSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
 
-    Widget iconWidget;
-    if (icon is IconData) {
-      iconWidget = Icon(icon as IconData, size: 18, color: iconColor);
-    } else {
-      iconWidget = HugeIcon(icon: icon, size: 18, color: iconColor);
-    }
-
     return Row(
       children: [
         Expanded(
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+              if (assetPath != null) ...[
+                AppAssetIcon(
+                  assetPath: assetPath!,
+                  size: 20,
+                  color: iconColor,
+                  semanticLabel: title,
                 ),
-                child: iconWidget,
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                 child: Text(
                   title,
@@ -380,6 +300,7 @@ class AppDataTableColumn {
 class AppDataTable<T> extends StatelessWidget {
   final String title;
   final dynamic icon;
+  final String? assetPath;
   final Color iconColor;
   final Widget? headerAction;
   final List<AppDataTableColumn> columns;
@@ -390,7 +311,8 @@ class AppDataTable<T> extends StatelessWidget {
   const AppDataTable({
     super.key,
     required this.title,
-    this.icon = HugeIcons.strokeRoundedTable,
+    this.icon,
+    this.assetPath,
     this.iconColor = const Color(0xFF2563EB),
     this.headerAction,
     required this.columns,
@@ -414,6 +336,7 @@ class AppDataTable<T> extends StatelessWidget {
             child: AppSectionHeader(
               title: title,
               icon: icon,
+              assetPath: assetPath,
               iconColor: iconColor,
               trailing: headerAction,
             ),

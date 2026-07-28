@@ -1,936 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:hugeicons/hugeicons.dart';
+
+import '../../../core/assets/app_assets.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_provider.dart';
-import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_ui_components.dart';
+import '../../../core/widgets/filter_bar.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../providers/system_provider.dart';
-import '../providers/shop_provider.dart';
-import '../providers/notification_provider.dart';
 import '../providers/costing_provider.dart';
-import '../../../core/guides/feature_guide_sheet.dart';
+import '../providers/notification_provider.dart';
+import '../providers/shop_provider.dart';
+import '../providers/system_provider.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
-    final shopAsync = ref.watch(shopProfileProvider);
-    final shopState = ref.watch(shopProvider);
-    final auth = ref.watch(authProvider);
-    final notifState = ref.watch(notificationProvider);
-
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        title: Text(
-          'Thiết lập hệ thống',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          featureGuideButton(context, 'settings'),
-          // Notification bell
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: HugeIcon(
-                  icon: HugeIcons.strokeRoundedNotification03,
-                  color: c.textSecondary,
-                  size: 22,
-                ),
-                onPressed: () => context.push('/notifications'),
-              ),
-              if (notifState.unreadCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.danger,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${notifState.unreadCount}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 8,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          children: [
-            // Premium Profile bento card - tappable
-            GestureDetector(
-              onTap: () => context.push('/profile'),
-              child: shopAsync.when(
-                data: (shop) => Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: primaryColor.withValues(alpha: 0.15),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            ((auth.user?['fullName'] as String?)?.isNotEmpty ==
-                                        true
-                                    ? (auth.user!['fullName'] as String)[0]
-                                    : '?')
-                                .toUpperCase(),
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              auth.user?['fullName'] ?? 'Người dùng SmartStock',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: c.textPrimary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              shop['shopName'] ??
-                                  shop['name'] ??
-                                  'Cửa hàng của tôi',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: c.textSecondary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'MST: ${shop['taxCode'] ?? 'N/A'}',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: c.textMuted,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            if (shopState.isOwner &&
-                                shopState.shopCode != null) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: primaryColor.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Mã CH: ${shopState.shopCode}',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 10,
-                                        color: primaryColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      HugeIcon(
-                        icon: HugeIcons.strokeRoundedArrowRight01,
-                        color: c.textMuted,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, s) => Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Center(
-                          child: Text(
-                            ((auth.user?['fullName'] as String?)?.isNotEmpty ==
-                                        true
-                                    ? (auth.user!['fullName'] as String)[0]
-                                    : '?')
-                                .toUpperCase(),
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              auth.user?['fullName'] ?? 'Người dùng SmartStock',
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: c.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Nhấn để xem thông tin cá nhân',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: c.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      HugeIcon(
-                        icon: HugeIcons.strokeRoundedArrowRight01,
-                        color: c.textMuted,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-
-            // Shop switcher (multiple shops)
-            if (shopState.userShops.length > 1)
-              _SettingGroup('Cửa hàng hiện tại', [
-                _SettingItem(
-                  HugeIcons.strokeRoundedExchange01,
-                  'Chuyển shop (${shopState.currentShopName ?? ""})',
-                  () => _showShopSwitcher(context, ref, shopState),
-                  c,
-                ),
-              ], c),
-
-            // Account & Security
-            _SettingGroup('Tài khoản & Bảo mật', [
-              _SettingItem(
-                HugeIcons.strokeRoundedUserCircle,
-                'Thông tin cá nhân',
-                () => context.push('/profile'),
-                c,
-              ),
-              _SettingItem(
-                HugeIcons.strokeRoundedLockPassword,
-                'Đổi mật khẩu tài khoản',
-                () => context.push('/change-password'),
-                c,
-              ),
-            ], c),
-
-            _SettingGroup('Trợ giúp nghiệp vụ', [
-              _SettingItem(
-                HugeIcons.strokeRoundedBookOpen01,
-                'Nguồn tài liệu tham khảo',
-                () => context.push('/settings/ai-knowledge'),
-                c,
-              ),
-            ], c),
-
-            // Appearance theme toggles
-            _SettingGroup('Giao diện ứng dụng', [_BrandColorTile(c: c)], c),
-
-            // Staff & roles (Owners only)
-            if (shopState.isOwner || auth.isShopOwner)
-              _SettingGroup('Nhân viên & Phân quyền', [
-                _SettingItem(
-                  HugeIcons.strokeRoundedUserMultiple,
-                  'Quản lý danh sách nhân viên',
-                  () => context.push('/staff'),
-                  c,
-                ),
-                _SettingItem(
-                  HugeIcons.strokeRoundedUserStar02,
-                  'Thiết lập vai trò phân quyền',
-                  () => context.push('/roles'),
-                  c,
-                ),
-              ], c),
-
-            _SettingGroup('Hàng hóa & Kho vận', [
-              _SettingItem(
-                HugeIcons.strokeRoundedDashboardSquare01,
-                'Quản lý danh mục sản phẩm',
-                () {
-                  ToastService.showSuccess(
-                    'Tính năng quản lý danh mục sẽ sớm khả dụng ở bản cập nhật kế tiếp!',
-                  );
-                },
-                c,
-              ),
-              if (shopState.isOwner || shopState.hasPermission('settings'))
-                _SettingItem(
-                  HugeIcons.strokeRoundedClock04,
-                  'Nhật ký hoạt động hệ thống',
-                  () => context.push('/activity-logs'),
-                  c,
-                ),
-            ], c),
-
-            if (shopState.isOwner || shopState.hasPermission('settings'))
-              _CostingMethodTile(c: c),
-
-            _SettingGroup('Cửa hàng & Thanh toán', [
-              if (shopState.isOwner || shopState.hasPermission('settings'))
-                _SettingItem(
-                  HugeIcons.strokeRoundedStore01,
-                  'Thông tin cấu hình cửa hàng',
-                  () => context.push('/shop-profile'),
-                  c,
-                ),
-              _SettingItem(
-                HugeIcons.strokeRoundedInvoice01,
-                'Tùy biến mẫu hóa đơn in ấn',
-                () {
-                  ToastService.showSuccess(
-                    'Tính năng tùy biến mẫu hóa đơn sẽ sớm khả dụng ở bản cập nhật kế tiếp!',
-                  );
-                },
-                c,
-              ),
-              if (shopState.isOwner || shopState.hasPermission('settings'))
-                _SettingItem(
-                  HugeIcons.strokeRoundedCreditCard,
-                  'Thiết lập VietQR & TK nhận tiền',
-                  () => context.push('/payment-config'),
-                  c,
-                ),
-              _SettingItem(
-                HugeIcons.strokeRoundedTruck,
-                'Đơn vị vận chuyển đối tác',
-                () {
-                  ToastService.showSuccess(
-                    'Tính năng quản lý vận chuyển đối tác sẽ sớm khả dụng ở bản cập nhật kế tiếp!',
-                  );
-                },
-                c,
-              ),
-            ], c),
-
-            _SettingGroup('Thuế & Nghĩa vụ kê khai', [
-              if (shopState.isOwner || shopState.hasPermission('settings'))
-                _SettingItem(
-                  HugeIcons.strokeRoundedCalculator01,
-                  'Cấu hình sắc thuế mặc định',
-                  () => context.push('/tax-config'),
-                  c,
-                ),
-              _SettingItem(
-                HugeIcons.strokeRoundedCustomerSupport,
-                'Kênh hỗ trợ giải đáp luật thuế',
-                () => context.push('/tax-support'),
-                c,
-              ),
-            ], c),
-
-            _SettingGroup('Hệ thống & Trợ giúp', [
-              _SettingItem(
-                HugeIcons.strokeRoundedNotification03,
-                'Trung tâm quản lý thông báo',
-                () => context.push('/notifications'),
-                c,
-              ),
-              _SettingItem(
-                HugeIcons.strokeRoundedCloudSavingDone01,
-                'Sao lưu & khôi phục dữ liệu',
-                () {
-                  ToastService.showSuccess(
-                    'Sao lưu và khôi phục dữ liệu sẽ sớm khả dụng ở bản cập nhật kế tiếp!',
-                  );
-                },
-                c,
-              ),
-              _SettingItem(
-                HugeIcons.strokeRoundedHelpCircle,
-                'Thông tin phần mềm hỗ trợ',
-                () async {
-                  final pkg = await PackageInfo.fromPlatform();
-                  if (!context.mounted) return;
-                  showAboutDialog(
-                    context: context,
-                    applicationName: 'SmartStock FinTech',
-                    applicationVersion: pkg.version,
-                    applicationLegalese:
-                        '© 2026 SmartStock Inc. Bảo lưu mọi quyền.',
-                    children: [
-                      const SizedBox(height: 12),
-                      Text(
-                        'Hệ sinh thái số quản lý bán hàng và hỗ trợ cảnh báo thuế thông minh dành riêng cho hộ kinh doanh cá thể tại Việt Nam.',
-                        style: GoogleFonts.inter(fontSize: 13, height: 1.4),
-                      ),
-                    ],
-                  );
-                },
-                c,
-              ),
-            ], c),
-            const SizedBox(height: 16),
-
-            // Redundant outlined Log Out button
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final confirmed = await AppConfirmModal.show(
-                    context,
-                    title: 'Xác nhận Đăng xuất',
-                    message:
-                        'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng không? Các giao dịch chưa đồng bộ có thể bị mất.',
-                    confirmText: 'Đăng xuất',
-                    cancelText: 'Hủy bỏ',
-                    isDestructive: true,
-                  );
-                  if (confirmed == true) {
-                    await ref.read(authProvider.notifier).logout();
-                    if (context.mounted) context.go('/login');
-                  }
-                },
-                icon: HugeIcon(
-                  icon: HugeIcons.strokeRoundedLogout03,
-                  color: AppColors.danger,
-                  size: 20,
-                ),
-                label: Text(
-                  'Đăng Xuất Tài Khoản',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.danger,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.danger, width: 1.5),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 88), // UI Breathing Room Padding
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showShopSwitcher(
-    BuildContext context,
-    WidgetRef ref,
-    ShopState shopState,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        final c = AppThemeColors.of(ctx);
-        final theme = Theme.of(context);
-        final primaryColor = theme.colorScheme.primary;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Chuyển đổi cửa hàng liên kết',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: c.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (shopState.userShops.any(
-                (s) =>
-                    s['memberType'] == 'OWNER' &&
-                    s['status'] == 'ACTIVE' &&
-                    s['isActive'] != false,
-              )) ...[
-                ListTile(
-                  leading: HugeIcon(
-                    icon: HugeIcons.strokeRoundedFolder01,
-                    color: shopState.isAllShops ? primaryColor : c.textMuted,
-                    size: 22,
-                  ),
-                  title: Text(
-                    'Tất cả cửa hàng (Tổng quát)',
-                    style: GoogleFonts.outfit(
-                      fontWeight: shopState.isAllShops
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      fontSize: 14,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Xem dữ liệu tổng hợp',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: c.textSecondary,
-                    ),
-                  ),
-                  trailing: shopState.isAllShops
-                      ? HugeIcon(
-                          icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                          color: primaryColor,
-                          size: 20,
-                        )
-                      : null,
-                  onTap: () {
-                    ref.read(shopProvider.notifier).switchShop(-1);
-                    Navigator.pop(ctx);
-                  },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  tileColor: shopState.isAllShops
-                      ? primaryColor.withValues(alpha: 0.08)
-                      : null,
-                ),
-                const SizedBox(height: 8),
-              ],
-              ...shopState.userShops
-                  .where(
-                    (shop) =>
-                        shop['status'] == 'ACTIVE' && shop['isActive'] != false,
-                  )
-                  .map((shop) {
-                    final isActive =
-                        shop['shopId'] == shopState.currentShopId &&
-                        !shopState.isAllShops;
-                    return ListTile(
-                      leading: HugeIcon(
-                        icon: HugeIcons.strokeRoundedStore01,
-                        color: isActive ? primaryColor : c.textMuted,
-                        size: 22,
-                      ),
-                      title: Text(
-                        shop['shopName'] ?? 'Shop #${shop['shopId']}',
-                        style: GoogleFonts.outfit(
-                          fontWeight: isActive
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 14,
-                        ),
-                      ),
-                      subtitle: Text(
-                        shop['memberType'] == 'OWNER'
-                            ? 'Chủ sở hữu'
-                            : (shop['role']?['name'] ?? 'Nhân viên'),
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: c.textSecondary,
-                        ),
-                      ),
-                      trailing: isActive
-                          ? HugeIcon(
-                              icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                              color: primaryColor,
-                              size: 20,
-                            )
-                          : null,
-                      onTap: () {
-                        ref
-                            .read(shopProvider.notifier)
-                            .switchShop(shop['shopId'] as int);
-                        Navigator.pop(ctx);
-                      },
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      tileColor: isActive
-                          ? primaryColor.withValues(alpha: 0.08)
-                          : null,
-                    );
-                  }),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _BrandColorTile extends ConsumerWidget {
-  final AppThemeColors c;
-  const _BrandColorTile({required this.c});
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  String _searchQuery = '';
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final brandColor = ref.watch(brandColorProvider);
-    final isDark = brandColor.isDark;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
-    return InkWell(
-      onTap: () => _showBrandColorPicker(context, ref, brandColor, c, isDark),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        child: Row(
-          children: [
-            HugeIcon(
-              icon: HugeIcons.strokeRoundedPaintBoard,
-              size: 20,
-              color: primaryColor,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Tông màu chủ đạo ứng dụng',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    brandColor.label,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: c.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: brandColor.color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: brandColor.color.withValues(alpha: 0.4),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            HugeIcon(
-              icon: HugeIcons.strokeRoundedArrowRight01,
-              size: 18,
-              color: c.textMuted,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showBrandColorPicker(
-    BuildContext context,
-    WidgetRef ref,
-    AppBrandColor current,
-    AppThemeColors c,
-    bool isDark,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Chọn tông màu thương hiệu',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: c.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Tùy chỉnh sắc thái giao diện phù hợp với gu thẩm mỹ của bạn',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: c.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Wrap of colors instead of horizontal ListView for better web/desktop UX
-              Wrap(
-                spacing: 12,
-                runSpacing: 16,
-                alignment: WrapAlignment.center,
-                children: AppBrandColor.values.map((item) {
-                  final isSelected = item == current;
-                  return GestureDetector(
-                    onTap: () {
-                      ref.read(brandColorProvider.notifier).setBrandColor(item);
-                      Navigator.pop(ctx);
-                    },
-                    child: SizedBox(
-                      width: 60,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: item.color,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? (isDark
-                                          ? Colors.white
-                                          : AppColors.primary)
-                                    : Colors.transparent,
-                                width: 3,
-                              ),
-                              boxShadow: [
-                                if (isSelected)
-                                  BoxShadow(
-                                    color: item.color.withValues(alpha: 0.5),
-                                    blurRadius: 10,
-                                    spreadRadius: 1,
-                                  ),
-                              ],
-                            ),
-                            child: isSelected
-                                ? const Icon(
-                                    Icons.check_rounded,
-                                    color: Colors.white,
-                                    size: 24,
-                                  )
-                                : null,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            item.label,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 10,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : c.textSecondary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _SettingGroup extends StatelessWidget {
-  final String title;
-  final List<Widget> items;
-  final AppThemeColors c;
-  const _SettingGroup(this.title, this.items, this.c);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            title,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppThemeColors.of(context).textSecondary,
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: AppThemeColors.of(context).card,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(children: items),
-        ),
-        const SizedBox(height: 18),
-      ],
-    );
-  }
-}
-
-class _SettingItem extends StatelessWidget {
-  final dynamic icon;
-  final String label;
-  final VoidCallback onTap;
-  final AppThemeColors c;
-  const _SettingItem(this.icon, this.label, this.onTap, this.c);
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
-            children: [
-              HugeIcon(
-                icon: icon,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  label,
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: c.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              HugeIcon(
-                icon: HugeIcons.strokeRoundedArrowRight01,
-                size: 18,
-                color: c.textMuted,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CostingMethodTile extends ConsumerStatefulWidget {
-  final AppThemeColors c;
-  const _CostingMethodTile({required this.c});
-
-  @override
-  ConsumerState<_CostingMethodTile> createState() => _CostingMethodTileState();
-}
-
-class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
   @override
   void initState() {
     super.initState();
@@ -941,202 +39,1028 @@ class _CostingMethodTileState extends ConsumerState<_CostingMethodTile> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final shopAsync = ref.watch(shopProfileProvider);
+    final shopState = ref.watch(shopProvider);
+    final auth = ref.watch(authProvider);
+    final notifications = ref.watch(notificationProvider);
+    final brandColor = ref.watch(brandColorProvider);
     final costing = ref.watch(costingProvider);
-    final c = widget.c;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final methodLabel = costing.method == 'FIFO'
-        ? 'Nhập trước - Xuất trước (FIFO)'
-        : 'Bình quân gia quyền (AVG)';
+    final canManageSettings =
+        shopState.isOwner || shopState.hasPermission('settings');
+    final canManageStaff = shopState.isOwner || auth.isShopOwner;
 
-    return _SettingGroup('Phương pháp tính giá vốn', [
-      InkWell(
-        onTap: () => _showCostingMethodPicker(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          child: Row(
+    final sections = <_SettingsSectionData>[
+      _SettingsSectionData(
+        title: 'Tài khoản & bảo mật',
+        entries: [
+          _SettingsEntry(
+            label: 'Thông tin cá nhân',
+            description: 'Cập nhật hồ sơ và thông tin liên hệ của tài khoản.',
+            onTap: () => context.push('/profile'),
+          ),
+          _SettingsEntry(
+            label: 'Đổi mật khẩu',
+            description: 'Thiết lập mật khẩu mới cho tài khoản đang đăng nhập.',
+            onTap: () => context.push('/change-password'),
+          ),
+          if (shopState.userShops.length > 1)
+            _SettingsEntry(
+              label: 'Chuyển cửa hàng',
+              description:
+                  'Đang xem: ${shopState.currentShopName ?? 'Tất cả cửa hàng'}.',
+              onTap: () => _showShopSwitcher(context, shopState),
+            ),
+        ],
+      ),
+      if (canManageStaff)
+        _SettingsSectionData(
+          title: 'Nhân viên & phân quyền',
+          entries: [
+            _SettingsEntry(
+              label: 'Danh sách nhân viên',
+              description: 'Quản lý thành viên đang làm việc tại cửa hàng.',
+              onTap: () => context.push('/staff'),
+            ),
+            _SettingsEntry(
+              label: 'Vai trò và quyền truy cập',
+              description: 'Thiết lập phạm vi thao tác theo từng vai trò.',
+              onTap: () => context.push('/roles'),
+            ),
+          ],
+        ),
+      _SettingsSectionData(
+        title: 'Hàng hóa & kho vận',
+        entries: [
+          _SettingsEntry(
+            label: 'Danh mục sản phẩm',
+            description: 'Chuẩn hóa nhóm hàng phục vụ tra cứu và báo cáo.',
+            badge: 'Sắp có',
+            onTap: () => _showComingSoon('Quản lý danh mục sản phẩm'),
+          ),
+          if (canManageSettings)
+            _SettingsEntry(
+              label: 'Nhật ký hoạt động',
+              description:
+                  'Tra cứu thao tác quan trọng đã thực hiện trong hệ thống.',
+              onTap: () => context.push('/activity-logs'),
+            ),
+          if (canManageSettings)
+            _SettingsEntry(
+              label: 'Phương pháp tính giá vốn',
+              description: costing.isLoading
+                  ? 'Đang tải cấu hình…'
+                  : costing.method == 'FIFO'
+                  ? 'Đang dùng: Nhập trước – xuất trước (FIFO).'
+                  : 'Đang dùng: Bình quân gia quyền (AVG).',
+              onTap: costing.isLoading
+                  ? null
+                  : () => _showCostingMethodPicker(context),
+            ),
+        ],
+      ),
+      _SettingsSectionData(
+        title: 'Cửa hàng & thanh toán',
+        entries: [
+          if (canManageSettings)
+            _SettingsEntry(
+              label: 'Thông tin cửa hàng',
+              description:
+                  'Cập nhật tên, địa chỉ, mã số thuế và thông tin liên hệ.',
+              onTap: () => context.push('/shop-profile'),
+            ),
+          if (canManageSettings)
+            _SettingsEntry(
+              label: 'VietQR và tài khoản nhận tiền',
+              description: 'Thiết lập tài khoản ngân hàng dùng khi thanh toán.',
+              onTap: () => context.push('/payment-config'),
+            ),
+          _SettingsEntry(
+            label: 'Mẫu hóa đơn in',
+            description:
+                'Tùy chỉnh nội dung và nhận diện trên chứng từ bán hàng.',
+            badge: 'Sắp có',
+            onTap: () => _showComingSoon('Tùy biến mẫu hóa đơn'),
+          ),
+          _SettingsEntry(
+            label: 'Đơn vị vận chuyển',
+            description: 'Quản lý đối tác giao hàng và cấu hình vận chuyển.',
+            badge: 'Sắp có',
+            onTap: () => _showComingSoon('Quản lý đơn vị vận chuyển'),
+          ),
+        ],
+      ),
+      _SettingsSectionData(
+        title: 'Thuế & trợ giúp nghiệp vụ',
+        entries: [
+          if (canManageSettings)
+            _SettingsEntry(
+              label: 'Cấu hình thuế',
+              description:
+                  'Thiết lập thông số dùng trong chức năng hỗ trợ tính thuế.',
+              onTap: () => context.push('/tax-config'),
+            ),
+          _SettingsEntry(
+            label: 'Kênh hỗ trợ thuế',
+            description:
+                'Xem đầu mối và tài liệu hỗ trợ khi cần làm rõ nghiệp vụ.',
+            onTap: () => context.push('/tax-support'),
+          ),
+          _SettingsEntry(
+            label: 'Nguồn tài liệu tham khảo',
+            description:
+                'Quản lý nguồn kiến thức được dùng trong phần trợ giúp.',
+            onTap: () => context.push('/settings/ai-knowledge'),
+          ),
+        ],
+      ),
+      _SettingsSectionData(
+        title: 'Hệ thống & giao diện',
+        entries: [
+          _SettingsEntry(
+            label: 'Trung tâm thông báo',
+            description: 'Xem cảnh báo vận hành và thông báo cần xử lý.',
+            badge: notifications.unreadCount > 0
+                ? '${notifications.unreadCount} chưa đọc'
+                : null,
+            onTap: () => context.push('/notifications'),
+          ),
+          _SettingsEntry(
+            label: 'Màu giao diện',
+            description: 'Đang dùng: ${brandColor.label}.',
+            onTap: () => _showBrandColorPicker(context, brandColor),
+          ),
+          _SettingsEntry(
+            label: 'Sao lưu và khôi phục',
+            description: 'Tạo bản sao dữ liệu và khôi phục khi có sự cố.',
+            badge: 'Sắp có',
+            onTap: () => _showComingSoon('Sao lưu và khôi phục dữ liệu'),
+          ),
+          _SettingsEntry(
+            label: 'Thông tin phần mềm',
+            description: 'Xem phiên bản và thông tin sản phẩm.',
+            onTap: () => _showAbout(context),
+          ),
+        ],
+      ),
+    ];
+
+    final query = _searchQuery.trim().toLowerCase();
+    final filteredSections = sections
+        .map(
+          (section) => _SettingsSectionData(
+            title: section.title,
+            entries: section.entries.where((entry) {
+              if (query.isEmpty) return true;
+              return entry.label.toLowerCase().contains(query) ||
+                  entry.description.toLowerCase().contains(query) ||
+                  section.title.toLowerCase().contains(query);
+            }).toList(),
+          ),
+        )
+        .where((section) => section.entries.isNotEmpty)
+        .toList();
+
+    return Scaffold(
+      backgroundColor: colors.bg,
+      body: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: AppResponsiveContent(
+          maxWidth: 1200,
+          verticalPadding: AppSpacing.lg,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              HugeIcon(
-                icon: HugeIcons.strokeRoundedCalculator01,
-                size: 20,
-                color: primaryColor,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              AppPageHeader(
+                title: 'Cài đặt hệ thống',
+                subtitle:
+                    'Quản lý tài khoản, cửa hàng, phân quyền và các cấu hình nghiệp vụ.',
+                action: Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
                   children: [
-                    Text(
-                      'Công thức tính giá vốn',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: c.textPrimary,
-                      ),
+                    TextButton(
+                      onPressed: () => showFeatureGuide(context, 'settings'),
+                      child: const Text('Hướng dẫn'),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      methodLabel,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: c.textSecondary,
-                        fontWeight: FontWeight.w500,
+                    OutlinedButton(
+                      onPressed: () => context.push('/notifications'),
+                      child: Text(
+                        notifications.unreadCount > 0
+                            ? 'Thông báo (${notifications.unreadCount})'
+                            : 'Thông báo',
                       ),
                     ),
                   ],
                 ),
               ),
-              if (costing.isLoading)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+              _SettingsProfileCard(
+                shopAsync: shopAsync,
+                user: auth.user,
+                shopState: shopState,
+                onOpenProfile: () => context.push('/profile'),
+                onSwitchShop: shopState.userShops.length > 1
+                    ? () => _showShopSwitcher(context, shopState)
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilterBar(
+                searchHint: 'Tìm nhanh một thiết lập',
+                onSearchChanged: (value) {
+                  if (value != _searchQuery) {
+                    setState(() => _searchQuery = value);
+                  }
+                },
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              if (filteredSections.isEmpty)
+                AppCardContainer(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.xl,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Không tìm thấy thiết lập phù hợp.',
+                        style: TextStyle(color: colors.textSecondary),
+                      ),
+                    ),
+                  ),
                 )
               else
-                HugeIcon(
-                  icon: HugeIcons.strokeRoundedArrowRight01,
-                  size: 18,
-                  color: c.textMuted,
+                AppFillGrid(
+                  minItemWidth: 420,
+                  maxColumns: 2,
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.md,
+                  children: [
+                    for (final section in filteredSections)
+                      _SettingsSection(section: section),
+                  ],
                 ),
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => _confirmLogout(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    side: BorderSide(
+                      color: AppColors.danger.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  child: const Text('Đăng xuất tài khoản'),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
             ],
           ),
         ),
       ),
-    ], c);
+    );
   }
 
-  void _showCostingMethodPicker(BuildContext context) {
-    final costing = ref.read(costingProvider);
-    showModalBottomSheet(
+  void _showComingSoon(String feature) {
+    ToastService.showSuccess(
+      '$feature đang được chuẩn bị cho phiên bản tiếp theo.',
+    );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await AppConfirmModal.show(
+      context,
+      title: 'Xác nhận đăng xuất',
+      message:
+          'Bạn có chắc muốn đăng xuất khỏi ứng dụng? Hãy hoàn tất các thay đổi chưa lưu trước khi tiếp tục.',
+      confirmText: 'Đăng xuất',
+      cancelText: 'Ở lại',
+      isDestructive: true,
+    );
+    if (confirmed != true) return;
+
+    await ref.read(authProvider.notifier).logout();
+    if (context.mounted) context.go('/login');
+  }
+
+  void _showShopSwitcher(BuildContext context, ShopState shopState) {
+    showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        final c = AppThemeColors.of(ctx);
-        final primaryColor = Theme.of(context).colorScheme.primary;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final colors = AppThemeColors.of(sheetContext);
+        final availableShops = shopState.userShops
+            .where(
+              (shop) => shop['status'] == 'ACTIVE' && shop['isActive'] != false,
+            )
+            .toList();
+        final canViewAll = availableShops.any(
+          (shop) => shop['memberType'] == 'OWNER',
+        );
+
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.82,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.md,
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Công thức tính giá vốn hàng bán',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: c.textPrimary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Chuyển cửa hàng',
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    'Dữ liệu trên màn hình sẽ đổi theo cửa hàng được chọn.',
+                    style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        if (canViewAll)
+                          _ShopOption(
+                            title: 'Tất cả cửa hàng',
+                            subtitle: 'Xem dữ liệu tổng hợp của các cửa hàng.',
+                            selected: shopState.isAllShops,
+                            onTap: () {
+                              ref.read(shopProvider.notifier).switchShop(-1);
+                              Navigator.pop(sheetContext);
+                            },
+                          ),
+                        for (final shop in availableShops)
+                          _ShopOption(
+                            title:
+                                shop['shopName']?.toString() ??
+                                'Cửa hàng #${shop['shopId']}',
+                            subtitle: shop['memberType'] == 'OWNER'
+                                ? 'Chủ sở hữu'
+                                : (shop['role']?['name']?.toString() ??
+                                      'Nhân viên'),
+                            selected:
+                                shop['shopId'] == shopState.currentShopId &&
+                                !shopState.isAllShops,
+                            onTap: () {
+                              final shopId = int.tryParse(
+                                shop['shopId']?.toString() ?? '',
+                              );
+                              if (shopId == null) return;
+                              ref
+                                  .read(shopProvider.notifier)
+                                  .switchShop(shopId);
+                              Navigator.pop(sheetContext);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Áp dụng chung làm cơ sở tính lợi nhuận cho toàn bộ sản phẩm',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: c.textSecondary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _costingOption(
-                ctx,
-                c,
-                'AVG',
-                'Bình quân gia quyền liên tục (AVG)',
-                'Giá vốn = trung bình giá nhập tất cả các lô còn tồn kho. Phù hợp nhất cho đại đa số hộ kinh doanh.',
-                Icons.balance_rounded,
-                costing.method == 'AVG',
-                primaryColor,
-              ),
-              const SizedBox(height: 8),
-              _costingOption(
-                ctx,
-                c,
-                'FIFO',
-                'Nhập trước - Xuất trước (FIFO)',
-                'Hàng nhập kho trước sẽ được xuất bán trước. Độ chính xác cao hơn khi biến động giá nhập lớn.',
-                Icons.sort_rounded,
-                costing.method == 'FIFO',
-                primaryColor,
-              ),
-              const SizedBox(height: 12),
-            ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _costingOption(
-    BuildContext ctx,
-    AppThemeColors c,
-    String method,
-    String title,
-    String desc,
-    IconData icon,
-    bool isActive,
-    Color primaryColor,
-  ) {
-    return InkWell(
-      onTap: () async {
-        Navigator.pop(ctx);
-        await ref.read(costingProvider.notifier).updateCostingMethod(method);
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isActive ? primaryColor.withValues(alpha: 0.08) : c.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isActive ? primaryColor : c.divider,
-            width: isActive ? 1.5 : 1,
+  void _showBrandColorPicker(BuildContext context, AppBrandColor current) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final colors = AppThemeColors.of(sheetContext);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.xl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Chọn màu giao diện',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Màu được áp dụng cho nút chính và trạng thái đang chọn.',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final item in AppBrandColor.values)
+                      _BrandColorOption(
+                        item: item,
+                        selected: item == current,
+                        onTap: () {
+                          ref
+                              .read(brandColorProvider.notifier)
+                              .setBrandColor(item);
+                          Navigator.pop(sheetContext);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showCostingMethodPicker(BuildContext context) {
+    final costing = ref.read(costingProvider);
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        final colors = AppThemeColors.of(sheetContext);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.xl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Phương pháp tính giá vốn',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Cấu hình này được dùng để tính giá vốn và lợi nhuận.',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _CostingOption(
+                  title: 'Bình quân gia quyền (AVG)',
+                  description: 'Tính giá bình quân từ các lô hàng còn tồn kho.',
+                  selected: costing.method == 'AVG',
+                  onTap: () => _updateCostingMethod(sheetContext, 'AVG'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _CostingOption(
+                  title: 'Nhập trước – xuất trước (FIFO)',
+                  description:
+                      'Ưu tiên giá của lô nhập kho sớm hơn khi xuất bán.',
+                  selected: costing.method == 'FIFO',
+                  onTap: () => _updateCostingMethod(sheetContext, 'FIFO'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _updateCostingMethod(
+    BuildContext sheetContext,
+    String method,
+  ) async {
+    Navigator.pop(sheetContext);
+    final success = await ref
+        .read(costingProvider.notifier)
+        .updateCostingMethod(method);
+    if (success) {
+      ToastService.showSuccess('Đã cập nhật phương pháp tính giá vốn.');
+    } else {
+      ToastService.showError('Không thể cập nhật phương pháp tính giá vốn.');
+    }
+  }
+
+  Future<void> _showAbout(BuildContext context) async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (!context.mounted) return;
+    showAboutDialog(
+      context: context,
+      applicationIcon: const AppAssetIcon(
+        assetPath: AppAssets.appIcon,
+        size: 44,
+        semanticLabel: 'SmartStock',
+      ),
+      applicationName: 'SmartStock',
+      applicationVersion: packageInfo.version,
+      applicationLegalese: '© 2026 SmartStock.',
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        const Text(
+          'Ứng dụng hỗ trợ quản lý bán hàng, tồn kho, tài chính và cảnh báo nghiệp vụ thuế cho hộ kinh doanh.',
+          style: TextStyle(fontSize: 13, height: 1.45),
         ),
-        child: Row(
+      ],
+    );
+  }
+}
+
+class _SettingsProfileCard extends StatelessWidget {
+  final AsyncValue<Map<String, dynamic>> shopAsync;
+  final Map<String, dynamic>? user;
+  final ShopState shopState;
+  final VoidCallback onOpenProfile;
+  final VoidCallback? onSwitchShop;
+
+  const _SettingsProfileCard({
+    required this.shopAsync,
+    required this.user,
+    required this.shopState,
+    required this.onOpenProfile,
+    required this.onSwitchShop,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final fullName = user?['fullName']?.toString().trim();
+    final displayName = fullName == null || fullName.isEmpty
+        ? 'Người dùng SmartStock'
+        : fullName;
+
+    return AppCardContainer(
+      child: shopAsync.when(
+        data: (shop) => LayoutBuilder(
+          builder: (context, constraints) {
+            final shopName =
+                shop['shopName']?.toString() ??
+                shop['name']?.toString() ??
+                'Cửa hàng của tôi';
+            final details = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  shopName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: colors.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'MST: ${shop['taxCode']?.toString() ?? 'Chưa cập nhật'}'
+                  '${shopState.isOwner && shopState.shopCode != null ? '  ·  Mã CH: ${shopState.shopCode}' : ''}',
+                  style: TextStyle(color: colors.textMuted, fontSize: 11),
+                ),
+              ],
+            );
+            final actions = Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                TextButton(
+                  onPressed: onOpenProfile,
+                  child: const Text('Xem hồ sơ'),
+                ),
+                if (onSwitchShop != null)
+                  OutlinedButton(
+                    onPressed: onSwitchShop,
+                    child: const Text('Đổi cửa hàng'),
+                  ),
+              ],
+            );
+
+            if (constraints.maxWidth < 640) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const AppAssetIcon(
+                        assetPath: AppAssets.appIcon,
+                        size: 44,
+                        semanticLabel: 'SmartStock',
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(child: details),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  actions,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                const AppAssetIcon(
+                  assetPath: AppAssets.appIcon,
+                  size: 48,
+                  semanticLabel: 'SmartStock',
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: details),
+                const SizedBox(width: AppSpacing.md),
+                actions,
+              ],
+            );
+          },
+        ),
+        loading: () => const SizedBox(
+          height: 72,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+        error: (_, _) => Row(
           children: [
-            Icon(icon, size: 24, color: isActive ? primaryColor : c.textMuted),
-            const SizedBox(width: 14),
+            const AppAssetIcon(
+              assetPath: AppAssets.appIcon,
+              size: 44,
+              semanticLabel: 'SmartStock',
+            ),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isActive ? primaryColor : c.textPrimary,
+                    displayName,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    desc,
-                    style: GoogleFonts.inter(
+                    'Chưa tải được thông tin cửa hàng.',
+                    style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: onOpenProfile,
+              child: const Text('Xem hồ sơ'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsSectionData {
+  final String title;
+  final List<_SettingsEntry> entries;
+
+  const _SettingsSectionData({required this.title, required this.entries});
+}
+
+class _SettingsEntry {
+  final String label;
+  final String description;
+  final String? badge;
+  final VoidCallback? onTap;
+
+  const _SettingsEntry({
+    required this.label,
+    required this.description,
+    this.badge,
+    required this.onTap,
+  });
+}
+
+class _SettingsSection extends StatelessWidget {
+  final _SettingsSectionData section;
+
+  const _SettingsSection({required this.section});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return AppCardContainer(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
+            child: Text(
+              section.title,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Divider(height: 1, color: colors.divider),
+          for (var index = 0; index < section.entries.length; index++)
+            _SettingsActionRow(
+              entry: section.entries[index],
+              showDivider: index < section.entries.length - 1,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsActionRow extends StatelessWidget {
+  final _SettingsEntry entry;
+  final bool showDivider;
+
+  const _SettingsActionRow({required this.entry, required this.showDivider});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return InkWell(
+      onTap: entry.onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          border: showDivider
+              ? Border(bottom: BorderSide(color: colors.divider))
+              : null,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.label,
+                    style: TextStyle(
+                      color: entry.onTap == null
+                          ? colors.textMuted
+                          : colors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    entry.description,
+                    style: TextStyle(
+                      color: colors.textSecondary,
                       fontSize: 11,
-                      color: c.textSecondary,
                       height: 1.4,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            if (isActive)
-              HugeIcon(
-                icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                color: primaryColor,
-                size: 20,
+            const SizedBox(width: AppSpacing.md),
+            if (entry.badge != null)
+              AppStatusBadge(
+                label: entry.badge!,
+                color: entry.badge == 'Sắp có'
+                    ? colors.textMuted
+                    : Theme.of(context).colorScheme.primary,
+              )
+            else
+              Text(
+                entry.onTap == null ? 'Đang tải' : 'Mở',
+                style: TextStyle(
+                  color: entry.onTap == null
+                      ? colors.textMuted
+                      : Theme.of(context).colorScheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopOption extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ShopOption({
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        color: selected ? primary.withValues(alpha: 0.07) : colors.card,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: selected ? primary : colors.divider),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (selected)
+                  AppStatusBadge(label: 'Đang dùng', color: primary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandColorOption extends StatelessWidget {
+  final AppBrandColor item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _BrandColorOption({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Material(
+      color: colors.card,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: selected ? item.color : colors.divider,
+          width: selected ? 1.5 : 1,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: SizedBox(
+          width: 148,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: item.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    item.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CostingOption extends StatelessWidget {
+  final String title;
+  final String description;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CostingOption({
+    required this.title,
+    required this.description,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    return Material(
+      color: selected ? primary.withValues(alpha: 0.07) : colors.card,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: selected ? primary : colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 11,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected) ...[
+                const SizedBox(width: AppSpacing.md),
+                AppStatusBadge(label: 'Đang dùng', color: primary),
+              ],
+            ],
+          ),
         ),
       ),
     );

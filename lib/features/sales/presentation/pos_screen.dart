@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -18,7 +19,6 @@ import '../../inventory/providers/inventory_provider.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../providers/sales_provider.dart';
 import 'qr_payment_screen.dart';
-import 'package:hugeicons/hugeicons.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_badge.dart';
@@ -354,15 +354,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       appBar: AppBar(
         title: const Text('Bán hàng'),
         actions: [
-          featureGuideButton(context, 'pos'),
+          TextButton(
+            onPressed: () => showFeatureGuide(context, 'pos'),
+            child: const Text('Hướng dẫn'),
+          ),
           if (cart.items.isNotEmpty)
-            Badge(
-              label: Text('${cart.itemCount}'),
-              child: IconButton(
-                icon: const Icon(Icons.shopping_cart),
-                onPressed: () => _showCart(context),
-              ),
+            TextButton(
+              onPressed: () => _showCart(context),
+              child: Text('Giỏ (${cart.itemCount})'),
             ),
+          const SizedBox(width: 8),
         ],
       ),
       body: LayoutBuilder(
@@ -458,23 +459,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               ],
                             ),
                           ),
-                          ElevatedButton.icon(
+                          ElevatedButton(
                             onPressed: _creating
                                 ? null
                                 : () => _showCheckout(context),
-                            icon: const Icon(
-                              Icons.payment,
-                              size: 24,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              'Thanh toán',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Colors.white,
-                              ),
-                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: c.textPrimary,
                               padding: const EdgeInsets.symmetric(
@@ -485,6 +473,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 borderRadius: BorderRadius.circular(
                                   AppRadius.control,
                                 ),
+                              ),
+                            ),
+                            child: Text(
+                              'Thanh toán',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -516,14 +512,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             controller: _searchCtrl,
             decoration: InputDecoration(
               hintText: 'Tìm sản phẩm...',
-              prefixIcon: Icon(Icons.search, color: c.textMuted),
               suffixIcon: _search.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, size: 18, color: c.textSecondary),
+                  ? TextButton(
                       onPressed: () {
                         _searchCtrl.clear();
                         setState(() => _search = '');
                       },
+                      child: const Text('Xóa'),
                     )
                   : null,
             ),
@@ -637,10 +632,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       ? 'Thêm sản phẩm để bắt đầu bán hàng'
                       : null,
                   action: _search.isEmpty
-                      ? ElevatedButton.icon(
+                      ? FilledButton(
                           onPressed: () => context.push('/products/form'),
-                          icon: const Icon(Icons.inventory_2),
-                          label: const Text('Thêm sản phẩm'),
+                          child: const Text('Thêm sản phẩm'),
                         )
                       : null,
                 );
@@ -693,14 +687,18 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           width: 52,
                           height: 52,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(16),
+                            color: c.cardAlt,
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.control,
+                            ),
+                            border: Border.all(color: c.divider),
                           ),
                           child: Center(
-                            child: HugeIcon(
-                              icon: HugeIcons.strokeRoundedPackage,
+                            child: AppAssetIcon(
+                              assetPath: AppAssets.inventory,
                               color: AppColors.primary,
                               size: 24,
+                              semanticLabel: 'Sản phẩm',
                             ),
                           ),
                         ),
@@ -783,12 +781,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           )
                         else
                           SizedBox(
-                            width: 44,
-                            height: 44,
-                            child: IconButton(
-                              tooltip: isOutOfStock
-                                  ? 'Sản phẩm đã hết hàng'
-                                  : 'Thêm vào giỏ',
+                            width: 76,
+                            height: 40,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
+                              ),
                               onPressed: isOutOfStock
                                   ? null
                                   : () {
@@ -804,19 +804,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                         HapticFeedback.lightImpact();
                                       }
                                     },
-                              icon: Icon(
-                                Icons.add_shopping_cart,
-                                color: isOutOfStock
-                                    ? c.textMuted
-                                    : AppColors.primary,
-                                size: 20,
-                              ),
-                              style: IconButton.styleFrom(
-                                backgroundColor: isOutOfStock
-                                    ? c.cardAlt
-                                    : AppColors.primary.withValues(alpha: 0.08),
-                                shape: const CircleBorder(),
-                              ),
+                              child: const Text('Thêm', maxLines: 1),
                             ),
                           ),
                       ],
@@ -825,9 +813,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(
-              child: Text('Lỗi: $e', style: TextStyle(color: AppColors.danger)),
+            loading: () =>
+                const AppLoading(message: 'Đang tải danh sách sản phẩm…'),
+            error: (_, _) => AppError(
+              message: 'Không thể tải danh sách sản phẩm.',
+              onRetry: () => ref.invalidate(productListProvider),
             ),
           ),
         ),
@@ -860,15 +850,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ),
               ),
               if (cart.items.isNotEmpty)
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline_rounded,
-                    color: AppColors.danger,
-                  ),
+                TextButton(
                   onPressed: () {
                     ref.read(_cartProvider.notifier).clear();
                     ToastService.showSuccess('Đã xóa toàn bộ giỏ hàng');
                   },
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                  ),
+                  child: const Text('Xóa giỏ'),
                 ),
             ],
           ),
@@ -878,31 +868,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         // Cart items list or Empty state
         Expanded(
           child: cart.items.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.shopping_bag_outlined,
-                        size: 64,
-                        color: c.textMuted,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Giỏ hàng đang trống',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: c.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Thêm sản phẩm từ danh sách bên trái',
-                        style: TextStyle(fontSize: 12, color: c.textMuted),
-                      ),
-                    ],
-                  ),
+              ? const AppEmpty(
+                  message: 'Giỏ hàng đang trống',
+                  subtitle: 'Chọn sản phẩm từ danh sách để bắt đầu đơn hàng.',
+                  size: 64,
                 )
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
@@ -1012,18 +981,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ],
               ),
               const SizedBox(height: 4),
-              OutlinedButton.icon(
+              OutlinedButton(
                 onPressed: () => _showCustomerPicker(context),
-                icon: Icon(
-                  cart.customerName == null
-                      ? Icons.person_add_alt_1_rounded
-                      : Icons.person_rounded,
-                  size: 18,
-                  color: cart.customerName == null
-                      ? c.textSecondary
-                      : AppColors.primary,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 12,
+                  ),
+                  alignment: Alignment.centerLeft,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                label: Text(
+                child: Text(
                   cart.customerName ?? 'Chọn khách hàng...',
                   style: TextStyle(
                     fontSize: 13,
@@ -1033,16 +1003,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     fontWeight: cart.customerName == null
                         ? FontWeight.normal
                         : FontWeight.bold,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 12,
-                  ),
-                  alignment: Alignment.centerLeft,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
@@ -1059,12 +1019,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.discount_outlined,
-                      size: 16,
-                      color: c.textSecondary,
-                    ),
-                    const SizedBox(width: 6),
                     Text(
                       'Chiết khấu:',
                       style: TextStyle(fontSize: 13, color: c.textSecondary),
@@ -1102,12 +1056,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.edit_note_rounded,
-                      size: 18,
-                      color: c.textSecondary,
-                    ),
-                    const SizedBox(width: 6),
                     Text(
                       'Ghi chú đơn:',
                       style: TextStyle(fontSize: 13, color: c.textSecondary),
@@ -1167,24 +1115,23 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: cart.items.isEmpty || _creating
                     ? null
                     : () => _showCheckout(context),
-                icon: const Icon(Icons.payment, size: 20, color: Colors.white),
-                label: Text(
-                  'XÁC NHẬN THANH TOÁN',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                    color: Colors.white,
-                  ),
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'XÁC NHẬN THANH TOÁN',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -1299,11 +1246,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         subtitle: Text(
                           '${_currFmt.format(item.price)} × ${item.quantity} = ${_currFmt.format(item.subtotal)}',
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: AppColors.danger,
-                          ),
+                        trailing: TextButton(
                           onPressed: () async {
                             final confirm = await AppConfirmModal.show(
                               context,
@@ -1322,6 +1265,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               );
                             }
                           },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.danger,
+                          ),
+                          child: const Text('Xóa'),
                         ),
                       );
                     },
@@ -1423,74 +1370,30 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             SizedBox(
-                              height: 64,
-                              child: OutlinedButton.icon(
+                              height: 48,
+                              child: FilledButton(
                                 onPressed: () {
                                   Navigator.pop(ctx);
                                   _showCashConfirm(context);
                                 },
-                                icon: Icon(
-                                  Icons.money,
-                                  size: 28,
-                                  color: c.textPrimary,
-                                ),
-                                label: Text(
-                                  'TIỀN MẶT',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 18,
-                                    color: c.textPrimary,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: c.textPrimary,
-                                    width: 3,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.zero,
-                                  ),
-                                ),
+                                child: const Text('Tiền mặt'),
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                             SizedBox(
-                              height: 64,
-                              child: OutlinedButton.icon(
+                              height: 48,
+                              child: OutlinedButton(
                                 onPressed: () {
                                   Navigator.pop(ctx);
                                   _processPayment('BANK_TRANSFER');
                                 },
-                                icon: Icon(
-                                  Icons.qr_code_2,
-                                  size: 28,
-                                  color: c.textPrimary,
-                                ),
-                                label: Text(
-                                  'CHUYỂN KHOẢN (QR)',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 18,
-                                    color: c.textPrimary,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: c.textPrimary,
-                                    width: 3,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.zero,
-                                  ),
-                                ),
+                                child: const Text('Chuyển khoản (QR)'),
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                             SizedBox(
-                              height: 64,
-                              child: ElevatedButton.icon(
+                              height: 48,
+                              child: OutlinedButton(
                                 onPressed: () {
                                   if (cart.customerId == null) {
                                     ToastService.showError(
@@ -1501,35 +1404,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                   Navigator.pop(ctx);
                                   _processPayment('DEBT');
                                 },
-                                icon: const Icon(
-                                  Icons.credit_score,
-                                  size: 28,
-                                  color: Colors.white,
-                                ),
-                                label: Text(
-                                  'GHI NỢ',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: c.textPrimary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.zero,
-                                  ),
-                                ),
+                                child: const Text('Ghi nợ'),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                        OutlinedButton.icon(
+                        OutlinedButton(
                           onPressed: () => _showCustomerPicker(context),
-                          icon: const Icon(Icons.person_search),
-                          label: Text(
+                          child: Text(
                             cart.customerName == null
                                 ? 'Chọn khách hàng (mua chịu)'
                                 : 'Khách: ${cart.customerName}',
@@ -1594,18 +1477,17 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       ),
                       child: SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton.icon(
+                        child: OutlinedButton(
                           onPressed: () {
                             Navigator.pop(ctx);
                             _showQuickAddCustomer(context);
                           },
-                          icon: const Icon(Icons.person_add_alt_1),
-                          label: const Text('+ Thêm khách hàng mới'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             side: BorderSide(color: AppColors.primary),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
+                          child: const Text('Thêm khách hàng mới'),
                         ),
                       ),
                     ),
@@ -1672,13 +1554,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             TextField(
               controller: nameCtrl,
               textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: 'Tên khách hàng *',
-                prefixIcon: const Icon(Icons.person),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+              decoration: const InputDecoration(labelText: 'Tên khách hàng *'),
               autofocus: true,
             ),
             const SizedBox(height: 12),
@@ -1727,13 +1603,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   }
                 }
               },
-              decoration: InputDecoration(
-                labelText: 'Số điện thoại',
-                prefixIcon: const Icon(Icons.phone),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+              decoration: const InputDecoration(labelText: 'Số điện thoại'),
               keyboardType: TextInputType.phone,
             ),
           ],
@@ -1767,17 +1637,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text('Đã thêm khách hàng: $name'),
-                        ],
-                      ),
+                      content: Text('Đã thêm khách hàng: $name'),
                       backgroundColor: AppColors.success,
                     ),
                   );
@@ -1939,16 +1799,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    method == 'CASH'
-                        ? 'Thanh toán tiền mặt thành công!'
-                        : 'Tạo đơn hàng ghi nợ thành công!',
-                  ),
-                ],
+              content: Text(
+                method == 'CASH'
+                    ? 'Thanh toán tiền mặt thành công!'
+                    : 'Tạo đơn hàng ghi nợ thành công!',
               ),
               backgroundColor: AppColors.success,
             ),
@@ -1965,21 +1819,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Chưa cấu hình ngân hàng!\nVào Cài đặt → Phương thức TT để thiết lập.',
-                      ),
-                    ),
-                  ],
+                content: Text(
+                  'Chưa cấu hình ngân hàng. Vào Cài đặt, chọn VietQR và tài khoản nhận tiền để thiết lập.',
                 ),
                 backgroundColor: AppColors.warning,
                 duration: Duration(seconds: 4),
@@ -2043,11 +1884,16 @@ class _CashConfirmDialogState extends State<_CashConfirmDialog> {
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.money, color: AppColors.success),
-          SizedBox(width: 8),
-          Text('Xác nhận tiền mặt'),
+          AppAssetIcon(
+            assetPath: AppAssets.cash,
+            color: AppColors.success,
+            size: 22,
+            semanticLabel: 'Tiền mặt',
+          ),
+          const SizedBox(width: 8),
+          const Text('Xác nhận tiền mặt'),
         ],
       ),
       content: SingleChildScrollView(

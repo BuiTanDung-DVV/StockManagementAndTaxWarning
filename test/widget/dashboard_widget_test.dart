@@ -19,7 +19,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: _DashboardTestApp()));
 
     expect(find.byType(DashboardScreen), findsOneWidget);
-    expect(find.text('Chưa có cửa hàng nào'), findsOneWidget);
+    expect(find.text('Chưa có cửa hàng'), findsOneWidget);
   });
 }
 

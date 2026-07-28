@@ -7,7 +7,7 @@ import '../theme/app_theme.dart';
 class AppLoading extends StatelessWidget {
   final double size;
   final String? message;
-  const AppLoading({super.key, this.size = 120, this.message});
+  const AppLoading({super.key, this.size = 56, this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -54,19 +54,11 @@ class AppEmpty extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
+              Lottie.asset(
+                'assets/lottie/empty.json',
                 width: size,
                 height: size,
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: c.divider),
-                ),
-                child: Icon(
-                  Icons.inbox_outlined,
-                  size: size * 0.42,
-                  color: c.textMuted,
-                ),
+                repeat: false,
               ),
               const SizedBox(height: 16),
               Text(
@@ -142,43 +134,48 @@ class AppError extends StatelessWidget {
     super.key,
     required this.message,
     this.onRetry,
-    this.size = 120,
+    this.size = 64,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Lottie.asset(
-              'assets/lottie/error.json',
-              width: size,
-              height: size,
-              repeat: true,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 14, color: AppColors.danger),
-              textAlign: TextAlign.center,
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Thử lại'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact =
+            constraints.hasBoundedHeight && constraints.maxHeight < 220;
+        final resolvedSize = compact && size > 44 ? 44.0 : size;
+        final spacing = compact ? 8.0 : 16.0;
+
+        return Center(
+          child: Padding(
+            padding: EdgeInsets.all(compact ? 12 : 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Lottie.asset(
+                  'assets/lottie/error.json',
+                  width: resolvedSize,
+                  height: resolvedSize,
+                  repeat: true,
                 ),
-              ),
-            ],
-          ],
-        ),
-      ),
+                SizedBox(height: spacing),
+                Text(
+                  message,
+                  style: const TextStyle(fontSize: 14, color: AppColors.danger),
+                  textAlign: TextAlign.center,
+                ),
+                if (onRetry != null) ...[
+                  SizedBox(height: spacing),
+                  FilledButton(
+                    onPressed: onRetry,
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -198,17 +195,11 @@ class AppInlineError extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.danger.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.control),
         border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: AppColors.danger,
-            size: 20,
-          ),
-          const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
@@ -218,12 +209,7 @@ class AppInlineError extends StatelessWidget {
             ),
           ),
           if (onRetry != null)
-            IconButton(
-              onPressed: onRetry,
-              tooltip: 'Thử lại',
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.refresh_rounded, size: 20),
-            ),
+            TextButton(onPressed: onRetry, child: const Text('Thử lại')),
         ],
       ),
     );

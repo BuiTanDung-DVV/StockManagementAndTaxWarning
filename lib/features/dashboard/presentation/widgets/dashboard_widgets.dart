@@ -388,10 +388,11 @@ class TimeFilterBar extends StatelessWidget {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: c.cardAlt.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
+        color: c.cardAlt,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: c.divider),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -420,19 +421,10 @@ class TimeFilterBar extends StatelessWidget {
       onTap: () => onChanged(val),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: active ? c.card : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
           label,
@@ -469,28 +461,14 @@ class ComparisonBarChart extends StatelessWidget {
     if (currentData.isEmpty && previousData.isEmpty) {
       return Container(
         height: 220,
-        margin: const EdgeInsets.only(top: 14),
         decoration: BoxDecoration(
           color: c.card,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: c.divider.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(color: c.divider),
         ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              HugeIcon(
-                icon: HugeIcons.strokeRoundedAnalytics01,
-                size: 32,
-                color: c.textMuted,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Chưa có dữ liệu giao dịch',
-                style: TextStyle(color: c.textSecondary, fontSize: 13),
-              ),
-            ],
-          ),
+        child: const AppEmpty(
+          message: 'Chưa có dữ liệu giao dịch',
+          subtitle: 'Biểu đồ sẽ xuất hiện khi có dữ liệu trong kỳ.',
         ),
       );
     }
@@ -544,23 +522,15 @@ class ComparisonBarChart extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: rev2,
-              gradient: LinearGradient(
-                colors: [pastColor, pastColor.withValues(alpha: 0.5)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+              color: pastColor,
               width: barWidth,
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(2),
             ),
             BarChartRodData(
               toY: rev1,
-              gradient: LinearGradient(
-                colors: [presentColor, presentColor.withValues(alpha: 0.7)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+              color: presentColor,
               width: barWidth,
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(2),
             ),
           ],
           barsSpace: bSpace,
@@ -571,55 +541,49 @@ class ComparisonBarChart extends StatelessWidget {
     if (maxRev == 0) maxRev = 1000000;
 
     return Container(
-      height: 380,
-      margin: const EdgeInsets.only(top: 14),
-      padding: const EdgeInsets.all(20),
+      height: isMobile ? 300 : 360,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 16, bottom: 20),
+            padding: const EdgeInsets.only(bottom: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'So sánh doanh thu',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: c.textSecondary,
-                        letterSpacing: -0.2,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Text(
+                        'Doanh thu theo kỳ',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: c.textPrimary,
+                          letterSpacing: -0.2,
+                        ),
                       ),
-                    ),
-                    if (filterWidget != null) ...[
-                      const SizedBox(width: 16),
-                      filterWidget!,
+                      if (!isMobile && filterWidget != null) ...[
+                        const SizedBox(width: 16),
+                        Flexible(child: filterWidget!),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildLegendItem(label2, pastColor, c.textSecondary),
-                    const SizedBox(width: 16),
-                    _buildLegendItem(label1, presentColor, c.textSecondary),
-                  ],
-                ),
+                if (!isMobile)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildLegendItem(label2, pastColor, c.textSecondary),
+                      const SizedBox(width: 16),
+                      _buildLegendItem(label1, presentColor, c.textSecondary),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -643,9 +607,8 @@ class ComparisonBarChart extends StatelessWidget {
                           show: true,
                           drawVerticalLine: false,
                           getDrawingHorizontalLine: (v) => FlLine(
-                            color: c.divider.withValues(alpha: 0.15),
+                            color: c.divider.withValues(alpha: 0.45),
                             strokeWidth: 1,
-                            dashArray: [5, 5],
                           ),
                         ),
                         borderData: FlBorderData(
@@ -2965,6 +2928,536 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
           chips[index],
         ],
       ],
+    );
+  }
+}
+
+class DashboardPriorityList extends ConsumerWidget {
+  const DashboardPriorityList({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppThemeColors.of(context);
+    final shopState = ref.watch(shopProvider);
+    final entries = <Widget>[];
+
+    if (shopState.isOwner || shopState.hasPermission('finance')) {
+      final today = DateTime.now();
+      final salesAsync = ref.watch(
+        salesSummaryProvider((
+          from: '${today.year}-01-01',
+          to: today.toIso8601String().split('T').first,
+        )),
+      );
+      final thresholds = ref.watch(taxConfigProvider).thresholds;
+      entries.add(
+        salesAsync.when(
+          loading: () => _PriorityRow(
+            number: entries.length + 1,
+            title: 'Kiểm tra nghĩa vụ thuế',
+            detail: 'Đang tải doanh thu năm',
+            status: 'Đang tải',
+            statusColor: colors.textMuted,
+            onTap: () => context.push('/tax-calculator'),
+          ),
+          error: (_, _) => _PriorityRow(
+            number: entries.length + 1,
+            title: 'Kiểm tra nghĩa vụ thuế',
+            detail: 'Chưa tải được doanh thu năm',
+            status: 'Kiểm tra',
+            statusColor: AppColors.warning,
+            onTap: () => context.push('/tax-calculator'),
+          ),
+          data: (data) {
+            final revenue =
+                num.tryParse(
+                  data['totalRevenue']?.toString() ?? '0',
+                )?.toDouble() ??
+                0.0;
+            return _PriorityRow(
+              number: entries.length + 1,
+              title: 'Thuế hộ kinh doanh ${today.year}',
+              detail: thresholds.getTierLabel(revenue),
+              status: 'Chi tiết',
+              statusColor: thresholds.getColor(revenue),
+              onTap: () => context.push('/tax-calculator'),
+            );
+          },
+        ),
+      );
+    }
+
+    if (shopState.isOwner || shopState.hasPermission('inventory')) {
+      entries.add(
+        ref
+            .watch(lowStockProvider)
+            .when(
+              loading: () => _PriorityRow(
+                number: entries.length + 1,
+                title: 'Tồn kho cần xử lý',
+                detail: 'Đang tải dữ liệu',
+                status: 'Đang tải',
+                statusColor: colors.textMuted,
+                onTap: () => context.push('/inventory'),
+              ),
+              error: (_, _) => _PriorityRow(
+                number: entries.length + 1,
+                title: 'Tồn kho cần xử lý',
+                detail: 'Chưa tải được dữ liệu',
+                status: 'Kiểm tra',
+                statusColor: AppColors.warning,
+                onTap: () => context.push('/inventory'),
+              ),
+              data: (items) => _PriorityRow(
+                number: entries.length + 1,
+                title: items.isEmpty
+                    ? 'Tồn kho trong định mức'
+                    : '${items.length} sản phẩm dưới định mức tồn',
+                detail: items.isEmpty
+                    ? 'Chưa có sản phẩm cần nhập thêm'
+                    : 'Kiểm tra và đề xuất nhập hàng',
+                status: items.isEmpty ? 'Ổn định' : 'Cần xử lý',
+                statusColor: items.isEmpty
+                    ? AppColors.success
+                    : AppColors.danger,
+                onTap: () => context.push('/inventory'),
+              ),
+            ),
+      );
+    }
+
+    if (shopState.isOwner || shopState.hasPermission('customers')) {
+      entries.add(
+        ref
+            .watch(overdueDebtsProvider)
+            .when(
+              loading: () => _PriorityRow(
+                number: entries.length + 1,
+                title: 'Công nợ khách hàng',
+                detail: 'Đang tải dữ liệu',
+                status: 'Đang tải',
+                statusColor: colors.textMuted,
+                onTap: () => context.push('/customer-debts'),
+              ),
+              error: (_, _) => _PriorityRow(
+                number: entries.length + 1,
+                title: 'Công nợ khách hàng',
+                detail: 'Chưa tải được dữ liệu',
+                status: 'Kiểm tra',
+                statusColor: AppColors.warning,
+                onTap: () => context.push('/customer-debts'),
+              ),
+              data: (items) => _PriorityRow(
+                number: entries.length + 1,
+                title: items.isEmpty
+                    ? 'Không có nợ quá hạn'
+                    : '${items.length} khoản nợ quá hạn',
+                detail: items.isEmpty
+                    ? 'Công nợ đang trong hạn'
+                    : 'Mở sổ nợ để theo dõi và thu nợ',
+                status: items.isEmpty ? 'Ổn định' : 'Quá hạn',
+                statusColor: items.isEmpty
+                    ? AppColors.success
+                    : AppColors.danger,
+                onTap: () => context.push('/customer-debts'),
+              ),
+            ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Text(
+              'Ưu tiên hôm nay',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Divider(height: 1, color: colors.divider),
+          if (entries.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Text(
+                'Không có mục cần xử lý theo quyền hiện tại.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
+              ),
+            )
+          else
+            for (var index = 0; index < entries.length; index++) ...[
+              if (index > 0) Divider(height: 1, color: colors.divider),
+              entries[index],
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PriorityRow extends StatelessWidget {
+  final int number;
+  final String title;
+  final String detail;
+  final String status;
+  final Color statusColor;
+  final VoidCallback onTap;
+
+  const _PriorityRow({
+    required this.number,
+    required this.title,
+    required this.detail,
+    required this.status,
+    required this.statusColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '$number',
+                  style: AppTheme.tabularStyle(
+                    context,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textMuted,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      detail,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.textMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                status,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: statusColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DashboardRecentOrdersList extends StatelessWidget {
+  final List<dynamic> transactions;
+
+  const DashboardRecentOrdersList(this.transactions, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final displayItems = transactions.take(4).toList();
+
+    if (displayItems.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: AppSpacing.lg),
+        child: AppEmpty(
+          message: 'Chưa có đơn hàng gần đây',
+          subtitle: 'Đơn hàng mới sẽ xuất hiện tại đây sau khi bán hàng.',
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Đơn hàng gần đây',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () =>
+                      ExcelExportService.exportOrdersToExcel(transactions),
+                  child: const Text('Xuất Excel'),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/sales'),
+                  child: const Text('Xem tất cả'),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: colors.divider),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 720) {
+                return Column(
+                  children: [
+                    for (
+                      var index = 0;
+                      index < displayItems.length;
+                      index++
+                    ) ...[
+                      if (index > 0) Divider(height: 1, color: colors.divider),
+                      _RecentOrderMobileRow(item: displayItems[index]),
+                    ],
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  Container(
+                    color: colors.cardAlt,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: const Row(
+                      children: [
+                        Expanded(flex: 2, child: Text('Mã đơn')),
+                        Expanded(flex: 3, child: Text('Khách hàng')),
+                        Expanded(flex: 2, child: Text('Ngày đặt')),
+                        Expanded(
+                          flex: 2,
+                          child: Text('Giá trị', textAlign: TextAlign.right),
+                        ),
+                      ],
+                    ),
+                  ),
+                  for (var index = 0; index < displayItems.length; index++) ...[
+                    if (index > 0) Divider(height: 1, color: colors.divider),
+                    _RecentOrderDesktopRow(item: displayItems[index]),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentOrderDesktopRow extends StatelessWidget {
+  final dynamic item;
+
+  const _RecentOrderDesktopRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final data = _RecentOrderData.from(item);
+
+    return InkWell(
+      onTap: () => context.push('/sales/${data.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(
+                data.code,
+                style: AppTheme.tabularStyle(
+                  context,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Text(
+                data.customer,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                data.date,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                data.total,
+                textAlign: TextAlign.right,
+                style: AppTheme.tabularStyle(
+                  context,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentOrderMobileRow extends StatelessWidget {
+  final dynamic item;
+
+  const _RecentOrderMobileRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final data = _RecentOrderData.from(item);
+
+    return InkWell(
+      onTap: () => context.push('/sales/${data.id}'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    data.code,
+                    style: AppTheme.tabularStyle(
+                      context,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    data.customer,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  data.date,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  data.total,
+                  style: AppTheme.tabularStyle(
+                    context,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentOrderData {
+  final dynamic id;
+  final String code;
+  final String customer;
+  final String date;
+  final String total;
+
+  const _RecentOrderData({
+    required this.id,
+    required this.code,
+    required this.customer,
+    required this.date,
+    required this.total,
+  });
+
+  factory _RecentOrderData.from(dynamic item) {
+    final dateValue = DateTime.tryParse(item['orderDate']?.toString() ?? '');
+    final amount =
+        num.tryParse(item['totalAmount']?.toString() ?? '0')?.toDouble() ?? 0;
+    final id = item['id'];
+    return _RecentOrderData(
+      id: id,
+      code: item['orderCode']?.toString() ?? 'HD-$id',
+      customer: item['customer']?['name']?.toString() ?? 'Khách mua lẻ',
+      date: dateValue == null
+          ? 'Chưa rõ'
+          : DateFormat('dd/MM/yyyy HH:mm').format(dateValue),
+      total: _currFmt.format(amount),
     );
   }
 }

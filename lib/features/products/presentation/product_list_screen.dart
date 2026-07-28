@@ -3,16 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_page_header.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_badge.dart';
 import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/filter_bar.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../../sales/providers/sales_provider.dart';
@@ -68,7 +69,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final isCompact = MediaQuery.sizeOf(context).width < 600;
     final searchQuery = ref.watch(_productSearchQueryProvider);
     final tagQuery = ref.watch(_productTagFilterProvider);
     final listAsync = ref.watch(
@@ -93,51 +93,33 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: AppBar(
-        title: Text(
-          'Danh mục sản phẩm',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          if (isCompact)
-            IconButton(
-              onPressed: () => context.push('/products/form'),
-              icon: const Icon(Icons.add_rounded),
-              tooltip: 'Thêm sản phẩm',
-            ),
-          if (ref.watch(authProvider).isShopOwner)
-            IconButton(
-              icon: HugeIcon(
-                icon: HugeIcons.strokeRoundedTag01,
-                color: c.textPrimary,
-                size: 22,
+      body: SafeArea(
+        top: false,
+        child: AppResponsiveContent(
+          maxWidth: 1440,
+          verticalPadding: AppSpacing.lg,
+          child: Column(
+            children: [
+              AppPageHeader(
+                title: 'Danh mục sản phẩm',
+                subtitle:
+                    'Tìm nhanh theo tên, SKU, tồn kho và nhãn nghiệp vụ.',
+                action: Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    if (ref.watch(authProvider).isShopOwner)
+                      OutlinedButton(
+                        onPressed: () => context.push('/products/tags'),
+                        child: const Text('Quản lý nhãn'),
+                      ),
+                    FilledButton(
+                      onPressed: () => context.push('/products/form'),
+                      child: const Text('Thêm sản phẩm'),
+                    ),
+                  ],
+                ),
               ),
-              onPressed: () => context.push('/products/tags'),
-              tooltip: 'Quản lý Nhãn',
-            ),
-          featureGuideButton(context, 'product_list'),
-        ],
-      ),
-      floatingActionButton: isCompact
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => context.push('/products/form'),
-              icon: const Icon(Icons.add_box_rounded),
-              label: Text(
-                'Thêm sản phẩm',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-              ),
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
-            ),
-      body: Column(
-        children: [
           FilterBar(
             searchHint: 'Tìm sản phẩm theo tên, SKU...',
             onSearchChanged: _onSearchChanged,
@@ -153,46 +135,53 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       .where((tag) => !_isInternalTag(tag.name))
                       .toList();
                   if (visibleTags.isEmpty) return const SizedBox.shrink();
-                  return SizedBox(
-                    height: 40,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: visibleTags.length,
-                      itemBuilder: (ctx, i) {
-                        final t = visibleTags[i];
-                        final isSelected = tagQuery == t.name;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Semantics(
-                            button: true,
-                            label: isSelected
-                                ? 'Bỏ lọc nhãn ${t.name}'
-                                : 'Lọc theo nhãn ${t.name}',
-                            selected: isSelected,
-                            child: ChoiceChip(
-                              label: Text(
-                                t.name,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isSelected ? Colors.white : t.uiColor,
+                  return Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        for (final t in visibleTags.take(6))
+                          Builder(
+                            builder: (context) {
+                              final isSelected = tagQuery == t.name;
+                              return Semantics(
+                                button: true,
+                                label: isSelected
+                                    ? 'Bỏ lọc nhãn ${t.name}'
+                                    : 'Lọc theo nhãn ${t.name}',
+                                selected: isSelected,
+                                child: ChoiceChip(
+                                  label: Text(
+                                    t.name,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : t.uiColor,
+                                    ),
+                                  ),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    ref
+                                        .read(
+                                          _productTagFilterProvider.notifier,
+                                        )
+                                        .set(selected ? t.name : '');
+                                  },
+                                  selectedColor: t.uiColor,
+                                  backgroundColor: t.uiColor.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  showCheckmark: false,
+                                  side: BorderSide(
+                                    color: t.uiColor.withValues(alpha: 0.3),
+                                  ),
                                 ),
-                              ),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                ref
-                                    .read(_productTagFilterProvider.notifier)
-                                    .set(selected ? t.name : '');
-                              },
-                              selectedColor: t.uiColor,
-                              backgroundColor: t.uiColor.withValues(alpha: 0.1),
-                              side: BorderSide(
-                                color: t.uiColor.withValues(alpha: 0.3),
-                              ),
-                            ),
+                              );
+                            },
                           ),
-                        );
-                      },
+                      ],
                     ),
                   );
                 },
@@ -382,28 +371,22 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
               ),
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildImageFallback(ThemeData theme) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary.withValues(alpha: 0.15),
-            theme.colorScheme.primary.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      color: AppThemeColors.of(context).cardAlt,
       alignment: Alignment.center,
-      child: Icon(
-        Icons.inventory_2_outlined,
-        color: theme.colorScheme.primary.withValues(alpha: 0.6),
+      child: AppAssetIcon(
+        assetPath: AppAssets.inventory,
+        color: theme.colorScheme.primary,
         size: 24,
+        semanticLabel: 'Sản phẩm chưa có ảnh',
       ),
     );
   }
@@ -449,10 +432,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     if (isDemoData) tags.insert(0, 'Dữ liệu thử nghiệm');
     if (tags.isEmpty) return const SizedBox.shrink();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: tags.take(4).map((t) {
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: tags.take(3).map((t) {
           // Special colors for auto tags
           Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
           Color textColor = theme.colorScheme.primary;
@@ -475,7 +458,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           }
 
           return Container(
-            margin: const EdgeInsets.only(right: 4),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: bgColor,
@@ -491,7 +473,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             ),
           );
         }).toList(),
-      ),
     );
   }
 
