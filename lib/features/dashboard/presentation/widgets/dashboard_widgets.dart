@@ -460,7 +460,7 @@ class ComparisonBarChart extends StatelessWidget {
 
     if (currentData.isEmpty && previousData.isEmpty) {
       return Container(
-        height: 220,
+        height: 280,
         decoration: BoxDecoration(
           color: c.card,
           borderRadius: BorderRadius.circular(AppRadius.card),
@@ -541,8 +541,13 @@ class ComparisonBarChart extends StatelessWidget {
     if (maxRev == 0) maxRev = 1000000;
 
     return Container(
-      height: isMobile ? 300 : 360,
-      padding: const EdgeInsets.all(16),
+      height: isMobile ? 340 : 420,
+      padding: EdgeInsets.fromLTRB(
+        isMobile ? 12 : 16,
+        14,
+        isMobile ? 12 : 16,
+        12,
+      ),
       decoration: BoxDecoration(
         color: c.surface,
         borderRadius: BorderRadius.circular(AppRadius.card),
@@ -552,7 +557,7 @@ class ComparisonBarChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

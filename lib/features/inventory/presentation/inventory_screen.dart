@@ -189,7 +189,7 @@ class _SimpleMetricStrip extends StatelessWidget {
         }
 
         return Container(
-          height: 120,
+          height: 96,
           decoration: BoxDecoration(
             color: colors.surface,
             border: Border.all(color: colors.divider),
@@ -220,7 +220,10 @@ class _InventoryMetricCell extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -229,7 +232,7 @@ class _InventoryMetricCell extends StatelessWidget {
               if (metric.assetPath != null) ...[
                 AppAssetIcon(
                   assetPath: metric.assetPath!,
-                  size: 18,
+                  size: 16,
                   color: Theme.of(context).colorScheme.primary,
                   semanticLabel: metric.label,
                 ),
@@ -247,21 +250,21 @@ class _InventoryMetricCell extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             metric.value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTheme.tabularStyle(
               context,
-              fontSize: 21,
+              fontSize: 19,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             metric.context,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(
               context,
@@ -283,13 +286,16 @@ class _InventoryMetricRow extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
           if (metric.assetPath != null) ...[
             AppAssetIcon(
               assetPath: metric.assetPath!,
-              size: 20,
+              size: 18,
               color: Theme.of(context).colorScheme.primary,
               semanticLabel: metric.label,
             ),
@@ -585,7 +591,8 @@ class _CategoryDistribution extends StatelessWidget {
                 );
               }
 
-              final values = items
+              final visibleItems = items.take(8).toList();
+              final values = visibleItems
                   .map<double>(
                     (item) =>
                         (item['value'] ??
@@ -604,10 +611,15 @@ class _CategoryDistribution extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   children: [
-                    for (var index = 0; index < items.length; index++) ...[
-                      if (index > 0) const SizedBox(height: AppSpacing.sm),
+                    for (
+                      var index = 0;
+                      index < visibleItems.length;
+                      index++
+                    ) ...[
+                      if (index > 0) const SizedBox(height: AppSpacing.md),
                       _DistributionRow(
-                        label: items[index]['name']?.toString() ?? 'Khác',
+                        label:
+                            visibleItems[index]['name']?.toString() ?? 'Khác',
                         value: values[index],
                         maximum: maximum,
                       ),
@@ -660,8 +672,8 @@ class _DistributionRow extends StatelessWidget {
         const SizedBox(height: 6),
         LinearProgressIndicator(
           value: progress,
-          minHeight: 6,
-          borderRadius: BorderRadius.circular(3),
+          minHeight: 10,
+          borderRadius: BorderRadius.circular(5),
           color: Theme.of(context).colorScheme.primary,
           backgroundColor: colors.cardAlt,
         ),
