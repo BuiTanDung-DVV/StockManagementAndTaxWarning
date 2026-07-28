@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/assets/app_assets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_animations.dart';
 import '../../../../core/utils/excel_export_service.dart';
@@ -3221,14 +3222,31 @@ class DashboardRecentOrdersList extends StatelessWidget {
         color: colors.surface,
         border: Border.all(color: colors.divider),
         borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Container(
+            height: 3,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.card - 1),
+              ),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            padding: const EdgeInsets.fromLTRB(16, 11, 8, 11),
             child: Row(
               children: [
+                AppAssetIcon(
+                  assetPath: AppAssets.orders,
+                  size: 19,
+                  color: Theme.of(context).colorScheme.primary,
+                  semanticLabel: 'Đơn hàng gần đây',
+                ),
+                const SizedBox(width: 9),
                 Expanded(
                   child: Text(
                     'Đơn hàng gần đây',
@@ -3270,10 +3288,10 @@ class DashboardRecentOrdersList extends StatelessWidget {
               return Column(
                 children: [
                   Container(
-                    color: colors.cardAlt,
+                    color: colors.cardAlt.withValues(alpha: 0.92),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 10,
+                      vertical: 12,
                     ),
                     child: const Row(
                       children: [
