@@ -601,32 +601,19 @@ class _TopProductsRevenueChart extends StatelessWidget {
 
   const _TopProductsRevenueChart({required this.items, required this.period});
 
-  String _axisLabel(String value) {
-    final normalized = value.trim();
-    if (normalized.length <= 11) return normalized;
-    return '${normalized.substring(0, 10)}…';
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final primary = Theme.of(context).colorScheme.primary;
-    final products = items.take(5).toList();
-    final names = products
-        .map((item) => item['name']?.toString() ?? 'Chưa rõ')
-        .toList();
-    final values = products
-        .map(
-          (item) =>
-              num.tryParse(item['value']?.toString() ?? '0')?.toDouble() ?? 0,
-        )
-        .toList();
+    final products = items.take(10).toList();
+    final chartHeight = products.isEmpty
+        ? 300.0
+        : (112 + products.length * 55).clamp(300, 662).toDouble();
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.lg),
       child: ChartCard(
-        title: 'Sản phẩm bán chạy theo doanh thu',
-        height: 320,
+        title: 'Top sản phẩm bán chạy',
+        height: chartHeight,
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
@@ -646,18 +633,202 @@ class _TopProductsRevenueChart extends StatelessWidget {
             ? const EmptyChartPlaceholder(
                 message: 'Chưa có doanh thu sản phẩm trong kỳ này.',
               )
-            : MiniBarChart(
-                values: values,
-                labels: names.map(_axisLabel).toList(),
-                tooltipLabels: names,
-                barColors: [
-                  primary,
-                  primary.withValues(alpha: 0.88),
-                  primary.withValues(alpha: 0.76),
-                  primary.withValues(alpha: 0.64),
-                  primary.withValues(alpha: 0.52),
-                ],
+            : _TopProductsHorizontalBars(products),
+      ),
+    );
+  }
+}
+
+class _TopProductsHorizontalBars extends StatelessWidget {
+  final List<dynamic> products;
+
+  const _TopProductsHorizontalBars(this.products);
+
+  double _number(dynamic value) =>
+      num.tryParse(value?.toString() ?? '0')?.toDouble() ?? 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    final maxRevenue = products.fold<double>(
+      0,
+      (current, item) =>
+          _number(item['value']) > current ? _number(item['value']) : current,
+    );
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              const SizedBox(width: 34),
+              Expanded(
+                child: Text(
+                  'Xếp theo doanh thu',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
+              SizedBox(
+                width: 66,
+                child: Text(
+                  'Đã bán',
+                  textAlign: TextAlign.right,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 92,
+                child: Text(
+                  'Doanh thu',
+                  textAlign: TextAlign.right,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: products.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 7),
+            itemBuilder: (context, index) {
+              final product = products[index];
+              final revenue = _number(product['value']);
+              final quantity = _number(product['quantity']);
+              final progress = maxRevenue <= 0 ? 0.0 : revenue / maxRevenue;
+
+              return _TopProductRankRow(
+                rank: index + 1,
+                name: product['name']?.toString() ?? 'Chưa rõ',
+                revenue: revenue,
+                quantity: quantity,
+                progress: progress,
+                color: primary.withValues(alpha: 1 - index * 0.045),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TopProductRankRow extends StatelessWidget {
+  final int rank;
+  final String name;
+  final double revenue;
+  final double quantity;
+  final double progress;
+  final Color color;
+
+  const _TopProductRankRow({
+    required this.rank,
+    required this.name,
+    required this.revenue,
+    required this.quantity,
+    required this.progress,
+    required this.color,
+  });
+
+  String get _quantityLabel {
+    final value = quantity == quantity.roundToDouble()
+        ? quantity.toInt().toString()
+        : NumberFormat('0.##', 'vi_VN').format(quantity);
+    return '$value sp';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return SizedBox(
+      height: 47,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              rank.toString().padLeft(2, '0'),
+              style: AppTheme.tabularStyle(
+                context,
+                color: rank <= 3 ? color : colors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 7,
+                    backgroundColor: colors.cardAlt,
+                    valueColor: AlwaysStoppedAnimation(color),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 66,
+            child: Text(
+              _quantityLabel,
+              textAlign: TextAlign.right,
+              style: AppTheme.tabularStyle(
+                context,
+                color: colors.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 92,
+            child: Text(
+              '${compactVietnameseAmount(revenue)} ₫',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: AppTheme.tabularStyle(
+                context,
+                color: colors.textPrimary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
