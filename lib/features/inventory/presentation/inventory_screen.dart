@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/assets/app_assets.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
@@ -54,16 +55,9 @@ class InventoryScreen extends ConsumerWidget {
                     title: 'Quản lý kho',
                     subtitle:
                         'Ưu tiên sản phẩm cần nhập, sắp hết hạn và tồn chậm luân chuyển.',
-                    action: Wrap(
-                      spacing: AppSpacing.xs,
-                      runSpacing: AppSpacing.xs,
-                      children: [
-                        OutlinedButton(
-                          onPressed: () => context.push('/stock-take'),
-                          child: const Text('Kiểm kê'),
-                        ),
-                      ],
-                    ),
+                    dense: true,
+                    action: featureGuideButton(context, 'inventory'),
+                    compactAction: featureGuideButton(context, 'inventory'),
                   ),
                   _InventoryMetricStrip(
                     stock: stockAsync,
@@ -84,6 +78,8 @@ class InventoryScreen extends ConsumerWidget {
                         },
                       ),
                     ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _InventoryQuickActions(),
                   const SizedBox(height: AppSpacing.lg),
                   _InventoryActionWorkspace(
                     lowStock: lowStockAsync,
@@ -91,18 +87,92 @@ class InventoryScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _CategoryDistribution(asyncValue: categoriesAsync),
-                  const SizedBox(height: AppSpacing.md),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => context.push('/xnt-report'),
-                      child: const Text('Mở báo cáo xuất nhập tồn'),
-                    ),
-                  ),
                   const SizedBox(height: AppSpacing.xl),
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InventoryQuickActions extends StatelessWidget {
+  const _InventoryQuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppFillGrid(
+      minItemWidth: 180,
+      maxColumns: 3,
+      itemHeight: 56,
+      children: [
+        _InventoryQuickAction(
+          label: 'Kiểm kê kho',
+          assetPath: AppAssets.inventory,
+          onTap: () => context.push('/stock-take'),
+        ),
+        _InventoryQuickAction(
+          label: 'Đơn nhập hàng',
+          assetPath: AppAssets.orders,
+          onTap: () => context.push('/purchase-orders'),
+        ),
+        _InventoryQuickAction(
+          label: 'Báo cáo xuất nhập tồn',
+          assetPath: AppAssets.emptyDocument,
+          onTap: () => context.push('/xnt-report'),
+        ),
+      ],
+    );
+  }
+}
+
+class _InventoryQuickAction extends StatelessWidget {
+  final String label;
+  final String assetPath;
+  final VoidCallback onTap;
+
+  const _InventoryQuickAction({
+    required this.label,
+    required this.assetPath,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Material(
+      color: colors.surface,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.control),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Row(
+            children: [
+              AppAssetIcon(
+                assetPath: assetPath,
+                size: 18,
+                color: primary,
+                semanticLabel: label,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
         ),
       ),

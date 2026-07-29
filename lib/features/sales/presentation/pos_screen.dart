@@ -354,10 +354,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       appBar: AppBar(
         title: const Text('Bán hàng'),
         actions: [
-          TextButton(
-            onPressed: () => showFeatureGuide(context, 'pos'),
-            child: const Text('Hướng dẫn'),
-          ),
+          featureGuideButton(context, 'pos'),
           if (cart.items.isNotEmpty)
             TextButton(
               onPressed: () => _showCart(context),

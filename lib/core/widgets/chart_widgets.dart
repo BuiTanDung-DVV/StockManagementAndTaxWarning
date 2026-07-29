@@ -496,6 +496,8 @@ class MiniBarChart extends StatelessWidget {
   final List<String>? tooltipLabels;
   final Color? barColor;
   final List<Color>? barColors;
+  final bool showLeftTitles;
+  final String valueSuffix;
 
   const MiniBarChart({
     super.key,
@@ -504,6 +506,8 @@ class MiniBarChart extends StatelessWidget {
     this.tooltipLabels,
     this.barColor,
     this.barColors,
+    this.showLeftTitles = false,
+    this.valueSuffix = '',
   });
 
   @override
@@ -536,7 +540,7 @@ class MiniBarChart extends StatelessWidget {
                   ? '${tooltipLabels![group.x]}\n'
                   : '';
               return BarTooltipItem(
-                '$label${_compactFmt.format(rod.toY)}',
+                '$label${NumberFormat.decimalPattern('vi_VN').format(rod.toY.round())}$valueSuffix',
                 AppTheme.tabularStyle(
                   context,
                   color: theme.colorScheme.primary,
@@ -554,8 +558,26 @@ class MiniBarChart extends StatelessWidget {
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
-          leftTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: showLeftTitles,
+              reservedSize: showLeftTitles ? 68 : 0,
+              getTitlesWidget: (value, meta) {
+                if (value == meta.max || value == meta.min) {
+                  return const SizedBox.shrink();
+                }
+                return Text(
+                  compactVietnameseAmount(value),
+                  textAlign: TextAlign.right,
+                  style: AppTheme.tabularStyle(
+                    context,
+                    color: c.textMuted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
+            ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(

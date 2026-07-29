@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
@@ -47,6 +48,7 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Quản lý Bán hàng & Kho hàng',
+      scrollBehavior: const AppScrollBehavior(),
       scaffoldMessengerKey: ToastService.scaffoldMessengerKey,
       builder: BotToastInit(),
       debugShowCheckedModeBanner: false,
@@ -62,4 +64,16 @@ class MyApp extends ConsumerWidget {
       routerConfig: router,
     );
   }
+}
+
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    ...super.dragDevices,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+  };
 }
