@@ -50,15 +50,28 @@ void main() {
     final launcher = find.bySemanticsLabel('Hỏi AI. Có thể kéo để đổi vị trí.');
     final initialPosition = tester.getTopLeft(launcher);
 
-    await tester.drag(launcher, const Offset(-120, -160));
+    await tester.drag(launcher, const Offset(120, -160));
     await tester.pumpAndSettle();
 
     final movedPosition = tester.getTopLeft(launcher);
-    expect(movedPosition.dx, lessThan(initialPosition.dx));
+    expect(movedPosition.dx, greaterThan(initialPosition.dx));
     expect(movedPosition.dy, lessThan(initialPosition.dy));
 
     final preferences = await SharedPreferences.getInstance();
-    expect(preferences.getDouble('ai_assistant_launcher_x'), isNotNull);
-    expect(preferences.getDouble('ai_assistant_launcher_y'), isNotNull);
+    expect(preferences.getDouble('ai_assistant_launcher_x_v2'), isNotNull);
+    expect(preferences.getDouble('ai_assistant_launcher_y_v2'), isNotNull);
+  });
+
+  testWidgets('AI launcher can be hidden with its close control', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildHost());
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Ẩn nút AI'), findsOneWidget);
+    await tester.tap(find.byTooltip('Ẩn nút AI'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Ẩn nút AI'), findsNothing);
   });
 }

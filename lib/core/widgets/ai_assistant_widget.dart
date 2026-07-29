@@ -22,6 +22,19 @@ final aiAssistantOpenProvider = NotifierProvider<AiAssistantOpenNotifier, bool>(
   AiAssistantOpenNotifier.new,
 );
 
+class AiAssistantLauncherVisibilityNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void show() => state = true;
+  void hide() => state = false;
+}
+
+final aiAssistantLauncherVisibleProvider =
+    NotifierProvider<AiAssistantLauncherVisibilityNotifier, bool>(
+      AiAssistantLauncherVisibilityNotifier.new,
+    );
+
 class AiAssistantWidget extends ConsumerStatefulWidget {
   final bool showLauncher;
   final double topSafeInset;
@@ -37,8 +50,8 @@ class AiAssistantWidget extends ConsumerStatefulWidget {
 }
 
 class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
-  static const _launcherXKey = 'ai_assistant_launcher_x';
-  static const _launcherYKey = 'ai_assistant_launcher_y';
+  static const _launcherXKey = 'ai_assistant_launcher_x_v2';
+  static const _launcherYKey = 'ai_assistant_launcher_y_v2';
 
   final TextEditingController _queryController = TextEditingController();
   Offset? _normalizedLauncherPosition;
@@ -94,7 +107,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   }
 
   Offset _resolveLauncherPosition(Rect bounds) {
-    final normalized = _normalizedLauncherPosition ?? const Offset(1, 1);
+    final normalized = _normalizedLauncherPosition ?? const Offset(0, 0.5);
     return Offset(
       bounds.left + (bounds.width * normalized.dx),
       bounds.top + (bounds.height * normalized.dy),
@@ -179,12 +192,13 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   @override
   Widget build(BuildContext context) {
     final isOpen = ref.watch(aiAssistantOpenProvider);
+    final launcherVisible = ref.watch(aiAssistantLauncherVisibleProvider);
     final media = MediaQuery.of(context);
     final isMobile = media.size.width < 700;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final launcherSize = Size(isMobile ? 68 : 144, 68);
+        final launcherSize = Size(isMobile ? 68 : 144, 80);
         const margin = 12.0;
         final minimumTop = math.min(
           widget.topSafeInset + margin,
@@ -255,7 +269,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                       onSend: _handleSend,
                     ),
                   ),
-              if (widget.showLauncher && !isOpen)
+              if (widget.showLauncher && launcherVisible && !isOpen)
                 Positioned(
                   left: launcherPosition.dx,
                   top: launcherPosition.dy,
@@ -276,6 +290,9 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                     child: _AssistantLauncher(
                       compact: isMobile,
                       dragging: _isDraggingLauncher,
+                      onHide: () => ref
+                          .read(aiAssistantLauncherVisibleProvider.notifier)
+                          .hide(),
                     ),
                   ),
                 ),
@@ -491,8 +508,13 @@ class _MessageBlock extends StatelessWidget {
 class _AssistantLauncher extends StatelessWidget {
   final bool compact;
   final bool dragging;
+  final VoidCallback onHide;
 
-  const _AssistantLauncher({required this.compact, required this.dragging});
+  const _AssistantLauncher({
+    required this.compact,
+    required this.dragging,
+    required this.onHide,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -500,75 +522,124 @@ class _AssistantLauncher extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Semantics(
+      container: true,
+      explicitChildNodes: true,
       button: true,
       label: 'Hỏi AI. Có thể kéo để đổi vị trí.',
-      child: Tooltip(
-        message: 'Kéo để đổi vị trí • Nhấn để hỏi AI',
-        child: MouseRegion(
-          cursor: SystemMouseCursors.move,
-          child: AnimatedScale(
-            scale: dragging ? 1.04 : 1,
-            duration: const Duration(milliseconds: 140),
-            child: Material(
-              color: colors.surface,
-              elevation: dragging ? 12 : 8,
-              shadowColor: primary.withValues(alpha: 0.28),
-              borderRadius: BorderRadius.circular(22),
-              clipBehavior: Clip.antiAlias,
-              child: Container(
-                padding: EdgeInsets.fromLTRB(
-                  compact ? 8 : 7,
-                  7,
-                  compact ? 8 : 12,
-                  7,
-                ),
-                decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.04),
-                  border: Border.all(
-                    color: primary.withValues(alpha: dragging ? 0.5 : 0.28),
-                  ),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AppAssetIcon(
-                      assetPath: AppAssets.aiMascot,
-                      size: compact ? 48 : 52,
-                      semanticLabel: 'Stocky, trợ lý SmartStock',
-                    ),
-                    if (!compact) ...[
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Hỏi AI',
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(
-                                    color: colors.textPrimary,
-                                    fontWeight: FontWeight.w700,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 12,
+            bottom: 0,
+            child: Tooltip(
+              message: 'Kéo để đổi vị trí • Nhấn để hỏi AI',
+              child: MouseRegion(
+                cursor: SystemMouseCursors.move,
+                child: AnimatedScale(
+                  scale: dragging ? 1.04 : 1,
+                  duration: const Duration(milliseconds: 140),
+                  child: Material(
+                    color: colors.surface,
+                    elevation: dragging ? 12 : 8,
+                    shadowColor: primary.withValues(alpha: 0.28),
+                    borderRadius: BorderRadius.circular(22),
+                    clipBehavior: Clip.antiAlias,
+                    child: Container(
+                      padding: EdgeInsets.fromLTRB(
+                        compact ? 8 : 7,
+                        7,
+                        compact ? 8 : 12,
+                        7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: primary.withValues(alpha: 0.04),
+                        border: Border.all(
+                          color: primary.withValues(
+                            alpha: dragging ? 0.5 : 0.28,
+                          ),
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          AppAssetIcon(
+                            assetPath: AppAssets.aiMascot,
+                            size: compact ? 48 : 52,
+                            semanticLabel: 'Stocky, trợ lý SmartStock',
+                          ),
+                          if (!compact) ...[
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Hỏi AI',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(
+                                          color: colors.textPrimary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                   ),
-                            ),
-                            Text(
-                              'Kéo để đặt vị trí',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: colors.textMuted),
+                                  Text(
+                                    'Kéo để đặt vị trí',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(color: colors.textMuted),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
-                        ),
+                        ],
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Tooltip(
+              message: 'Ẩn nút AI',
+              child: Material(
+                color: colors.surface,
+                elevation: 4,
+                shape: CircleBorder(side: BorderSide(color: colors.divider)),
+                child: InkWell(
+                  onTap: onHide,
+                  customBorder: const CircleBorder(),
+                  child: SizedBox.square(
+                    dimension: 26,
+                    child: Center(
+                      child: Text(
+                        '×',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 18,
+                          height: 1,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
