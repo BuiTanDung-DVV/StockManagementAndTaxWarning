@@ -40,7 +40,7 @@ export class ShopProfile {
     @Column({ name: 'account_holder', length: 200, nullable: true })
     accountHolder: string;
 
-    @Column({ name: 'qr_payment_url', length: 1000, nullable: true })
+    @Column({ name: 'qr_payment_url', type: 'varchar', length: 1000, nullable: true })
     qrPaymentUrl: string | null;
 
     @Column({ name: 'receipt_footer', length: 500, nullable: true })

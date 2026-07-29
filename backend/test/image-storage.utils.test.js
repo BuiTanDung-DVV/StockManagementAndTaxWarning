@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { getMetadataArgsStorage } = require('typeorm');
+const { Product } = require('../dist/product/entities');
+const { ShopProfile } = require('../dist/system/entities');
 
 const {
   MAX_PRODUCT_IMAGE_BYTES,
@@ -102,4 +105,18 @@ test('payment QR keys are isolated by shop', () => {
     ),
     key,
   );
+});
+
+test('nullable media URL columns keep an explicit PostgreSQL type', () => {
+  const columns = getMetadataArgsStorage().columns;
+  const productImage = columns.find(
+    (column) => column.target === Product && column.propertyName === 'imageUrl',
+  );
+  const shopQr = columns.find(
+    (column) =>
+      column.target === ShopProfile && column.propertyName === 'qrPaymentUrl',
+  );
+
+  assert.equal(productImage?.options.type, 'varchar');
+  assert.equal(shopQr?.options.type, 'varchar');
 });

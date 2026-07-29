@@ -102,7 +102,7 @@ export class Product {
     minStock: number;
 
     // === META ===
-    @Column({ name: 'image_url', length: 500, nullable: true })
+    @Column({ name: 'image_url', type: 'varchar', length: 500, nullable: true })
     imageUrl: string | null;
 
     @Column({ length: 50, nullable: true })
