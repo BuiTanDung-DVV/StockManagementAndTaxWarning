@@ -170,9 +170,12 @@ class MainShell extends ConsumerWidget {
                         }
                       },
                       onNotifications: () => context.push('/notifications'),
-                      onRestoreAi: () => ref
-                          .read(aiAssistantLauncherVisibleProvider.notifier)
-                          .show(),
+                      onRestoreAi: () {
+                        ref
+                            .read(aiAssistantLauncherVisibleProvider.notifier)
+                            .show();
+                        ref.read(aiAssistantOpenProvider.notifier).open();
+                      },
                     ),
                   Expanded(child: child),
                 ],

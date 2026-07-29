@@ -269,7 +269,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                       onSend: _handleSend,
                     ),
                   ),
-              if (widget.showLauncher && launcherVisible && !isOpen)
+              if (widget.showLauncher && launcherVisible)
                 Positioned(
                   left: launcherPosition.dx,
                   top: launcherPosition.dy,
