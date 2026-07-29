@@ -90,12 +90,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return score;
   }
 
-  Future<void> _handleSocialRegister(String provider) async {
-    ToastService.showSuccess('Đang xác thực qua $provider...');
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      if (!mounted) return;
-      context.go('/onboarding');
-    });
+  void _handleSocialRegister(String provider) {
+    ToastService.showInfo(
+      'Đăng ký qua $provider chưa được tích hợp. Vui lòng đăng ký bằng email và OTP.',
+    );
   }
 
   Future<void> _proceedToOtpVerification() async {

@@ -1,5 +1,9 @@
 # Kiểm tra dữ liệu giả và kế hoạch dữ liệu vận hành 3 năm
 
+> **Trạng thái tài liệu:** các phát hiện “trước khi thay dữ liệu” bên dưới được giữ
+> làm lịch sử. Kết quả production mới nhất và ma trận màn hình → API → database
+> được xác nhận tại `17_BAO_CAO_NGUON_DU_LIEU_PRODUCTION.md`.
+
 ## 1. Phạm vi kiểm tra
 
 Phiên bản được kiểm tra: mã nguồn `main` tại ngày 28/07/2026.

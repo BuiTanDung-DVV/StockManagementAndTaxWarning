@@ -46,7 +46,8 @@ Không xóa dữ liệu của cửa hàng khác.
 3. Backend đã cài dependency và build thành công.
 4. Database đã chạy:
    - `20260728_create_ai_knowledge_documents.sql`;
-   - `20260728_fix_daily_closing_multi_shop_unique.sql`.
+   - `20260728_fix_daily_closing_multi_shop_unique.sql`;
+   - `20260729_fix_purchase_without_invoice_item_compatibility.sql`.
 5. Biến môi trường kết nối database được cấu hình ở môi trường chạy. Không ghi
    mật khẩu database vào lệnh, tài liệu hoặc Git.
 
@@ -193,3 +194,14 @@ Ghi lại tối thiểu:
 - số sản phẩm, đơn bán, đơn nhập và ngày chốt quỹ;
 - kết quả build, chạy thử rollback và đối soát sau import;
 - link bản sao lưu và phương án khôi phục.
+
+## 10. Độ phủ bắt buộc của bộ import hiện tại
+
+Sau import, mỗi cửa hàng phải có đủ dữ liệu cho sản phẩm, tag, chi phí cấu thành,
+lịch sử giá, quy đổi đơn vị, lô hàng, tồn theo lô, kiểm kê, nhập hàng, bán hàng,
+trả hàng, công nợ, dòng tiền, sổ tài chính, chốt quỹ, dự báo, ngân sách, hóa đơn,
+bảng kê mua hàng chưa hóa đơn, nghĩa vụ thuế, nhật ký và kiến thức AI.
+
+Không tự tạo ảnh quét hóa đơn hoặc chứng từ công nợ giả. Hai nhóm này chỉ được ghi
+khi người dùng tải lên tệp có thật. Kết quả số lượng và nguồn dữ liệu production
+được ghi tại `17_BAO_CAO_NGUON_DU_LIEU_PRODUCTION.md`.

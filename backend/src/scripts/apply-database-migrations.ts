@@ -6,6 +6,7 @@ import { AppDataSource } from '../config/db.config';
 const MIGRATION_FILES = [
   '20260728_create_ai_knowledge_documents.sql',
   '20260728_fix_daily_closing_multi_shop_unique.sql',
+  '20260729_fix_purchase_without_invoice_item_compatibility.sql',
 ];
 
 async function main(): Promise<void> {
@@ -41,13 +42,26 @@ async function main(): Promise<void> {
             AND conname = 'UQ_daily_closings_shop_date'
             AND pg_get_constraintdef(oid) LIKE '%shop_id, closing_date%'
         ) AS "closingReady"
+        ,
+        NOT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'purchase_without_invoice_items'
+            AND column_name = 'item_name'
+            AND is_nullable = 'NO'
+        ) AS "purchaseItemReady"
     `);
-    if (!checks[0]?.aiReady || !checks[0]?.closingReady) {
+    if (
+      !checks[0]?.aiReady ||
+      !checks[0]?.closingReady ||
+      !checks[0]?.purchaseItemReady
+    ) {
       throw new Error('Đối soát migration không đạt');
     }
 
     await runner.commitTransaction();
-    console.log('Đã áp dụng và đối soát 2 migration production.');
+    console.log('Đã áp dụng và đối soát 3 migration production.');
   } catch (error) {
     await runner.rollbackTransaction();
     throw error;
