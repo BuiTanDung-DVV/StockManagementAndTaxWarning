@@ -6,6 +6,7 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../providers/inventory_provider.dart';
@@ -24,6 +25,13 @@ class InventoryScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: colors.bg,
+      floatingActionButton: AppPrimaryFloatingAction(
+        label: 'Nhập hàng',
+        assetPath: AppAssets.inventory,
+        heroTag: 'inventory-purchase-action',
+        onPressed: () => context.push('/purchase-orders'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
@@ -53,10 +61,6 @@ class InventoryScreen extends ConsumerWidget {
                         OutlinedButton(
                           onPressed: () => context.push('/stock-take'),
                           child: const Text('Kiểm kê'),
-                        ),
-                        FilledButton(
-                          onPressed: () => context.push('/purchase-orders'),
-                          child: const Text('Nhập hàng'),
                         ),
                       ],
                     ),

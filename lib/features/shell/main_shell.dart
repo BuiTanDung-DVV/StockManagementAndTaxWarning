@@ -143,8 +143,6 @@ class MainShell extends ConsumerWidget {
           viewportWidth: constraints.maxWidth,
         );
         final aiLauncherVisible = ref.watch(aiAssistantLauncherVisibleProvider);
-        final canSell =
-            !shop.isAllShops && (shop.isOwner || shop.hasPermission('sales'));
 
         final page = ColoredBox(
           color: colors.bg,
@@ -157,7 +155,6 @@ class MainShell extends ConsumerWidget {
                     _ShellUtilityHeader(
                       compact: mode == MainShellNavigationMode.bottomBar,
                       shopName: shop.currentShopName,
-                      canSell: canSell,
                       showAiRestore: showAi && !aiLauncherVisible,
                       onSearch: () async {
                         final route = await showSearch<String>(
@@ -176,7 +173,6 @@ class MainShell extends ConsumerWidget {
                       onRestoreAi: () => ref
                           .read(aiAssistantLauncherVisibleProvider.notifier)
                           .show(),
-                      onSale: () => context.push('/pos'),
                     ),
                   Expanded(child: child),
                 ],
@@ -242,22 +238,18 @@ class MainShell extends ConsumerWidget {
 class _ShellUtilityHeader extends StatelessWidget {
   final bool compact;
   final String? shopName;
-  final bool canSell;
   final bool showAiRestore;
   final VoidCallback onSearch;
   final VoidCallback onNotifications;
   final VoidCallback onRestoreAi;
-  final VoidCallback onSale;
 
   const _ShellUtilityHeader({
     required this.compact,
     required this.shopName,
-    required this.canSell,
     required this.showAiRestore,
     required this.onSearch,
     required this.onNotifications,
     required this.onRestoreAi,
-    required this.onSale,
   });
 
   @override
@@ -331,14 +323,6 @@ class _ShellUtilityHeader extends StatelessWidget {
             ),
             if (compact) ...[
               const SizedBox(width: AppSpacing.xs),
-              if (canSell) ...[
-                _HeaderAssetButton(
-                  assetPath: AppAssets.orders,
-                  semanticLabel: 'Mở POS',
-                  onPressed: onSale,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-              ],
               if (showAiRestore) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.aiMascot,
@@ -395,8 +379,6 @@ class _ShellUtilityHeader extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
             ],
-            if (!compact && canSell)
-              FilledButton(onPressed: onSale, child: const Text('Tạo đơn bán')),
           ],
         ),
       ),

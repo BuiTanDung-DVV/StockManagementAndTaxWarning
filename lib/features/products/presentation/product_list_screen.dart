@@ -9,6 +9,7 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_badge.dart';
 import '../../../core/utils/type_parser.dart';
@@ -93,6 +94,13 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
+      floatingActionButton: AppPrimaryFloatingAction(
+        label: 'Thêm sản phẩm',
+        assetPath: AppAssets.add,
+        heroTag: 'products-add-action',
+        onPressed: () => context.push('/products/form'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
         child: AppResponsiveContent(
@@ -112,10 +120,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         onPressed: () => context.push('/products/tags'),
                         child: const Text('Quản lý nhãn'),
                       ),
-                    FilledButton(
-                      onPressed: () => context.push('/products/form'),
-                      child: const Text('Thêm sản phẩm'),
-                    ),
                   ],
                 ),
               ),

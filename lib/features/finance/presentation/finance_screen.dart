@@ -10,6 +10,7 @@ import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/chart_widgets.dart';
@@ -110,6 +111,13 @@ class FinanceScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: colors.bg,
+      floatingActionButton: AppPrimaryFloatingAction(
+        label: 'Ghi giao dịch',
+        assetPath: AppAssets.cash,
+        heroTag: 'finance-transaction-action',
+        onPressed: () => context.push('/transactions'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: RefreshIndicator(
         onRefresh: refresh,
         child: SingleChildScrollView(
@@ -124,20 +132,9 @@ class FinanceScreen extends ConsumerWidget {
                   title: 'Tài chính & sổ cái',
                   subtitle:
                       'Theo dõi dòng tiền, đối soát giao dịch và xử lý công việc tài chính trong tháng.',
-                  action: Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: [
-                      TextButton(
-                        onPressed: () => showFeatureGuide(context, 'finance'),
-                        child: const Text('Hướng dẫn'),
-                      ),
-                      FilledButton(
-                        onPressed: () => context.push('/transactions'),
-                        child: const Text('Ghi giao dịch'),
-                      ),
-                    ],
-                  ),
+                  dense: true,
+                  action: featureGuideButton(context, 'finance'),
+                  compactAction: featureGuideButton(context, 'finance'),
                 ),
                 summaryAsync.when(
                   data: (data) => _FinanceMetricStrip(data: data),
