@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/chart_widgets.dart';
@@ -69,6 +70,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
 
     return Scaffold(
       backgroundColor: colors.bg,
+      floatingActionButton: AppPrimaryFloatingAction(
+        label: 'Mở POS',
+        assetPath: AppAssets.orders,
+        heroTag: 'sales-open-pos-action',
+        onPressed: () => context.push('/pos'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
         child: AppResponsiveContent(

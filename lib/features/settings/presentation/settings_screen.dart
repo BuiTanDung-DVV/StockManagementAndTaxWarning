@@ -235,24 +235,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: 'Cài đặt hệ thống',
                 subtitle:
                     'Quản lý tài khoản, cửa hàng, phân quyền và các cấu hình nghiệp vụ.',
-                action: Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    TextButton(
-                      onPressed: () => showFeatureGuide(context, 'settings'),
-                      child: const Text('Hướng dẫn'),
-                    ),
-                    OutlinedButton(
-                      onPressed: () => context.push('/notifications'),
-                      child: Text(
-                        notifications.unreadCount > 0
-                            ? 'Thông báo (${notifications.unreadCount})'
-                            : 'Thông báo',
-                      ),
-                    ),
-                  ],
-                ),
+                dense: true,
+                action: featureGuideButton(context, 'settings'),
+                compactAction: featureGuideButton(context, 'settings'),
               ),
               _SettingsProfileCard(
                 shopAsync: shopAsync,

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/filter_bar.dart';
@@ -34,6 +36,13 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
 
     return Scaffold(
       backgroundColor: colors.bg,
+      floatingActionButton: AppPrimaryFloatingAction(
+        label: 'Thêm nhà cung cấp',
+        assetPath: AppAssets.add,
+        heroTag: 'suppliers-add-action',
+        onPressed: () => context.push('/suppliers/form'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: AppResponsiveContent(
         maxWidth: 1320,
         verticalPadding: AppSpacing.lg,
@@ -44,20 +53,9 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
               title: 'Nhà cung cấp',
               subtitle:
                   'Quản lý đối tác, thông tin thuế và điều khoản thanh toán.',
-              action: Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  TextButton(
-                    onPressed: () => showFeatureGuide(context, 'supplier_list'),
-                    child: const Text('Hướng dẫn'),
-                  ),
-                  FilledButton(
-                    onPressed: () => context.push('/suppliers/form'),
-                    child: const Text('Thêm nhà cung cấp'),
-                  ),
-                ],
-              ),
+              dense: true,
+              action: featureGuideButton(context, 'supplier_list'),
+              compactAction: featureGuideButton(context, 'supplier_list'),
             ),
             FilterBar(
               searchHint: 'Tìm theo tên, mã số thuế hoặc số điện thoại',

@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/responsive_layout.dart';
@@ -114,6 +115,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      floatingActionButton:
+          shopState.isOwner || shopState.hasPermission('sales')
+          ? AppPrimaryFloatingAction(
+              label: 'Bán hàng',
+              assetPath: AppAssets.orders,
+              heroTag: 'dashboard-sale-action',
+              onPressed: () => context.push('/pos'),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
@@ -154,34 +165,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       fontWeight: FontWeight.w500,
                       color: colors.textSecondary,
                     ),
-                    action:
-                        shopState.isOwner || shopState.hasPermission('sales')
-                        ? FilledButton.icon(
-                            onPressed: () => context.push('/pos'),
-                            icon: const AppAssetIcon(
-                              assetPath: AppAssets.orders,
-                              size: 17,
-                              color: Colors.white,
-                              semanticLabel: 'Bán hàng',
-                            ),
-                            label: const Text('Bán hàng'),
-                          )
-                        : null,
-                    compactAction:
-                        shopState.isOwner || shopState.hasPermission('sales')
-                        ? Tooltip(
-                            message: 'Bán hàng',
-                            child: IconButton.filled(
-                              onPressed: () => context.push('/pos'),
-                              icon: const AppAssetIcon(
-                                assetPath: AppAssets.orders,
-                                size: 19,
-                                color: Colors.white,
-                                semanticLabel: 'Bán hàng',
-                              ),
-                            ),
-                          )
-                        : null,
                   ),
                   if (salesAsync != null && cashAsync != null)
                     salesAsync.when(

@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/filter_bar.dart';
@@ -42,6 +44,13 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
     return Scaffold(
       backgroundColor: colors.bg,
+      floatingActionButton: AppPrimaryFloatingAction(
+        label: 'Thêm khách hàng',
+        assetPath: AppAssets.add,
+        heroTag: 'customers-add-action',
+        onPressed: () => context.push('/customers/form'),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: AppResponsiveContent(
         maxWidth: 1320,
         verticalPadding: AppSpacing.lg,
@@ -52,20 +61,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               title: 'Khách hàng',
               subtitle:
                   'Tra cứu thông tin liên hệ, nhóm khách và công nợ phát sinh.',
-              action: Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  TextButton(
-                    onPressed: () => showFeatureGuide(context, 'customer_list'),
-                    child: const Text('Hướng dẫn'),
-                  ),
-                  FilledButton(
-                    onPressed: () => context.push('/customers/form'),
-                    child: const Text('Thêm khách hàng'),
-                  ),
-                ],
-              ),
+              dense: true,
+              action: featureGuideButton(context, 'customer_list'),
+              compactAction: featureGuideButton(context, 'customer_list'),
             ),
             FilterBar(
               searchHint: 'Tìm theo tên hoặc số điện thoại',
