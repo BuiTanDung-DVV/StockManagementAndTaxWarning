@@ -39,6 +39,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Trợ giúp nghiệp vụ'), findsOneWidget);
+    expect(launcher, findsOneWidget);
   });
 
   testWidgets('dragging the AI launcher persists its normalized position', (
