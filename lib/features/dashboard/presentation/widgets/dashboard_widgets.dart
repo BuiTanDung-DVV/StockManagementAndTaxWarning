@@ -461,6 +461,23 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
   final ScrollController _horizontalController = ScrollController();
 
   @override
+  void didUpdateWidget(covariant ComparisonBarChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final periodChanged =
+        oldWidget.label1 != widget.label1 ||
+        oldWidget.label2 != widget.label2 ||
+        oldWidget.currentData.length != widget.currentData.length ||
+        oldWidget.previousData.length != widget.previousData.length;
+    if (periodChanged) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_horizontalController.hasClients) {
+          _horizontalController.jumpTo(0);
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _horizontalController.dispose();
     super.dispose();
@@ -736,51 +753,15 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
                                     return const SizedBox.shrink();
                                   }
 
-                                  String displayDate = '';
-                                  if (idx < currentData.length) {
-                                    final dateStr =
-                                        currentData[idx]['date'] as String? ??
-                                        '';
-                                    final parts = dateStr.split('-');
-                                    displayDate = parts.length >= 3
-                                        ? '${parts[2]}/${parts[1]}'
-                                        : parts.length == 2
-                                        ? '${parts[1]}/${parts[0]}'
-                                        : dateStr;
-                                  } else if (currentData.isNotEmpty) {
-                                    // Project forward from the first day
-                                    final firstDateStr =
-                                        currentData.first['date'] as String? ??
-                                        '';
-                                    final firstDate = DateTime.tryParse(
-                                      firstDateStr,
-                                    );
-                                    if (firstDate != null) {
-                                      final projectedDate = firstDate.add(
-                                        Duration(days: idx),
-                                      );
-                                      final d = projectedDate.day
-                                          .toString()
-                                          .padLeft(2, '0');
-                                      final m = projectedDate.month
-                                          .toString()
-                                          .padLeft(2, '0');
-                                      displayDate = '$d/$m';
-                                    }
-                                  } else if (idx < previousData.length) {
-                                    final dateStr =
-                                        previousData[idx]['date'] as String? ??
-                                        '';
-                                    final parts = dateStr.split('-');
-                                    displayDate = parts.length >= 3
-                                        ? '${parts[2]}/${parts[1]}'
-                                        : parts.length == 2
-                                        ? '${parts[1]}/${parts[0]}'
-                                        : dateStr;
-                                  }
+                                  final displayDate = dashboardChartPeriodLabel(
+                                    currentData,
+                                    previousData,
+                                    idx,
+                                  );
 
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 10),
+                                  return SideTitleWidget(
+                                    meta: meta,
+                                    space: 10,
                                     child: Text(
                                       displayDate,
                                       style: GoogleFonts.manrope(
@@ -796,20 +777,26 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
                             leftTitles: AxisTitles(
                               sideTitles: SideTitles(
                                 showTitles: true,
-                                reservedSize: 72,
+                                reservedSize: 92,
                                 getTitlesWidget: (value, meta) {
                                   if (value == meta.max || value == meta.min) {
                                     return const SizedBox.shrink();
                                   }
-                                  final label = compactVietnameseAmount(value);
-                                  return Text(
-                                    label,
-                                    style: GoogleFonts.manrope(
-                                      color: c.textMuted,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
+                                  final label = compactVietnameseCurrency(
+                                    value,
+                                  );
+                                  return SideTitleWidget(
+                                    meta: meta,
+                                    space: 8,
+                                    child: Text(
+                                      label,
+                                      style: GoogleFonts.manrope(
+                                        color: c.textMuted,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      textAlign: TextAlign.right,
                                     ),
-                                    textAlign: TextAlign.right,
                                   );
                                 },
                               ),
@@ -853,6 +840,50 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
       ],
     );
   }
+}
+
+String dashboardChartPeriodLabel(
+  List<dynamic> currentData,
+  List<dynamic> previousData,
+  int index,
+) {
+  if (index < 0) return '';
+  if (index < currentData.length) {
+    final raw = currentData[index]['date']?.toString() ?? '';
+    if (raw.isNotEmpty) return _formatDashboardPeriod(raw);
+  }
+
+  if (currentData.isNotEmpty) {
+    final firstRaw = currentData.first['date']?.toString() ?? '';
+    final parts = firstRaw.split('-');
+    if (parts.length == 2) {
+      final year = int.tryParse(parts[0]);
+      final month = int.tryParse(parts[1]);
+      if (year != null && month != null) {
+        final projected = DateTime(year, month + index);
+        return '${projected.month.toString().padLeft(2, '0')}/${projected.year}';
+      }
+    }
+    final firstDate = DateTime.tryParse(firstRaw);
+    if (firstDate != null) {
+      final projected = firstDate.add(Duration(days: index));
+      return '${projected.day.toString().padLeft(2, '0')}/${projected.month.toString().padLeft(2, '0')}';
+    }
+  }
+
+  if (index < previousData.length) {
+    return _formatDashboardPeriod(
+      previousData[index]['date']?.toString() ?? '',
+    );
+  }
+  return '';
+}
+
+String _formatDashboardPeriod(String raw) {
+  final parts = raw.split('-');
+  if (parts.length >= 3) return '${parts[2]}/${parts[1]}';
+  if (parts.length == 2) return '${parts[1]}/${parts[0]}';
+  return raw;
 }
 
 class TopProductsChart extends StatelessWidget {

@@ -10,6 +10,7 @@ import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/responsive_layout.dart';
+import '../../settings/providers/shop_provider.dart';
 import '../providers/inventory_provider.dart';
 
 class InventoryScreen extends ConsumerWidget {
@@ -23,14 +24,19 @@ class InventoryScreen extends ConsumerWidget {
     final expiringAsync = ref.watch(expiringProductsProvider);
     final slowMovingAsync = ref.watch(slowMovingProvider);
     final categoriesAsync = ref.watch(inventoryCategoriesSummaryProvider);
+    final shopState = ref.watch(shopProvider);
+    final canManageProducts =
+        shopState.isOwner || shopState.hasPermission('products');
 
     return Scaffold(
       backgroundColor: colors.bg,
       floatingActionButton: AppPrimaryFloatingAction(
-        label: 'Nhập hàng',
-        assetPath: AppAssets.inventory,
-        heroTag: 'inventory-purchase-action',
-        onPressed: () => context.push('/purchase-orders'),
+        label: canManageProducts ? 'Thêm sản phẩm' : 'Nhập hàng',
+        assetPath: canManageProducts ? AppAssets.add : AppAssets.inventory,
+        heroTag: 'inventory-primary-action',
+        onPressed: () => context.push(
+          canManageProducts ? '/products/form' : '/purchase-orders',
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
@@ -79,7 +85,7 @@ class InventoryScreen extends ConsumerWidget {
                       ),
                     ),
                   const SizedBox(height: AppSpacing.md),
-                  const _InventoryQuickActions(),
+                  _InventoryQuickActions(canManageProducts: canManageProducts),
                   const SizedBox(height: AppSpacing.lg),
                   _InventoryActionWorkspace(
                     lowStock: lowStockAsync,
@@ -99,33 +105,66 @@ class InventoryScreen extends ConsumerWidget {
 }
 
 class _InventoryQuickActions extends StatelessWidget {
-  const _InventoryQuickActions();
+  final bool canManageProducts;
+
+  const _InventoryQuickActions({required this.canManageProducts});
 
   @override
   Widget build(BuildContext context) {
-    return AppFillGrid(
-      minItemWidth: 180,
-      maxColumns: 3,
-      itemHeight: 56,
-      children: [
+    final actions = <Widget>[
+      if (canManageProducts)
         _InventoryQuickAction(
-          label: 'Kiểm kê kho',
+          label: 'Danh mục sản phẩm',
           assetPath: AppAssets.inventory,
-          onTap: () => context.push('/stock-take'),
+          onTap: () => context.push('/products'),
         ),
-        _InventoryQuickAction(
-          label: 'Đơn nhập hàng',
-          assetPath: AppAssets.orders,
-          onTap: () => context.push('/purchase-orders'),
-        ),
-        _InventoryQuickAction(
-          label: 'Báo cáo xuất nhập tồn',
-          assetPath: AppAssets.emptyDocument,
-          onTap: () => context.push('/xnt-report'),
-        ),
-      ],
+      _InventoryQuickAction(
+        label: 'Kiểm kê kho',
+        assetPath: AppAssets.inventory,
+        onTap: () => context.push('/stock-take'),
+      ),
+      _InventoryQuickAction(
+        label: 'Đơn nhập hàng',
+        assetPath: AppAssets.orders,
+        onTap: () => context.push('/purchase-orders'),
+      ),
+      _InventoryQuickAction(
+        label: 'Báo cáo xuất nhập tồn',
+        assetPath: AppAssets.emptyDocument,
+        onTap: () => context.push('/xnt-report'),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = inventoryQuickActionColumnCount(
+          constraints.maxWidth,
+          actions.length,
+        );
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: actions.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.md,
+            mainAxisExtent: 56,
+          ),
+          itemBuilder: (context, index) => actions[index],
+        );
+      },
     );
   }
+}
+
+int inventoryQuickActionColumnCount(double width, int actionCount) {
+  if (actionCount <= 0) return 1;
+  if (width >= 980) return actionCount < 4 ? actionCount : 4;
+  if (actionCount == 3 && width >= 600) return 3;
+  if (width >= 480) return 2;
+  return 1;
 }
 
 class _InventoryQuickAction extends StatelessWidget {
@@ -429,7 +468,11 @@ class _InventoryActionWorkspace extends StatelessWidget {
           asyncValue: lowStock,
           statusBuilder: (item) {
             final quantity = item['currentQuantity'] ?? item['quantity'] ?? 0;
-            return 'Tồn $quantity';
+            final unit =
+                item['product']?['unit']?.toString() ??
+                item['unit']?.toString() ??
+                '';
+            return 'Tồn $quantity${unit.isEmpty ? '' : ' $unit'}';
           },
         );
         final slowPanel = _InventoryIssuePanel(
@@ -438,7 +481,11 @@ class _InventoryActionWorkspace extends StatelessWidget {
           asyncValue: slowMoving,
           statusBuilder: (item) {
             final quantity = item['currentQuantity'] ?? item['quantity'] ?? 0;
-            return 'Tồn $quantity';
+            final unit =
+                item['product']?['unit']?.toString() ??
+                item['unit']?.toString() ??
+                '';
+            return 'Tồn $quantity${unit.isEmpty ? '' : ' $unit'}';
           },
         );
 

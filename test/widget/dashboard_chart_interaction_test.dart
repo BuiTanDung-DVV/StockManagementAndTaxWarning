@@ -4,6 +4,21 @@ import 'package:flutter_app/features/dashboard/presentation/widgets/dashboard_wi
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('dashboard month labels continue through the current year', () {
+    final current = List.generate(
+      7,
+      (index) => {'date': '2026-${(index + 1).toString().padLeft(2, '0')}'},
+    );
+    final previous = List.generate(
+      12,
+      (index) => {'date': '2025-${(index + 1).toString().padLeft(2, '0')}'},
+    );
+
+    expect(dashboardChartPeriodLabel(current, previous, 0), '01/2026');
+    expect(dashboardChartPeriodLabel(current, previous, 7), '08/2026');
+    expect(dashboardChartPeriodLabel(current, previous, 11), '12/2026');
+  });
+
   testWidgets('dashboard period filter remains complete and clickable', (
     tester,
   ) async {

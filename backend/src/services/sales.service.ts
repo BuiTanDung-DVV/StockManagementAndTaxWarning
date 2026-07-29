@@ -199,6 +199,7 @@ export class SalesService {
         const topProducts = await AppDataSource.query(`
             SELECT 
                 p.name,
+                p.unit,
                 SUM(oi.subtotal) as value,
                 SUM(oi.quantity) as quantity
             FROM sales_order_items oi
@@ -208,13 +209,14 @@ export class SalesService {
               AND o.order_date >= $2 
               AND o.order_date <= $3 
               AND o.status != 'CANCELLED'
-            GROUP BY p.id, p.name
+            GROUP BY p.id, p.name, p.unit
             ORDER BY value DESC
             LIMIT 10
         `, params);
 
         return topProducts.map((p: any) => ({
             name: p.name,
+            unit: p.unit || 'Sản phẩm',
             value: Number(p.value),
             quantity: Number(p.quantity)
         }));

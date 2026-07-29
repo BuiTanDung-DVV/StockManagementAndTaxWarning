@@ -737,6 +737,7 @@ class _TopProductsHorizontalBars extends StatelessWidget {
                 name: product['name']?.toString() ?? 'Chưa rõ',
                 revenue: revenue,
                 quantity: quantity,
+                unit: product['unit']?.toString() ?? 'sản phẩm',
                 progress: progress,
                 color: primary.withValues(alpha: 1 - index * 0.045),
               );
@@ -753,6 +754,7 @@ class _TopProductRankRow extends StatelessWidget {
   final String name;
   final double revenue;
   final double quantity;
+  final String unit;
   final double progress;
   final Color color;
 
@@ -761,6 +763,7 @@ class _TopProductRankRow extends StatelessWidget {
     required this.name,
     required this.revenue,
     required this.quantity,
+    required this.unit,
     required this.progress,
     required this.color,
   });
@@ -769,7 +772,7 @@ class _TopProductRankRow extends StatelessWidget {
     final value = quantity == quantity.roundToDouble()
         ? quantity.toInt().toString()
         : NumberFormat('0.##', 'vi_VN').format(quantity);
-    return '$value sp';
+    return '$value $unit';
   }
 
   @override

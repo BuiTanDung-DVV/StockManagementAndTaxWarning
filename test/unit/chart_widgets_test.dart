@@ -7,5 +7,6 @@ void main() {
     expect(compactVietnameseAmount(1250000), '1,3 triệu');
     expect(compactVietnameseAmount(2500000000), '2,5 tỷ');
     expect(compactVietnameseAmount(750), '750');
+    expect(compactVietnameseCurrency(1250000), '1,3 triệu ₫');
   });
 }
