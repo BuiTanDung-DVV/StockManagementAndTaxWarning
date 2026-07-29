@@ -112,7 +112,7 @@ class FinanceScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: colors.bg,
       floatingActionButton: AppPrimaryFloatingAction(
-        label: 'Ghi giao dịch',
+        label: 'Lịch sử giao dịch',
         assetPath: AppAssets.cash,
         heroTag: 'finance-transaction-action',
         onPressed: () => context.push('/transactions'),
@@ -193,9 +193,9 @@ class FinanceScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 AppFillGrid(
-                  minItemWidth: 300,
-                  maxColumns: 3,
-                  itemHeight: 104,
+                  minItemWidth: 240,
+                  maxColumns: 4,
+                  itemHeight: 84,
                   children: [
                     for (var index = 0; index < _financeTools.length; index++)
                       _FinanceToolTile(
@@ -250,9 +250,9 @@ class _FinanceMetricStrip extends StatelessWidget {
     final net = income - expense;
 
     return AppFillGrid(
-      minItemWidth: 220,
+      minItemWidth: 190,
       maxColumns: 4,
-      itemHeight: 96,
+      itemHeight: 88,
       children: [
         AppKpiCard(
           title: 'Số dư quỹ tiền mặt',
@@ -291,9 +291,9 @@ class _FinanceMetricLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppFillGrid(
-      minItemWidth: 220,
+      minItemWidth: 190,
       maxColumns: 4,
-      itemHeight: 96,
+      itemHeight: 88,
       children: List.generate(
         4,
         (_) => AppShimmer(
@@ -342,7 +342,7 @@ class _CashFlowPanel extends StatelessWidget {
         children: [
           const _SectionLead(
             title: 'Dòng tiền tháng này',
-            subtitle: 'So sánh tiền thu và tiền chi theo ngày.',
+            subtitle: 'Đơn vị: đồng · So sánh tiền thu và tiền chi theo ngày.',
           ),
           const SizedBox(height: AppSpacing.lg),
           if (dailyFlow.isEmpty)
@@ -534,7 +534,10 @@ class _FinanceToolTile extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.card),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -565,7 +568,7 @@ class _FinanceToolTile extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       description,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: colors.textSecondary,
@@ -578,7 +581,7 @@ class _FinanceToolTile extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'Mở',
+                'Xem',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontSize: 12,

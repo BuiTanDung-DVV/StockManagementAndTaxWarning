@@ -79,60 +79,65 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
-        child: AppResponsiveContent(
-          maxWidth: 1440,
-          verticalPadding: AppSpacing.lg,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppPageHeader(
-                title: 'Lịch sử đơn hàng',
-                subtitle:
-                    'Theo dõi trạng thái thanh toán và xử lý đơn bán hàng.',
-                dense: true,
-                action: featureGuideButton(context, 'sales_list'),
-                compactAction: featureGuideButton(context, 'sales_list'),
-              ),
-              FilterBar(
-                searchHint: 'Tìm theo mã đơn hoặc khách hàng',
-                onSearchChanged: _onSearchChanged,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _SalesStatusFilter(
-                value: _status,
-                onChanged: (value) => setState(() {
-                  _status = value;
-                  _page = 1;
-                }),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _SalesSummarySection(
-                onRetry: () => ref.invalidate(salesSummaryProvider),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Expanded(
-                child: listAsync.when(
-                  data: (data) {
-                    final items = (data['items'] as List?) ?? const [];
-                    if (items.isEmpty) {
-                      return const AppEmpty(
-                        visual: AppEmptyVisual.sales,
-                        message: 'Không tìm thấy đơn hàng',
-                        subtitle:
-                            'Thử thay đổi bộ lọc hoặc tạo đơn mới từ màn hình POS.',
-                      );
-                    }
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(salesListProvider);
+            ref.invalidate(salesSummaryProvider);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: AppResponsiveContent(
+              maxWidth: 1440,
+              verticalPadding: AppSpacing.lg,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppPageHeader(
+                    title: 'Lịch sử đơn hàng',
+                    subtitle:
+                        'Theo dõi trạng thái thanh toán và xử lý đơn bán hàng.',
+                    dense: true,
+                    action: featureGuideButton(context, 'sales_list'),
+                    compactAction: featureGuideButton(context, 'sales_list'),
+                  ),
+                  FilterBar(
+                    searchHint: 'Tìm theo mã đơn hoặc khách hàng',
+                    onSearchChanged: _onSearchChanged,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _SalesStatusFilter(
+                    value: _status,
+                    onChanged: (value) => setState(() {
+                      _status = value;
+                      _page = 1;
+                    }),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _SalesSummarySection(
+                    onRetry: () => ref.invalidate(salesSummaryProvider),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  listAsync.when(
+                    data: (data) {
+                      final items = (data['items'] as List?) ?? const [];
+                      if (items.isEmpty) {
+                        return const AppEmpty(
+                          visual: AppEmptyVisual.sales,
+                          message: 'Không tìm thấy đơn hàng',
+                          subtitle:
+                              'Thử thay đổi bộ lọc hoặc tạo đơn mới từ màn hình POS.',
+                        );
+                      }
 
-                    return RefreshIndicator(
-                      onRefresh: () async => ref.invalidate(salesListProvider),
-                      child: LayoutBuilder(
+                      return LayoutBuilder(
                         builder: (context, constraints) {
                           final desktop = constraints.maxWidth >= 780;
                           return ListView.separated(
+                            shrinkWrap: true,
                             padding: const EdgeInsets.only(
-                              bottom: AppSpacing.xl,
+                              bottom: AppSpacing.xxl,
                             ),
-                            physics: const AlwaysScrollableScrollPhysics(),
+                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: items.length + (desktop ? 1 : 0),
                             separatorBuilder: (_, index) =>
                                 index == 0 && desktop
@@ -153,17 +158,17 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                             },
                           );
                         },
-                      ),
-                    );
-                  },
-                  loading: () => const ShimmerList(),
-                  error: (_, _) => AppError(
-                    message: 'Không thể tải danh sách đơn hàng.',
-                    onRetry: () => ref.invalidate(salesListProvider),
+                      );
+                    },
+                    loading: () => const ShimmerList(),
+                    error: (_, _) => AppError(
+                      message: 'Không thể tải danh sách đơn hàng.',
+                      onRetry: () => ref.invalidate(salesListProvider),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -184,6 +189,7 @@ class _SalesStatusFilter extends StatelessWidget {
     final options = <(String?, String)>[
       (null, 'Tất cả'),
       ('PENDING', 'Chờ xử lý'),
+      ('CONFIRMED', 'Đã xác nhận'),
       ('COMPLETED', 'Hoàn thành'),
       ('CANCELLED', 'Đã hủy'),
     ];
@@ -300,6 +306,29 @@ class _SalesSummarySection extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (barValues.length >= 3 && barValues.any((value) => value > 0))
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: ChartCard(
+                  title: 'Doanh thu 7 ngày gần nhất',
+                  height: 230,
+                  trailing: Text(
+                    'Đơn vị: đồng',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: MiniBarChart(
+                    values: barValues,
+                    labels: barLabels,
+                    tooltipLabels: barLabels,
+                    barColor: Theme.of(context).colorScheme.primary,
+                    showLeftTitles: true,
+                    valueSuffix: ' đồng',
+                  ),
+                ),
+              ),
             Container(
               decoration: BoxDecoration(
                 color: colors.surface,
@@ -337,19 +366,6 @@ class _SalesSummarySection extends ConsumerWidget {
                 },
               ),
             ),
-            if (barValues.length >= 3 && barValues.any((value) => value > 0))
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.md),
-                child: ChartCard(
-                  title: 'Doanh thu 7 ngày gần nhất',
-                  height: 150,
-                  child: MiniBarChart(
-                    values: barValues,
-                    labels: barLabels,
-                    barColor: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ),
           ],
         );
       },

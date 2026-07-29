@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/assets/app_assets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_animations.dart';
+import '../../../../core/widgets/chart_widgets.dart';
 import '../../../../core/utils/excel_export_service.dart';
 import '../../../finance/providers/finance_provider.dart';
 import '../../../auth/providers/auth_provider.dart';
@@ -395,17 +396,15 @@ class TimeFilterBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: c.divider),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildBtn(context, 'week', 'Tuần này', theme, c),
-            _buildBtn(context, 'month', 'Tháng này', theme, c),
-            _buildBtn(context, '6_months', '6 Tháng', theme, c),
-            _buildBtn(context, 'year', 'Năm nay', theme, c),
-          ],
-        ),
+      child: Wrap(
+        spacing: 2,
+        runSpacing: 2,
+        children: [
+          _buildBtn(context, 'week', 'Tuần này', theme, c),
+          _buildBtn(context, 'month', 'Tháng này', theme, c),
+          _buildBtn(context, '6_months', '6 tháng', theme, c),
+          _buildBtn(context, 'year', 'Năm nay', theme, c),
+        ],
       ),
     );
   }
@@ -440,7 +439,7 @@ class TimeFilterBar extends StatelessWidget {
   }
 }
 
-class ComparisonBarChart extends StatelessWidget {
+class ComparisonBarChart extends StatefulWidget {
   final List<dynamic> currentData;
   final List<dynamic> previousData;
   final String label1, label2;
@@ -455,9 +454,27 @@ class ComparisonBarChart extends StatelessWidget {
   });
 
   @override
+  State<ComparisonBarChart> createState() => _ComparisonBarChartState();
+}
+
+class _ComparisonBarChartState extends State<ComparisonBarChart> {
+  final ScrollController _horizontalController = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
+    final currentData = widget.currentData;
+    final previousData = widget.previousData;
+    final label1 = widget.label1;
+    final label2 = widget.label2;
+    final filterWidget = widget.filterWidget;
 
     if (currentData.isEmpty && previousData.isEmpty) {
       return Container(
@@ -488,11 +505,11 @@ class ComparisonBarChart extends StatelessWidget {
     double barWidth;
     double bSpace;
     if (maxLen <= 7) {
-      barWidth = isMobile ? 10.0 : 17.0;
-      bSpace = isMobile ? 7.0 : 12.0;
+      barWidth = isMobile ? 14.0 : 20.0;
+      bSpace = isMobile ? 8.0 : 12.0;
     } else {
-      barWidth = isMobile ? 8.0 : 12.0;
-      bSpace = isMobile ? 5.0 : 7.0;
+      barWidth = isMobile ? 11.0 : 16.0;
+      bSpace = isMobile ? 6.0 : 8.0;
     }
 
     final pastColor = Colors.grey.shade400;
@@ -543,7 +560,7 @@ class ComparisonBarChart extends StatelessWidget {
     if (maxRev == 0) maxRev = 1000000;
 
     return Container(
-      height: isMobile ? 340 : 420,
+      height: isMobile ? 390 : 440,
       padding: EdgeInsets.fromLTRB(
         isMobile ? 12 : 16,
         14,
@@ -560,13 +577,13 @@ class ComparisonBarChart extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Text(
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
                         'Doanh thu theo kỳ',
                         style: GoogleFonts.manrope(
                           fontSize: 17,
@@ -575,22 +592,30 @@ class ComparisonBarChart extends StatelessWidget {
                           letterSpacing: -0.35,
                         ),
                       ),
-                      if (!isMobile && filterWidget != null) ...[
-                        const SizedBox(width: 16),
-                        Flexible(child: filterWidget!),
-                      ],
-                    ],
-                  ),
+                    ),
+                    Text(
+                      'Đơn vị: đồng',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: c.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
-                if (!isMobile)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildLegendItem(label2, pastColor, c.textSecondary),
-                      const SizedBox(width: 16),
-                      _buildLegendItem(label1, presentColor, c.textSecondary),
-                    ],
-                  ),
+                if (filterWidget != null) ...[
+                  const SizedBox(height: 10),
+                  filterWidget,
+                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 6,
+                  children: [
+                    _buildLegendItem(label2, pastColor, c.textSecondary),
+                    _buildLegendItem(label1, presentColor, c.textSecondary),
+                  ],
+                ),
               ],
             ),
           ),
@@ -598,208 +623,204 @@ class ComparisonBarChart extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final double minWidth =
-                    barGroups.length * (isMobile ? 56.0 : 62.0);
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Container(
-                    padding: const EdgeInsets.only(right: 16),
-                    width: minWidth > constraints.maxWidth
-                        ? minWidth
-                        : constraints.maxWidth,
-                    child: BarChart(
-                      BarChartData(
-                        alignment: BarChartAlignment.spaceAround,
-                        maxY: maxRev * 1.18,
-                        gridData: FlGridData(
-                          show: true,
-                          drawVerticalLine: false,
-                          getDrawingHorizontalLine: (v) => FlLine(
-                            color: c.divider.withValues(alpha: 0.45),
-                            strokeWidth: 1,
-                          ),
-                        ),
-                        borderData: FlBorderData(
-                          show: true,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: c.divider.withValues(alpha: 0.5),
-                              width: 1,
+                    barGroups.length * (isMobile ? 58.0 : 66.0);
+                final canScroll = minWidth > constraints.maxWidth;
+                return Scrollbar(
+                  controller: _horizontalController,
+                  thumbVisibility: canScroll,
+                  scrollbarOrientation: ScrollbarOrientation.bottom,
+                  child: SingleChildScrollView(
+                    controller: _horizontalController,
+                    scrollDirection: Axis.horizontal,
+                    physics: const ClampingScrollPhysics(),
+                    child: Container(
+                      padding: const EdgeInsets.only(right: 16, bottom: 10),
+                      width: canScroll ? minWidth : constraints.maxWidth,
+                      child: BarChart(
+                        BarChartData(
+                          alignment: BarChartAlignment.spaceAround,
+                          maxY: maxRev * 1.18,
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            getDrawingHorizontalLine: (v) => FlLine(
+                              color: c.divider.withValues(alpha: 0.45),
+                              strokeWidth: 1,
                             ),
-                            left: BorderSide.none,
-                            right: BorderSide.none,
-                            top: BorderSide.none,
                           ),
-                        ),
-                        barTouchData: BarTouchData(
-                          touchTooltipData: BarTouchTooltipData(
-                            fitInsideHorizontally: true,
-                            fitInsideVertically: true,
-                            getTooltipColor: (group) =>
-                                const Color(0xFF1E293B).withValues(alpha: 0.9),
-                            tooltipPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
+                          borderData: FlBorderData(
+                            show: true,
+                            border: Border(
+                              bottom: BorderSide(
+                                color: c.divider.withValues(alpha: 0.5),
+                                width: 1,
+                              ),
+                              left: BorderSide.none,
+                              right: BorderSide.none,
+                              top: BorderSide.none,
                             ),
-                            tooltipMargin: 8,
-                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                              final val = NumberFormat.compact(
-                                locale: 'vi_VN',
-                              ).format(rod.toY);
-                              final idx = group.x;
-                              String dateStr = '';
-                              if (rodIndex == 0 && idx < previousData.length) {
-                                dateStr =
-                                    previousData[idx]['date'] as String? ?? '';
-                              } else if (rodIndex == 1 &&
-                                  idx < currentData.length) {
-                                dateStr =
-                                    currentData[idx]['date'] as String? ?? '';
-                              }
-
-                              final parts = dateStr.split('-');
-                              String displayDate = dateStr;
-                              if (parts.length >= 3) {
-                                displayDate =
-                                    '${parts[2]}/${parts[1]}/${parts[0]}';
-                              } else if (parts.length == 2) {
-                                displayDate = '${parts[1]}/${parts[0]}';
-                              }
-
-                              final dateLine = displayDate.isNotEmpty
-                                  ? '$displayDate\n'
-                                  : '';
-                              return BarTooltipItem(
-                                '$dateLine$val đ',
-                                GoogleFonts.outfit(
-                                  color: rodIndex == 0
-                                      ? const Color(0xFF94A3B8)
-                                      : Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              );
-                            },
                           ),
-                        ),
-                        titlesData: FlTitlesData(
-                          show: true,
-                          rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 32,
-                              interval: 1,
-                              getTitlesWidget: (value, meta) {
-                                final idx = value.toInt();
-                                if (idx < 0 || idx >= maxLen) {
-                                  return const SizedBox.shrink();
-                                }
+                          barTouchData: BarTouchData(
+                            touchTooltipData: BarTouchTooltipData(
+                              fitInsideHorizontally: true,
+                              fitInsideVertically: true,
+                              getTooltipColor: (group) => const Color(
+                                0xFF1E293B,
+                              ).withValues(alpha: 0.9),
+                              tooltipPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              tooltipMargin: 8,
+                              getTooltipItem:
+                                  (group, groupIndex, rod, rodIndex) {
+                                    final val = NumberFormat.decimalPattern(
+                                      'vi_VN',
+                                    ).format(rod.toY.round());
+                                    final idx = group.x;
+                                    String dateStr = '';
+                                    if (rodIndex == 0 &&
+                                        idx < previousData.length) {
+                                      dateStr =
+                                          previousData[idx]['date']
+                                              as String? ??
+                                          '';
+                                    } else if (rodIndex == 1 &&
+                                        idx < currentData.length) {
+                                      dateStr =
+                                          currentData[idx]['date'] as String? ??
+                                          '';
+                                    }
 
-                                String displayDate = '';
-                                if (idx < currentData.length) {
-                                  final dateStr =
-                                      currentData[idx]['date'] as String? ?? '';
-                                  final parts = dateStr.split('-');
-                                  displayDate = parts.length >= 3
-                                      ? '${parts[2]}/${parts[1]}'
-                                      : dateStr;
-                                } else if (currentData.isNotEmpty) {
-                                  // Project forward from the first day
-                                  final firstDateStr =
-                                      currentData.first['date'] as String? ??
-                                      '';
-                                  final firstDate = DateTime.tryParse(
-                                    firstDateStr,
-                                  );
-                                  if (firstDate != null) {
-                                    final projectedDate = firstDate.add(
-                                      Duration(days: idx),
+                                    final parts = dateStr.split('-');
+                                    String displayDate = dateStr;
+                                    if (parts.length >= 3) {
+                                      displayDate =
+                                          '${parts[2]}/${parts[1]}/${parts[0]}';
+                                    } else if (parts.length == 2) {
+                                      displayDate = '${parts[1]}/${parts[0]}';
+                                    }
+
+                                    final dateLine = displayDate.isNotEmpty
+                                        ? '$displayDate\n'
+                                        : '';
+                                    return BarTooltipItem(
+                                      '$dateLine$val đồng',
+                                      GoogleFonts.outfit(
+                                        color: rodIndex == 0
+                                            ? const Color(0xFF94A3B8)
+                                            : Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
                                     );
-                                    final d = projectedDate.day
-                                        .toString()
-                                        .padLeft(2, '0');
-                                    final m = projectedDate.month
-                                        .toString()
-                                        .padLeft(2, '0');
-                                    displayDate = '$d/$m';
+                                  },
+                            ),
+                          ),
+                          titlesData: FlTitlesData(
+                            show: true,
+                            rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 36,
+                                interval: 1,
+                                getTitlesWidget: (value, meta) {
+                                  final idx = value.toInt();
+                                  if (idx < 0 || idx >= maxLen) {
+                                    return const SizedBox.shrink();
                                   }
-                                } else if (idx < previousData.length) {
-                                  final dateStr =
-                                      previousData[idx]['date'] as String? ??
-                                      '';
-                                  final parts = dateStr.split('-');
-                                  displayDate = parts.length >= 3
-                                      ? '${parts[2]}/${parts[1]}'
-                                      : dateStr;
-                                }
 
-                                if (displayDate.length < 5) {
-                                  return const SizedBox.shrink();
-                                }
+                                  String displayDate = '';
+                                  if (idx < currentData.length) {
+                                    final dateStr =
+                                        currentData[idx]['date'] as String? ??
+                                        '';
+                                    final parts = dateStr.split('-');
+                                    displayDate = parts.length >= 3
+                                        ? '${parts[2]}/${parts[1]}'
+                                        : parts.length == 2
+                                        ? '${parts[1]}/${parts[0]}'
+                                        : dateStr;
+                                  } else if (currentData.isNotEmpty) {
+                                    // Project forward from the first day
+                                    final firstDateStr =
+                                        currentData.first['date'] as String? ??
+                                        '';
+                                    final firstDate = DateTime.tryParse(
+                                      firstDateStr,
+                                    );
+                                    if (firstDate != null) {
+                                      final projectedDate = firstDate.add(
+                                        Duration(days: idx),
+                                      );
+                                      final d = projectedDate.day
+                                          .toString()
+                                          .padLeft(2, '0');
+                                      final m = projectedDate.month
+                                          .toString()
+                                          .padLeft(2, '0');
+                                      displayDate = '$d/$m';
+                                    }
+                                  } else if (idx < previousData.length) {
+                                    final dateStr =
+                                        previousData[idx]['date'] as String? ??
+                                        '';
+                                    final parts = dateStr.split('-');
+                                    displayDate = parts.length >= 3
+                                        ? '${parts[2]}/${parts[1]}'
+                                        : parts.length == 2
+                                        ? '${parts[1]}/${parts[0]}'
+                                        : dateStr;
+                                  }
 
-                                // Limit labels if too many
-                                if (maxLen > 7 &&
-                                    idx % (maxLen / 5).ceil() != 0 &&
-                                    idx != maxLen - 1) {
-                                  return const SizedBox.shrink();
-                                }
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 10),
-                                  child: Text(
-                                    displayDate,
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 10),
+                                    child: Text(
+                                      displayDate,
+                                      style: GoogleFonts.manrope(
+                                        color: c.textMuted,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 72,
+                                getTitlesWidget: (value, meta) {
+                                  if (value == meta.max || value == meta.min) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  final label = compactVietnameseAmount(value);
+                                  return Text(
+                                    label,
                                     style: GoogleFonts.manrope(
                                       color: c.textMuted,
                                       fontSize: 11,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                  ),
-                                );
-                              },
+                                    textAlign: TextAlign.right,
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 52,
-                              getTitlesWidget: (value, meta) {
-                                if (value == meta.max || value == meta.min) {
-                                  return const SizedBox.shrink();
-                                }
-                                String label = '';
-                                if (value >= 1000000) {
-                                  label =
-                                      '${(value / 1000000).toStringAsFixed(0)}Tr';
-                                } else if (value >= 1000) {
-                                  label =
-                                      '${(value / 1000).toStringAsFixed(0)}K';
-                                } else {
-                                  label = value.toStringAsFixed(0);
-                                }
-                                return Text(
-                                  label,
-                                  style: GoogleFonts.manrope(
-                                    color: c.textMuted,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                );
-                              },
-                            ),
-                          ),
+                          barGroups: barGroups,
                         ),
-                        barGroups: barGroups,
                       ),
                     ),
                   ),
-                ); // ends SingleChildScrollView
+                );
               }, // ends builder
             ), // ends LayoutBuilder
           ), // ends Expanded

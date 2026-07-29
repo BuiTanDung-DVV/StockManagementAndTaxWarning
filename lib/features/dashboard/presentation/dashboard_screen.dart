@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -165,6 +166,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       fontWeight: FontWeight.w500,
                       color: colors.textSecondary,
                     ),
+                    action: featureGuideButton(context, 'dashboard'),
+                    compactAction: featureGuideButton(context, 'dashboard'),
                   ),
                   if (salesAsync != null && cashAsync != null)
                     salesAsync.when(
