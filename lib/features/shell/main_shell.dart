@@ -142,6 +142,7 @@ class MainShell extends ConsumerWidget {
           location: location,
           viewportWidth: constraints.maxWidth,
         );
+        final aiLauncherVisible = ref.watch(aiAssistantLauncherVisibleProvider);
         final canSell =
             !shop.isAllShops && (shop.isOwner || shop.hasPermission('sales'));
 
@@ -157,6 +158,7 @@ class MainShell extends ConsumerWidget {
                       compact: mode == MainShellNavigationMode.bottomBar,
                       shopName: shop.currentShopName,
                       canSell: canSell,
+                      showAiRestore: showAi && !aiLauncherVisible,
                       onSearch: () async {
                         final route = await showSearch<String>(
                           context: context,
@@ -164,11 +166,16 @@ class MainShell extends ConsumerWidget {
                             api: ref.read(apiClientProvider),
                           ),
                         );
-                        if (route != null && route.isNotEmpty && context.mounted) {
+                        if (route != null &&
+                            route.isNotEmpty &&
+                            context.mounted) {
                           context.push(route);
                         }
                       },
                       onNotifications: () => context.push('/notifications'),
+                      onRestoreAi: () => ref
+                          .read(aiAssistantLauncherVisibleProvider.notifier)
+                          .show(),
                       onSale: () => context.push('/pos'),
                     ),
                   Expanded(child: child),
@@ -236,16 +243,20 @@ class _ShellUtilityHeader extends StatelessWidget {
   final bool compact;
   final String? shopName;
   final bool canSell;
+  final bool showAiRestore;
   final VoidCallback onSearch;
   final VoidCallback onNotifications;
+  final VoidCallback onRestoreAi;
   final VoidCallback onSale;
 
   const _ShellUtilityHeader({
     required this.compact,
     required this.shopName,
     required this.canSell,
+    required this.showAiRestore,
     required this.onSearch,
     required this.onNotifications,
+    required this.onRestoreAi,
     required this.onSale,
   });
 
@@ -320,6 +331,23 @@ class _ShellUtilityHeader extends StatelessWidget {
             ),
             if (compact) ...[
               const SizedBox(width: AppSpacing.xs),
+              if (canSell) ...[
+                _HeaderAssetButton(
+                  assetPath: AppAssets.orders,
+                  semanticLabel: 'Mở POS',
+                  onPressed: onSale,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              if (showAiRestore) ...[
+                _HeaderAssetButton(
+                  assetPath: AppAssets.aiMascot,
+                  semanticLabel: 'Hiển thị nút AI',
+                  onPressed: onRestoreAi,
+                  preserveAssetColor: true,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
               _HeaderAssetButton(
                 assetPath: AppAssets.notification,
                 semanticLabel: 'Mở thông báo',
@@ -351,6 +379,15 @@ class _ShellUtilityHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
+              if (showAiRestore) ...[
+                _HeaderAssetButton(
+                  assetPath: AppAssets.aiMascot,
+                  semanticLabel: 'Hiển thị nút AI',
+                  onPressed: onRestoreAi,
+                  preserveAssetColor: true,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
               _HeaderAssetButton(
                 assetPath: AppAssets.notification,
                 semanticLabel: 'Mở thông báo',
@@ -371,11 +408,13 @@ class _HeaderAssetButton extends StatelessWidget {
   final String assetPath;
   final String semanticLabel;
   final VoidCallback onPressed;
+  final bool preserveAssetColor;
 
   const _HeaderAssetButton({
     required this.assetPath,
     required this.semanticLabel,
     required this.onPressed,
+    this.preserveAssetColor = false,
   });
 
   @override
@@ -405,7 +444,7 @@ class _HeaderAssetButton extends StatelessWidget {
               child: AppAssetIcon(
                 assetPath: assetPath,
                 size: 19,
-                color: primary,
+                color: preserveAssetColor ? null : primary,
                 semanticLabel: semanticLabel,
               ),
             ),

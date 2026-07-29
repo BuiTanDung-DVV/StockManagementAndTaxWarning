@@ -81,20 +81,9 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                 title: 'Lịch sử đơn hàng',
                 subtitle:
                     'Theo dõi trạng thái thanh toán và xử lý đơn bán hàng.',
-                action: Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    OutlinedButton(
-                      onPressed: () => showFeatureGuide(context, 'sales_list'),
-                      child: const Text('Hướng dẫn'),
-                    ),
-                    FilledButton(
-                      onPressed: () => context.push('/pos'),
-                      child: const Text('Mở POS'),
-                    ),
-                  ],
-                ),
+                dense: true,
+                action: featureGuideButton(context, 'sales_list'),
+                compactAction: featureGuideButton(context, 'sales_list'),
               ),
               FilterBar(
                 searchHint: 'Tìm theo mã đơn hoặc khách hàng',
@@ -509,8 +498,7 @@ class _OrderRow extends StatelessWidget {
               '0',
         ) ??
         0;
-    final customer =
-        order['customer']?['name']?.toString() ?? 'Khách mua lẻ';
+    final customer = order['customer']?['name']?.toString() ?? 'Khách mua lẻ';
     final code = order['orderCode']?.toString() ?? 'DH-${order['id']}';
     final payment = paid >= total && paid > 0
         ? 'Đã thanh toán'

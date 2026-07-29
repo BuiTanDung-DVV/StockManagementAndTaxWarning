@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
 import 'feature_guide_data.dart';
 
@@ -79,7 +80,11 @@ void showFeatureGuide(BuildContext context, String screenKey) {
 /// Tạo nút ❓ để gắn vào AppBar actions
 Widget featureGuideButton(BuildContext context, String screenKey) {
   return IconButton(
-    icon: const Icon(Icons.help_outline_rounded, size: 22),
+    icon: const AppAssetIcon(
+      assetPath: AppAssets.help,
+      size: 20,
+      semanticLabel: 'Hướng dẫn',
+    ),
     tooltip: 'Hướng dẫn',
     onPressed: () => showFeatureGuide(context, screenKey),
   );
