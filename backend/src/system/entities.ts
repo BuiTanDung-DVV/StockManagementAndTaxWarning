@@ -41,7 +41,7 @@ export class ShopProfile {
     accountHolder: string;
 
     @Column({ name: 'qr_payment_url', length: 1000, nullable: true })
-    qrPaymentUrl: string;
+    qrPaymentUrl: string | null;
 
     @Column({ name: 'receipt_footer', length: 500, nullable: true })
     receiptFooter: string;

@@ -3,6 +3,7 @@ import { Product, Category, CostType, ProductCostItem, ProductBatch, UnitConvers
 import { InventoryMovement, InventoryStock, Warehouse } from '../inventory/entities';
 import { Brackets } from 'typeorm';
 import { COGSService } from './cogs.service';
+import { ImageStorageService } from './image-storage.service';
 
 export class ProductService {
     private productRepo = AppDataSource.getRepository(Product);
@@ -16,6 +17,7 @@ export class ProductService {
     private movementRepo = AppDataSource.getRepository(InventoryMovement);
     private warehouseRepo = AppDataSource.getRepository(Warehouse);
     private cogsService = new COGSService();
+    private imageStorageService = new ImageStorageService();
 
     // === PRODUCT CRUD ===
     async findAllProducts(shopId: number, page = 1, limit = 20, search?: string, tag?: string) {
@@ -101,6 +103,10 @@ export class ProductService {
         const rawBarcode = dto.barcode !== null && dto.barcode !== undefined ? String(dto.barcode).trim() : '';
         dto.barcode = rawBarcode === '' ? null : rawBarcode;
         const product = await this.loadProductEntity(shopId, id);
+        const previousImageUrl = product.imageUrl;
+        const imageWasChanged =
+            Object.prototype.hasOwnProperty.call(dto, 'imageUrl') &&
+            dto.imageUrl !== previousImageUrl;
         if (dto.sku && String(dto.sku).trim() !== product.sku) {
             const existsSku = await this.productRepo.findOne({ where: { sku: String(dto.sku).trim(), shopId, isActive: true } });
             if (existsSku) throw new Error('Mã SKU này đã tồn tại trong hệ thống');
@@ -133,13 +139,37 @@ export class ProductService {
             );
         }
 
+        if (imageWasChanged && previousImageUrl) {
+            try {
+                await this.imageStorageService.deleteProductImageByUrl(
+                    shopId,
+                    previousImageUrl,
+                );
+            } catch {
+                // Product update has succeeded; cleanup must not roll it back.
+            }
+        }
+
         return this.findProductById(shopId, id);
     }
 
     async deleteProduct(shopId: number, id: number) {
         const product = await this.loadProductEntity(shopId, id);
+        const previousImageUrl = product.imageUrl;
         product.isActive = false;
-        return this.productRepo.save(product);
+        product.imageUrl = null;
+        const saved = await this.productRepo.save(product);
+        if (previousImageUrl) {
+            try {
+                await this.imageStorageService.deleteProductImageByUrl(
+                    shopId,
+                    previousImageUrl,
+                );
+            } catch {
+                // The product is already deactivated; cleanup is best effort.
+            }
+        }
+        return saved;
     }
 
     // === PRICING ===

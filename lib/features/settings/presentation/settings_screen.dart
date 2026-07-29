@@ -394,7 +394,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 : (shop['role']?['name']?.toString() ??
                                       'Nhân viên'),
                             selected:
-                                shop['shopId'] == shopState.currentShopId &&
+                                parseShopRecordId(shop['shopId']) ==
+                                    shopState.currentShopId &&
                                 !shopState.isAllShops,
                             onTap: () {
                               final shopId = int.tryParse(

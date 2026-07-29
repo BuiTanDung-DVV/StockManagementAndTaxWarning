@@ -11,7 +11,7 @@
         "lint": "eslint \"src/**/*.ts\"",
         "test:permissions": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js",
         "test:tax": "npm run build && node --test test/tax-policy.test.js",
-        "test:p0": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js test/tax-policy.test.js test/debt.utils.test.js test/sales-metric.utils.test.js test/invoice-metadata.test.js",
+        "test:p0": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js test/tax-policy.test.js test/debt.utils.test.js test/sales-metric.utils.test.js test/invoice-metadata.test.js test/image-storage.utils.test.js test/product-image-lifecycle.test.js test/shop-payment-qr-lifecycle.test.js",
         "seed:three-years": "tsx src/scripts/seed-three-year-store.ts",
         "audit:data": "tsx src/scripts/audit-store-data.ts",
         "validate:data": "tsx src/scripts/validate-store-data.ts",
@@ -20,6 +20,7 @@
     },
     "dependencies": {
         "bcrypt": "^6.0.0",
+        "cloudinary": "^2.10.0",
         "cors": "^2.8.5",
         "dotenv": "^16.3.1",
         "express": "^5.2.1",

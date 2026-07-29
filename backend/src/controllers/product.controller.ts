@@ -1,7 +1,62 @@
 import { Request, Response } from 'express';
 import { ProductService } from '../services/product.service';
+import {
+    ImageStorageError,
+    ImageStorageService,
+} from '../services/image-storage.service';
 
 const productService = new ProductService();
+const imageStorageService = new ImageStorageService();
+
+const imageStorageError = (res: Response, error: unknown) => {
+    if (error instanceof ImageStorageError) {
+        return res.status(error.statusCode).json({
+            success: false,
+            message: error.message,
+        });
+    }
+    console.error('Product image storage error:', error);
+    return res.status(500).json({
+        success: false,
+        message: 'Không thể xử lý ảnh sản phẩm',
+    });
+};
+
+export const createProductImageUpload = async (req: Request, res: Response) => {
+    try {
+        const data = await imageStorageService.createProductImageUpload(
+            (req as any).shopId,
+            req.body,
+        );
+        return res.json({ success: true, data });
+    } catch (error) {
+        return imageStorageError(res, error);
+    }
+};
+
+export const confirmProductImageUpload = async (req: Request, res: Response) => {
+    try {
+        const data = await imageStorageService.confirmProductImage(
+            (req as any).shopId,
+            String(req.body.objectKey || ''),
+        );
+        return res.json({ success: true, data });
+    } catch (error) {
+        return imageStorageError(res, error);
+    }
+};
+
+export const deleteProductImageUpload = async (req: Request, res: Response) => {
+    try {
+        const data = await imageStorageService.deleteProductImage(
+            (req as any).shopId,
+            String(req.body.objectKey || ''),
+        );
+        return res.json({ success: true, data });
+    } catch (error) {
+        return imageStorageError(res, error);
+    }
+};
 
 export const findAllProducts = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.findAllProducts((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.search as string, req.query.tag as string) }); }

@@ -37,6 +37,13 @@ class _DashboardTimeFilter extends Notifier<String> {
 final _dashboardTimeFilterProvider =
     NotifierProvider<_DashboardTimeFilter, String>(_DashboardTimeFilter.new);
 
+bool dashboardUsesCompactLayout(double width) =>
+    width < AppBreakpoints.compactNavigation;
+
+bool dashboardCanSell(ShopState shopState) =>
+    !shopState.isAllShops &&
+    (shopState.isOwner || shopState.hasPermission('sales'));
+
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -62,6 +69,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         shopState.hasPermission('dashboard');
     final hasInventory =
         shopState.isOwner || shopState.hasPermission('inventory');
+    final canSell = dashboardCanSell(shopState);
+    final compactLayout = dashboardUsesCompactLayout(
+      MediaQuery.sizeOf(context).width,
+    );
     final filter = ref.watch(_dashboardTimeFilterProvider);
     final today = DateTime.now();
     final periods = _resolvePeriods(filter, today);
@@ -90,7 +101,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             )),
           )
         : null;
-    final recentTransactionsAsync = hasFinance && shopState.userShops.isNotEmpty
+    final recentTransactionsAsync =
+        hasFinance &&
+            shopState.userShops.isNotEmpty &&
+            !shopState.isAllShops
         ? ref.watch(recentTransactionsProvider)
         : null;
     final topProductsAsync = hasSalesInsights && shopState.userShops.isNotEmpty
@@ -114,10 +128,32 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       );
     }
 
+    Widget headerActions({required bool compact}) => Wrap(
+      spacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        featureGuideButton(context, 'dashboard'),
+        if (compact && canSell)
+          Tooltip(
+            message: 'Bán hàng',
+            child: FloatingActionButton.small(
+              heroTag: 'dashboard-sale-action-compact',
+              elevation: 0,
+              onPressed: () => context.push('/pos'),
+              child: const AppAssetIcon(
+                assetPath: AppAssets.orders,
+                size: 18,
+                color: Colors.white,
+                semanticLabel: 'Bán hàng',
+              ),
+            ),
+          ),
+      ],
+    );
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton:
-          shopState.isOwner || shopState.hasPermission('sales')
+      floatingActionButton: canSell && !compactLayout
           ? AppPrimaryFloatingAction(
               label: 'Bán hàng',
               assetPath: AppAssets.orders,
@@ -149,7 +185,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   AppPageHeader(
-                    title: 'Tình hình cửa hàng',
+                    title: shopState.isAllShops
+                        ? 'Tổng quan tất cả cửa hàng'
+                        : 'Tình hình cửa hàng',
                     subtitle:
                         '${shopState.currentShopName ?? 'Cửa hàng'} • ${periods.currentLabel} • cập nhật ${DateFormat('dd/MM/yyyy').format(today)}',
                     dense: true,
@@ -166,9 +204,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       fontWeight: FontWeight.w500,
                       color: colors.textSecondary,
                     ),
-                    action: featureGuideButton(context, 'dashboard'),
-                    compactAction: featureGuideButton(context, 'dashboard'),
+                    action: headerActions(compact: compactLayout),
+                    compactAction: headerActions(compact: true),
                   ),
+                  if (shopState.isAllShops) ...[
+                    _AllShopsNotice(
+                      shopCount: shopState.userShops
+                          .where(
+                            (shop) =>
+                                shop['status'] == 'ACTIVE' &&
+                                shop['isActive'] != false,
+                          )
+                          .length,
+                      onChooseShop: () => context.push('/settings'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                   if (salesAsync != null && cashAsync != null)
                     salesAsync.when(
                       data: (salesData) => cashAsync.when(
@@ -512,6 +563,79 @@ class _ActivationStep extends StatelessWidget {
   }
 }
 
+class _AllShopsNotice extends StatelessWidget {
+  final int shopCount;
+  final VoidCallback onChooseShop;
+
+  const _AllShopsNotice({
+    required this.shopCount,
+    required this.onChooseShop,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    final message = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Chế độ tổng hợp • $shopCount cửa hàng',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          'Các chỉ số bên dưới được cộng gộp. Bán hàng, nhập kho và chỉnh sửa dữ liệu yêu cầu chọn một cửa hàng cụ thể.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+
+    final chooseButton = OutlinedButton(
+      onPressed: onChooseShop,
+      child: const Text('Chọn cửa hàng cụ thể'),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.055),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: primary.withValues(alpha: 0.28)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 560) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                message,
+                const SizedBox(height: AppSpacing.sm),
+                Align(alignment: Alignment.centerLeft, child: chooseButton),
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: message),
+              const SizedBox(width: AppSpacing.md),
+              chooseButton,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _DashboardWorkspace extends StatelessWidget {
   final AsyncValue<Map<String, dynamic>>? currentSales;
   final AsyncValue<Map<String, dynamic>>? comparisonSales;
@@ -588,9 +712,9 @@ class _DashboardWorkspace extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              chart,
-              const SizedBox(height: AppSpacing.lg),
               priorities,
+              const SizedBox(height: AppSpacing.lg),
+              chart,
               products,
               orders,
             ],
@@ -958,7 +1082,10 @@ class _DashboardMetricStrip extends StatelessWidget {
               children: [
                 for (var index = 0; index < visibleMetrics.length; index++) ...[
                   if (index > 0) Divider(height: 1, color: colors.divider),
-                  _MetricRow(metric: visibleMetrics[index]),
+                  _MetricRow(
+                    metric: visibleMetrics[index],
+                    emphasized: index == 0,
+                  ),
                 ],
                 Divider(height: 1, color: colors.divider),
                 Align(
@@ -988,7 +1115,12 @@ class _DashboardMetricStrip extends StatelessWidget {
             children: [
               for (var index = 0; index < metrics.length; index++) ...[
                 if (index > 0) VerticalDivider(width: 1, color: colors.divider),
-                Expanded(child: _MetricCell(metric: metrics[index])),
+                Expanded(
+                  child: _MetricCell(
+                    metric: metrics[index],
+                    emphasized: index == 0,
+                  ),
+                ),
               ],
             ],
           ),
@@ -1000,14 +1132,16 @@ class _DashboardMetricStrip extends StatelessWidget {
 
 class _MetricCell extends StatelessWidget {
   final _DashboardMetric metric;
+  final bool emphasized;
 
-  const _MetricCell({required this.metric});
+  const _MetricCell({required this.metric, this.emphasized = false});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Padding(
+    return Container(
+      color: emphasized ? metric.color.withValues(alpha: 0.055) : null,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
@@ -1031,6 +1165,7 @@ class _MetricCell extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: colors.textSecondary,
+                    fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
               ),
@@ -1047,7 +1182,7 @@ class _MetricCell extends StatelessWidget {
                 fontSize: 19,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.35,
-                color: colors.textPrimary,
+                color: emphasized ? metric.color : colors.textPrimary,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -1067,14 +1202,21 @@ class _MetricCell extends StatelessWidget {
 
 class _MetricRow extends StatelessWidget {
   final _DashboardMetric metric;
+  final bool emphasized;
 
-  const _MetricRow({required this.metric});
+  const _MetricRow({required this.metric, this.emphasized = false});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: emphasized ? metric.color.withValues(alpha: 0.055) : null,
+        border: emphasized
+            ? Border(left: BorderSide(color: metric.color, width: 3))
+            : null,
+      ),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
@@ -1094,9 +1236,10 @@ class _MetricRow extends StatelessWidget {
               children: [
                 Text(
                   metric.label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.textSecondary,
+                    fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -1119,7 +1262,7 @@ class _MetricRow extends StatelessWidget {
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.3,
-                color: colors.textPrimary,
+                color: emphasized ? metric.color : colors.textPrimary,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),

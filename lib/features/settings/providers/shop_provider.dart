@@ -5,6 +5,11 @@ import '../../../core/network/api_client.dart';
 bool _isUsableShopRecord(Map<String, dynamic> shop) =>
     shop['status'] == 'ACTIVE' && shop['isActive'] != false;
 
+int? parseShopRecordId(dynamic value) {
+  if (value is int) return value;
+  return int.tryParse(value?.toString() ?? '');
+}
+
 // ── Shop state ──
 class ShopState {
   final int? currentShopId;
@@ -162,7 +167,7 @@ class ShopNotifier extends Notifier<ShopState> {
       final activeShops = shops.where(_isUsableShop).toList();
       final fallback = activeShops.isNotEmpty ? activeShops.first : shops.first;
       final current = shops.firstWhere(
-        (s) => s['shopId'] == currentId && _isUsableShop(s),
+        (s) => parseShopRecordId(s['shopId']) == currentId && _isUsableShop(s),
         orElse: () => fallback,
       );
       _selectShop(shops, current);
@@ -184,7 +189,7 @@ class ShopNotifier extends Notifier<ShopState> {
     final activeShops = state.userShops.where(_isUsableShop).toList();
     if (activeShops.isEmpty) return;
     final shop = activeShops.firstWhere(
-      (s) => s['shopId'] == shopId,
+      (s) => parseShopRecordId(s['shopId']) == shopId,
       orElse: () => activeShops.first,
     );
     _selectShop(state.userShops, shop);
@@ -229,7 +234,7 @@ class ShopNotifier extends Notifier<ShopState> {
     _api.setShopId(usable ? current['shopId']?.toString() : null);
 
     state = ShopState(
-      currentShopId: current['shopId'] as int?,
+      currentShopId: parseShopRecordId(current['shopId']),
       currentShopName: current['shopName'] as String?,
       shopCode: current['shopCode'] as String?,
       memberType: current['memberType'] as String?,

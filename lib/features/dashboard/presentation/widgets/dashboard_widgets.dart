@@ -3136,11 +3136,23 @@ class DashboardPriorityList extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
-            child: Text(
-              'Ưu tiên hôm nay',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ưu tiên hôm nay',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Các việc cần chú ý trước khi xem báo cáo chi tiết.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
           Divider(height: 1, color: colors.divider),
@@ -3190,20 +3202,30 @@ class _PriorityRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(
+            color: statusColor.withValues(alpha: 0.045),
+            border: Border(left: BorderSide(color: statusColor, width: 3)),
+          ),
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 28,
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
                 child: Text(
                   '$number',
                   style: AppTheme.tabularStyle(
                     context,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: colors.textMuted,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
                   ),
                 ),
               ),
@@ -3235,11 +3257,24 @@ class _PriorityRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text(
-                status,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: statusColor,
-                  fontWeight: FontWeight.w600,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: AppSpacing.xxs,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.24),
+                  ),
+                ),
+                child: Text(
+                  status,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: statusColor,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
