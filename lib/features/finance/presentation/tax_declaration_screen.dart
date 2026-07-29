@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/tax_config_provider.dart';
+import '../../tax/services/tax_service.dart';
 import '../providers/finance_provider.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -317,6 +318,8 @@ class TaxDeclarationScreen extends ConsumerWidget {
                               child: OutlinedButton.icon(
                                 onPressed: () => _showExportDialog(
                                   context,
+                                  ref,
+                                  f['form'] as String,
                                   f['name'] as String,
                                 ),
                                 icon: const Icon(Icons.download, size: 16),
@@ -394,32 +397,50 @@ class TaxDeclarationScreen extends ConsumerWidget {
     );
   }
 
-  void _showExportDialog(BuildContext context, String formName) {
+  Future<void> _showExportDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String formCode,
+    String formName,
+  ) async {
+    if (formCode != '01/CNKD') {
+      ToastService.showWarning(
+        'Mẫu $formCode chưa được hỗ trợ xuất XML. Hiện hệ thống chỉ hỗ trợ mẫu 01/CNKD.',
+      );
+      return;
+    }
+
     final c = AppThemeColors.of(context);
-    showDialog(
+    showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) {
-        Future.delayed(const Duration(seconds: 2), () {
-          if (ctx.mounted) {
-            Navigator.pop(ctx);
-            ToastService.showSuccess(
-              'Đã kết xuất XML mẫu $formName thành công!',
-            );
-          }
-        });
-        return AlertDialog(
-          backgroundColor: c.surface,
-          content: const Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Đang kết xuất XML...'),
-            ],
-          ),
-        );
-      },
+      builder: (_) => AlertDialog(
+        backgroundColor: c.surface,
+        content: const Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Đang kết xuất XML...'),
+          ],
+        ),
+      ),
     );
+
+    try {
+      final now = DateTime.now();
+      await ref
+          .read(taxServiceProvider)
+          .exportHTKK(now.month.toString().padLeft(2, '0'), '${now.year}');
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ToastService.showSuccess('Đã kết xuất XML mẫu $formName thành công!');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ToastService.showError('Không thể kết xuất XML: $error');
+      }
+    }
   }
 
   void _showSubmitDialog(BuildContext context, String formName) {
@@ -445,7 +466,8 @@ class TaxDeclarationScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Hệ thống sẽ kết nối với Tổng cục Thuế để ký điện tử và nộp tờ khai. Bạn có muốn tiếp tục?',
+              'Ứng dụng chưa tích hợp ký điện tử và nộp tờ khai trực tuyến. '
+              'Hãy xuất XML đã kiểm tra, sau đó nộp bằng kênh chính thức của cơ quan thuế.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -463,11 +485,8 @@ class TaxDeclarationScreen extends ConsumerWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _showExportDialog(context, formName);
-                    },
-                    child: const Text('Xác nhận nộp'),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Đã hiểu'),
                   ),
                 ),
               ],

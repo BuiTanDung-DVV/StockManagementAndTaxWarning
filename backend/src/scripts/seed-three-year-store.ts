@@ -344,11 +344,34 @@ async function clearExistingShopData(
 
 async function ensureValidationSchema(runner: QueryRunner): Promise<void> {
   const rows = await runner.query(
-    "SELECT TO_REGCLASS('public.ai_knowledge_documents') AS table_name",
+    `
+      SELECT
+        TO_REGCLASS('public.ai_knowledge_documents') AS "aiTable",
+        EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conrelid = 'public.daily_closings'::regclass
+            AND conname = 'UQ_daily_closings_shop_date'
+            AND pg_get_constraintdef(oid) LIKE '%shop_id, closing_date%'
+        ) AS "closingConstraintReady",
+        NOT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'purchase_without_invoice_items'
+            AND column_name = 'item_name'
+            AND is_nullable = 'NO'
+        ) AS "purchaseItemReady"
+    `,
   );
   const migrationFiles = [
-    ...(!rows[0]?.table_name ? ['20260728_create_ai_knowledge_documents.sql'] : []),
-    '20260728_fix_daily_closing_multi_shop_unique.sql',
+    ...(!rows[0]?.aiTable ? ['20260728_create_ai_knowledge_documents.sql'] : []),
+    ...(!rows[0]?.closingConstraintReady
+      ? ['20260728_fix_daily_closing_multi_shop_unique.sql']
+      : []),
+    ...(!rows[0]?.purchaseItemReady
+      ? ['20260729_fix_purchase_without_invoice_item_compatibility.sql']
+      : []),
   ];
   for (const fileName of migrationFiles) {
     const migrationPath = resolve(process.cwd(), 'database', fileName);
@@ -472,6 +495,18 @@ async function validateGeneratedData(
       (SELECT COUNT(*)::int FROM invoices WHERE shop_id = $1) AS "invoiceCount",
       (SELECT COUNT(*)::int FROM receivables WHERE shop_id = $1) AS "receivableCount",
       (SELECT COUNT(*)::int FROM ai_knowledge_documents WHERE shop_id = $1) AS "knowledgeCount",
+      (SELECT COUNT(*)::int FROM products WHERE shop_id = $1) AS "productCount",
+      (SELECT COUNT(*)::int FROM tags WHERE shop_id = $1) AS "tagCount",
+      (SELECT COUNT(*)::int FROM product_batches WHERE shop_id = $1) AS "batchCount",
+      (SELECT COUNT(*)::int FROM inventory_lots WHERE shop_id = $1) AS "lotCount",
+      (SELECT COUNT(*)::int FROM stock_takes WHERE shop_id = $1) AS "stockTakeCount",
+      (SELECT COUNT(*)::int FROM cashflow_forecasts WHERE shop_id = $1) AS "forecastCount",
+      (
+        SELECT COUNT(*)::int FROM purchases_without_invoice WHERE shop_id = $1
+      ) AS "purchaseWithoutInvoiceCount",
+      (SELECT COUNT(*)::int FROM activity_logs WHERE shop_id = $1) AS "activityLogCount",
+      (SELECT COUNT(*)::int FROM financial_ledger WHERE shop_id = $1) AS "ledgerCount",
+      (SELECT COUNT(*)::int FROM cash_transactions WHERE shop_id = $1) AS "cashTransactionCount",
       (
         SELECT ABS(
           COALESCE((
@@ -524,6 +559,15 @@ async function validateGeneratedData(
     ['invoiceCount', Number(result.invoiceCount) > 0 ? 0 : 1],
     ['receivableCount', Number(result.receivableCount) > 0 ? 0 : 1],
     ['knowledgeCount', Number(result.knowledgeCount) >= 3 ? 0 : 1],
+    ['productCount', Math.abs(Number(result.productCount) - 250)],
+    ['tagCount', Number(result.tagCount) >= 8 ? 0 : 1],
+    ['batchCount', Math.abs(Number(result.batchCount) - 250)],
+    ['lotCount', Math.abs(Number(result.lotCount) - 250)],
+    ['stockTakeCount', Math.abs(Number(result.stockTakeCount) - 12)],
+    ['forecastCount', Math.abs(Number(result.forecastCount) - 90)],
+    ['purchaseWithoutInvoiceCount', Number(result.purchaseWithoutInvoiceCount) >= 7 ? 0 : 1],
+    ['activityLogCount', Number(result.activityLogCount) >= 50 ? 0 : 1],
+    ['ledgerCount', Math.abs(Number(result.ledgerCount) - Number(result.cashTransactionCount))],
     ['revenueDifference', Number(result.revenueDifference) > 1 ? Number(result.revenueDifference) : 0],
     ['cogsDifference', Number(result.cogsDifference) > 1 ? Number(result.cogsDifference) : 0],
   ].filter(([, violations]) => Number(violations) > 0);
@@ -760,6 +804,33 @@ async function seed(
       categoryRows,
       'id',
     );
+    const operationalTagNames = [
+      ...categoryNames,
+      'Bán chạy',
+      'Hàng cần theo dõi',
+      profile.key === 'agriculture' ? 'Theo mùa vụ' : 'Hàng công trình',
+    ];
+    await bulkInsert(
+      runner,
+      'tags',
+      ['shop_id', 'name', 'color', 'type'],
+      operationalTagNames.map((name, index) => ({
+        shop_id: shopId,
+        name,
+        color: [
+          '#2563EB',
+          '#0F766E',
+          '#7C3AED',
+          '#C2410C',
+          '#0369A1',
+          '#4D7C0F',
+          '#DC2626',
+          '#D97706',
+          '#0891B2',
+        ][index % 9],
+        type: 'product',
+      })),
+    );
 
     const categoryIdByName = new Map(
       categoryNames.map((name, index) => [name, Number(categories[index].id)]),
@@ -777,6 +848,11 @@ async function seed(
       tax_rate: 0,
       min_stock: definition.minStock,
       description: `Sản phẩm thuộc nhóm ${definition.category.toLocaleLowerCase('vi-VN')}`,
+      tags: [
+        definition.category,
+        index < 40 ? 'Bán chạy' : 'Hàng cần theo dõi',
+        profile.key === 'agriculture' ? 'Theo mùa vụ' : 'Hàng công trình',
+      ].join(','),
       is_active: true,
       created_at: START_DATE,
       updated_at: END_DATE,
@@ -786,9 +862,106 @@ async function seed(
       'products',
       ['sku', 'shop_id', 'name', 'category_id', 'unit', 'cost_price', 'selling_price',
         'wholesale_price', 'wholesale_min_qty', 'tax_rate', 'min_stock', 'description',
-        'is_active', 'created_at', 'updated_at'],
+        'tags', 'is_active', 'created_at', 'updated_at'],
       productRows,
       'id, sku',
+    );
+    const costTypes = await bulkInsert(
+      runner,
+      'cost_types',
+      ['name', 'shop_id', 'description', 'is_active', 'sort_order', 'created_at'],
+      [
+        ['Vận chuyển', 'Chi phí đưa hàng về kho'],
+        ['Bốc xếp', 'Chi phí bốc xếp và sắp kho'],
+        ['Bảo quản', 'Chi phí lưu kho và bảo quản'],
+        ['Hao hụt định mức', 'Hao hụt hợp lý theo nhóm hàng'],
+      ].map(([name, description], index) => ({
+        name: `${name} · ${key}`,
+        shop_id: shopId,
+        description,
+        is_active: true,
+        sort_order: index + 1,
+        created_at: START_DATE,
+      })),
+      'id',
+    );
+    const productCostRows: Row[] = [];
+    const priceHistoryRows: Row[] = [];
+    const conversionRows: Row[] = [];
+    for (let index = 0; index < products.length; index += 1) {
+      const definition = profile.products[index];
+      const productId = Number(products[index].id);
+      if (index % 4 === 0) {
+        productCostRows.push({
+          product_id: productId,
+          shop_id: shopId,
+          cost_type_id: Number(costTypes[index % costTypes.length].id),
+          amount: roundMoney(Math.max(definition.cost * 0.015, 1000)),
+          calculation_type: 'FIXED',
+          notes: 'Phân bổ theo lần nhập gần nhất',
+        });
+      }
+      const currentSellingPrice = roundMoney(definition.sell * 1.10);
+      priceHistoryRows.push(
+        {
+          product_id: productId,
+          shop_id: shopId,
+          price_type: 'SELLING',
+          old_price: roundMoney(currentSellingPrice / 1.10),
+          new_price: roundMoney(currentSellingPrice / 1.05),
+          change_reason: 'Điều chỉnh theo chi phí đầu vào năm 2025',
+          changed_by: ownerId,
+          changed_at: new Date('2025-01-03T08:00:00+07:00'),
+        },
+        {
+          product_id: productId,
+          shop_id: shopId,
+          price_type: 'SELLING',
+          old_price: roundMoney(currentSellingPrice / 1.05),
+          new_price: currentSellingPrice,
+          change_reason: 'Cập nhật bảng giá bán năm 2026',
+          changed_by: ownerId,
+          changed_at: new Date('2026-01-05T08:00:00+07:00'),
+        },
+      );
+      const conversion = definition.unit === 'Bao'
+        ? { toUnit: 'Kg', rate: definition.name.includes('25kg') ? 25 : definition.name.includes('10kg') ? 10 : 50 }
+        : definition.unit === 'Thùng'
+          ? { toUnit: 'Lít', rate: definition.name.includes('18L') ? 18 : 20 }
+          : definition.unit === 'Cuộn'
+            ? { toUnit: 'Mét', rate: 100 }
+            : null;
+      if (conversion) {
+        conversionRows.push({
+          product_id: productId,
+          shop_id: shopId,
+          from_unit: definition.unit,
+          to_unit: conversion.toUnit,
+          conversion_rate: conversion.rate,
+          selling_price_per_unit: roundMoney(currentSellingPrice / conversion.rate),
+        });
+      }
+    }
+    await bulkInsert(
+      runner,
+      'product_cost_items',
+      ['product_id', 'shop_id', 'cost_type_id', 'amount', 'calculation_type', 'notes'],
+      productCostRows,
+    );
+    await bulkInsert(
+      runner,
+      'product_price_history',
+      ['product_id', 'shop_id', 'price_type', 'old_price', 'new_price', 'change_reason',
+        'changed_by', 'changed_at'],
+      priceHistoryRows,
+      '',
+      500,
+    );
+    await bulkInsert(
+      runner,
+      'unit_conversions',
+      ['product_id', 'shop_id', 'from_unit', 'to_unit', 'conversion_rate', 'selling_price_per_unit'],
+      conversionRows,
     );
 
     const customerRows = profile.customers.map((name, index) => ({
@@ -1373,6 +1546,7 @@ async function seed(
     const purchaseItemsByCode = new Map<string, Row[]>();
     const payableByCode = new Map<string, Row>();
     const purchasePaymentMethods = new Map<string, string>();
+    const purchaseWithoutInvoiceCodes = new Set<string>();
     let purchaseSequence = 1;
     for (const [keyMonth, soldQuantities] of [...monthlySold.entries()].sort()) {
       const purchaseDate = keyMonth === monthKey(START_DATE)
@@ -1385,7 +1559,10 @@ async function seed(
         ),
         2,
       );
-      const code = `P3${key}${String(purchaseSequence++).padStart(4, '0')}`;
+      const purchaseNumber = purchaseSequence++;
+      const code = `P3${key}${String(purchaseNumber).padStart(4, '0')}`;
+      const isWithoutInvoice = purchaseNumber % 5 === 0;
+      if (isWithoutInvoice) purchaseWithoutInvoiceCodes.add(code);
       const items = soldQuantities.map((sold, index) => ({
         product_id: Number(products[index].id),
         quantity:
@@ -1413,7 +1590,7 @@ async function seed(
         warehouse_id: warehouseId,
         order_date: purchaseDate,
         payment_due_date: dateOnly(addDays(purchaseDate, 30)),
-        invoice_number: `MUA-${code}`,
+        invoice_number: isWithoutInvoice ? null : `MUA-${code}`,
         status: 'COMPLETED',
         subtotal: total,
         discount_amount: 0,
@@ -1491,6 +1668,8 @@ async function seed(
     const purchaseMovementRows: Row[] = [];
     const payableRows: Row[] = [];
     const purchaseInvoiceRows: Row[] = [];
+    const purchaseWithoutInvoiceRows: Row[] = [];
+    const purchaseWithoutInvoiceItemsByCode = new Map<string, Row[]>();
     const purchaseCodeById = new Map(
       insertedPurchases.map((purchase) => [
         Number(purchase.id),
@@ -1523,24 +1702,69 @@ async function seed(
         });
       }
       payableRows.push({ ...payableByCode.get(code)!, purchase_order_id: purchaseId });
-      purchaseInvoiceRows.push({
-        invoice_number: `MUA-${code}`,
-        shop_id: shopId,
-        invoice_symbol: 'M26TSS',
-        invoice_type: 'IN',
-        invoice_date: dateOnly(new Date(purchase.order_date as string)),
-        partner_name: supplierNameById.get(Number(purchase.supplier_id)) ?? 'Nhà cung cấp',
-        reference_type: 'PURCHASE_ORDER',
-        reference_id: purchaseId,
-        subtotal: Number(purchase.total_amount),
-        tax_amount: 0,
-        total_amount: Number(purchase.total_amount),
-        payment_method: purchasePaymentMethods.get(code) ?? 'TRANSFER',
-        payment_status: Number(purchase.paid_amount) >= Number(purchase.total_amount) ? 'PAID' : 'PARTIAL',
-        notes: 'Hóa đơn mua hàng',
-        created_by: ownerId,
-        created_at: purchase.order_date as Date,
-      });
+      if (purchaseWithoutInvoiceCodes.has(code)) {
+        const documentItems = items
+          .filter((_, index) => index % Math.max(Math.floor(items.length / 8), 1) === 0)
+          .slice(0, 8);
+        const documentTotal = documentItems.reduce(
+          (sum, item) => sum + Number(item.quantity) * Number(item.unit_price),
+          0,
+        );
+        const documentIndex = purchaseWithoutInvoiceRows.length;
+        const approvalStatus = documentIndex % 4 === 1
+          ? 'PENDING'
+          : documentIndex % 4 === 3
+            ? 'REJECTED'
+            : 'APPROVED';
+        purchaseWithoutInvoiceRows.push({
+          record_code: `BK${key}${code.slice(-4)}`,
+          shop_id: shopId,
+          purchase_date: dateOnly(new Date(purchase.order_date as string)),
+          seller_name: supplierNameById.get(Number(purchase.supplier_id)) ?? 'Nhà cung cấp',
+          seller_identity_number: `07926${String(shopId).padStart(2, '0')}${String(documentIndex + 1).padStart(5, '0')}`,
+          seller_address: 'Khu thương mại và kho vận địa phương',
+          seller_phone: `0908${String(shopId).padStart(2, '0')}${String(documentIndex + 1).padStart(4, '0')}`,
+          total_amount: documentTotal,
+          payment_method: documentTotal >= 20000000
+            ? 'TRANSFER'
+            : purchasePaymentMethods.get(code) ?? 'TRANSFER',
+          market_price_reference: roundMoney(documentTotal * 1.02),
+          notes: `Bảng kê chứng từ bổ sung cho đơn nhập ${code}`,
+          approval_status: approvalStatus,
+          approval_notes: approvalStatus === 'REJECTED'
+            ? 'Thiếu xác nhận người bán, cần bổ sung trước khi ghi nhận'
+            : approvalStatus === 'APPROVED'
+              ? 'Đã đối chiếu đơn nhập, thanh toán và hàng nhận kho'
+              : 'Đang chờ chủ cửa hàng kiểm tra chứng từ',
+          approved_at: approvalStatus === 'PENDING' ? null : purchase.order_date as Date,
+          approved_by: approvalStatus === 'PENDING' ? null : ownerId,
+          created_by: ownerId,
+          created_at: purchase.order_date as Date,
+        });
+        purchaseWithoutInvoiceItemsByCode.set(
+          `BK${key}${code.slice(-4)}`,
+          documentItems,
+        );
+      } else {
+        purchaseInvoiceRows.push({
+          invoice_number: `MUA-${code}`,
+          shop_id: shopId,
+          invoice_symbol: 'M26TSS',
+          invoice_type: 'IN',
+          invoice_date: dateOnly(new Date(purchase.order_date as string)),
+          partner_name: supplierNameById.get(Number(purchase.supplier_id)) ?? 'Nhà cung cấp',
+          reference_type: 'PURCHASE_ORDER',
+          reference_id: purchaseId,
+          subtotal: Number(purchase.total_amount),
+          tax_amount: 0,
+          total_amount: Number(purchase.total_amount),
+          payment_method: purchasePaymentMethods.get(code) ?? 'TRANSFER',
+          payment_status: Number(purchase.paid_amount) >= Number(purchase.total_amount) ? 'PAID' : 'PARTIAL',
+          notes: 'Hóa đơn mua hàng',
+          created_by: ownerId,
+          created_at: purchase.order_date as Date,
+        });
+      }
     }
     await bulkInsert(runner, 'purchase_order_items', ['order_id', 'product_id', 'quantity', 'unit_price', 'subtotal'], purchaseItemRows, '', 700);
     await bulkInsert(
@@ -1548,6 +1772,49 @@ async function seed(
       ['product_id', 'shop_id', 'warehouse_id', 'movement_type', 'quantity',
         'reference_type', 'reference_id', 'notes', 'created_by', 'created_at'],
       purchaseMovementRows, '', 700,
+    );
+    const insertedPurchaseDocuments = await bulkInsert(
+      runner,
+      'purchases_without_invoice',
+      ['record_code', 'shop_id', 'purchase_date', 'seller_name', 'seller_identity_number',
+        'seller_address', 'seller_phone', 'total_amount', 'payment_method',
+        'market_price_reference', 'notes', 'approval_status', 'approval_notes',
+        'approved_at', 'approved_by', 'created_by', 'created_at'],
+      purchaseWithoutInvoiceRows,
+      'id, record_code',
+    );
+    const purchaseDocumentItemRows: Row[] = [];
+    for (const document of insertedPurchaseDocuments) {
+      const documentItems = purchaseWithoutInvoiceItemsByCode.get(String(document.record_code)) ?? [];
+      for (const item of documentItems) {
+        const productIndex = products.findIndex(
+          (product) => Number(product.id) === Number(item.product_id),
+        );
+        purchaseDocumentItemRows.push({
+          purchase_id: Number(document.id),
+          shop_id: shopId,
+          product_name: productIndex >= 0
+            ? profile.products[productIndex].name
+            : 'Hàng hóa nhập kho',
+          item_name: productIndex >= 0
+            ? profile.products[productIndex].name
+            : 'Hàng hóa nhập kho',
+          unit: productIndex >= 0 ? profile.products[productIndex].unit : 'Cái',
+          product_id: Number(item.product_id),
+          warehouse_id: warehouseId,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          subtotal: Number(item.quantity) * Number(item.unit_price),
+        });
+      }
+    }
+    await bulkInsert(
+      runner,
+      'purchase_without_invoice_items',
+      ['purchase_id', 'shop_id', 'product_name', 'item_name', 'unit',
+        'product_id', 'warehouse_id',
+        'quantity', 'unit_price', 'subtotal'],
+      purchaseDocumentItemRows,
     );
     const insertedPayables = await bulkInsert(
       runner, 'payables',
@@ -1626,6 +1893,27 @@ async function seed(
         'account_id', 'counterparty', 'reference_type', 'reference_id', 'transaction_date',
         'notes', 'created_by', 'created_at'],
       cashRows, '', 500,
+    );
+    await bulkInsert(
+      runner, 'financial_ledger',
+      ['shop_id', 'event_type', 'amount', 'payment_method', 'account_id',
+        'reference_id', 'description', 'created_at', 'created_by'],
+      cashRows.map((transaction) => ({
+        shop_id: shopId,
+        event_type: transaction.type === 'INCOME'
+          ? (transaction.reference_type === 'SALE_ORDER' ? 'SALE' : 'DEBT_COLLECTION')
+          : (transaction.category === 'SALARY' ? 'SALARY'
+              : transaction.reference_type === 'PURCHASE_ORDER' ? 'PURCHASE' : 'EXPENSE'),
+        amount: transaction.amount,
+        payment_method: transaction.payment_method,
+        account_id: transaction.account_id,
+        reference_id: transaction.reference_id,
+        description: transaction.notes,
+        created_at: transaction.created_at,
+        created_by: ownerId,
+      })),
+      '',
+      500,
     );
 
     const insertedJournals = await bulkInsert(
@@ -1778,6 +2066,148 @@ async function seed(
       GROUP BY p.id
     `, [shopId, warehouseId, END_DATE, `${profile.skuPrefix}-${key}-%`]);
 
+    const stockSnapshot = await runner.query(`
+      SELECT
+        p.id AS product_id,
+        p.cost_price,
+        s.quantity
+      FROM products p
+      JOIN inventory_stocks s
+        ON s.product_id = p.id
+        AND s.shop_id = p.shop_id
+      WHERE p.shop_id = $1
+      ORDER BY p.id
+    `, [shopId]);
+    const batchRows: Row[] = [];
+    for (let index = 0; index < stockSnapshot.length; index += 1) {
+      const definition = profile.products[index];
+      const tracksExpiry = profile.key === 'agriculture' ||
+        /Xi măng|Sơn|Bột trét|Keo dán|Chống thấm/i.test(definition.name);
+      const nearExpiry = tracksExpiry &&
+        (profile.key === 'agriculture' ? index < 18 : index < 8);
+      const expiryDate = tracksExpiry
+        ? addDays(END_DATE, nearExpiry ? 10 + index : 180 + (index % 240))
+        : null;
+      batchRows.push({
+        product_id: Number(stockSnapshot[index].product_id),
+        shop_id: shopId,
+        batch_number: `LOT${key}${String(index + 1).padStart(5, '0')}`,
+        manufacturing_date: expiryDate ? dateOnly(addDays(expiryDate, -365)) : null,
+        expiry_date: expiryDate ? dateOnly(expiryDate) : null,
+        quantity: Number(stockSnapshot[index].quantity),
+        cost_price: Number(stockSnapshot[index].cost_price),
+        supplier_name: profile.suppliers[index % profile.suppliers.length],
+        notes: tracksExpiry
+          ? 'Lô đang theo dõi hạn sử dụng và điều kiện bảo quản'
+          : 'Lô hàng đang lưu kho',
+        is_active: true,
+        created_at: new Date('2026-06-02T08:00:00+07:00'),
+      });
+    }
+    const insertedBatches = await bulkInsert(
+      runner,
+      'product_batches',
+      ['product_id', 'shop_id', 'batch_number', 'manufacturing_date', 'expiry_date',
+        'quantity', 'cost_price', 'supplier_name', 'notes', 'is_active', 'created_at'],
+      batchRows,
+      'id, product_id',
+      500,
+    );
+    const batchIdByProduct = new Map(
+      insertedBatches.map((batch) => [Number(batch.product_id), Number(batch.id)]),
+    );
+    await bulkInsert(
+      runner,
+      'inventory_lots',
+      ['product_id', 'shop_id', 'purchase_id', 'batch_id', 'lot_date', 'initial_qty',
+        'remaining_qty', 'cost_price', 'notes', 'created_at'],
+      stockSnapshot.map((stock: Record<string, unknown>) => ({
+        product_id: Number(stock.product_id),
+        shop_id: shopId,
+        purchase_id: null,
+        batch_id: batchIdByProduct.get(Number(stock.product_id)) ?? null,
+        lot_date: new Date('2026-06-02T08:00:00+07:00'),
+        initial_qty: Number(stock.quantity),
+        remaining_qty: Number(stock.quantity),
+        cost_price: Number(stock.cost_price),
+        notes: 'Số dư lô được đối chiếu với tồn kho cuối kỳ',
+        created_at: new Date('2026-06-02T08:00:00+07:00'),
+      })),
+      '',
+      500,
+    );
+
+    const stockTakeRows: Row[] = [];
+    const stockTakeDates: Date[] = [];
+    for (let index = 0; index < 12; index += 1) {
+      const stockTakeDate = addDays(START_DATE, 89 + index * 91);
+      stockTakeDates.push(stockTakeDate);
+      stockTakeRows.push({
+        stock_take_code: `KK${key}${String(index + 1).padStart(3, '0')}`,
+        shop_id: shopId,
+        warehouse_id: warehouseId,
+        stock_take_date: dateOnly(stockTakeDate),
+        status: 'COMPLETED',
+        notes: 'Kiểm kê định kỳ, số liệu đã được đối chiếu với sổ kho',
+        created_by: ownerId,
+        approved_by: ownerId,
+        completed_at: atLocalTime(stockTakeDate, 18, 0),
+        created_at: atLocalTime(stockTakeDate, 8, 0),
+      });
+    }
+    const insertedStockTakes = await bulkInsert(
+      runner,
+      'stock_takes',
+      ['stock_take_code', 'shop_id', 'warehouse_id', 'stock_take_date', 'status',
+        'notes', 'created_by', 'approved_by', 'completed_at', 'created_at'],
+      stockTakeRows,
+      'id',
+    );
+    const stockTakeItemRows: Row[] = [];
+    for (let index = 0; index < insertedStockTakes.length; index += 1) {
+      const selectedProductIds = products
+        .filter((_, productIndex) => productIndex % 12 === index)
+        .slice(0, 24)
+        .map((product) => Number(product.id));
+      const historicalStocks = await runner.query(`
+        SELECT
+          p.id AS product_id,
+          COALESCE(SUM(
+            CASE
+              WHEN m.movement_type IN ('IN', 'RETURN') THEN m.quantity
+              ELSE -m.quantity
+            END
+          ), 0)::numeric AS quantity
+        FROM products p
+        LEFT JOIN inventory_movements m
+          ON m.product_id = p.id
+          AND m.shop_id = $1
+          AND m.created_at::date <= $2::date
+        WHERE p.id = ANY($3::int[])
+        GROUP BY p.id
+        ORDER BY p.id
+      `, [shopId, dateOnly(stockTakeDates[index]), selectedProductIds]);
+      for (const stock of historicalStocks) {
+        const quantity = Math.max(Number(stock.quantity), 0);
+        stockTakeItemRows.push({
+          stock_take_id: Number(insertedStockTakes[index].id),
+          product_id: Number(stock.product_id),
+          system_qty: quantity,
+          actual_qty: quantity,
+          difference: 0,
+          notes: 'Khớp số lượng thực tế',
+        });
+      }
+    }
+    await bulkInsert(
+      runner,
+      'stock_take_items',
+      ['stock_take_id', 'product_id', 'system_qty', 'actual_qty', 'difference', 'notes'],
+      stockTakeItemRows,
+      '',
+      500,
+    );
+
     await runner.query(`
       UPDATE customers c SET balance = debt.remaining
       FROM (
@@ -1860,6 +2290,45 @@ async function seed(
         'cash_difference', 'total_sales', 'total_returns', 'total_income', 'total_expense',
         'order_count', 'notes', 'closed_by', 'closed_at'],
       closingRows, '', 500,
+    );
+
+    const recentDays = dailyRows.slice(-60);
+    const averageIncome = recentDays.reduce(
+      (sum: number, day: Record<string, unknown>) => sum + Number(day.income),
+      0,
+    ) / recentDays.length;
+    const averageExpense = recentDays.reduce(
+      (sum: number, day: Record<string, unknown>) => sum + Number(day.expense),
+      0,
+    ) / recentDays.length;
+    const forecastRows: Row[] = [];
+    for (let index = 1; index <= 90; index += 1) {
+      const forecastDate = addDays(END_DATE, index);
+      const weekday = forecastDate.getDay();
+      const salesFactor = weekday === 0 ? 0.72 : weekday === 6 ? 1.13 : 1;
+      const seasonalFactor = 1 + Math.sin(index / 11) * 0.04;
+      const expectedIncome = roundMoney(averageIncome * salesFactor * seasonalFactor);
+      const expectedExpense = roundMoney(
+        averageExpense * (weekday === 1 ? 1.08 : 0.99) * (1 + Math.cos(index / 9) * 0.03),
+      );
+      forecastRows.push({
+        forecast_date: dateOnly(forecastDate),
+        shop_id: shopId,
+        expected_income: expectedIncome,
+        expected_expense: expectedExpense,
+        expected_balance: roundMoney(expectedIncome - expectedExpense),
+        notes: 'Dự báo từ bình quân 60 ngày gần nhất, có điều chỉnh theo thứ trong tuần',
+        created_at: END_DATE,
+      });
+    }
+    await bulkInsert(
+      runner,
+      'cashflow_forecasts',
+      ['forecast_date', 'shop_id', 'expected_income', 'expected_expense',
+        'expected_balance', 'notes', 'created_at'],
+      forecastRows,
+      '',
+      200,
     );
 
     const monthTotals = await runner.query(`
@@ -1961,15 +2430,62 @@ async function seed(
       ],
     );
 
-    await bulkInsert(
-      runner, 'activity_logs',
-      ['user_id', 'shop_id', 'action', 'entity_type', 'entity_name', 'new_value', 'description', 'created_at'],
-      [{
+    const activityLogRows: Row[] = monthTotals.map(
+      (month: Record<string, unknown>, index: number) => ({
+        user_id: ownerId,
+        shop_id: shopId,
+        action: 'EXPORT',
+        entity_type: 'MONTHLY_REPORT',
+        entity_id: null,
+        entity_name: `Báo cáo ${month.month}`,
+        old_value: null,
+        new_value: JSON.stringify({
+          income: roundMoney(Number(month.income)),
+          expense: roundMoney(Number(month.expense)),
+        }),
+        description: 'Đã tổng hợp và đối chiếu báo cáo vận hành tháng',
+        ip_address: null,
+        created_at: addDays(START_DATE, Math.min(index * 30 + 27, 1095)),
+      }),
+    );
+    activityLogRows.push(
+      ...insertedStockTakes.map((stockTake, index) => ({
+        user_id: ownerId,
+        shop_id: shopId,
+        action: 'UPDATE',
+        entity_type: 'STOCK_TAKE',
+        entity_id: Number(stockTake.id),
+        entity_name: stockTakeRows[index].stock_take_code,
+        old_value: JSON.stringify({ status: 'DRAFT' }),
+        new_value: JSON.stringify({ status: 'COMPLETED' }),
+        description: 'Hoàn thành và phê duyệt kiểm kê định kỳ',
+        ip_address: null,
+        created_at: stockTakeRows[index].completed_at,
+      })),
+      ...insertedPurchaseDocuments.map((document, index) => ({
+        user_id: ownerId,
+        shop_id: shopId,
+        action: 'CREATE',
+        entity_type: 'PURCHASE_WITHOUT_INVOICE',
+        entity_id: Number(document.id),
+        entity_name: String(document.record_code),
+        old_value: null,
+        new_value: JSON.stringify({
+          status: purchaseWithoutInvoiceRows[index].approval_status,
+          totalAmount: purchaseWithoutInvoiceRows[index].total_amount,
+        }),
+        description: 'Ghi nhận bảng kê mua hàng chưa có hóa đơn',
+        ip_address: null,
+        created_at: purchaseWithoutInvoiceRows[index].purchase_date,
+      })),
+      {
         user_id: ownerId,
         shop_id: shopId,
         action: 'IMPORT',
         entity_type: 'DATASET',
+        entity_id: null,
         entity_name: profile.datasetVersion,
+        old_value: null,
         new_value: JSON.stringify({
           from: dateOnly(START_DATE),
           to: dateOnly(END_DATE),
@@ -1979,8 +2495,17 @@ async function seed(
           profile: profile.key,
         }),
         description: 'Khởi tạo dữ liệu lịch sử vận hành 3 năm',
+        ip_address: null,
         created_at: END_DATE,
-      }],
+      },
+    );
+    await bulkInsert(
+      runner, 'activity_logs',
+      ['user_id', 'shop_id', 'action', 'entity_type', 'entity_id', 'entity_name',
+        'old_value', 'new_value', 'description', 'ip_address', 'created_at'],
+      activityLogRows,
+      '',
+      200,
     );
 
     await validateGeneratedData(runner, shopId);
