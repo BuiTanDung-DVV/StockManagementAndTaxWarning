@@ -488,11 +488,11 @@ class ComparisonBarChart extends StatelessWidget {
     double barWidth;
     double bSpace;
     if (maxLen <= 7) {
-      barWidth = isMobile ? 8.0 : 16.0;
-      bSpace = isMobile ? 6.0 : 12.0;
+      barWidth = isMobile ? 10.0 : 17.0;
+      bSpace = isMobile ? 7.0 : 12.0;
     } else {
-      barWidth = isMobile ? 3.0 : 8.0;
-      bSpace = isMobile ? 2.0 : 4.0;
+      barWidth = isMobile ? 8.0 : 12.0;
+      bSpace = isMobile ? 5.0 : 7.0;
     }
 
     final pastColor = Colors.grey.shade400;
@@ -568,11 +568,11 @@ class ComparisonBarChart extends StatelessWidget {
                     children: [
                       Text(
                         'Doanh thu theo kỳ',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        style: GoogleFonts.manrope(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
                           color: c.textPrimary,
-                          letterSpacing: -0.2,
+                          letterSpacing: -0.35,
                         ),
                       ),
                       if (!isMobile && filterWidget != null) ...[
@@ -597,7 +597,8 @@ class ComparisonBarChart extends StatelessWidget {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final double minWidth = barGroups.length * 50.0;
+                final double minWidth =
+                    barGroups.length * (isMobile ? 56.0 : 62.0);
                 return SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
@@ -609,7 +610,7 @@ class ComparisonBarChart extends StatelessWidget {
                     child: BarChart(
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: maxRev * 1.3,
+                        maxY: maxRev * 1.18,
                         gridData: FlGridData(
                           show: true,
                           drawVerticalLine: false,
@@ -753,10 +754,10 @@ class ComparisonBarChart extends StatelessWidget {
                                   padding: const EdgeInsets.only(top: 10),
                                   child: Text(
                                     displayDate,
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.manrope(
                                       color: c.textMuted,
                                       fontSize: 11,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 );
@@ -783,10 +784,10 @@ class ComparisonBarChart extends StatelessWidget {
                                 }
                                 return Text(
                                   label,
-                                  style: TextStyle(
+                                  style: GoogleFonts.manrope(
                                     color: c.textMuted,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                   textAlign: TextAlign.right,
                                 );

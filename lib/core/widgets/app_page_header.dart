@@ -6,14 +6,22 @@ class AppPageHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? action;
+  final Widget? compactAction;
   final List<Widget>? breadcrumbs;
+  final bool dense;
+  final TextStyle? titleStyle;
+  final TextStyle? subtitleStyle;
 
   const AppPageHeader({
     super.key,
     required this.title,
     this.subtitle,
     this.action,
+    this.compactAction,
     this.breadcrumbs,
+    this.dense = false,
+    this.titleStyle,
+    this.subtitleStyle,
   });
 
   @override
@@ -41,31 +49,41 @@ class AppPageHeader extends StatelessWidget {
         ],
         Text(
           title,
-          style: textTheme.headlineMedium?.copyWith(
-            color: colors.textPrimary,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.55,
-            height: 1.15,
-          ),
+          style:
+              titleStyle ??
+              textTheme.headlineMedium?.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.55,
+                height: 1.15,
+              ),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: AppSpacing.xxs),
           Text(
             subtitle!,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.textSecondary,
-              height: 1.45,
-            ),
+            maxLines: dense ? 2 : null,
+            overflow: dense ? TextOverflow.ellipsis : null,
+            style:
+                subtitleStyle ??
+                textTheme.bodyMedium?.copyWith(
+                  color: colors.textSecondary,
+                  height: 1.45,
+                ),
           ),
         ],
       ],
     );
 
     return Container(
-      padding: const EdgeInsets.only(top: AppSpacing.xs, bottom: AppSpacing.lg),
+      padding: EdgeInsets.only(
+        top: dense ? 0 : AppSpacing.xs,
+        bottom: dense ? AppSpacing.md : AppSpacing.lg,
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          if (constraints.maxWidth < 600 && action != null) {
+          final isCompact = constraints.maxWidth < 600;
+          if (isCompact && action != null && compactAction == null) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -80,7 +98,10 @@ class AppPageHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: heading),
-              if (action != null) ...[
+              if (isCompact && compactAction != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                compactAction!,
+              ] else if (action != null) ...[
                 const SizedBox(width: AppSpacing.md),
                 action!,
               ],

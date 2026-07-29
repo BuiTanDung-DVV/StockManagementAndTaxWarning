@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
@@ -139,11 +140,46 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     title: 'Tình hình cửa hàng',
                     subtitle:
                         '${shopState.currentShopName ?? 'Cửa hàng'} • ${periods.currentLabel} • cập nhật ${DateFormat('dd/MM/yyyy').format(today)}',
+                    dense: true,
+                    titleStyle: GoogleFonts.manrope(
+                      fontSize: 26,
+                      height: 1.15,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.65,
+                      color: colors.textPrimary,
+                    ),
+                    subtitleStyle: GoogleFonts.manrope(
+                      fontSize: 14,
+                      height: 1.35,
+                      fontWeight: FontWeight.w500,
+                      color: colors.textSecondary,
+                    ),
                     action:
                         shopState.isOwner || shopState.hasPermission('sales')
-                        ? FilledButton(
+                        ? FilledButton.icon(
                             onPressed: () => context.push('/pos'),
-                            child: const Text('Bán hàng'),
+                            icon: const AppAssetIcon(
+                              assetPath: AppAssets.orders,
+                              size: 17,
+                              color: Colors.white,
+                              semanticLabel: 'Bán hàng',
+                            ),
+                            label: const Text('Bán hàng'),
+                          )
+                        : null,
+                    compactAction:
+                        shopState.isOwner || shopState.hasPermission('sales')
+                        ? Tooltip(
+                            message: 'Bán hàng',
+                            child: IconButton.filled(
+                              onPressed: () => context.push('/pos'),
+                              icon: const AppAssetIcon(
+                                assetPath: AppAssets.orders,
+                                size: 19,
+                                color: Colors.white,
+                                semanticLabel: 'Bán hàng',
+                              ),
+                            ),
                           )
                         : null,
                   ),
@@ -1018,10 +1054,12 @@ class _MetricCell extends StatelessWidget {
             child: Text(
               metric.value,
               maxLines: 1,
-              style: AppTheme.tabularStyle(
-                context,
+              style: GoogleFonts.manrope(
                 fontSize: 19,
                 fontWeight: FontWeight.w700,
+                letterSpacing: -0.35,
+                color: colors.textPrimary,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -1088,10 +1126,12 @@ class _MetricRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
-              style: AppTheme.tabularStyle(
-                context,
+              style: GoogleFonts.manrope(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+                color: colors.textPrimary,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
