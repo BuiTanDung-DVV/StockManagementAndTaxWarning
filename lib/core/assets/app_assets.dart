@@ -17,6 +17,7 @@ abstract final class AppAssets {
   static const String home = 'assets/icon/home_icon.svg';
   static const String settings = 'assets/icon/settings_icon.svg';
   static const String notification = 'assets/icon/notification_icon.svg';
+  static const String qrPayment = 'assets/icon/qr_payment_icon.svg';
   static const String help = 'assets/icon/help_icon.svg';
   static const String add = 'assets/icon/add_icon.svg';
   static const String search = 'assets/icon/search_icon.svg';

@@ -103,7 +103,7 @@ export class Product {
 
     // === META ===
     @Column({ name: 'image_url', length: 500, nullable: true })
-    imageUrl: string;
+    imageUrl: string | null;
 
     @Column({ length: 50, nullable: true })
     barcode: string;

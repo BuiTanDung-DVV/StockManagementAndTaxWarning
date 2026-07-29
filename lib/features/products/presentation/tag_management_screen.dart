@@ -244,7 +244,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
 
     if (!isOwner) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Quản lý nhãn')),
+        appBar: AppBar(title: const Text('Cấu hình bộ lọc và nhãn')),
         body: Center(
           child: Text(
             'Bạn không có quyền truy cập tính năng này',
@@ -262,7 +262,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Quản lý Nhãn (Tags)',
+          'Cấu hình bộ lọc và nhãn',
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             fontSize: 20,

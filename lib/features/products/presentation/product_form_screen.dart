@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/utils/cloudinary_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/inline_tag_picker.dart';
@@ -32,6 +36,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
   List<String> _tags = [];
   bool _saving = false;
+  bool _uploadingImage = false;
+  Uint8List? _imageBytes;
+  String? _imageFileName;
+  String? _imageContentType;
+  String? _existingImageUrl;
+  bool _removeExistingImage = false;
   bool get _isEdit => widget.product != null;
 
   @override
@@ -51,6 +61,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _currentStockCtrl.text = '${p['currentStock'] ?? p['stock'] ?? ''}';
       _minStockCtrl.text = '${p['minStock'] ?? p['min_stock'] ?? ''}';
       _descCtrl.text = p['description'] ?? '';
+      _existingImageUrl = p['imageUrl']?.toString();
 
       final tagsRaw = p['tags'];
       if (tagsRaw is List) {
@@ -64,6 +75,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
+    String? uploadedObjectKey;
     try {
       final repo = ref.read(productRepoProvider);
       final name = _nameCtrl.text.trim();
@@ -80,6 +92,22 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         return;
       }
 
+      String? imageUrl = _removeExistingImage ? null : _existingImageUrl;
+      if (_imageBytes != null) {
+        setState(() => _uploadingImage = true);
+        final uploaded = await repo.uploadProductImage(
+          fileName: _imageFileName!,
+          contentType: _imageContentType!,
+          bytes: _imageBytes!,
+        );
+        imageUrl = uploaded['imageUrl']?.toString();
+        uploadedObjectKey = uploaded['objectKey']?.toString();
+        if (imageUrl == null || imageUrl.isEmpty) {
+          throw ApiException('Không nhận được địa chỉ ảnh sau khi tải lên');
+        }
+        if (mounted) setState(() => _uploadingImage = false);
+      }
+
       final data = {
         'name': name,
         'sku': _skuCtrl.text.trim().isEmpty ? null : _skuCtrl.text.trim(),
@@ -94,12 +122,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         'minStock': int.tryParse(_minStockCtrl.text.trim()) ?? 0,
         'description': _descCtrl.text.trim(),
         'tags': _tags,
+        'imageUrl': imageUrl,
       };
       if (_isEdit) {
         await repo.update(widget.product!['id'], data);
       } else {
         await repo.create(data);
       }
+
       if (!mounted) return;
       ref.invalidate(productListProvider((page: 1, search: null, tag: null)));
       ToastService.showSuccess(
@@ -108,6 +138,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       Navigator.of(context).pop(true);
       return;
     } catch (e) {
+      if (uploadedObjectKey != null) {
+        try {
+          await ref
+              .read(productRepoProvider)
+              .deleteProductImage(uploadedObjectKey);
+        } catch (_) {
+          // A bucket lifecycle rule can clean up an orphaned upload.
+        }
+      }
       if (context.mounted) {
         if (e is ApiException) {
           ToastService.showError(e.message);
@@ -115,8 +154,67 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           ToastService.showError('Lỗi: $e');
         }
       }
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _uploadingImage = false;
+        });
+      }
     }
+  }
+
+  Future<void> _pickProductImage() async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1400,
+        imageQuality: 82,
+      );
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
+        ToastService.showError('Ảnh phải có dung lượng nhỏ hơn 5 MB');
+        return;
+      }
+
+      final contentType =
+          file.mimeType?.toLowerCase() ?? _contentTypeForFileName(file.name);
+      if (!const {
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+      }.contains(contentType)) {
+        ToastService.showError('Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP');
+        return;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _imageBytes = bytes;
+        _imageFileName = file.name;
+        _imageContentType = contentType;
+        _removeExistingImage = false;
+      });
+    } catch (_) {
+      ToastService.showError('Không thể mở ảnh đã chọn');
+    }
+  }
+
+  String _contentTypeForFileName(String fileName) {
+    final lower = fileName.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
+  }
+
+  void _removeProductImage() {
+    setState(() {
+      _imageBytes = null;
+      _imageFileName = null;
+      _imageContentType = null;
+      _removeExistingImage = true;
+    });
   }
 
   @override
@@ -165,61 +263,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image upload frame with dotted/dashed visual
-              Center(
-                child: Container(
-                  width: double.infinity,
-                  height: 125,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                      width: 1.5,
-                      style: BorderStyle.solid,
-                    ),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        ToastService.showSuccess(
-                          'Tính năng tải ảnh sản phẩm sẽ khả dụng ở bản cập nhật tiếp theo!',
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(20),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add_photo_alternate_rounded,
-                            size: 32,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tải ảnh sản phẩm lên (Dưới 5MB)',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Hỗ trợ định dạng JPG, PNG, WEBP',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              color: c.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              _buildImagePicker(c, theme),
+              const SizedBox(height: 20),
 
               _sectionHeader('Thông tin cơ bản', theme, c),
               const SizedBox(height: 12),
@@ -368,7 +413,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         ),
                   label: Text(
                     _saving
-                        ? 'Đang lưu lại...'
+                        ? (_uploadingImage
+                              ? 'Đang tải ảnh...'
+                              : 'Đang lưu lại...')
                         : (_isEdit ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm Mới'),
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
@@ -389,6 +436,119 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildImagePicker(AppThemeColors c, ThemeData theme) {
+    final hasExistingImage =
+        !_removeExistingImage &&
+        (_existingImageUrl?.trim().isNotEmpty ?? false);
+    final hasImage = _imageBytes != null || hasExistingImage;
+
+    return Container(
+      width: double.infinity,
+      height: 168,
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _saving ? null : _pickProductImage,
+              child: hasImage
+                  ? (_imageBytes != null
+                        ? Image.memory(_imageBytes!, fit: BoxFit.cover)
+                        : Image.network(
+                            optimizedCloudinaryImageUrl(
+                              _existingImageUrl!,
+                              width: 900,
+                            ),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                _imagePickerPlaceholder(c, theme),
+                          ))
+                  : _imagePickerPlaceholder(c, theme),
+            ),
+          ),
+          if (hasImage)
+            Positioned(
+              left: 12,
+              bottom: 12,
+              child: Material(
+                color: c.card.withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  onTap: _saving ? null : _pickProductImage,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      'Thay ảnh',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (hasImage)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton.filled(
+                tooltip: 'Xóa ảnh',
+                onPressed: _saving ? null : _removeProductImage,
+                style: IconButton.styleFrom(
+                  backgroundColor: c.card.withValues(alpha: 0.94),
+                  foregroundColor: AppColors.danger,
+                ),
+                icon: const Icon(Icons.close_rounded, size: 18),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _imagePickerPlaceholder(AppThemeColors c, ThemeData theme) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.add_photo_alternate_rounded,
+          size: 32,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Chọn ảnh sản phẩm',
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          'JPG, PNG hoặc WEBP • tối đa 5 MB',
+          style: GoogleFonts.inter(fontSize: 11, color: c.textMuted),
+        ),
+      ],
     );
   }
 

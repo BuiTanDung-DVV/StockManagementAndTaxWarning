@@ -1,6 +1,7 @@
 import { AppDataSource } from '../config/db.config';
 import { ShopProfile, ActivityLog, AiKnowledgeDocument, InvoiceScan, Invoice } from '../system/entities';
 import { PurchaseWithoutInvoice } from '../finance/entities';
+import { ImageStorageService, ProductImageUploadRequest } from './image-storage.service';
 
 export class SystemService {
     private profileRepo = AppDataSource.getRepository(ShopProfile);
@@ -9,18 +10,70 @@ export class SystemService {
     private invoiceRepo = AppDataSource.getRepository(Invoice);
     private pwioRepo = AppDataSource.getRepository(PurchaseWithoutInvoice);
     private aiKnowledgeRepo = AppDataSource.getRepository(AiKnowledgeDocument);
+    private imageStorageService = new ImageStorageService();
 
     // Profile
     async getShopProfile(shopId: number) {
-        const profile = await this.profileRepo.findOne({ where: { id: shopId } });
+        const profile = await this.profileRepo.findOne({ where: { shopId } }) ??
+            await this.profileRepo.findOne({ where: { id: shopId } });
         if (!profile) throw new Error('Shop profile not found');
         return profile;
     }
 
     async updateShopProfile(shopId: number, dto: Partial<ShopProfile>) {
         const profile = await this.getShopProfile(shopId);
-        Object.assign(profile, dto);
+        const { qrPaymentUrl: _managedByUploadFlow, ...safeDto } = dto;
+        Object.assign(profile, safeDto);
         return this.profileRepo.save(profile);
+    }
+
+    async getShopPaymentQr(shopId: number) {
+        const profile = await this.getShopProfile(shopId);
+        return { imageUrl: profile.qrPaymentUrl || null };
+    }
+
+    async createShopPaymentQrUpload(
+        shopId: number,
+        request: ProductImageUploadRequest,
+    ) {
+        return this.imageStorageService.createShopPaymentQrUpload(shopId, request);
+    }
+
+    async confirmAndReplaceShopPaymentQr(shopId: number, objectKey: string) {
+        const uploaded = await this.imageStorageService.confirmShopPaymentQr(
+            shopId,
+            objectKey,
+        );
+        const profile = await this.getShopProfile(shopId);
+        const previousImageUrl = profile.qrPaymentUrl;
+
+        try {
+            profile.qrPaymentUrl = uploaded.imageUrl;
+            await this.profileRepo.save(profile);
+        } catch (error) {
+            try {
+                await this.imageStorageService.deleteShopPaymentQr(
+                    shopId,
+                    uploaded.objectKey,
+                );
+            } catch {
+                // Cleanup is best effort if the profile update fails.
+            }
+            throw error;
+        }
+
+        if (previousImageUrl && previousImageUrl !== uploaded.imageUrl) {
+            try {
+                await this.imageStorageService.deleteShopPaymentQrByUrl(
+                    shopId,
+                    previousImageUrl,
+                );
+            } catch {
+                // The new QR is already saved; old-object cleanup is best effort.
+            }
+        }
+
+        return { imageUrl: uploaded.imageUrl };
     }
 
     // Activity Log

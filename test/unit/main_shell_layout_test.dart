@@ -17,6 +17,12 @@ void main() {
     expect(navigationModeForWidth(1440), MainShellNavigationMode.sidebar);
   });
 
+  test('keeps two-item aggregate navigation intentionally compact', () {
+    expect(mobileNavigationItemWidth(540, 2), 190);
+    expect(mobileNavigationItemWidth(320, 2), 152);
+    expect(mobileNavigationItemWidth(540, 5), closeTo(104.8, 0.01));
+  });
+
   test('hides AI assistant on POS and QR payment flows', () {
     expect(shouldShowAiAssistant(location: '/', viewportWidth: 390), isTrue);
     expect(
@@ -44,5 +50,10 @@ void main() {
     expect(shouldShowShellUtilityHeader('/settings'), isTrue);
     expect(shouldShowShellUtilityHeader('/pos'), isFalse);
     expect(shouldShowShellUtilityHeader('/products/42'), isFalse);
+  });
+
+  test('shows shop QR only for a specific shop', () {
+    expect(shouldShowShopPaymentQr(isAllShops: false), isTrue);
+    expect(shouldShowShopPaymentQr(isAllShops: true), isFalse);
   });
 }

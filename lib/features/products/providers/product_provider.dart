@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
@@ -27,6 +29,55 @@ class ProductRepository {
       await _api.put('/products/$id', data: dto);
   Future<void> delete(int id) async => await _api.delete('/products/$id');
   Future<List<dynamic>> findCategories() async => await _api.get('/categories');
+
+  Future<Map<String, dynamic>> uploadProductImage({
+    required String fileName,
+    required String contentType,
+    required Uint8List bytes,
+  }) async {
+    final signed = Map<String, dynamic>.from(
+      await _api.post(
+        '/products/image-upload/presign',
+        data: {
+          'fileName': fileName,
+          'contentType': contentType,
+          'size': bytes.length,
+        },
+      ),
+    );
+    final uploadUrl = signed['uploadUrl']?.toString() ?? '';
+    final objectKey = signed['objectKey']?.toString() ?? '';
+    final fields = Map<String, dynamic>.from(
+      signed['fields'] as Map? ?? const {},
+    );
+    if (uploadUrl.isEmpty || objectKey.isEmpty || fields.isEmpty) {
+      throw ApiException('Máy chủ không tạo được liên kết tải ảnh');
+    }
+
+    final uploaded = await _api.postSignedImageUpload(
+      uploadUrl,
+      bytes,
+      fileName,
+      contentType,
+      fields,
+    );
+    if (uploaded['public_id']?.toString() != objectKey) {
+      throw ApiException('Cloudinary trả về định danh ảnh không hợp lệ');
+    }
+    return Map<String, dynamic>.from(
+      await _api.post(
+        '/products/image-upload/confirm',
+        data: {'objectKey': objectKey},
+      ),
+    );
+  }
+
+  Future<void> deleteProductImage(String objectKey) async {
+    await _api.post(
+      '/products/image-upload/delete',
+      data: {'objectKey': objectKey},
+    );
+  }
 }
 
 final productRepoProvider = Provider<ProductRepository>((ref) {

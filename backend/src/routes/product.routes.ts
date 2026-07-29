@@ -7,6 +7,9 @@ const router = Router();
 // Products
 router.get('/products', requirePermission('products', 'view'), productCtrl.findAllProducts);
 router.post('/products', requirePermission('products', 'edit'), productCtrl.createProduct);
+router.post('/products/image-upload/presign', requirePermission('products', 'edit'), productCtrl.createProductImageUpload);
+router.post('/products/image-upload/confirm', requirePermission('products', 'edit'), productCtrl.confirmProductImageUpload);
+router.post('/products/image-upload/delete', requirePermission('products', 'edit'), productCtrl.deleteProductImageUpload);
 router.get('/products/:id', requirePermission('products', 'view'), productCtrl.findProductById);
 router.put('/products/:id', requirePermission('products', 'edit'), productCtrl.updateProduct);
 router.delete('/products/:id', requirePermission('products', 'edit'), productCtrl.deleteProduct);

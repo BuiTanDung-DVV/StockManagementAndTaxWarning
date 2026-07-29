@@ -7,6 +7,9 @@ const router = Router();
 // Shop Profile
 router.get('/shop-profile', requirePermission('settings', 'view'), systemCtrl.getShopProfile);
 router.post('/shop-profile', requirePermission('settings', 'edit'), systemCtrl.saveShopProfile);
+router.get('/shop-payment-qr', systemCtrl.getShopPaymentQr);
+router.post('/shop-payment-qr/presign', requirePermission('settings', 'edit'), systemCtrl.createShopPaymentQrUpload);
+router.post('/shop-payment-qr/confirm', requirePermission('settings', 'edit'), systemCtrl.confirmShopPaymentQrUpload);
 
 // Activity Logs
 router.get('/activity-logs', requirePermission('settings', 'view'), systemCtrl.getActivityLogs);

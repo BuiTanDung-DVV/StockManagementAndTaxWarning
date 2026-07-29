@@ -8,6 +8,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/ai_assistant_widget.dart';
 import '../../core/widgets/global_search_delegate.dart';
+import '../settings/presentation/shop_payment_qr_dialog.dart';
 import '../settings/providers/shop_provider.dart';
 
 enum MainShellNavigationMode { bottomBar, rail, sidebar }
@@ -28,6 +29,15 @@ MainShellNavigationMode navigationModeForWidth(double width) {
     return MainShellNavigationMode.rail;
   }
   return MainShellNavigationMode.sidebar;
+}
+
+double mobileNavigationItemWidth(double width, int itemCount) {
+  if (itemCount <= 0) return 0;
+  final available = width - 16;
+  if (itemCount <= 2) {
+    return (available / itemCount).clamp(132.0, 190.0).toDouble();
+  }
+  return available / itemCount;
 }
 
 bool shouldShowAiAssistant({
@@ -52,6 +62,8 @@ bool shouldShowShellUtilityHeader(String location) {
     '/settings',
   }.contains(location);
 }
+
+bool shouldShowShopPaymentQr({required bool isAllShops}) => !isAllShops;
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -156,6 +168,9 @@ class MainShell extends ConsumerWidget {
                       compact: mode == MainShellNavigationMode.bottomBar,
                       shopName: shop.currentShopName,
                       showAiRestore: showAi && !aiLauncherVisible,
+                      showShopQr: shouldShowShopPaymentQr(
+                        isAllShops: shop.isAllShops,
+                      ),
                       onSearch: () async {
                         final route = await showSearch<String>(
                           context: context,
@@ -170,6 +185,12 @@ class MainShell extends ConsumerWidget {
                         }
                       },
                       onNotifications: () => context.push('/notifications'),
+                      onShopQr: () => showShopPaymentQrDialog(
+                        context,
+                        canManage:
+                            shop.isOwner ||
+                            shop.hasPermission('settings', 'edit'),
+                      ),
                       onRestoreAi: () {
                         ref
                             .read(aiAssistantLauncherVisibleProvider.notifier)
@@ -242,16 +263,20 @@ class _ShellUtilityHeader extends StatelessWidget {
   final bool compact;
   final String? shopName;
   final bool showAiRestore;
+  final bool showShopQr;
   final VoidCallback onSearch;
   final VoidCallback onNotifications;
+  final VoidCallback onShopQr;
   final VoidCallback onRestoreAi;
 
   const _ShellUtilityHeader({
     required this.compact,
     required this.shopName,
     required this.showAiRestore,
+    required this.showShopQr,
     required this.onSearch,
     required this.onNotifications,
+    required this.onShopQr,
     required this.onRestoreAi,
   });
 
@@ -335,6 +360,14 @@ class _ShellUtilityHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: AppSpacing.xs),
               ],
+              if (showShopQr) ...[
+                _HeaderAssetButton(
+                  assetPath: AppAssets.qrPayment,
+                  semanticLabel: 'Mở QR của cửa hàng',
+                  onPressed: onShopQr,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
               _HeaderAssetButton(
                 assetPath: AppAssets.notification,
                 semanticLabel: 'Mở thông báo',
@@ -372,6 +405,14 @@ class _ShellUtilityHeader extends StatelessWidget {
                   semanticLabel: 'Hiển thị nút AI',
                   onPressed: onRestoreAi,
                   preserveAssetColor: true,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
+              if (showShopQr) ...[
+                _HeaderAssetButton(
+                  assetPath: AppAssets.qrPayment,
+                  semanticLabel: 'Mở QR của cửa hàng',
+                  onPressed: onShopQr,
                 ),
                 const SizedBox(width: AppSpacing.sm),
               ],
@@ -765,6 +806,51 @@ class _MobileNavigationBar extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final primary = Theme.of(context).colorScheme.primary;
 
+    Widget buildItem(int index) => Semantics(
+      button: true,
+      selected: index == currentIndex,
+      label: tabs[index].label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        onTap: () => context.go(tabs[index].route),
+        child: Container(
+          decoration: BoxDecoration(
+            color: index == currentIndex
+                ? primary.withValues(alpha: 0.09)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.control),
+          ),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppAssetIcon(
+                assetPath: tabs[index].assetPath,
+                size: 19,
+                color: index == currentIndex ? primary : colors.textMuted,
+                semanticLabel: tabs[index].label,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                tabs[index].label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
+                  color: index == currentIndex ? primary : colors.textMuted,
+                  fontWeight: index == currentIndex
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
     return Material(
       color: colors.surface,
       child: SafeArea(
@@ -782,63 +868,29 @@ class _MobileNavigationBar extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            children: [
-              for (var index = 0; index < tabs.length; index++)
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    selected: index == currentIndex,
-                    label: tabs[index].label,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(AppRadius.control),
-                      onTap: () => context.go(tabs[index].route),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: index == currentIndex
-                              ? primary.withValues(alpha: 0.09)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(
-                            AppRadius.control,
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AppAssetIcon(
-                              assetPath: tabs[index].assetPath,
-                              size: 19,
-                              color: index == currentIndex
-                                  ? primary
-                                  : colors.textMuted,
-                              semanticLabel: tabs[index].label,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              tabs[index].label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    fontSize: 10,
-                                    color: index == currentIndex
-                                        ? primary
-                                        : colors.textMuted,
-                                    fontWeight: index == currentIndex
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (tabs.length <= 2) {
+                final itemWidth = mobileNavigationItemWidth(
+                  constraints.maxWidth + 16,
+                  tabs.length,
+                );
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var index = 0; index < tabs.length; index++)
+                      SizedBox(width: itemWidth, child: buildItem(index)),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  for (var index = 0; index < tabs.length; index++)
+                    Expanded(child: buildItem(index)),
+                ],
+              );
+            },
           ),
         ),
       ),

@@ -1,8 +1,62 @@
 import { Request, Response } from 'express';
 import { SystemService } from '../services/system.service';
 import { CURRENT_TAX_POLICY } from '../tax/tax-policy';
+import { ImageStorageError } from '../services/image-storage.service';
 
 const systemService = new SystemService();
+
+const paymentQrError = (res: Response, error: unknown) => {
+    if (error instanceof ImageStorageError) {
+        return res.status(error.statusCode).json({
+            success: false,
+            message: error.message,
+        });
+    }
+    console.error('Shop payment QR error:', error);
+    return res.status(500).json({
+        success: false,
+        message: 'Không thể xử lý ảnh QR của cửa hàng',
+    });
+};
+
+export const getShopPaymentQr = async (req: Request, res: Response) => {
+    try {
+        if ((req as any).isAllShops || !(req as any).shopId) {
+            return res.status(403).json({
+                success: false,
+                message: 'QR chỉ khả dụng khi chọn một cửa hàng cụ thể',
+            });
+        }
+        const data = await systemService.getShopPaymentQr((req as any).shopId);
+        return res.json({ success: true, data });
+    } catch (error) {
+        return paymentQrError(res, error);
+    }
+};
+
+export const createShopPaymentQrUpload = async (req: Request, res: Response) => {
+    try {
+        const data = await systemService.createShopPaymentQrUpload(
+            (req as any).shopId,
+            req.body,
+        );
+        return res.json({ success: true, data });
+    } catch (error) {
+        return paymentQrError(res, error);
+    }
+};
+
+export const confirmShopPaymentQrUpload = async (req: Request, res: Response) => {
+    try {
+        const data = await systemService.confirmAndReplaceShopPaymentQr(
+            (req as any).shopId,
+            String(req.body.objectKey || ''),
+        );
+        return res.json({ success: true, data });
+    } catch (error) {
+        return paymentQrError(res, error);
+    }
+};
 
 export const getShopProfile = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await systemService.getShopProfile((req as any).shopId) }); }

@@ -1,0 +1,31 @@
+import 'package:flutter_app/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:flutter_app/features/settings/providers/shop_provider.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('dashboard moves the primary action out of compact content', () {
+    expect(dashboardUsesCompactLayout(390), isTrue);
+    expect(dashboardUsesCompactLayout(648), isTrue);
+    expect(dashboardUsesCompactLayout(799), isTrue);
+    expect(dashboardUsesCompactLayout(800), isFalse);
+  });
+
+  test('dashboard disables write actions in all-shops mode', () {
+    const aggregate = ShopState(
+      isAllShops: true,
+      status: 'ACTIVE',
+      userShops: [
+        {
+          'shopId': 1,
+          'memberType': 'OWNER',
+          'status': 'ACTIVE',
+          'isActive': true,
+        },
+      ],
+      isLoading: false,
+    );
+
+    expect(aggregate.hasPermission('sales'), isTrue);
+    expect(dashboardCanSell(aggregate), isFalse);
+  });
+}

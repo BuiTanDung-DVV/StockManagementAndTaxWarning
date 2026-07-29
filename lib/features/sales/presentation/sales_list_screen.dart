@@ -25,6 +25,9 @@ final _currencyFormat = NumberFormat.currency(
   decimalDigits: 0,
 );
 
+bool salesListUsesCompactLayout(double width) =>
+    width < AppBreakpoints.compactNavigation;
+
 class SalesListScreen extends ConsumerStatefulWidget {
   const SalesListScreen({super.key});
 
@@ -59,6 +62,9 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final compactLayout = salesListUsesCompactLayout(
+      MediaQuery.sizeOf(context).width,
+    );
     final listAsync = ref.watch(
       salesListProvider((
         page: _page,
@@ -67,15 +73,39 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         search: _searchQuery,
       )),
     );
+    Widget headerActions({required bool compact}) => Wrap(
+      spacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        featureGuideButton(context, 'sales_list'),
+        if (compact)
+          Tooltip(
+            message: 'Mở POS',
+            child: FloatingActionButton.small(
+              heroTag: 'sales-open-pos-action-compact',
+              elevation: 0,
+              onPressed: () => context.push('/pos'),
+              child: const AppAssetIcon(
+                assetPath: AppAssets.orders,
+                size: 18,
+                color: Colors.white,
+                semanticLabel: 'Mở POS',
+              ),
+            ),
+          ),
+      ],
+    );
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: AppPrimaryFloatingAction(
-        label: 'Mở POS',
-        assetPath: AppAssets.orders,
-        heroTag: 'sales-open-pos-action',
-        onPressed: () => context.push('/pos'),
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : AppPrimaryFloatingAction(
+              label: 'Mở POS',
+              assetPath: AppAssets.orders,
+              heroTag: 'sales-open-pos-action',
+              onPressed: () => context.push('/pos'),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
@@ -97,26 +127,22 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                     subtitle:
                         'Theo dõi trạng thái thanh toán và xử lý đơn bán hàng.',
                     dense: true,
-                    action: featureGuideButton(context, 'sales_list'),
-                    compactAction: featureGuideButton(context, 'sales_list'),
+                    action: headerActions(compact: compactLayout),
+                    compactAction: headerActions(compact: true),
                   ),
-                  FilterBar(
-                    searchHint: 'Tìm theo mã đơn hoặc khách hàng',
-                    onSearchChanged: _onSearchChanged,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _SalesStatusFilter(
-                    value: _status,
-                    onChanged: (value) => setState(() {
-                      _status = value;
-                      _page = 1;
-                    }),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
                   _SalesSummarySection(
                     onRetry: () => ref.invalidate(salesSummaryProvider),
                   ),
                   const SizedBox(height: AppSpacing.lg),
+                  _SalesListControls(
+                    status: _status,
+                    onSearchChanged: _onSearchChanged,
+                    onStatusChanged: (value) => setState(() {
+                      _status = value;
+                      _page = 1;
+                    }),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   listAsync.when(
                     data: (data) {
                       final items = (data['items'] as List?) ?? const [];
@@ -134,9 +160,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                           final desktop = constraints.maxWidth >= 780;
                           return ListView.separated(
                             shrinkWrap: true,
-                            padding: const EdgeInsets.only(
-                              bottom: AppSpacing.xxl,
-                            ),
+                            padding: const EdgeInsets.only(bottom: 112),
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: items.length + (desktop ? 1 : 0),
                             separatorBuilder: (_, index) =>
@@ -171,6 +195,78 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SalesListControls extends StatelessWidget {
+  final String? status;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<String?> onStatusChanged;
+
+  const _SalesListControls({
+    required this.status,
+    required this.onSearchChanged,
+    required this.onStatusChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Danh sách đơn hàng',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Tìm kiếm và trạng thái chỉ áp dụng cho danh sách bên dưới.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          FilterBar(
+            searchHint: 'Tìm theo mã đơn hoặc khách hàng',
+            onSearchChanged: onSearchChanged,
+            dense: true,
+            showSearchIcon: true,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: _SalesStatusFilter(
+              value: status,
+              onChanged: onStatusChanged,
+            ),
+          ),
+        ],
       ),
     );
   }
