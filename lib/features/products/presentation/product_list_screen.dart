@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/assets/app_assets.dart';
+import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
@@ -72,6 +73,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     final theme = Theme.of(context);
     final searchQuery = ref.watch(_productSearchQueryProvider);
     final tagQuery = ref.watch(_productTagFilterProvider);
+    final authState = ref.watch(authProvider);
     final listAsync = ref.watch(
       productListProvider((
         page: 1,
@@ -91,6 +93,23 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     );
     final topProductNames =
         topProductsAsync.value?.map((e) => e['name'].toString()).toList() ?? [];
+    Widget headerActions() => Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        featureGuideButton(context, 'product_list'),
+        if (authState.isShopOwner)
+          IconButton(
+            tooltip: 'Quản lý nhãn sản phẩm',
+            onPressed: () => context.push('/products/tags'),
+            icon: const AppAssetIcon(
+              assetPath: AppAssets.settings,
+              size: 20,
+              semanticLabel: 'Quản lý nhãn sản phẩm',
+            ),
+          ),
+      ],
+    );
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -111,17 +130,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
               AppPageHeader(
                 title: 'Danh mục sản phẩm',
                 subtitle: 'Tìm nhanh theo tên, SKU, tồn kho và nhãn nghiệp vụ.',
-                action: Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    if (ref.watch(authProvider).isShopOwner)
-                      OutlinedButton(
-                        onPressed: () => context.push('/products/tags'),
-                        child: const Text('Quản lý nhãn'),
-                      ),
-                  ],
-                ),
+                dense: true,
+                action: headerActions(),
+                compactAction: headerActions(),
               ),
               FilterBar(
                 searchHint: 'Tìm sản phẩm theo tên, SKU...',
@@ -227,6 +238,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                 p['retailPrice'],
                           );
                           final stock = p['currentStock'] ?? p['stock'] ?? 0;
+                          final unit = p['unit']?.toString().trim();
+                          final displayUnit = unit == null || unit.isEmpty
+                              ? 'đơn vị'
+                              : unit;
                           final imageUrl = p['imageUrl']?.toString() ?? '';
                           final isOutOfStock = stock <= 0;
 
@@ -353,7 +368,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                             AppBadge(
                                               label: isOutOfStock
                                                   ? 'Hết hàng'
-                                                  : 'Còn tồn: $stock',
+                                                  : 'Còn tồn: $stock $displayUnit',
                                               color: isOutOfStock
                                                   ? AppColors.danger
                                                   : (stock < 10
@@ -366,13 +381,28 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                       const SizedBox(width: 8),
 
                                       // Price tag Outfit bold
-                                      Text(
-                                        _currFmt.format(price),
-                                        style: GoogleFonts.outfit(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 14,
-                                          color: c.textPrimary,
-                                        ),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            _currFmt.format(price),
+                                            style: GoogleFonts.outfit(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 14,
+                                              color: c.textPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '/ $displayUnit',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: c.textSecondary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

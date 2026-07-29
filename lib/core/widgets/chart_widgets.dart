@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../theme/app_theme.dart';
+import '../utils/finance_display.dart';
 
 final _compactFmt = NumberFormat.compact(locale: 'vi_VN');
 final _axisDecimalFmt = NumberFormat('0.#', 'vi_VN');
@@ -21,6 +22,9 @@ String compactVietnameseAmount(num value) {
   }
   return _axisDecimalFmt.format(value);
 }
+
+String compactVietnameseCurrency(num value) =>
+    '${compactVietnameseAmount(value)} ₫';
 
 // ─────────────────────────────────────────────
 // ChartCard — Unified container for all charts
@@ -259,12 +263,16 @@ class MiniAreaChart extends StatelessWidget {
                           }
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              xLabels![idx],
-                              style: TextStyle(
-                                color: c.textMuted,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
+                            child: SideTitleWidget(
+                              meta: m,
+                              space: 6,
+                              child: Text(
+                                xLabels![idx],
+                                style: TextStyle(
+                                  color: c.textMuted,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           );
@@ -274,26 +282,56 @@ class MiniAreaChart extends StatelessWidget {
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 60,
+                        reservedSize: 86,
                         getTitlesWidget: (v, m) {
                           if (v == m.max || v == m.min) {
                             return const SizedBox.shrink();
                           }
-                          return Text(
-                            compactVietnameseAmount(v),
-                            style: AppTheme.tabularStyle(
-                              context,
-                              fontSize: 9,
-                              color: c.textMuted,
-                              fontWeight: FontWeight.bold,
+                          return SideTitleWidget(
+                            meta: m,
+                            space: 8,
+                            child: Text(
+                              compactVietnameseCurrency(v),
+                              style: AppTheme.tabularStyle(
+                                context,
+                                fontSize: 9,
+                                color: c.textMuted,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.right,
                             ),
-                            textAlign: TextAlign.right,
                           );
                         },
                       ),
                     ),
                   ),
                   borderData: FlBorderData(show: false),
+                  lineTouchData: LineTouchData(
+                    touchSpotThreshold: 40,
+                    handleBuiltInTouches: true,
+                    touchTooltipData: LineTouchTooltipData(
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
+                      getTooltipColor: (_) =>
+                          const Color(0xFF334155).withValues(alpha: 0.94),
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          final isFirstSeries = spot.barIndex == 0;
+                          final seriesLabel = isFirstSeries ? label1 : label2;
+                          final seriesColor = isFirstSeries ? color1 : color2;
+                          return LineTooltipItem(
+                            '$seriesLabel: ${formatVietnameseCurrency(spot.y)}',
+                            AppTheme.tabularStyle(
+                              context,
+                              color: seriesColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          );
+                        }).toList();
+                      },
+                    ),
+                  ),
                   minX: 0,
                   maxX: (maxLen - 1).toDouble(),
                   minY: 0,
@@ -561,19 +599,23 @@ class MiniBarChart extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: showLeftTitles,
-              reservedSize: showLeftTitles ? 68 : 0,
+              reservedSize: showLeftTitles ? 86 : 0,
               getTitlesWidget: (value, meta) {
                 if (value == meta.max || value == meta.min) {
                   return const SizedBox.shrink();
                 }
-                return Text(
-                  compactVietnameseAmount(value),
-                  textAlign: TextAlign.right,
-                  style: AppTheme.tabularStyle(
-                    context,
-                    color: c.textMuted,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
+                return SideTitleWidget(
+                  meta: meta,
+                  space: 8,
+                  child: Text(
+                    compactVietnameseCurrency(value),
+                    textAlign: TextAlign.right,
+                    style: AppTheme.tabularStyle(
+                      context,
+                      color: c.textMuted,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 );
               },

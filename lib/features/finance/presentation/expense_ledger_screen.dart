@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/utils/finance_display.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -96,7 +97,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                       final color = catColors[e.key % catColors.length];
                       final amount = asNum(c['amount']);
                       return DonutSegment(
-                        _categoryLabel(c['category']),
+                        financeCategoryLabel(c['category']?.toString()),
                         amount.toDouble(),
                         color,
                       );
@@ -139,7 +140,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _categoryLabel(c['category']),
+                                financeCategoryLabel(c['category']?.toString()),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w500,
                                   fontSize: 13,
@@ -204,7 +205,9 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 t['counterparty'] ??
-                                    _categoryLabel(t['category']),
+                                    financeCategoryLabel(
+                                      t['category']?.toString(),
+                                    ),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w500,
                                   fontSize: 13,
@@ -251,23 +254,6 @@ class ExpenseLedgerScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
       ),
     );
-  }
-
-  String _categoryLabel(String? cat) {
-    switch (cat) {
-      case 'SALARY':
-        return 'Lương nhân viên';
-      case 'RENT':
-        return 'Tiền thuê';
-      case 'UTILITIES':
-        return 'Tiện ích';
-      case 'PURCHASE':
-        return 'Mua hàng';
-      case 'OTHER':
-        return 'Khác';
-      default:
-        return cat ?? 'Khác';
-    }
   }
 
   void _showAddExpenseDialog(BuildContext context, WidgetRef ref) {

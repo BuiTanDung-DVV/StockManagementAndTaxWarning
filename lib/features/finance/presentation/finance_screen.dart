@@ -8,6 +8,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/reporting_period.dart';
+import '../../../core/utils/finance_display.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
@@ -428,10 +429,10 @@ class _ExpenseCategoryPanel extends StatelessWidget {
                 children: [
                   for (var index = 0; index < categories.length; index++) ...[
                     _ExpenseCategoryRow(
-                      name:
-                          categories[index]['category']?.toString() ??
-                          categories[index]['name']?.toString() ??
-                          'Khác',
+                      name: financeCategoryLabel(
+                        categories[index]['category']?.toString() ??
+                            categories[index]['name']?.toString(),
+                      ),
                       value: asDouble(
                         categories[index]['total'] ??
                             categories[index]['amount'] ??
