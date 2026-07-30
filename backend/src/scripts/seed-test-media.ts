@@ -10,7 +10,7 @@ type ShopMedia = {
     productSlugs: Set<string>;
 };
 
-const mediaRoot = process.env.TEST_MEDIA_ROOT
+let mediaRoot = process.env.TEST_MEDIA_ROOT
     ? path.resolve(process.env.TEST_MEDIA_ROOT)
     : path.resolve(process.cwd(), 'database/seed-assets/test-media');
 const backupRoot = process.env.VERCEL === '1'
@@ -100,6 +100,22 @@ function slugify(value: string): string {
 }
 
 async function assertAssetsExist(): Promise<void> {
+    const candidates = [
+        mediaRoot,
+        path.resolve(process.cwd(), 'backend/database/seed-assets/test-media'),
+        path.resolve(__dirname, '../../database/seed-assets/test-media'),
+        path.resolve(__dirname, '../../../database/seed-assets/test-media'),
+    ];
+    for (const candidate of candidates) {
+        try {
+            await fs.access(path.join(candidate, 'products'));
+            mediaRoot = candidate;
+            break;
+        } catch {
+            // Try the next Vercel/local runtime layout.
+        }
+    }
+
     const required = [
         ...Array.from(constructionSlugs),
         ...Array.from(agricultureSlugs),
