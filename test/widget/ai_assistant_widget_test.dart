@@ -5,17 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _buildHost() {
+Widget _buildHost({Size size = const Size(390, 700)}) {
   return ProviderScope(
     child: MaterialApp(
       theme: AppTheme.lightTheme(AppColors.primary),
-      home: const Scaffold(
+      home: Scaffold(
         body: MediaQuery(
-          data: MediaQueryData(size: Size(390, 700)),
+          data: MediaQueryData(size: size),
           child: SizedBox(
-            width: 390,
-            height: 700,
-            child: AiAssistantWidget(topSafeInset: 56),
+            width: size.width,
+            height: size.height,
+            child: const AiAssistantWidget(topSafeInset: 56),
           ),
         ),
       ),
@@ -39,7 +39,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Trợ giúp nghiệp vụ'), findsOneWidget);
-    expect(launcher, findsOneWidget);
+    expect(launcher, findsNothing);
+  });
+
+  testWidgets('desktop assistant panel is capped at 680 logical pixels', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildHost(size: const Size(1200, 1200)));
+    await tester.pumpAndSettle();
+
+    final launcher = find.bySemanticsLabel('Hỏi AI. Có thể kéo để đổi vị trí.');
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    final panel = find.text('Trợ giúp nghiệp vụ');
+    expect(panel, findsOneWidget);
+    final panelMaterial = find
+        .ancestor(of: panel, matching: find.byType(Material))
+        .first;
+    expect(tester.getSize(panelMaterial).height, lessThanOrEqualTo(680));
   });
 
   testWidgets('dragging the AI launcher persists its normalized position', (
