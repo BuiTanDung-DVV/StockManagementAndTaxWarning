@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as systemCtrl from '../controllers/system.controller';
-import { requirePermission } from '../middleware/permission.middleware';
+import { requireOwner, requirePermission } from '../middleware/permission.middleware';
 
 const router = Router();
 
@@ -28,5 +28,8 @@ router.delete('/ai-knowledge/:id', requirePermission('settings', 'edit'), system
 // Dynamic System Configurations
 router.get('/configs', requirePermission('settings', 'view'), systemCtrl.getConfigs);
 router.post('/configs', requirePermission('settings', 'edit'), systemCtrl.saveConfigs);
+
+// One-time production test-data task. Remove after the seed is verified.
+router.post('/test-media/seed', requireOwner, systemCtrl.seedProductionTestMedia);
 
 export default router;

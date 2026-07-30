@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { SystemService } from '../services/system.service';
 import { CURRENT_TAX_POLICY } from '../tax/tax-policy';
 import { ImageStorageError } from '../services/image-storage.service';
+import { AppDataSource } from '../config/db.config';
 
 const systemService = new SystemService();
 
@@ -209,6 +210,38 @@ export const saveConfigs = async (req: Request, res: Response) => {
         res.json({ success: true, message: 'Cập nhật cấu hình hệ thống thành công' });
     } catch (e: any) {
         res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+export const seedProductionTestMedia = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user?.sub;
+        const ownership = await AppDataSource.query(
+            `SELECT count(DISTINCT shop_id)::int AS total
+             FROM public.shop_members
+             WHERE user_id = $1
+               AND shop_id = ANY($2)
+               AND member_type = 'OWNER'
+               AND is_active = TRUE
+               AND status = 'ACTIVE'`,
+            [userId, [34, 35]],
+        );
+        if (Number(ownership[0]?.total || 0) !== 2) {
+            return res.status(403).json({
+                success: false,
+                message: 'Chỉ chủ sở hữu của cả hai cửa hàng thử nghiệm mới được thực hiện tác vụ này',
+            });
+        }
+
+        const { seedTestMedia } = await import('../scripts/seed-test-media');
+        const result = await seedTestMedia();
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        console.error('Seed production test media failed:', error);
+        res.status(500).json({
+            success: false,
+            message: error?.message || 'Không thể tạo dữ liệu ảnh kiểm thử',
+        });
     }
 };
 
