@@ -1,5 +1,9 @@
 # Bộ tài liệu BA SmartStock
 
+> **Cập nhật ngày 30/07/2026:** đã chụp và audit 43 route production ở desktop
+> `1280×800` và mobile `390×844` (86 ảnh). Xem
+> [Báo cáo audit production UI, nghiệp vụ và code](18_PRODUCTION_UI_BUSINESS_CODE_AUDIT_20260730.md).
+
 > **Cập nhật ngày 26/07/2026:** vòng đánh giá UI/UX thứ hai đã kiểm tra 18 màn
 > desktop và 7 màn mobile. Ảnh As-Is và các thay đổi giao diện mới được ghi tại
 > [Báo cáo UI/UX vòng 2](13_PRODUCTION_UI_REVIEW_ROUND_2.md). Thay đổi chỉ được
