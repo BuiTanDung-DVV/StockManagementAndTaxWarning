@@ -1,0 +1,26 @@
+{
+  "createdAt": "2026-07-30T05:14:02.605Z",
+  "products": [
+    {
+      "id": 3036,
+      "shop_id": 34,
+      "image_url": "https://res.cloudinary.com/vkumgqmb/image/upload/v1785382354/smartstock/shops/34/products/19f0c36d-89da-4336-848b-fef9f6b14b5e.png"
+    }
+  ],
+  "shopProfiles": [
+    {
+      "id": 34,
+      "logo_url": null,
+      "qr_payment_url": "https://res.cloudinary.com/vkumgqmb/image/upload/v1785382072/smartstock/shops/34/payment-qr/9a554150-4832-46a4-8f6d-e9118732c213.png"
+    },
+    {
+      "id": 35,
+      "logo_url": null,
+      "qr_payment_url": null
+    }
+  ],
+  "receipts": [],
+  "invoices": [],
+  "customers": [],
+  "users": []
+}
