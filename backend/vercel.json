@@ -4,7 +4,12 @@
   "builds": [
     {
       "src": "src/index.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "database/seed-assets/test-media/**"
+        ]
+      }
     }
   ],
   "routes": [
