@@ -198,7 +198,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final launcherSize = Size(isMobile ? 68 : 144, 80);
+        final launcherSize = Size(isMobile ? 68 : 144, isMobile ? 80 : 84);
         const margin = 12.0;
         final minimumTop = math.min(
           widget.topSafeInset + margin,
@@ -222,6 +222,14 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
           maximumTop,
         );
         final launcherPosition = _resolveLauncherPosition(launcherBounds);
+        final desktopPanelTop = math.max(
+          80.0,
+          widget.topSafeInset + AppSpacing.md,
+        );
+        final desktopPanelHeight = math.min(
+          680.0,
+          math.max(0.0, constraints.maxHeight - desktopPanelTop - 16),
+        );
 
         return IgnorePointer(
           ignoring: !isOpen && !widget.showLauncher,
@@ -253,10 +261,10 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                   )
                 else
                   Positioned(
-                    top: math.max(80, widget.topSafeInset + 16),
                     right: 16,
                     bottom: 16,
                     width: 408,
+                    height: desktopPanelHeight,
                     child: _AssistantPanel(
                       messages: _messages,
                       quickQuestions: _quickQuestions,
@@ -269,7 +277,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                       onSend: _handleSend,
                     ),
                   ),
-              if (widget.showLauncher && launcherVisible)
+              if (!isOpen && widget.showLauncher && launcherVisible)
                 Positioned(
                   left: launcherPosition.dx,
                   top: launcherPosition.dy,
