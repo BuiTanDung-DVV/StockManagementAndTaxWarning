@@ -24,14 +24,14 @@ trạng thái quan trọng. Phạm vi hiện tại gồm:
 | Hạng mục | Kết quả |
 |---|---|
 | URL production | `https://smartstock-tax.vercel.app/#/login` |
-| Kích thước đã quan sát | Desktop `1440×900`; mobile `390×844` |
-| Màn đã có ảnh hợp lệ | Vòng 2: 10 trạng thái auth; vòng 3: 62 ảnh/49 route hoặc màn protected, gồm lỗi route/deep-link |
-| Chụp bằng Browser | Hoạt động; ảnh đã lưu ở `screenshots/20260801-production-audit-run2/` |
+| Kích thước đã quan sát | Vòng 2: desktop `1440×900`; vòng 3: desktop `1280×720`, mobile `390×843` |
+| Màn đã có ảnh hợp lệ | Vòng 2: 10 trạng thái auth; vòng 3: 99 ảnh/49 route hoặc màn protected, gồm lỗi route/deep-link |
+| Chụp bằng Browser | Hoạt động; ảnh protected mới nhất ở `screenshots/20260801-production-audit-run3/` |
 | Route bảo vệ | Mở trực tiếp `/inventory` khi chưa đăng nhập chuyển đúng về `/login` |
 | Phiên đăng nhập test | Đã đăng nhập bằng tài khoản test khai báo trong dự án |
 | Smoke route protected | 47/47 giữ đúng route; không có console warning/error |
 | Smoke API đọc | 48/48 endpoint hợp lệ trả 200/success |
-| Chụp protected | Đã hoạt động ở vòng 3; 52 ảnh desktop `1280×720` và 10 ảnh mobile `390×843` |
+| Chụp protected | Đã hoạt động ở vòng 3; 52 ảnh desktop `1280×720` và 47 ảnh mobile `390×843` |
 
 Không kết luận màn sau đăng nhập “đạt” chỉ vì đã có ảnh; luồng ghi và accessibility vẫn chưa được kiểm thử.
 
@@ -58,89 +58,89 @@ Quy ước trạng thái ảnh: `Đã chụp`, `Chờ đăng nhập`, `Chờ d�
 
 | # | Route | Màn hình/trạng thái phải kiểm tra | Desktop | Mobile |
 |---:|---|---|---|---|
-| 7 | `/` | Một cửa hàng, tất cả cửa hàng, các kỳ, chart/tooltip, empty/error | Chờ đăng nhập | Chờ đăng nhập |
-| 8 | `/sales` | Chart, KPI, bộ lọc chỉ áp dụng danh sách, tìm kiếm, phân trang | Chờ đăng nhập | Chờ đăng nhập |
-| 9 | `/pos` | Tìm SKU/barcode, giỏ hàng, khách, giảm giá, tiền mặt/QR/công nợ | Chờ đăng nhập | Chờ đăng nhập |
-| 10 | `/sales/:id` | Chi tiết đơn, thanh toán, hoàn/hủy, chứng từ | Chờ bản ghi thật | Chờ bản ghi thật |
+| 7 | `/` | Một cửa hàng, tất cả cửa hàng, các kỳ, chart/tooltip, empty/error | Đã chụp một cửa hàng | Đã chụp một cửa hàng |
+| 8 | `/sales` | Chart, KPI, bộ lọc chỉ áp dụng danh sách, tìm kiếm, phân trang | Đã chụp | Đã chụp |
+| 9 | `/pos` | Tìm SKU/barcode, giỏ hàng, khách, giảm giá, tiền mặt/QR/công nợ | Đã chụp danh sách/giỏ trống | Đã chụp danh sách/giỏ trống |
+| 10 | `/sales/:id` | Chi tiết đơn, thanh toán, hoàn/hủy, chứng từ | Đã chụp bản ghi thật | Đã chụp trạng thái không tìm thấy; chờ bản ghi thật |
 | 11 | `/sales/returns/:id` | Chi tiết phiếu trả, số lượng/tiền/giá vốn | Chờ deploy/test deep-link | Chờ deploy/test deep-link |
-| 12 | `/customer-debts` | Aging, thu nợ, lọc, export toàn tập | Chờ đăng nhập | Chờ đăng nhập |
+| 12 | `/customer-debts` | Aging, thu nợ, lọc, export toàn tập | Đã chụp | Đã chụp |
 
 ### 3.3 Sản phẩm, khách hàng và nhà cung cấp
 
 | # | Route | Màn hình/trạng thái phải kiểm tra | Desktop | Mobile |
 |---:|---|---|---|---|
-| 13 | `/products` | Ảnh, SKU, đơn vị, giá, tồn, tag, lọc, đủ >20 dòng | Chờ đăng nhập | Chờ đăng nhập |
-| 14 | `/products/tags` | Tạo/sửa/xóa tag, cấu hình bộ lọc | Chờ quyền chủ shop | Chờ quyền chủ shop |
-| 15 | `/products/form` | Tạo/sửa, giá nhập/bán, đơn vị, upload/thay/xóa ảnh | Chờ quyền ghi | Chờ quyền ghi |
-| 16 | `/products/:id` | Ảnh thật, giá, tồn, lịch sử, sửa sản phẩm | Chờ bản ghi thật | Chờ bản ghi thật |
-| 17 | `/customers` | Tìm/lọc, công nợ, đủ >20 dòng | Chờ đăng nhập | Chờ đăng nhập |
-| 18 | `/customers/form` | Tạo/sửa, validation, ảnh định danh | Chờ quyền ghi | Chờ quyền ghi |
-| 19 | `/customers/:id` | Hồ sơ, đơn hàng, công nợ, thanh toán | Chờ bản ghi thật | Chờ bản ghi thật |
-| 20 | `/suppliers` | Tìm/lọc, công nợ, đủ >20 dòng | Chờ đăng nhập | Chờ đăng nhập |
-| 21 | `/suppliers/form` | Tạo/sửa và validation | Chờ quyền ghi | Chờ quyền ghi |
-| 22 | `/suppliers/:id` | Hồ sơ, đơn nhập, phải trả | Chờ bản ghi thật | Chờ bản ghi thật |
+| 13 | `/products` | Ảnh, SKU, đơn vị, giá, tồn, tag, lọc, đủ >20 dòng | Đã chụp | Đã chụp |
+| 14 | `/products/tags` | Tạo/sửa/xóa tag, cấu hình bộ lọc | Đã chụp | Đã chụp |
+| 15 | `/products/form` | Tạo/sửa, giá nhập/bán, đơn vị, upload/thay/xóa ảnh | Đã chụp form | Đã chụp form |
+| 16 | `/products/:id` | Ảnh thật, giá, tồn, lịch sử, sửa sản phẩm | Đã chụp bản ghi thật | Đã chụp bản ghi thật |
+| 17 | `/customers` | Tìm/lọc, công nợ, đủ >20 dòng | Đã chụp | Đã chụp |
+| 18 | `/customers/form` | Tạo/sửa, validation, ảnh định danh | Đã chụp form | Đã chụp form |
+| 19 | `/customers/:id` | Hồ sơ, đơn hàng, công nợ, thanh toán | Đã chụp bản ghi thật | Chờ bản ghi thật |
+| 20 | `/suppliers` | Tìm/lọc, công nợ, đủ >20 dòng | Đã chụp | Đã chụp |
+| 21 | `/suppliers/form` | Tạo/sửa và validation | Đã chụp form | Đã chụp form |
+| 22 | `/suppliers/:id` | Hồ sơ, đơn nhập, phải trả | Đã chụp bản ghi thật | Chờ bản ghi thật |
 
 ### 3.4 Kho và nhập hàng
 
 | # | Route | Màn hình/trạng thái phải kiểm tra | Desktop | Mobile |
 |---:|---|---|---|---|
-| 23 | `/inventory` | KPI, cảnh báo, nhóm hàng, link nghiệp vụ, đơn vị | Chờ đăng nhập | Chờ đăng nhập |
-| 24 | `/stock-take` | Tạo phiếu, lịch sử, trạng thái phiếu | Chờ đăng nhập | Chờ đăng nhập |
-| 25 | `/purchase-orders` | Danh sách, tạo đơn, nhận hàng, thanh toán | Chờ đăng nhập | Chờ đăng nhập |
-| 26 | `/xnt-report` | Khoảng ngày, bảng đủ cột, tổng kiểm soát, export | Chờ đăng nhập | Chờ đăng nhập |
-| 27 | `/purchase-orders/detail` | Chi tiết, dòng hàng, nhận hàng, công nợ | Chờ bản ghi từ danh sách | Chờ bản ghi từ danh sách |
+| 23 | `/inventory` | KPI, cảnh báo, nhóm hàng, link nghiệp vụ, đơn vị | Đã chụp | Đã chụp |
+| 24 | `/stock-take` | Tạo phiếu, lịch sử, trạng thái phiếu | Đã chụp danh sách | Đã chụp danh sách |
+| 25 | `/purchase-orders` | Danh sách, tạo đơn, nhận hàng, thanh toán | Đã chụp | Đã chụp |
+| 26 | `/xnt-report` | Khoảng ngày, bảng đủ cột, tổng kiểm soát, export | Đã chụp | Đã chụp; bảng bị cắt |
+| 27 | `/purchase-orders/detail` | Chi tiết, dòng hàng, nhận hàng, công nợ | Đã chụp bản ghi + deep-link lỗi | Đã chụp deep-link lỗi |
 
 ### 3.5 Tài chính, hóa đơn và thuế
 
 | # | Route | Màn hình/trạng thái phải kiểm tra | Desktop | Mobile |
 |---:|---|---|---|---|
-| 28 | `/finance` | KPI, thu/chi, chart, kỳ, đơn vị, drill-down | Chờ đăng nhập | Chờ đăng nhập |
-| 29 | `/daily-closing` | Tiền hệ thống/thực đếm/chênh lệch, khóa sổ | Chờ dữ liệu ngày | Chờ dữ liệu ngày |
-| 30 | `/profit-loss` | Doanh thu, giảm trừ, giá vốn, chi phí, lợi nhuận | Chờ đăng nhập | Chờ đăng nhập |
-| 31 | `/cashflow-forecast` | Số dư đầu kỳ, dự báo, thu/chi, giả định | Chờ đăng nhập | Chờ đăng nhập |
-| 32 | `/debt-aging` | Phải thu/phải trả theo bucket, drill-down | Chờ đăng nhập | Chờ đăng nhập |
-| 33 | `/invoices` | Danh sách, ảnh, trạng thái, tìm/lọc, đủ >20 dòng | Chờ đăng nhập | Chờ đăng nhập |
-| 34 | `/purchases-no-invoice` | Chứng từ, duyệt/từ chối, lý do | Chờ dữ liệu phù hợp | Chờ dữ liệu phù hợp |
-| 35 | `/tax-calculator` | Kỳ, ngưỡng, công thức, nguồn pháp lý, responsive | Chờ đăng nhập | Chờ đăng nhập |
-| 36 | `/expense-ledger` | Nhóm chi phí Việt hóa, chart, danh sách, export | Chờ đăng nhập | Chờ đăng nhập |
-| 37 | `/tax-obligations` | Nghĩa vụ, hạn, trạng thái, thanh toán | Chờ đăng nhập | Chờ đăng nhập |
-| 38 | `/salary-ledger` | Kỳ lương, nhân viên, gross/net, trạng thái trả | Chờ đăng nhập | Chờ đăng nhập |
-| 39 | `/tax-declaration` | Kỳ, chỉ tiêu, XML, lỗi validation/import HTKK | Chờ dữ liệu khai báo | Chờ dữ liệu khai báo |
-| 40 | `/transactions` | Thu/chi, lọc, phân trang, export toàn tập | Chờ đăng nhập | Chờ đăng nhập |
-| 41 | `/transactions/detail` | Chứng từ, tài khoản, liên kết nguồn, ảnh | Chờ bản ghi từ danh sách | Chờ bản ghi từ danh sách |
-| 42 | `/tax-estimate` | Kỳ hiện tại, doanh thu, thuế ước tính, nguồn | Chờ đăng nhập | Chờ đăng nhập |
+| 28 | `/finance` | KPI, thu/chi, chart, kỳ, đơn vị, drill-down | Đã chụp | Đã chụp |
+| 29 | `/daily-closing` | Tiền hệ thống/thực đếm/chênh lệch, khóa sổ | Đã chụp | Đã chụp; ô trống tạo chênh lệch âm |
+| 30 | `/profit-loss` | Doanh thu, giảm trừ, giá vốn, chi phí, lợi nhuận | Đã chụp | Đã chụp empty mặc định một ngày |
+| 31 | `/cashflow-forecast` | Số dư đầu kỳ, dự báo, thu/chi, giả định | Đã chụp | Đã chụp |
+| 32 | `/debt-aging` | Phải thu/phải trả theo bucket, drill-down | Đã chụp | Đã chụp |
+| 33 | `/invoices` | Danh sách, ảnh, trạng thái, tìm/lọc, đủ >20 dòng | Đã chụp | Đã chụp |
+| 34 | `/purchases-no-invoice` | Chứng từ, duyệt/từ chối, lý do | Đã chụp bản ghi quantity 0 | Đã chụp bản ghi quantity 0 |
+| 35 | `/tax-calculator` | Kỳ, ngưỡng, công thức, nguồn pháp lý, responsive | Đã chụp | Đã chụp; biểu đồ vỡ nhãn |
+| 36 | `/expense-ledger` | Nhóm chi phí Việt hóa, chart, danh sách, export | Đã chụp | Đã chụp; KPI/list khác kỳ |
+| 37 | `/tax-obligations` | Nghĩa vụ, hạn, trạng thái, thanh toán | Đã chụp | Đã chụp; thứ tự kỳ sai |
+| 38 | `/salary-ledger` | Kỳ lương, nhân viên, gross/net, trạng thái trả | Đã chụp | Đã chụp; tháng 8 chứa dòng tháng 7 |
+| 39 | `/tax-declaration` | Kỳ, chỉ tiêu, XML, lỗi validation/import HTKK | Đã chụp mẫu kê khai | Đã chụp mẫu kê khai |
+| 40 | `/transactions` | Thu/chi, lọc, phân trang, export toàn tập | Đã chụp | Đã chụp empty mặc định một ngày |
+| 41 | `/transactions/detail` | Chứng từ, tài khoản, liên kết nguồn, ảnh | Đã chụp deep-link lỗi | Đã chụp deep-link lỗi |
+| 42 | `/tax-estimate` | Kỳ hiện tại, doanh thu, thuế ước tính, nguồn | Đã chụp | Đã chụp |
 
 ### 3.6 Cài đặt và quản trị
 
 | # | Route | Màn hình/trạng thái phải kiểm tra | Desktop | Mobile |
 |---:|---|---|---|---|
-| 43 | `/settings` | Menu theo quyền, chọn một/tất cả cửa hàng, đăng xuất | Chờ đăng nhập | Chờ đăng nhập |
-| 44 | `/settings/ai-knowledge` | Danh sách nguồn, upload, trạng thái xử lý, xóa | Chờ quyền chủ shop | Chờ quyền chủ shop |
-| 45 | `/activity-logs` | Actor, hành động, đối tượng, thời gian, lọc | Chờ quyền chủ shop | Chờ quyền chủ shop |
-| 46 | `/tax-config` | Phiên bản hiệu lực, nguồn, ngưỡng, audit thay đổi | Chờ quyền chủ shop | Chờ quyền chủ shop |
-| 47 | `/tax-support` | Nội dung hướng dẫn, liên kết nguồn | Chờ đăng nhập | Chờ đăng nhập |
-| 48 | `/payment-config` | QR/logo theo cửa hàng, thay/xóa ảnh | Chờ một cửa hàng | Chờ một cửa hàng |
-| 49 | `/notifications` | Đọc/chưa đọc, gom nhóm, xử lý yêu cầu | Chờ đăng nhập | Chờ đăng nhập |
-| 50 | `/staff` | Danh sách, mời, duyệt, quyền, trạng thái | Chờ quyền chủ shop | Chờ quyền chủ shop |
-| 51 | `/employees` | Hiện trùng `/staff`; xác minh quyết định gộp/tách | Chờ quyền chủ shop | Chờ quyền chủ shop |
-| 52 | `/roles` | Ma trận quyền, quyền nguy hiểm, responsive | Chờ quyền chủ shop | Chờ quyền chủ shop |
-| 53 | `/profile` | Thông tin cá nhân, avatar/định danh | Chờ đăng nhập | Chờ đăng nhập |
-| 54 | `/change-password` | Mật khẩu cũ/mới, validation, hết phiên | Chờ tài khoản mật khẩu | Chờ tài khoản mật khẩu |
-| 55 | `/shop-profile` | Logo, thông tin thuế, địa chỉ, validation | Chờ một cửa hàng | Chờ một cửa hàng |
+| 43 | `/settings` | Menu theo quyền, chọn một/tất cả cửa hàng, đăng xuất | Đã chụp | Đã chụp |
+| 44 | `/settings/ai-knowledge` | Danh sách nguồn, upload, trạng thái xử lý, xóa | Đã chụp | Đã chụp |
+| 45 | `/activity-logs` | Actor, hành động, đối tượng, thời gian, lọc | Đã chụp | Đã chụp |
+| 46 | `/tax-config` | Phiên bản hiệu lực, nguồn, ngưỡng, audit thay đổi | Đã chụp | Đã chụp |
+| 47 | `/tax-support` | Nội dung hướng dẫn, liên kết nguồn | Đã chụp | Đã chụp |
+| 48 | `/payment-config` | QR/logo theo cửa hàng, thay/xóa ảnh | Đã chụp | Đã chụp |
+| 49 | `/notifications` | Đọc/chưa đọc, gom nhóm, xử lý yêu cầu | Đã chụp | Đã chụp |
+| 50 | `/staff` | Danh sách, mời, duyệt, quyền, trạng thái | Đã chụp | Đã chụp |
+| 51 | `/employees` | Hiện trùng `/staff`; xác minh quyết định gộp/tách | Đã chụp, trùng `/staff` | Đã chụp, trùng `/staff` |
+| 52 | `/roles` | Ma trận quyền, quyền nguy hiểm, responsive | Đã chụp | Đã chụp |
+| 53 | `/profile` | Thông tin cá nhân, avatar/định danh | Đã chụp | Đã chụp |
+| 54 | `/change-password` | Mật khẩu cũ/mới, validation, hết phiên | Đã chụp form | Đã chụp form |
+| 55 | `/shop-profile` | Logo, thông tin thuế, địa chỉ, validation | Đã chụp | Đã chụp |
 
 ## 4. Màn con và trạng thái bắt buộc
 
 | # | Màn/luồng | Cách mở đúng | Trạng thái |
 |---:|---|---|---|
 | 56 | QR thanh toán | Từ POS, chọn phương thức QR | Chờ đăng nhập |
-| 57 | Form đơn nhập | Từ danh sách đơn nhập | Chờ đăng nhập |
-| 58 | Form kiểm kê | Từ màn kiểm kê | Chờ đăng nhập |
-| 59 | Lịch sử kiểm kê | Từ màn kiểm kê | Chờ đăng nhập |
+| 57 | Form đơn nhập | Từ danh sách đơn nhập | Đã chụp Page Not Found desktop/mobile |
+| 58 | Form kiểm kê | Từ màn kiểm kê | Đã chụp luồng mở form; chưa ghi |
+| 59 | Lịch sử kiểm kê | Từ màn kiểm kê | Đã chụp điểm vào; chưa có phiếu hoàn tất để đối chiếu |
 | 60 | Kế hoạch ngân sách | Chưa có route/điểm vào được xác minh | Màn mồ côi |
 | 61 | Quét hóa đơn | Chưa có route/điểm vào được xác minh | Màn mồ côi |
-| 62 | Trợ lý AI | Header, floating, mở/đóng/ẩn/di chuyển | Chờ đăng nhập |
-| 63 | QR cửa hàng ở header | Một cửa hàng/cửa hàng chưa có QR/tất cả cửa hàng | Chờ đăng nhập |
-| 64 | Chọn phạm vi cửa hàng | Một cửa hàng → tất cả → quay lại một cửa hàng | Chờ đăng nhập |
+| 62 | Trợ lý AI | Header, floating, mở/đóng/ẩn/di chuyển | Đã chụp mở/đóng và xung đột CTA; chưa kiểm thử kéo bằng bàn phím |
+| 63 | QR cửa hàng ở header | Một cửa hàng/cửa hàng chưa có QR/tất cả cửa hàng | Đã chụp trạng thái có nút; chưa ghi/thay ảnh |
+| 64 | Chọn phạm vi cửa hàng | Một cửa hàng → tất cả → quay lại một cửa hàng | Đã quan sát lỗi chuyển phạm vi; chờ regression sau deploy |
 
 ## 5. Lỗi route và trạng thái sửa local
 

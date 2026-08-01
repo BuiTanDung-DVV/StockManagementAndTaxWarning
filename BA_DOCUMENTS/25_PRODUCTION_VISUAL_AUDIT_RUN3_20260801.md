@@ -4,16 +4,16 @@
 
 - Production được kiểm tra: `https://smartstock-tax.vercel.app/`.
 - Commit production đang đối chiếu: `093b17ac`; code local đang đi trước production.
-- 62 ảnh đã được chụp và mở kiểm tra lại trong vòng audit hiện tại:
+- 99 ảnh đã được chụp và mở kiểm tra lại trong vòng audit hiện tại:
   - 52 ảnh desktop `1280×720`;
-  - 10 ảnh mobile `390×843`;
+  - 47 ảnh mobile `390×843`;
   - bao phủ 49 route/màn nghiệp vụ bảo vệ;
   - có bằng chứng riêng cho Page Not Found và hai deep-link dựng object rỗng.
 - Ảnh nằm tại [`screenshots/20260801-production-audit-run3/`](screenshots/20260801-production-audit-run3/).
 - Chỉ thực hiện luồng đọc và mở form; không lưu form, duyệt chứng từ, khóa sổ, xóa dữ liệu hay nộp thuế.
 
 Kết luận tổng quát: shell, typography và card đã thống nhất hơn trước, nhưng production chưa đủ điều kiện
-được coi là chính xác nghiệp vụ. Có bảy sai lệch P0 nhìn thấy trực tiếp và nhiều vấn đề P1 về phân trang,
+được coi là chính xác nghiệp vụ. Có chín sai lệch P0 nhìn thấy trực tiếp và nhiều vấn đề P1 về phân trang,
 ngữ nghĩa kỳ báo cáo, dữ liệu test và xung đột giữa nút AI với hành động chính.
 
 ## 2. Các bước kiểm toán và sức khỏe chung
@@ -29,7 +29,7 @@ ngữ nghĩa kỳ báo cáo, dữ liệu test và xung đột giữa nút AI v�
 | 7 | Thuế | Đúng một phần, rủi ro cao | Có nguồn pháp lý 2026; kỳ mặc định và thứ tự nghĩa vụ chưa hợp lý; nút “Nộp” chỉ mở thông báo |
 | 8 | Cài đặt/RBAC/audit | Đúng một phần | Mở được màn quản trị; quyền còn lẫn key kỹ thuật, log không đủ actor/entity/before-after |
 | 9 | Form và hồ sơ | Đúng một phần | Form sản phẩm chia nhóm tốt; email hồ sơ không khớp tiêu đề; hồ sơ cửa hàng thiếu dữ liệu pháp lý |
-| 10 | Mobile/responsive | Đúng một phần | Card reflow tốt; AI che CTA, bảng/biểu đồ quan trọng bị đẩy xuống dưới nếp gấp |
+| 10 | Mobile/responsive | Không chính xác ở một số màn | Card reflow khá tốt; AI che CTA, bảng XNT bị cắt ngang, biểu đồ thuế vỡ nhãn và một số báo cáo dùng sai phạm vi kỳ |
 
 Không ghi nhận đạt accessibility. Chưa kiểm thử bàn phím, focus, screen reader, zoom 200% và độ tương phản
 bằng công cụ chuyên biệt.
@@ -153,6 +153,52 @@ bằng công cụ chuyên biệt.
 - Danh sách hiển thị ảnh xi măng đã tải lên, nhưng detail cùng sản phẩm chỉ hiện icon hộp mặc định.
 - Detail phải dùng cùng `imageUrl`/thumbnail contract với list và có fallback chỉ khi ảnh thật lỗi.
 
+### 3.15 Báo cáo XNT mobile — bảng bị cắt và không đủ ngữ cảnh
+
+![Báo cáo XNT mobile](screenshots/20260801-production-audit-run3/66-xnt-report-mobile.png)
+
+- Bảng vẫn dùng cấu trúc nhiều cột của desktop nên phần `Nhập`, `Xuất`, `Tồn cuối` nằm ngoài khung nhìn.
+- Không có chỉ dấu cuộn ngang rõ ràng, header cố định hoặc chế độ card theo sản phẩm.
+- Kỳ mặc định chỉ là `01/08/2026 → 01/08/2026`, vì vậy toàn bộ nhập/xuất bằng 0 dù hệ thống có ba năm dữ liệu.
+
+### 3.16 Sổ chi phí và sổ lương — phạm vi kỳ không khớp danh sách
+
+![Sổ chi phí mobile](screenshots/20260801-production-audit-run3/73-expense-ledger-mobile.png)
+
+![Sổ lương mobile](screenshots/20260801-production-audit-run3/74-salary-ledger-mobile.png)
+
+- Sổ chi phí ghi `Tổng chi phí tháng này = 0 đ`, nhưng cùng màn vẫn liệt kê các giao dịch tháng 7 mà không gắn nhãn “ngoài kỳ”.
+- Sổ lương ghi `Tháng 8/2026` và `1 giao dịch`, trong khi dòng duy nhất là ngày `2026-07-10`.
+- Source backend xác nhận summary chi phí lọc từ đầu tháng đến hiện tại, nhưng `recentItems` lại lấy 10 giao dịch chi gần nhất không có điều kiện ngày.
+- Cả hai màn phải để API áp dụng cùng `from/to`, cùng loại giao dịch và cùng cửa hàng cho KPI, biểu đồ, danh sách và export.
+
+### 3.17 Thuế mobile — biểu đồ ngưỡng không đọc được
+
+![Công cụ tính thuế mobile](screenshots/20260801-production-audit-run3/84-tax-calculator-mobile.png)
+
+- Nhãn `900M` và chú thích bị ép thành từng ký tự theo chiều dọc; mốc và điểm cảnh báo không đọc được.
+- Widget phải đổi sang progress/threshold card ở mobile, chỉ giữ chart khi chiều rộng đủ; mọi mốc cần đơn vị `triệu/tỷ đồng` và tooltip hoặc bảng số liệu tương đương.
+
+### 3.18 Form đơn nhập và deep-link detail vẫn lỗi trên mobile
+
+![Form đơn nhập Page Not Found mobile](screenshots/20260801-production-audit-run3/94-purchase-order-form-mobile.png)
+
+![Deep-link đơn nhập mobile](screenshots/20260801-production-audit-run3/96-purchase-order-detail-deeplink-mobile.png)
+
+![Deep-link giao dịch mobile](screenshots/20260801-production-audit-run3/97-transaction-detail-deeplink-mobile.png)
+
+- Route form trả nguyên lỗi kỹ thuật `GoException: no routes for location`, không phải error page thân thiện.
+- Hai detail vẫn dựng `PO-null` và `-0 đ`, đồng thời còn hiển thị nút xóa/sửa trên object không hợp lệ.
+- Đây là lỗi route/data contract xuyên desktop và mobile, không thể xử lý chỉ bằng chỉnh bố cục.
+
+### 3.19 Daily closing — mặc định tạo chênh lệch âm rất lớn
+
+![Chốt ca mobile](screenshots/20260801-production-audit-run3/71-daily-closing-mobile.png)
+
+- Khi ô tiền thực tế còn trống, UI lập tức tính chênh lệch `-1.919.881.000 đ` và yêu cầu giải trình.
+- Source khởi tạo `_closingCash = 0` và luôn tính `_closingCash - expectedCash`, nên ảnh production phản ánh đúng lỗi logic hiện tại.
+- Trạng thái chưa nhập phải là `Chưa đối soát`, không quy đổi ô trống thành 0; chỉ tính chênh lệch sau khi người dùng nhập số hợp lệ.
+
 ## 4. Sai lệch ưu tiên
 
 ### P0 — phải sửa trước deploy rộng
@@ -166,6 +212,8 @@ bằng công cụ chuyên biệt.
 | SALES-01 | List/detail cùng mã đơn khác khách hàng | In phiếu, thu nợ và chăm sóc nhầm khách | API detail join customer; list/detail/invoice cùng `customerId/name`; contract test đạt |
 | SALES-02 | Modal hoàn không có dòng/số lượng trả | Sai tồn, COGS, doanh thu thuần và tiền hoàn | Hoàn theo item/quantity/cost lot; nhiều lần hoàn không vượt số đã bán |
 | NAV-02 | Deep-link detail tạo `PO-null` và `-0 đ` | Dữ liệu giả, action sửa/xóa trên object không hợp lệ | Route `:id`, API fetch, not-found; action bị ẩn/disable khi chưa có entity |
+| FIN-02 | Sổ chi phí tổng tháng = 0 nhưng danh sách chứa giao dịch ngoài kỳ | Người dùng hiểu sai chi phí kỳ hiện tại và export sai phạm vi | KPI/chart/list/export dùng cùng `from/to`; giao dịch ngoài kỳ không xuất hiện |
+| FIN-03 | Chốt ca coi ô thực tế trống là 0 và tạo chênh lệch âm toàn bộ số dư | Dễ ghi nhận/giải trình sai số tiền rất lớn | Chưa nhập thì không tính; validate số; xác nhận lại trước khóa sổ |
 
 ### P1 — ổn định và làm rõ nghiệp vụ
 
@@ -182,6 +230,8 @@ bằng công cụ chuyên biệt.
 | AUDIT-01 | Log chỉ ghi “Cập nhật thông tin”, actor “Hệ thống” | Actor, shop, action, entity, id, before/after, IP/device/correlation id theo chính sách |
 | MEDIA-01 | Product list có ảnh nhưng detail dùng icon mặc định | Người dùng khó xác nhận đúng sản phẩm | Một image contract; thumbnail/list/detail cùng nguồn; fallback khi tải lỗi |
 | CREDIT-01 | Khách nợ 48,414 triệu nhưng hạn mức 25 triệu không có cảnh báo | Tiếp tục bán chịu vượt kiểm soát | Cảnh báo exposure/limit, chặn hoặc yêu cầu quyền override có lý do/audit |
+| UI-06 | XNT mobile bị cắt cột, biểu đồ ngưỡng thuế vỡ chữ | Không đọc được báo cáo hoặc hiểu sai mốc | Mobile card/column priority, scroll affordance; threshold card thay chart hẹp |
+| FIN-04 | KPI chi phí và danh sách không cùng kỳ | Tổng bằng 0 nhưng vẫn có dòng chi phía dưới | Một filter contract dùng chung cho summary/chart/list/export |
 
 ## 5. Đánh giá bảng và biểu đồ so với hệ thống lớn
 
@@ -209,8 +259,8 @@ Các hệ thống như Shopify, Square, Dynamics 365 Commerce, Lightspeed và Od
 
 ## 7. Phần chưa xác minh
 
-- 7 route/trạng thái còn lại chưa có ảnh production vòng 3: auth/onboarding/waiting approval và chi tiết phiếu trả đã lưu.
-- Mobile mới chụp 10 màn lõi, chưa bao phủ toàn bộ 56 route.
+- Các trạng thái auth có điều kiện (`verify-otp`, onboarding, waiting approval) và chi tiết phiếu trả đã lưu chưa có bằng chứng hoàn chỉnh vì cần tài khoản/trạng thái chuyên biệt.
+- Mobile đã có 47 ảnh trạng thái protected; chưa có mobile cho mọi detail có dữ liệu thật và các trạng thái ghi thành công/thất bại.
 - Chưa thao tác ghi: thanh toán, hoàn/hủy, thu nợ, duyệt chứng từ, khóa sổ, upload/xóa ảnh, đổi quyền.
 - Chưa xác minh tooltip bằng tương tác, drag chart, horizontal scroll, keyboard hoặc assistive technology.
 - Hai màn code mồ côi `budget_plan_screen` và `invoice_scan_screen` chưa có route/điểm vào.
