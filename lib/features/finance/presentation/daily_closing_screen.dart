@@ -7,6 +7,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/utils/finance_display.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../domain/closing_cash_assessment.dart';
 import '../providers/finance_provider.dart';
 
 class DailyClosingScreen extends ConsumerStatefulWidget {
@@ -19,7 +20,6 @@ class DailyClosingScreen extends ConsumerStatefulWidget {
 class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
   final _closingCashController = TextEditingController();
   final _notesController = TextEditingController();
-  double _closingCash = 0;
   bool _submitting = false;
   String? _errorMessage;
 
@@ -46,12 +46,24 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
     int orderCount,
     String today,
   ) async {
+    final assessment = assessClosingCash(
+      rawActualCash: _closingCashController.text,
+      expectedCash: expectedCash,
+    );
+    if (!assessment.canSubmit) {
+      setState(() {
+        _errorMessage = 'Vui lòng nhập số tiền mặt thực tế hợp lệ.';
+      });
+      return;
+    }
+    final closingCash = assessment.actualCash!;
+
     setState(() {
       _submitting = true;
       _errorMessage = null;
     });
 
-    final cashDifference = _closingCash - expectedCash;
+    final cashDifference = closingCash - expectedCash;
 
     if (cashDifference.abs() > 50000 && _notesController.text.trim().isEmpty) {
       setState(() {
@@ -67,7 +79,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
       final dto = {
         'closingDate': today,
         'openingCash': openingCash,
-        'closingCash': _closingCash,
+        'closingCash': closingCash,
         'expectedCash': expectedCash,
         'cashDifference': cashDifference,
         'totalIncome': totalIncome,
@@ -156,8 +168,14 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
           final expectedCash = asNum(data['expectedCash']);
 
           // Calculated local variables
-          final localDifference = _closingCash - expectedCash;
-          final needsNotes = localDifference.abs() > 50000;
+          final closingAssessment = assessClosingCash(
+            rawActualCash: _closingCashController.text,
+            expectedCash: expectedCash.toDouble(),
+          );
+          final localDifference = closingAssessment.difference;
+          final differenceValue = localDifference ?? 0;
+          final hasAssessment = localDifference != null;
+          final needsNotes = closingAssessment.needsExplanation;
 
           if (closed) {
             final closedOpeningCash = asNum(data['openingCash']);
@@ -588,7 +606,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                   ),
                   onChanged: (v) {
                     setState(() {
-                      _closingCash = double.tryParse(v) ?? 0;
+                      _errorMessage = null;
                     });
                   },
                 ),
@@ -598,16 +616,16 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: localDifference == 0
+                    color: !hasAssessment || differenceValue == 0
                         ? c.card
-                        : (localDifference > 0
+                        : (differenceValue > 0
                               ? AppColors.success.withValues(alpha: 0.05)
                               : AppColors.danger.withValues(alpha: 0.05)),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: localDifference == 0
+                      color: !hasAssessment || differenceValue == 0
                           ? c.divider.withValues(alpha: 0.5)
-                          : (localDifference > 0
+                          : (differenceValue > 0
                                 ? AppColors.success.withValues(alpha: 0.25)
                                 : AppColors.danger.withValues(alpha: 0.25)),
                     ),
@@ -623,13 +641,13 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                         ),
                       ),
                       Text(
-                        _fmt(localDifference),
+                        hasAssessment ? _fmt(differenceValue) : 'Chưa đối soát',
                         style: GoogleFonts.outfit(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: localDifference == 0
-                              ? c.textPrimary
-                              : (localDifference > 0
+                          color: !hasAssessment || differenceValue == 0
+                              ? c.textSecondary
+                              : (differenceValue > 0
                                     ? AppColors.success
                                     : AppColors.danger),
                         ),
@@ -754,7 +772,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: _submitting
+                    onPressed: _submitting || !closingAssessment.canSubmit
                         ? null
                         : () => _submitClosing(
                             expectedCash.toDouble(),

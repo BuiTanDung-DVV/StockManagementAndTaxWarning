@@ -27,7 +27,14 @@ class TransactionHistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final txAsync = ref.watch(
-      transactionsProvider((page: 1, type: null, from: _from, to: _to)),
+      transactionsProvider((
+        page: 1,
+        limit: 20,
+        type: null,
+        category: null,
+        from: _from,
+        to: _to,
+      )),
     );
 
     return Scaffold(

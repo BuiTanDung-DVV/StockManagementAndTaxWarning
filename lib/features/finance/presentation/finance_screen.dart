@@ -98,7 +98,14 @@ class FinanceScreen extends ConsumerWidget {
     final to = period.to;
     final summaryAsync = ref.watch(cashSummaryProvider((from: from, to: to)));
     final transactionsAsync = ref.watch(
-      transactionsProvider((page: 1, type: null, from: from, to: to)),
+      transactionsProvider((
+        page: 1,
+        limit: 20,
+        type: null,
+        category: null,
+        from: from,
+        to: to,
+      )),
     );
     final categoriesAsync = ref.watch(
       expensesByCategoryForPeriodProvider((from: from, to: to)),
