@@ -133,6 +133,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
 
       await ref.read(inventoryRepoProvider).createStockTake(payload);
       ref.invalidate(stockProvider(null)); // Refresh stock list
+      ref.invalidate(stockPageProvider(null));
       ref.invalidate(lowStockProvider); // Refresh low-stock warning
 
       if (mounted) {

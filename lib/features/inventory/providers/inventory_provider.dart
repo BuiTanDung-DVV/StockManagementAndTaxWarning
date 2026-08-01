@@ -12,8 +12,10 @@ class InventoryRepository {
     return await _api.get('/inventory/stock', params: params);
   }
 
-  Future<List<dynamic>> getLowStock({int threshold = 10}) async => await _api
-      .get('/inventory/low-stock', params: {'threshold': '$threshold'});
+  Future<List<dynamic>> getLowStock({int? threshold}) async => await _api.get(
+    '/inventory/low-stock',
+    params: threshold == null ? const {} : {'threshold': '$threshold'},
+  );
 
   Future<Map<String, dynamic>> getMovements({
     int? productId,
@@ -96,6 +98,32 @@ class InventoryRepository {
 final inventoryRepoProvider = Provider<InventoryRepository>((ref) {
   ref.watch(shopProvider);
   return InventoryRepository(ref.read(apiClientProvider));
+});
+
+final stockPageProvider = FutureProvider.family<Map<String, dynamic>, int?>((
+  ref,
+  warehouseId,
+) async {
+  final result = await ref
+      .watch(inventoryRepoProvider)
+      .getCurrentStock(warehouseId: warehouseId);
+  if (result is Map) return Map<String, dynamic>.from(result);
+  if (result is List) {
+    return {
+      'items': result,
+      'total': result.length,
+      'page': 1,
+      'limit': result.length,
+      'totalPages': 1,
+    };
+  }
+  return const {
+    'items': <dynamic>[],
+    'total': 0,
+    'page': 1,
+    'limit': 0,
+    'totalPages': 0,
+  };
 });
 
 final stockProvider = FutureProvider.family<List<dynamic>, int?>((
