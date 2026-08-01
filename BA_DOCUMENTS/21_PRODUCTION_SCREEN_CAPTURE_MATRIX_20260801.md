@@ -3,6 +3,9 @@
 Ma trận này theo dõi bằng chứng ảnh production. Kiểm kê component và hướng triển khai cho 59 file màn hình nằm tại
 [Ma trận thành phần và triển khai giao diện](24_SCREEN_COMPONENT_IMPLEMENTATION_MATRIX_20260801.md).
 
+Ảnh protected production mới nhất và nhận xét theo từng bằng chứng nằm tại
+[Kiểm toán trực quan production vòng 3](25_PRODUCTION_VISUAL_AUDIT_RUN3_20260801.md).
+
 ## 1. Mục đích
 
 Ma trận này khóa phạm vi vòng kiểm tra lại production để không bỏ sót màn hình, màn con hoặc
@@ -22,19 +25,19 @@ trạng thái quan trọng. Phạm vi hiện tại gồm:
 |---|---|
 | URL production | `https://smartstock-tax.vercel.app/#/login` |
 | Kích thước đã quan sát | Desktop `1440×900`; mobile `390×844` |
-| Màn đã có ảnh hợp lệ | 10 trạng thái của đăng nhập, đăng ký, quên mật khẩu và auth redirect |
+| Màn đã có ảnh hợp lệ | Vòng 2: 10 trạng thái auth; vòng 3: 62 ảnh/49 route hoặc màn protected, gồm lỗi route/deep-link |
 | Chụp bằng Browser | Hoạt động; ảnh đã lưu ở `screenshots/20260801-production-audit-run2/` |
 | Route bảo vệ | Mở trực tiếp `/inventory` khi chưa đăng nhập chuyển đúng về `/login` |
 | Phiên đăng nhập test | Đã đăng nhập bằng tài khoản test khai báo trong dự án |
 | Smoke route protected | 47/47 giữ đúng route; không có console warning/error |
 | Smoke API đọc | 48/48 endpoint hợp lệ trả 200/success |
-| Chụp protected | Bị chặn: `Page.captureScreenshot` timeout với Flutter canvas |
+| Chụp protected | Đã hoạt động ở vòng 3; 52 ảnh desktop `1280×720` và 10 ảnh mobile `390×843` |
 
-Không kết luận màn sau đăng nhập “đạt” khi chưa có ảnh và chưa thao tác trực tiếp.
+Không kết luận màn sau đăng nhập “đạt” chỉ vì đã có ảnh; luồng ghi và accessibility vẫn chưa được kiểm thử.
 
-Các ô `Chờ đăng nhập` bên dưới được giữ như trạng thái **ảnh**; route và API đã được smoke test theo
-[báo cáo authenticated smoke](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md), nhưng chưa có ảnh mới
-để đánh giá trực quan từng màn.
+Các ô cũ `Chờ đăng nhập` trong bảng route được thay thế bằng danh mục bằng chứng chi tiết ở báo cáo vòng 3.
+Route và API đọc vẫn được đối chiếu thêm theo
+[báo cáo authenticated smoke](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md).
 
 ## 3. Ma trận route chính
 
@@ -141,9 +144,10 @@ Quy ước trạng thái ảnh: `Đã chụp`, `Chờ đăng nhập`, `Chờ d�
 
 ## 5. Lỗi route và trạng thái sửa local
 
-### NAV-01 — Nút “Nhập kho” đã có route local
+### NAV-01 — Nút “Nhập kho” lỗi production, đã có route local
 
-Router hiện đã khai báo `/purchase-orders/form` và mở cùng `PurchaseOrderFormScreen`.
+Production commit `093b17ac` không khai báo `/purchase-orders/form` dù dashboard có CTA đẩy tới URL này;
+ảnh vòng 3 xác nhận `Page Not Found`. Router local hiện đã khai báo route và mở `PurchaseOrderFormScreen`.
 
 **Trạng thái:** static route registry test đạt; chờ smoke test production sau deploy.
 

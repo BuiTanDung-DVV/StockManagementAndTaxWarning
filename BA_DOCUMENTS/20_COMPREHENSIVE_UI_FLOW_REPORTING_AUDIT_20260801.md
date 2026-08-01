@@ -419,3 +419,6 @@ Phạm vi route và trạng thái bắt buộc: xem
 
 Kết quả smoke test route/API sau đăng nhập:
 [22 — Smoke test production sau đăng nhập](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md).
+
+Bằng chứng trực quan protected mới nhất:
+[25 — Kiểm toán trực quan production vòng 3](25_PRODUCTION_VISUAL_AUDIT_RUN3_20260801.md).
