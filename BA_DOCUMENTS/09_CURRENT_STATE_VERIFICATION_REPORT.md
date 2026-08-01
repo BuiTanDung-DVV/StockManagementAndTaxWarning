@@ -1,10 +1,31 @@
 # Báo cáo xác minh tính chính xác hiện tại
 
+> **Cập nhật source audit 01/08/2026:** production sau đăng nhập chưa được chụp lại trong vòng này.
+> Các kết luận mới bên dưới được xác minh từ code/test local và phải được smoke test lại trước khi
+> coi là trạng thái production. Phạm vi ảnh xem
+> [ma trận 55 route](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md).
+
 > **Cập nhật production 26/07/2026:** bản vá và vòng nâng cấp UI thứ nhất đã được
 > triển khai từ commit ứng dụng `17dd84d4b46994c921d373d03273bb39b9787ac4`.
 > Frontend và backend đều ở trạng thái `READY` trên Vercel.
 
-## Kết quả xác minh bản production hiện tại
+## Kết quả mới nhất từ source/test local 01/08/2026
+
+| ID | Hạng mục | Trạng thái | Bằng chứng hiện tại | Ảnh hưởng |
+|---|---|---|---|---|
+| CUR-01 | Backend quyết định giá bán | Không chính xác | `SalesService.create` dùng `unitPrice` từ request, chỉ chặn giá âm | Rất cao |
+| CUR-02 | Giá vốn hoàn một phần | Không chính xác | Summary cộng `total_cogs` của toàn đơn cho từng return | Rất cao |
+| CUR-03 | Danh sách dữ liệu lớn | Không chính xác | Nhiều provider cố định `page: 1`; backend mặc định 20 | Rất cao |
+| CUR-04 | Auth local khởi tạo datasource | Đúng một phần | Đã khai báo kiểu cột rõ ràng; metadata regression test và kiểm toán DB chỉ đọc đạt. Production chưa có migration auth | Rất cao; chặn deploy backend mới |
+| CUR-05 | Route CTA kho và hoàn trả | Đúng một phần | Đã khai báo `/purchase-orders/form`, chuyển CTA hoàn trả sang `/sales/returns/:id` và route registry test đạt; deep-link chi tiết vẫn cần bỏ phụ thuộc `state.extra` | Cao |
+| CUR-06 | Guard route và API | Đúng một phần | Tax estimate/activity/AI knowledge/tax config có mapping quyền lệch | Cao |
+| CUR-07 | Invoice entity | Đã xác minh từ code | 51 entity/51 bảng duy nhất; một model `invoices` | Trung bình; chờ introspect DB |
+| CUR-08 | Sổ nợ | Đúng một phần | Flutter gọi `/customer-receivables`; chưa đối soát UI–API–DB có dữ liệu | Cao |
+| CUR-09 | Bộ test backend P0 | Đã xác minh | Build/lint và 47/47 test đạt | Trung bình; test chưa phủ CUR-01/02 đầy đủ |
+| CUR-10 | Flutter analyze/test/build | Đã xác minh local | Analyze sạch, 57/57 test đạt, Web release build thành công | Trung bình; chưa thay thế smoke test production |
+| CUR-11 | Accessibility | Bị chặn | Chưa test keyboard, focus, zoom 200%, screen reader | Trung bình |
+
+## Snapshot production đã xác minh ngày 26/07/2026
 
 | Finding cũ | Kết quả hiện tại | Bằng chứng | Trạng thái |
 |---|---|---|---|
@@ -21,7 +42,7 @@
 | Lỗi runtime frontend | Không có error group trong cửa sổ kiểm tra 1 giờ | Vercel Runtime Errors | Đã xác minh tại thời điểm kiểm tra |
 | Cảnh báo runtime backend | Node ghi cảnh báo deprecation `DEP0169` từ luồng dùng `url.parse()` | 21 lần/1 giờ, route serverless `/src/index.ts`; không có bằng chứng gián đoạn | Đúng một phần; cần truy nguồn dependency và nâng cấp có kiểm soát |
 
-### Bằng chứng phát hành
+### Bằng chứng phát hành của snapshot 26/07
 
 - GitHub `main`: commit ứng dụng `17dd84d4b46994c921d373d03273bb39b9787ac4`.
 - Frontend deployment `dpl_H2A15cYunhndkfbDHZwC5GEVt5dA`, alias
@@ -36,7 +57,7 @@
 - Smoke test chỉ đọc trên desktop và mobile 390×844: dashboard, sales, customer
   debts và POS tải thành công; không thấy lỗi console ứng dụng.
 
-### Phần vẫn bị chặn hoặc còn rủi ro
+### Phần còn bị chặn trong snapshot 26/07
 
 - Chưa chạy kiểm thử lỗi API có chủ đích trên production để tránh ảnh hưởng dữ liệu.
 - Chưa có dataset chuẩn để chứng minh dashboard, sales, finance, kho và công nợ

@@ -97,7 +97,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     }
 
     final strengthScore = _calculatePasswordStrength(newPass);
-    if (newPass.length < 8 || strengthScore < 3) {
+    if (newPass.length < 8 || strengthScore < 5) {
       setState(
         () => _error =
             'Mật khẩu mới chưa đạt tiêu chuẩn bảo mật quốc tế (cần tối thiểu 8 ký tự và kết hợp chữ hoa, chữ thường, số hoặc ký tự đặc biệt)',
@@ -311,9 +311,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                         color: c.textMuted,
                         size: 20,
                       ),
-                      onPressed: () => setState(
-                        () => _obscureConfirm = !_obscureConfirm,
-                      ),
+                      onPressed: () =>
+                          setState(() => _obscureConfirm = !_obscureConfirm),
                     ),
                   ),
                   _buildConfirmPasswordMatchIndicator(c),

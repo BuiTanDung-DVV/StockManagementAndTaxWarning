@@ -145,7 +145,7 @@ pháp lý, kế toán hoặc cơ quan thuế.
 |---|---|---|---|
 | BR-FIN-01 | Số dư quỹ khớp tổng thu/chi và dashboard | Must | Không chính xác |
 | BR-FIN-02 | Lợi nhuận dùng định nghĩa được công bố | Must | Đúng một phần |
-| BR-DEBT-01 | Sổ nợ dùng receivable thật, không dùng dữ liệu mẫu | Must | Không chính xác |
+| BR-DEBT-01 | Sổ nợ dùng receivable thật, không dùng dữ liệu mẫu | Must | Đúng một phần: đã gọi API, chưa đối soát UI–API–DB có dữ liệu |
 | BR-DEBT-02 | Thu nợ cập nhật khoản phải thu và sổ quỹ | Must | Bị chặn |
 | BR-REP-01 | Excel phản ánh đúng dữ liệu nguồn và tổng kiểm soát | Must | Bị chặn |
 

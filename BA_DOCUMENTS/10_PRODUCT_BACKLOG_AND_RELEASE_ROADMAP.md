@@ -1,5 +1,9 @@
 # Product Backlog và lộ trình nâng cấp
 
+> **Cập nhật source audit 01/08/2026:** bổ sung backlog mới về quyền quyết định giá, hoàn hàng,
+> phân trang, metadata auth, toàn vẹn tồn và route. Các P0 cũ bên dưới được giữ để truy vết nhưng
+> không tự coi là đã đóng nếu chưa có production evidence.
+
 > **Cập nhật backlog 26/07/2026:** bản vá và UI vòng 1 đã deploy production.
 > Chỉ đóng hoàn toàn các mục có đủ kiểm thử dữ liệu, phân quyền hoặc giao dịch theo
 > [danh mục test](11_ACCEPTANCE_TEST_CATALOG.md).
@@ -41,7 +45,17 @@
 Độ khó: `S` ≤ 3 ngày, `M` khoảng 1–2 tuần, `L` trên 2 tuần; cần ước lượng lại sau
 khi chốt thiết kế kỹ thuật.
 
-## 2. P0 – Bản vá khẩn cấp
+## 2. P0 hiện tại — Bản vá khẩn cấp trước deploy tiếp theo
+
+| ID | Vấn đề hiện tại | Nguyên nhân | Giải pháp đề xuất | Lợi ích | Ưu tiên | Độ khó | Rủi ro triển khai | Tiêu chí nghiệm thu |
+|---|---|---|---|---|---|---|---|---|
+| P0-08 | API tạo đơn tin `unitPrice` từ client | Chưa có pricing policy ở service | Backend tải sản phẩm/chính sách và quyết định giá; override cần quyền, lý do, biên độ, audit | Ngăn bán sai giá và sửa request | P0 | L | Ảnh hưởng giá sỉ/khuyến mại hiện có | Request sửa giá trái phép bị 403/validation; POS, đơn, hóa đơn dùng giá backend trả |
+| P0-09 | Hoàn một phần có thể trừ toàn bộ COGS đơn | Return summary dùng `sales_orders.total_cogs` | Trả hàng theo `sales_order_item_id`, returned quantity/cost và lot reversal | Lợi nhuận gộp chính xác | P0 | L | Cần migration/backfill return cũ | Hoàn 2/10 chỉ đảo giá vốn 2; nhiều lần hoàn không vượt lượng/cost đã bán |
+| P0-10 | Nhiều danh sách chỉ hiện 20 dòng đầu | Provider cố định trang 1, UI thiếu pagination | `PagedResult<T>` dùng chung, server search, pagination/infinite list | Không “mất” dữ liệu trên UI | P0 | L | Thay đổi nhiều feature/form picker | Shop 300 sản phẩm duyệt/tìm/chọn đủ; không lặp/bỏ dòng; export không chỉ trang hiện tại |
+| P0-11 | Production chưa có schema cho auth hardening | Metadata `Object` đã sửa local nhưng migration production chưa chạy | Sao lưu DB; cấu hình ba secret riêng; chạy migration; cold-start và auth smoke test | Tránh backend chết cold start và lỗi truy vấn cột thiếu | P0 | S | Migration xóa OTP chờ và secret mới làm phiên cũ hết hiệu lực | Schema đủ cột/bảng; cold-start, login, refresh, logout và OTP đạt |
+| P0-12 | Tồn có thể trùng theo shop/kho/sản phẩm | Thiếu unique composite và upsert invariant | Audit duplicate, hợp nhất có phê duyệt, thêm unique constraint, transaction upsert | Tồn và XNT không cộng trùng | P0 | M | Migration fail nếu production có duplicate | Query duplicate = 0; concurrent update không tạo dòng thứ hai; reconciliation đạt |
+
+## 2.1 P0 cũ — Giữ để xác minh đóng trên production
 
 | ID | Vấn đề hiện tại | Nguyên nhân | Giải pháp đề xuất | Lợi ích | Ưu tiên | Độ khó | Rủi ro triển khai | Tiêu chí nghiệm thu |
 |---|---|---|---|---|---|---|---|---|
@@ -63,7 +77,10 @@ khi chốt thiết kế kỹ thuật.
 | V11-04 | Loading/empty/error không đồng nhất | Mỗi feature tự xử lý | Chuẩn hóa component và error model; retry có kiểm soát | Dễ hiểu khi lỗi mạng/dữ liệu rỗng | V1.1 | M | Che mất lỗi nghiệp vụ nếu map sai | Tất cả màn chính có loading/empty/error; lỗi 4xx giữ message an toàn |
 | V11-05 | Nhiều controller không hỗ trợ `all` | Chỉ sales/finance/inventory có helper scope | Chuẩn hóa `ShopScope` bắt buộc và repository helper | Ngăn query thiếu shopId | V1.1 | L | Query tổng hợp lớn/chậm | Mọi query shop-scoped có test shop đơn + nhiều shop, không trả ngoài scope |
 | V11-06 | Bộ test chạy được trên máy hiện tại nhưng chưa là cổng CI bắt buộc | Toolchain local đã hoạt động; pipeline chưa lưu bằng chứng phát hành | Chuẩn hóa CI; pin dependency; lưu artifact test; giữ backend build/lint/P0 trong pipeline | Có cổng chất lượng lặp lại | V1.1 | M | Nâng package gây warning mới | CI chạy analyze, Flutter test, backend build/lint/P0 trên mỗi PR |
-| V11-07 | Backend phát cảnh báo Node `DEP0169` trên mỗi số lần gọi serverless | Một dependency còn dùng API `url.parse()` đã bị deprecate | Dùng trace ở staging để xác định package; nâng dependency nhỏ nhất, chạy lại P0 và smoke test | Giảm nợ kỹ thuật và rủi ro tương thích Node | V1.1 | S–M | Nâng transitive dependency có thể đổi hành vi kết nối | Production không còn `DEP0169`; 28 P0 tests và API smoke test đạt |
+| V11-07 | Backend phát cảnh báo Node `DEP0169` trên mỗi số lần gọi serverless | Một dependency còn dùng API `url.parse()` đã bị deprecate | Dùng trace ở staging để xác định package; nâng dependency nhỏ nhất, chạy lại P0 và smoke test | Giảm nợ kỹ thuật và rủi ro tương thích Node | V1.1 | S–M | Nâng transitive dependency có thể đổi hành vi kết nối | Production không còn `DEP0169`; toàn bộ P0 suite hiện hành và API smoke test đạt |
+| V11-08 | CTA nhập kho/chi tiết hoàn đã resolve local nhưng detail còn phụ thuộc `state.extra` | Route registry trước đây thiếu contract deep-link | Giữ route registry test; chuyển màn detail tải API theo `:id` khi reload | Luồng không đứt và chia sẻ/reload URL được | V1.1 | M | Cần thống nhất model detail từ API | Mọi CTA resolve; reload detail giữ dữ liệu; route test không có path dùng nhưng chưa khai báo |
+| V11-09 | Header, primary action và bảng không đồng nhất | Chỉ 9 điểm dùng `AppPageHeader`; `AppDataTable` thiếu pagination/sort/mobile card | `AppScreenScaffold`, action responsive, `AppPagedTable` + `AppRecordCardList` | Giao diện chuyên nghiệp, dày thông tin đúng thiết bị | V1.1 | L | Chuyển đổi nhiều màn | 55 route dùng pattern được duyệt; desktop/mobile screenshot regression đạt |
+| V11-10 | Guard frontend lệch quyền API | Menu/router và middleware có mapping riêng | Một route-policy frontend sinh từ ma trận module/action; contract test với backend | Không vào màn rồi gặp 403 hoặc bị chặn sai | V1.1 | M | Có thể lộ menu cũ đang sai | Owner/view/edit/none test đạt cho tax, activity log, AI knowledge và config |
 
 ## 4. V1.2 – Hoàn thiện nghiệp vụ
 

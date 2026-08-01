@@ -4,6 +4,7 @@ import { config } from '../config/env.config';
 
 import { AppDataSource } from '../config/db.config';
 import { ShopMember } from '../shop/entities';
+import { User } from '../auth/entities';
 import { requestContext } from './context.middleware';
 import { parseRequestedShopScope } from './shop-scope.utils';
 
@@ -20,10 +21,8 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
   let token: string | undefined;
   const authHeader = req.headers.authorization;
   
-  if (authHeader) {
-    token = authHeader.split(' ')[1];
-  } else if (req.query.token) {
-    token = req.query.token as string;
+  if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.slice('Bearer '.length).trim();
   }
 
   if (!token) {
@@ -32,13 +31,29 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
 
   let decoded: any;
   try {
-    decoded = jwt.verify(token, config.jwtSecret);
-    req.user = decoded;
+    decoded = jwt.verify(token, config.accessTokenSecret);
+    if (decoded?.type !== 'access' || !decoded?.sub) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
   } catch {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
 
   try {
+    if (!AppDataSource.isInitialized) {
+      await AppDataSource.initialize();
+    }
+    const currentUser = await AppDataSource.getRepository(User).findOne({
+      where: { id: Number(decoded.sub) },
+    });
+    if (
+      !currentUser?.isActive ||
+      Number(decoded.ver) !== currentUser.authVersion
+    ) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    req.user = decoded;
+
     // Parse shop ID from header or query param (validation deferred to requireShopId)
     const shopIdValue = req.headers['x-shop-id'] ?? req.query.shopId;
     if (shopIdValue !== undefined) {

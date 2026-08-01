@@ -1,394 +1,587 @@
+import { createHmac, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
+import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
+import { EntityManager, ILike, Repository } from 'typeorm';
 import { AppDataSource } from '../config/db.config';
-import { User } from '../auth/entities';
+import { config } from '../config/env.config';
+import { AuthError } from '../auth/auth.errors';
+import {
+  ForgotPasswordDto,
+  GoogleAuthDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  SendOtpDto,
+  normalizeEmail,
+} from '../auth/auth.schemas';
+import { RefreshSession, User } from '../auth/entities';
 import { ShopMember } from '../shop/entities';
 import { ShopProfile } from '../system/entities';
-import { ILike } from 'typeorm';
-import * as jwt from 'jsonwebtoken';
-import * as bcrypt from 'bcrypt';
-import { config } from '../config/env.config';
-import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
 
+type OtpPurpose = 'REGISTER' | 'RESET';
+
+type AuthResult = {
+  access_token: string;
+  refresh_token: string;
+  user: Record<string, unknown>;
+  shops: unknown[];
+};
+
+const DUMMY_PASSWORD_HASH = '$2b$10$aOomly2n3KydeGDfTDO7HOoYu5HS6/EyRHWTwawmo.FiK7/9dVSMm';
+const MAX_LOGIN_FAILURES = 5;
+const LOGIN_LOCK_MINUTES = 15;
+const MAX_OTP_ATTEMPTS = 5;
+const MAX_OTP_SENDS = 3;
+
 export class AuthService {
-    private userRepo = AppDataSource.getRepository(User);
-    private memberRepo = AppDataSource.getRepository(ShopMember);
-    private shopRepo = AppDataSource.getRepository(ShopProfile);
-    private smsService = new SmsService();
-    private emailService = new EmailService();
+  private userRepo = AppDataSource.getRepository(User);
+  private memberRepo = AppDataSource.getRepository(ShopMember);
+  private shopRepo = AppDataSource.getRepository(ShopProfile);
+  private sessionRepo = AppDataSource.getRepository(RefreshSession);
+  private emailService = new EmailService();
+  private googleClient = new OAuth2Client();
 
-    async register(dto: Partial<User> & { otpCode?: string }) {
-        const identifier = (dto.username || '').toString().trim();
-        const isPhone = /^(0|\+84)\d{8,9}$/.test(identifier);
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+  private hashOtp(identifier: string, purpose: OtpPurpose, code: string): string {
+    return createHmac('sha256', config.otpSecret)
+      .update(`${purpose}:${identifier}:${code}`)
+      .digest('hex');
+  }
 
-        if (isPhone) {
-            throw new Error('Đăng ký bằng Số điện thoại hiện không được hỗ trợ. Vui lòng sử dụng địa chỉ Email.');
-        } else if (isEmail) {
-            dto.email = identifier;
-        } else {
-            throw new Error('Định dạng tài khoản không hợp lệ. Vui lòng sử dụng địa chỉ Email.');
-        }
-        (dto as any).isOnboarded = false;
+  private hashRefreshToken(token: string): string {
+    return createHmac('sha256', config.refreshTokenSecret).update(token).digest('hex');
+  }
 
-        const existing = await this.userRepo.findOne({
-            where: [
-                { username: identifier },
-                ...(isPhone ? [{ phone: identifier }] : []),
-                ...(isEmail ? [{ email: identifier }] : [])
-            ]
-        });
-        if (existing) throw new Error('Tài khoản, SĐT hoặc Email đã tồn tại');
+  private hashesMatch(left: string, right: string): boolean {
+    const leftBuffer = Buffer.from(left, 'hex');
+    const rightBuffer = Buffer.from(right, 'hex');
+    return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+  }
 
-        // Verify OTP if registering with phone number or email
-        if (isPhone || isEmail) {
-            const otpCode = (dto.otpCode || '').toString().trim();
-            if (!otpCode) throw new Error('Mã OTP là bắt buộc khi đăng ký');
-
-            const validOtp = await AppDataSource.query(`
-                SELECT * FROM otps 
-                WHERE phone = $1 AND otp_code = $2 AND expires_at > NOW() 
-                ORDER BY created_at DESC LIMIT 1
-            `, [identifier, otpCode]);
-
-            if (!validOtp || validOtp.length === 0) {
-                throw new Error('Mã xác thực OTP không đúng hoặc đã hết hạn');
-            }
-
-            // Cleanup OTP
-            await AppDataSource.query(`DELETE FROM otps WHERE phone = $1`, [identifier]);
-        }
-        
-        const password = (dto as any)?.password || (dto as any)?.passwordHash;
-        if (!password) throw new Error('Missing password');
-
-        const user = this.userRepo.create({
-            ...dto,
-            username: identifier,
-            // Do not persist raw password
-            passwordHash: await bcrypt.hash(password, 10),
-        } as any);
-        return this.userRepo.save(user);
+  private async findUserByIdentifier(
+    identifier: string,
+    repository: Repository<User> = this.userRepo,
+  ): Promise<User | null> {
+    if (identifier.includes('@')) {
+      const email = normalizeEmail(identifier);
+      return repository
+        .createQueryBuilder('user')
+        .where('LOWER(user.email) = :email OR LOWER(user.username) = :email', { email })
+        .getOne();
     }
+    return repository.findOne({
+      where: [{ username: identifier }, { phone: identifier }],
+    });
+  }
 
-    async login(dto: any) {
-        const identifier = (dto.username || '').toString().trim();
-        const user = await this.userRepo.findOne({
-            where: [
-                { username: identifier },
-                { phone: identifier },
-                { email: identifier }
-            ]
-        });
-        const password = (dto?.password || '').toString();
-        if (!user || !(await bcrypt.compare(password, user.passwordHash || ''))) {
-            throw new Error('Invalid credentials');
+  private async findVerifiedEmailUser(
+    email: string,
+    repository: Repository<User> = this.userRepo,
+  ): Promise<User | null> {
+    return repository
+      .createQueryBuilder('user')
+      .where('LOWER(user.email) = :email', { email })
+      .andWhere('user.email_verified = true')
+      .getOne();
+  }
+
+  private safeUser(user: User): Record<string, unknown> {
+    return {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      fullName: user.fullName,
+      email: user.email || null,
+      phone: user.phone || null,
+      avatarUrl: user.avatarUrl || null,
+      accountType: user.accountType,
+      isOnboarded: user.isOnboarded,
+    };
+  }
+
+  private async getUserShops(userId: number): Promise<unknown[]> {
+    try {
+      const memberships = await this.memberRepo.find({
+        where: { userId },
+        relations: ['role'],
+      });
+      return memberships.map((membership) => {
+        let permissions: Record<string, string> = {};
+        if (
+          membership.memberType === 'OWNER' &&
+          membership.status === 'ACTIVE' &&
+          membership.isActive
+        ) {
+          permissions = { _owner: 'true' };
+        } else if (
+          membership.status === 'ACTIVE' &&
+          membership.isActive &&
+          membership.role?.shopId === membership.shopId &&
+          membership.role.permissions
+        ) {
+          try {
+            permissions = JSON.parse(membership.role.permissions) as Record<string, string>;
+          } catch {
+            permissions = {};
+          }
         }
-        if (!user.isActive) {
-            throw new Error('Account is inactive');
-        }
-
-        const payload = { sub: user.id, username: user.username, role: user.role, accountType: user.accountType };
-        const accessToken = jwt.sign(
-            payload,
-            config.jwtSecret as jwt.Secret,
-            { expiresIn: String(config.jwtExpiresIn) } as jwt.SignOptions,
-        );
-        const refreshToken = jwt.sign(
-            payload,
-            config.jwtSecret as jwt.Secret,
-            { expiresIn: '7d' } as jwt.SignOptions,
-        );
-
-        let shops: any[];
-        try {
-            const memberships = await this.memberRepo.find({
-                where: { userId: user.id }, // Get all to check PENDING status
-                relations: ['role'],
-            });
-            shops = memberships.map(m => {
-                let permissions: Record<string, string> = {};
-                if (m.memberType === 'OWNER' && m.status === 'ACTIVE' && m.isActive) {
-                    permissions = { _owner: 'true' };
-                } else if (
-                    m.status === 'ACTIVE' &&
-                    m.isActive &&
-                    m.role?.shopId === m.shopId &&
-                    m.role.permissions
-                ) {
-                    try {
-                        permissions = JSON.parse(m.role.permissions);
-                    } catch {
-                        permissions = {};
-                    }
-                }
-                return {
-                    shopId: m.shopId,
-                    memberType: m.memberType,
-                    status: m.status,
-                    isActive: m.isActive,
-                    role: m.role ? { id: m.role.id, name: m.role.name } : null,
-                    permissions,
-                };
-            });
-        } catch {
-            shops = [];
-        }
-
         return {
-            access_token: accessToken,
-            refresh_token: refreshToken,
-            user: {
-                id: user.id,
-                username: user.username,
-                role: user.role,
-                fullName: user.fullName,
-                email: user.email || null,
-                phone: user.phone || null,
-                avatarUrl: user.avatarUrl || null,
-                accountType: user.accountType,
-                isOnboarded: user.isOnboarded,
-            },
-            shops,
+          shopId: membership.shopId,
+          memberType: membership.memberType,
+          status: membership.status,
+          isActive: membership.isActive,
+          role: membership.role
+            ? { id: membership.role.id, name: membership.role.name }
+            : null,
+          permissions,
         };
+      });
+    } catch {
+      return [];
     }
+  }
 
-    async refreshToken(refreshToken: string) {
-        if (!refreshToken) throw new Error('Missing refresh token');
-        let decoded: any;
-        try {
-            decoded = jwt.verify(refreshToken, config.jwtSecret as jwt.Secret);
-        } catch {
-            throw new Error('Invalid refresh token');
-        }
+  private async createSessionTokens(
+    user: User,
+    manager?: EntityManager,
+    familyId: string = randomUUID(),
+  ): Promise<{ accessToken: string; refreshToken: string; sessionId: string }> {
+    const sessionId = randomUUID();
+    const accessPayload = {
+      sub: user.id,
+      username: user.username,
+      role: user.role,
+      accountType: user.accountType,
+      ver: user.authVersion,
+      type: 'access',
+    };
+    const refreshPayload = { sub: user.id, sid: sessionId, type: 'refresh' };
+    const accessToken = jwt.sign(accessPayload, config.accessTokenSecret as jwt.Secret, {
+      expiresIn: String(config.jwtExpiresIn),
+      jwtid: randomUUID(),
+    } as jwt.SignOptions);
+    const refreshToken = jwt.sign(refreshPayload, config.refreshTokenSecret as jwt.Secret, {
+      expiresIn: `${config.refreshTokenExpiresInDays}d`,
+      jwtid: randomUUID(),
+    } as jwt.SignOptions);
 
-        const user = await this.userRepo.findOne({ where: { id: decoded.sub } });
-        if (!user || !user.isActive) throw new Error('Invalid user or inactive');
+    const repository = manager
+      ? manager.getRepository(RefreshSession)
+      : this.sessionRepo;
+    await repository.save(repository.create({
+      id: sessionId,
+      familyId,
+      userId: user.id,
+      tokenHash: this.hashRefreshToken(refreshToken),
+      expiresAt: new Date(Date.now() + config.refreshTokenExpiresInDays * 86_400_000),
+      revokedAt: null,
+      replacedBy: null,
+      lastUsedAt: null,
+    }));
+    return { accessToken, refreshToken, sessionId };
+  }
 
-        const payload = { sub: user.id, username: user.username, role: user.role, accountType: user.accountType };
-        const newAccessToken = jwt.sign(
-            payload,
-            config.jwtSecret as jwt.Secret,
-            { expiresIn: String(config.jwtExpiresIn) } as jwt.SignOptions,
-        );
-        const newRefreshToken = jwt.sign(
-            payload,
-            config.jwtSecret as jwt.Secret,
-            { expiresIn: '7d' } as jwt.SignOptions,
-        );
+  private async issueAuthResult(user: User): Promise<AuthResult> {
+    const tokens = await this.createSessionTokens(user);
+    return {
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+      user: this.safeUser(user),
+      shops: await this.getUserShops(user.id),
+    };
+  }
 
-        return { access_token: newAccessToken, refresh_token: newRefreshToken };
+  private async verifyOtp(
+    manager: EntityManager,
+    identifier: string,
+    purpose: OtpPurpose,
+    otpCode: string,
+  ): Promise<void> {
+    const rows = await manager.query(
+      `SELECT id, otp_code, attempts
+       FROM otps
+       WHERE phone = $1 AND purpose = $2 AND consumed_at IS NULL AND expires_at > NOW()
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [identifier, purpose],
+    );
+    const otp = rows[0];
+    if (!otp) {
+      throw new AuthError('Mã OTP không đúng hoặc đã hết hạn', 400, 'OTP_INVALID');
     }
-
-    async sendOtp(dto: { phone?: string; identifier?: string; checkExists?: boolean; isRegistration?: boolean }) {
-        const identifier = (dto?.identifier || dto?.phone || '').toString().trim();
-        if (!identifier) throw new Error('Thiếu số điện thoại hoặc email');
-
-        const isPhone = /^(0|\+84)\d{8,11}$/.test(identifier);
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-
-        if (isPhone && dto.isRegistration) {
-            throw new Error('Đăng ký bằng Số điện thoại hiện không được hỗ trợ. Vui lòng sử dụng địa chỉ Email.');
-        }
-        
-        if (!isPhone && !isEmail) throw new Error('Định dạng Số điện thoại hoặc Email không hợp lệ');
-
-        if (dto.checkExists) {
-            const user = await this.userRepo.findOne({
-                where: [
-                    { username: identifier },
-                    { phone: identifier },
-                    { email: identifier }
-                ]
-            });
-            if (!user) throw new Error('Số điện thoại hoặc Email này chưa được đăng ký trong hệ thống');
-        }
-
-        // Generate 6 digit OTP
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // Save to DB otps table
-        await AppDataSource.query(`
-            INSERT INTO otps (phone, otp_code, expires_at)
-            VALUES ($1, $2, NOW() + INTERVAL '2 minutes')
-        `, [identifier, otpCode]);
-
-        // Send actual SMS or Email
-        let sent: boolean;
-        if (isEmail) {
-            sent = await this.emailService.sendOtp(identifier, otpCode);
-        } else {
-            sent = await this.smsService.sendOtp(identifier, otpCode);
-        }
-        
-        const exposeOtp =
-            process.env.NODE_ENV !== 'production' &&
-            process.env.OTP_DEBUG_RESPONSE === 'true';
-        
-        if (!sent) {
-            throw new Error('Không thể gửi OTP do lỗi hệ thống hoặc cấu hình chưa đúng.');
-        }
-
-        return { 
-            success: true, 
-            message: 'Đã gửi OTP thành công', 
-            otp: exposeOtp ? otpCode : undefined
-        };
+    if (Number(otp.attempts) >= MAX_OTP_ATTEMPTS) {
+      throw new AuthError('Mã OTP đã bị khóa do nhập sai quá nhiều lần', 429, 'OTP_LOCKED');
     }
-
-    async forgotPassword(dto: any) {
-        const identifier = (dto?.identifier || '').toString().trim();
-        if (!identifier) throw new Error('Vui lòng nhập số điện thoại hoặc email');
-
-        const user = await this.userRepo.findOne({
-            where: [
-                { username: identifier },
-                { phone: identifier },
-                { email: identifier }
-            ]
-        });
-        if (!user) {
-            throw new Error('Số điện thoại hoặc email này chưa được đăng ký trong hệ thống');
-        }
-
-        // Generate OTP and send
-        return this.sendOtp({ identifier: user.email || user.phone || identifier, checkExists: false });
+    const actualHash = this.hashOtp(identifier, purpose, otpCode);
+    if (!this.hashesMatch(String(otp.otp_code), actualHash)) {
+      await manager.query('UPDATE otps SET attempts = attempts + 1 WHERE id = $1', [otp.id]);
+      throw new AuthError('Mã OTP không đúng hoặc đã hết hạn', 400, 'OTP_INVALID');
     }
+    await manager.query(
+      'UPDATE otps SET consumed_at = NOW() WHERE phone = $1 AND purpose = $2 AND consumed_at IS NULL',
+      [identifier, purpose],
+    );
+  }
 
-    async resetPassword(dto: any) {
-        const identifier = (dto?.identifier || '').toString().trim();
-        const newPassword = (dto?.newPassword || '').toString();
-        const otpCode = (dto?.otpCode || '').toString().trim();
-        if (!identifier || !newPassword || !otpCode) throw new Error('Vui lòng nhập đầy đủ thông tin (tài khoản, mật khẩu mới, mã OTP)');
+  async register(dto: RegisterDto): Promise<AuthResult> {
+    const email = normalizeEmail(dto.username);
+    const user = await AppDataSource.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [email]);
+      const repository = manager.getRepository(User);
+      if (await this.findUserByIdentifier(email, repository)) {
+        throw new AuthError('Địa chỉ Gmail đã tồn tại', 409, 'EMAIL_EXISTS');
+      }
+      await this.verifyOtp(manager, email, 'REGISTER', dto.otpCode);
+      return repository.save(repository.create({
+        username: email,
+        email,
+        emailVerified: true,
+        passwordHash: await bcrypt.hash(dto.password, 12),
+        fullName: dto.fullName,
+        accountType: dto.accountType,
+        role: 'STAFF',
+        isActive: true,
+        isOnboarded: false,
+        googleSubject: null,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        authVersion: 0,
+      }));
+    });
+    return this.issueAuthResult(user);
+  }
 
-        const user = await this.userRepo.findOne({
-            where: [
-                { username: identifier },
-                { phone: identifier },
-                { email: identifier }
-            ]
-        });
-        if (!user) throw new Error('Không tìm thấy tài khoản');
+  async login(dto: LoginDto): Promise<AuthResult> {
+    const identifier = dto.username.includes('@')
+      ? normalizeEmail(dto.username)
+      : dto.username.trim();
+    const user = await this.findUserByIdentifier(identifier);
+    const passwordValid = await bcrypt.compare(
+      dto.password,
+      user?.passwordHash || DUMMY_PASSWORD_HASH,
+    );
 
-        // Verify OTP
-        const validOtp = await AppDataSource.query(`
-            SELECT * FROM otps 
-            WHERE phone = $1 AND otp_code = $2 AND expires_at > NOW() 
-            ORDER BY created_at DESC LIMIT 1
-        `, [user.email || user.phone || identifier, otpCode]);
-
-        if (!validOtp || validOtp.length === 0) {
-            throw new Error('Mã xác thực OTP không đúng hoặc đã hết hạn');
+    if (user?.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+      throw new AuthError('Tài khoản tạm khóa. Vui lòng thử lại sau', 429, 'ACCOUNT_LOCKED');
+    }
+    if (!user || !passwordValid) {
+      if (user) {
+        const failures = user.failedLoginAttempts + 1;
+        user.failedLoginAttempts = failures;
+        if (failures >= MAX_LOGIN_FAILURES) {
+          user.lockedUntil = new Date(Date.now() + LOGIN_LOCK_MINUTES * 60_000);
+          user.failedLoginAttempts = 0;
         }
-
-        // Cleanup OTP
-        await AppDataSource.query(`DELETE FROM otps WHERE phone = $1`, [user.email || user.phone || identifier]);
-
-        user.passwordHash = await bcrypt.hash(newPassword, 10);
         await this.userRepo.save(user);
-        return { updated: true };
+      }
+      throw new AuthError('Sai Gmail hoặc mật khẩu', 401, 'INVALID_CREDENTIALS');
+    }
+    if (!user.isActive) {
+      throw new AuthError('Tài khoản đã bị khóa', 401, 'ACCOUNT_INACTIVE');
+    }
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = null;
+    await this.userRepo.save(user);
+    return this.issueAuthResult(user);
+  }
+
+  async googleAuth(dto: GoogleAuthDto): Promise<AuthResult> {
+    if (config.googleClientIds.length === 0) {
+      throw new AuthError('Google Sign-In chưa được cấu hình', 503, 'GOOGLE_NOT_CONFIGURED');
+    }
+    let payload;
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: dto.idToken,
+        audience: config.googleClientIds,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new AuthError('Google ID token không hợp lệ', 401, 'GOOGLE_TOKEN_INVALID');
+    }
+    const email = payload?.email ? normalizeEmail(payload.email) : '';
+    if (!payload?.sub || !payload.email_verified || !email.endsWith('@gmail.com')) {
+      throw new AuthError('Chỉ chấp nhận tài khoản Gmail đã được Google xác minh', 401, 'GOOGLE_EMAIL_INVALID');
     }
 
-    async searchShops(q: string) {
-        if (!q || q.trim().length === 0) return [];
-        const shops = await this.shopRepo.find({
-            where: { shopName: ILike(`%${q.trim()}%`) },
-            take: 10,
-            select: ['id', 'shopName', 'address', 'logoUrl'] // DO NOT expose shopCode
+    const user = await AppDataSource.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [email]);
+      const repository = manager.getRepository(User);
+      let current = await repository.findOne({ where: { googleSubject: payload.sub } });
+      current ??= await this.findVerifiedEmailUser(email, repository);
+      if (!current && !dto.createIfMissing) {
+        throw new AuthError('Chưa có tài khoản. Vui lòng đăng ký bằng Google trước', 404, 'ACCOUNT_NOT_FOUND');
+      }
+      if (!current) {
+        return repository.save(repository.create({
+          username: email,
+          email,
+          emailVerified: true,
+          passwordHash: null,
+          fullName: (payload.name || email.split('@')[0]).slice(0, 100),
+          avatarUrl: payload.picture || undefined,
+          accountType: dto.accountType,
+          role: 'STAFF',
+          isActive: true,
+          isOnboarded: false,
+          googleSubject: payload.sub,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+          authVersion: 0,
+        }));
+      }
+      if (current.googleSubject && current.googleSubject !== payload.sub) {
+        throw new AuthError('Gmail đã liên kết với tài khoản Google khác', 409, 'GOOGLE_LINK_CONFLICT');
+      }
+      if (!current.isActive) {
+        throw new AuthError('Tài khoản đã bị khóa', 401, 'ACCOUNT_INACTIVE');
+      }
+      current.googleSubject = payload.sub;
+      current.email = email;
+      current.emailVerified = true;
+      if (!current.avatarUrl && payload.picture) current.avatarUrl = payload.picture;
+      return repository.save(current);
+    });
+    return this.issueAuthResult(user);
+  }
+
+  async refreshToken(refreshToken: string): Promise<{ access_token: string; refresh_token: string }> {
+    if (!refreshToken) {
+      throw new AuthError('Thiếu refresh token', 401, 'REFRESH_MISSING');
+    }
+    let decoded: jwt.JwtPayload;
+    try {
+      decoded = jwt.verify(refreshToken, config.refreshTokenSecret) as jwt.JwtPayload;
+    } catch {
+      throw new AuthError('Phiên đăng nhập không hợp lệ', 401, 'REFRESH_INVALID');
+    }
+    if (decoded.type !== 'refresh' || !decoded.sub || typeof decoded.sid !== 'string') {
+      throw new AuthError('Phiên đăng nhập không hợp lệ', 401, 'REFRESH_INVALID');
+    }
+
+    const outcome = await AppDataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(RefreshSession);
+      const session = await repository
+        .createQueryBuilder('session')
+        .setLock('pessimistic_write')
+        .where('session.id = :id', { id: decoded.sid })
+        .getOne();
+      const presentedHash = this.hashRefreshToken(refreshToken);
+      if (!session || !this.hashesMatch(session.tokenHash, presentedHash)) {
+        throw new AuthError('Phiên đăng nhập không hợp lệ', 401, 'REFRESH_INVALID');
+      }
+      if (session.revokedAt) {
+        await repository.update({ familyId: session.familyId }, { revokedAt: new Date() });
+        return { kind: 'reused' as const };
+      }
+      if (session.expiresAt.getTime() <= Date.now()) {
+        session.revokedAt = new Date();
+        await repository.save(session);
+        throw new AuthError('Phiên đăng nhập đã hết hạn', 401, 'REFRESH_EXPIRED');
+      }
+      const user = await manager.getRepository(User).findOne({
+        where: { id: Number(decoded.sub) },
+      });
+      if (!user?.isActive) {
+        throw new AuthError('Tài khoản không còn hoạt động', 401, 'ACCOUNT_INACTIVE');
+      }
+      const next = await this.createSessionTokens(user, manager, session.familyId);
+      session.revokedAt = new Date();
+      session.lastUsedAt = new Date();
+      session.replacedBy = next.sessionId;
+      await repository.save(session);
+      return {
+        kind: 'tokens' as const,
+        access_token: next.accessToken,
+        refresh_token: next.refreshToken,
+      };
+    });
+    if (outcome.kind === 'reused') {
+      throw new AuthError('Phát hiện refresh token đã được sử dụng lại', 401, 'REFRESH_REUSED');
+    }
+    return {
+      access_token: outcome.access_token,
+      refresh_token: outcome.refresh_token,
+    };
+  }
+
+  async logout(refreshToken?: string): Promise<void> {
+    if (!refreshToken) return;
+    try {
+      const decoded = jwt.verify(refreshToken, config.refreshTokenSecret) as jwt.JwtPayload;
+      if (typeof decoded.sid !== 'string') return;
+      const session = await this.sessionRepo.findOne({ where: { id: decoded.sid } });
+      if (session && this.hashesMatch(session.tokenHash, this.hashRefreshToken(refreshToken))) {
+        session.revokedAt = new Date();
+        await this.sessionRepo.save(session);
+      }
+    } catch {
+      return;
+    }
+  }
+
+  async revokeAllSessions(userId: number): Promise<void> {
+    await this.sessionRepo
+      .createQueryBuilder()
+      .update()
+      .set({ revokedAt: new Date() })
+      .where('user_id = :userId AND revoked_at IS NULL', { userId })
+      .execute();
+  }
+
+  async sendOtp(dto: SendOtpDto): Promise<{ success: true; message: string; otp?: string }> {
+    const identifier = normalizeEmail(dto.identifier);
+    const purpose: OtpPurpose = dto.isRegistration ? 'REGISTER' : 'RESET';
+    const existing = await this.findUserByIdentifier(identifier);
+    if (purpose === 'REGISTER' && existing) {
+      throw new AuthError('Địa chỉ Gmail đã tồn tại', 409, 'EMAIL_EXISTS');
+    }
+    if (purpose === 'RESET' && !existing) {
+      return { success: true, message: 'Nếu Gmail tồn tại, mã OTP sẽ được gửi' };
+    }
+    const recent = await AppDataSource.query(
+      `SELECT COUNT(*)::int AS count FROM otps
+       WHERE phone = $1 AND purpose = $2 AND created_at > NOW() - INTERVAL '15 minutes'`,
+      [identifier, purpose],
+    );
+    if (Number(recent[0]?.count || 0) >= MAX_OTP_SENDS) {
+      throw new AuthError('Bạn đã yêu cầu quá nhiều mã OTP. Vui lòng thử lại sau 15 phút', 429, 'OTP_RATE_LIMIT');
+    }
+
+    const otpCode = randomInt(100000, 1000000).toString();
+    const otpHash = this.hashOtp(identifier, purpose, otpCode);
+    const inserted = await AppDataSource.query(
+      `INSERT INTO otps (phone, otp_code, purpose, attempts, expires_at)
+       VALUES ($1, $2, $3, 0, NOW() + INTERVAL '5 minutes')
+       RETURNING id`,
+      [identifier, otpHash, purpose],
+    );
+    const sent = await this.emailService.sendOtp(identifier, otpCode);
+    if (!sent) {
+      await AppDataSource.query('DELETE FROM otps WHERE id = $1', [inserted[0].id]);
+      throw new AuthError('Không thể gửi OTP. Vui lòng thử lại sau', 503, 'OTP_DELIVERY_FAILED');
+    }
+    const exposeOtp = process.env.NODE_ENV !== 'production' && process.env.OTP_DEBUG_RESPONSE === 'true';
+    return {
+      success: true,
+      message: purpose === 'RESET'
+        ? 'Nếu Gmail tồn tại, mã OTP sẽ được gửi'
+        : 'Đã gửi OTP thành công',
+      otp: exposeOtp ? otpCode : undefined,
+    };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    return this.sendOtp({
+      identifier: dto.identifier,
+      isRegistration: false,
+      checkExists: true,
+    });
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ updated: true }> {
+    const identifier = normalizeEmail(dto.identifier);
+    await AppDataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(User);
+      const user = await this.findUserByIdentifier(identifier, repository);
+      if (!user) {
+        throw new AuthError('Mã OTP không đúng hoặc đã hết hạn', 400, 'OTP_INVALID');
+      }
+      await this.verifyOtp(manager, identifier, 'RESET', dto.otpCode);
+      user.passwordHash = await bcrypt.hash(dto.newPassword, 12);
+      user.authVersion += 1;
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
+      await repository.save(user);
+      await manager.getRepository(RefreshSession)
+        .createQueryBuilder()
+        .update()
+        .set({ revokedAt: new Date() })
+        .where('user_id = :userId AND revoked_at IS NULL', { userId: user.id })
+        .execute();
+    });
+    return { updated: true };
+  }
+
+  async searchShops(q: string) {
+    if (!q || q.trim().length === 0) return [];
+    return this.shopRepo.find({
+      where: { shopName: ILike(`%${q.trim()}%`) },
+      take: 10,
+      select: ['id', 'shopName', 'address', 'logoUrl'],
+    });
+  }
+
+  async completeOnboarding(userId: number, dto: any) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new Error('User not found');
+
+    if (dto.username) {
+      const newUsername = dto.username.toString().trim();
+      const existing = await this.userRepo.findOne({ where: { username: newUsername } });
+      if (existing && existing.id !== user.id) throw new Error('Username already exists');
+      user.username = newUsername;
+    }
+    if (dto.phone) {
+      const newPhone = dto.phone.toString().trim();
+      const existing = await this.userRepo.findOne({ where: { phone: newPhone } });
+      if (existing && existing.id !== user.id) throw new Error('Phone already exists');
+      user.phone = newPhone;
+    }
+    if (dto.fullName) user.fullName = dto.fullName.toString().trim();
+    user.isOnboarded = true;
+    let status = 'ACTIVE';
+
+    await AppDataSource.transaction(async (manager) => {
+      await manager.save(user);
+      if (user.accountType === 'SHOP') {
+        const charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) code += charSet[randomInt(0, charSet.length)];
+        const shop = manager.create(ShopProfile, {
+          shopName: dto.shopName?.toString().trim() || user.fullName,
+          ownerName: dto.ownerName?.toString().trim() || user.fullName,
+          address: dto.address?.toString().trim() || '',
+          shopCode: code,
         });
-        return shops;
-    }
-
-    async completeOnboarding(userId: number, dto: any) {
-        const user = await this.userRepo.findOne({ where: { id: userId } });
-        if (!user) throw new Error('User not found');
-
-        if (dto.username) {
-            const newUsername = dto.username.toString().trim();
-            const existing = await this.userRepo.findOne({ where: { username: newUsername } });
-            if (existing && existing.id !== user.id) throw new Error('Username already exists');
-            user.username = newUsername;
+        const savedShop = await manager.save(shop);
+        await manager.save(manager.create(ShopMember, {
+          shopId: savedShop.id,
+          userId: user.id,
+          memberType: 'OWNER',
+          status: 'ACTIVE',
+          isActive: true,
+        }));
+      } else if (user.accountType === 'PERSONAL') {
+        const existingMember = await manager.findOne(ShopMember, { where: { userId: user.id } });
+        if (existingMember) {
+          status = existingMember.status;
+        } else {
+          const submittedShopCode = dto.shopCode?.toString().trim();
+          if (submittedShopCode) {
+            const submittedShopId = dto.shopId ? parseInt(dto.shopId, 10) : null;
+            const whereClause: Record<string, unknown> = { shopCode: submittedShopCode };
+            if (submittedShopId) whereClause.id = submittedShopId;
+            const targetShop = await manager.findOne(ShopProfile, { where: whereClause });
+            if (!targetShop) throw new Error('Không tìm thấy cửa hàng phù hợp');
+            await manager.save(manager.create(ShopMember, {
+              shopId: targetShop.id,
+              userId: user.id,
+              memberType: 'EMPLOYEE',
+              status: 'PENDING',
+              isActive: true,
+            }));
+            status = 'PENDING';
+          }
         }
-
-        if (dto.phone) {
-            const newPhone = dto.phone.toString().trim();
-            const existing = await this.userRepo.findOne({ where: { phone: newPhone } });
-            if (existing && existing.id !== user.id) throw new Error('Phone already exists');
-            user.phone = newPhone;
-        }
-
-        if (dto.fullName) user.fullName = dto.fullName.toString().trim();
-        user.isOnboarded = true;
-        // Business logic parsing
-        let status = 'ACTIVE';
-
-        await AppDataSource.transaction(async manager => {
-            await manager.save(user);
-
-            if (user.accountType === 'SHOP') {
-                // Generate a random 6-char shopCode (e.g. A-Z0-9)
-                const charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                let code = '';
-                for (let i = 0; i < 6; i++) {
-                    code += charSet.charAt(Math.floor(Math.random() * charSet.length));
-                }
-
-                const shopName = dto.shopName?.toString().trim() || user.fullName;
-                const ownerName = dto.ownerName?.toString().trim() || user.fullName;
-
-                const shop = manager.create(ShopProfile, {
-                    shopName: shopName,
-                    ownerName: ownerName,
-                    address: dto.address?.toString().trim() || '',
-                    shopCode: code,
-                });
-                const savedShop = await manager.save(shop);
-
-                const member = manager.create(ShopMember, {
-                    shopId: savedShop.id,
-                    userId: user.id,
-                    memberType: 'OWNER',
-                    status: 'ACTIVE',
-                    isActive: true, // Keep backward compatible flag
-                });
-                await manager.save(member);
-            } 
-            else if (user.accountType === 'PERSONAL') {
-                const existingMember = await manager.findOne(ShopMember, { where: { userId: user.id } });
-                if (existingMember) {
-                    status = existingMember.status;
-                } else {
-                    const submittedShopCode = dto.shopCode?.toString().trim();
-                    if (submittedShopCode) {
-                        const submittedShopId = dto.shopId ? parseInt(dto.shopId, 10) : null;
-                        const whereClause: any = { shopCode: submittedShopCode };
-                        if (submittedShopId) whereClause.id = submittedShopId;
-
-                        const targetShop = await manager.findOne(ShopProfile, { where: whereClause });
-                        if (!targetShop) throw new Error('Không tìm thấy Cửa hàng khớp với yêu cầu của bạn.');
-
-                        const member = manager.create(ShopMember, {
-                            shopId: targetShop.id,
-                            userId: user.id,
-                            memberType: 'EMPLOYEE',
-                            status: 'PENDING',
-                            isActive: true,
-                        });
-                        await manager.save(member);
-                        status = 'PENDING';
-                    } else {
-                        status = 'ACTIVE';
-                    }
-                }
-            }
-        });
-
-        return { 
-            updated: true, 
-            status: status, // PENDING for personal, ACTIVE for shop. App controls routing.
-            user: { 
-                id: user.id, username: user.username, phone: user.phone, 
-                fullName: user.fullName, isOnboarded: user.isOnboarded, accountType: user.accountType 
-            } 
-        };
-    }
+      }
+    });
+    return {
+      updated: true,
+      status,
+      user: this.safeUser(user),
+    };
+  }
 }

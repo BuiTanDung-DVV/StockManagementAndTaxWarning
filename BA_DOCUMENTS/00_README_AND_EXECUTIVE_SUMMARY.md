@@ -1,5 +1,12 @@
 # Bộ tài liệu BA SmartStock
 
+> **Cập nhật ngày 01/08/2026:** đã kiểm kê lại cấu trúc UI, luồng dữ liệu, bảng biểu và
+> benchmark báo cáo với Shopify, Square, Lightspeed, Odoo và Dynamics 365. Xem
+> [Audit tổng thể UI, luồng và hệ thống báo cáo](20_COMPREHENSIVE_UI_FLOW_REPORTING_AUDIT_20260801.md).
+> Vòng chụp production sau đăng nhập đang bị chặn vì chưa có phiên tài khoản test an toàn và
+> công cụ chụp canvas Flutter hết thời gian phản hồi;
+> không dùng ảnh cũ để khẳng định trạng thái hiện tại.
+
 > **Cập nhật ngày 30/07/2026:** đã chụp và audit 43 route production ở desktop
 > `1280×800` và mobile `390×844` (86 ảnh). Xem
 > [Báo cáo audit production UI, nghiệp vụ và code](18_PRODUCTION_UI_BUSINESS_CODE_AUDIT_20260730.md).
@@ -55,26 +62,27 @@ Mỗi kết luận phải thuộc một trong bốn trạng thái:
 Không dùng ảnh chụp giao diện để thay thế cho kiểm tra dữ liệu nguồn. Không ghi nhận
 đạt chuẩn accessibility vì chưa thực hiện kiểm thử chuyên biệt.
 
-## 3. Kết luận điều hành
+## 3. Kết luận điều hành hiện tại
 
-SmartStock đã có phạm vi chức năng rộng cho bán hàng, kho, tài chính, công nợ, thuế,
-nhân viên và cấu hình. Hai deployment production hoạt động và dùng cùng commit.
-Tuy nhiên, baseline hiện tại chưa phù hợp để coi là bản production tin cậy cho dữ
-liệu tài chính/thuế nếu chưa xử lý các vấn đề P0 sau:
+SmartStock có phạm vi chức năng rộng cho bán hàng, kho, tài chính, công nợ, thuế, nhân viên và cấu
+hình. Tuy nhiên source local ngày 01/08/2026 chưa an toàn để coi là bản production tin cậy nếu chưa
+xử lý các vấn đề ưu tiên sau:
 
-1. Luồng “tất cả cửa hàng” có thể bỏ qua kiểm tra quyền ở backend và tự xem là
-   `OWNER` ở frontend.
-2. Màn thuế và kho tri thức AI vẫn dùng ngưỡng miễn thuế 100 triệu đồng/năm; nguồn
-   pháp lý hiện hành năm 2026 dùng ngưỡng khác.
-3. Dashboard hiển thị VAT và thuế TNDN âm khi lợi nhuận âm; đây không phải kết quả
-   thuế có thể dùng để kê khai.
-4. Sổ nợ khách hàng và xuất Excel nợ đang dùng dữ liệu mẫu hard-code.
-5. Hai entity khác nhau cùng ánh xạ bảng `invoices`, đồng thời hai nhóm route cùng
-   khai báo `/invoices`.
+1. API tạo đơn vẫn dùng `unitPrice` do client gửi, chỉ kiểm tra không âm; backend chưa quyết định giá
+   theo sản phẩm/chính sách/quyền ghi đè.
+2. Báo cáo giá vốn hàng hoàn có thể trừ toàn bộ `total_cogs` của đơn cho một lần hoàn một phần.
+3. Nhiều danh sách và form chọn dữ liệu chỉ tải trang 1 mặc định 20 dòng, không có phân trang/tải tiếp.
+4. Metadata TypeORM của auth đã được sửa và có regression test; production vẫn chưa có migration
+   `20260801_harden_authentication.sql`, vì vậy chưa được deploy backend auth mới trước khi sao lưu,
+   cấu hình ba secret riêng và chạy migration có kiểm soát.
+5. `inventory_stocks` chưa có unique `(shop_id, warehouse_id, product_id)` trong entity/migration
+   hiện có; `sales_return_items` cũng thiếu liên kết dòng bán gốc và cost snapshot.
 
-Các vấn đề trên được mô tả với bằng chứng và tiêu chí nghiệm thu tại
-[Báo cáo xác minh](09_CURRENT_STATE_VERIFICATION_REPORT.md) và
-[Product backlog](10_PRODUCT_BACKLOG_AND_RELEASE_ROADMAP.md).
+Hai kết luận cũ đã được đóng ở source hiện tại: chỉ còn một entity `invoices`, và màn Sổ nợ đã dùng
+API `/customer-receivables` thay cho dữ liệu hard-code. Chi tiết mới nhất nằm tại
+[Audit tổng thể 01/08](20_COMPREHENSIVE_UI_FLOW_REPORTING_AUDIT_20260801.md),
+[Data Dictionary](03_DATA_DICTIONARY_AND_SCHEMA.md) và
+[Ma trận chụp production](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md).
 
 ## 4. Danh mục tài liệu
 
@@ -94,6 +102,8 @@ Các vấn đề trên được mô tả với bằng chứng và tiêu chí ngh
 | [12 - UI/UX Visual Upgrade Plan](12_UI_UX_VISUAL_UPGRADE_MASTER_PLAN.md) | Kế hoạch nâng cấp giao diện theo Material 3 và nguyên tắc Taste |
 | [13 - Production UI/UX vòng 2](13_PRODUCTION_UI_REVIEW_ROUND_2.md) | Audit 25 viewport/màn, phát hiện, bản vá và backlog tiếp theo |
 | [14 - Responsive fill layout](14_RESPONSIVE_FILL_LAYOUT_UPGRADE.md) | Quy tắc, thành phần và kiểm thử cho bố cục tự co giãn theo vùng chứa |
+| [20 - Audit UI, luồng và báo cáo 01/08](20_COMPREHENSIVE_UI_FLOW_REPORTING_AUDIT_20260801.md) | Đánh giá toàn hệ thống, benchmark, cấu trúc bảng/biểu đồ và lộ trình P0–V2.0 |
+| [21 - Ma trận chụp production](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md) | Phạm vi 55 route, màn con, trạng thái và tiêu chí ảnh desktop/mobile |
 
 ## 5. Nguồn bằng chứng
 
@@ -103,8 +113,9 @@ Các vấn đề trên được mô tả với bằng chứng và tiêu chí ngh
 - Ảnh production: [`assets/production-audit-2026-07-25/`](assets/production-audit-2026-07-25/)
 - Ảnh production vòng 2: [`assets/production-ui-audit-2026-07-26-round2/`](assets/production-ui-audit-2026-07-26-round2/)
 - Baseline trước bản vá: Flutter Web release và backend TypeScript build thành công.
-- Sau bản vá responsive: Flutter analyze đạt, Flutter test `26/26`, Flutter Web release
-  build đạt; backend build/lint và P0 suite `28/28` thành công.
+- Vòng kiểm tra 01/08: backend build/lint và P0 suite `47/47` đạt; Flutter analyze sạch,
+  Flutter suite `57/57` đạt và Flutter Web release build thành công. Kiểm toán DB chỉ đọc cũng chạy được;
+  migration auth production vẫn là điều kiện chặn phát hành backend.
 
 ## 6. Quy tắc quản trị tài liệu
 

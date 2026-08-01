@@ -1,15 +1,20 @@
 # Data Dictionary và ERD thực tế
 
+> Cập nhật đối chiếu source ngày 01/08/2026.
+
 ## 1. Nguồn và kết luận
 
-Tài liệu được lập từ 50 khai báo `@Entity` trong
+Tài liệu được lập từ 51 khai báo `@Entity` trong
 [`backend/src`](../backend/src/) và SQL tại
 [`backend/database`](../backend/database/).
 
-- Có 50 khai báo entity.
-- Có 49 tên bảng duy nhất vì `invoices` được ánh xạ bởi hai class khác nhau.
-- `otps` được tạo bằng DDL runtime trong
-  [`index.ts`](../backend/src/index.ts), không có TypeORM entity/migration chuẩn.
+- Có 51 khai báo entity và 51 tên bảng duy nhất.
+- Xung đột hai entity cùng ánh xạ `invoices` đã được loại bỏ; `FinanceService` dùng `Invoice`
+  duy nhất từ `system/entities.ts`.
+- `refresh_sessions` đã có entity và migration hardening auth.
+- `otps` vẫn không có TypeORM entity, nhưng schema đã được đưa vào migration
+  `20260725_p0_schema_baseline.sql` và `20260801_harden_authentication.sql`; không còn tạo bảng
+  trực tiếp trong `index.ts`.
 - Vì entity, SQL khởi tạo và database production chưa được introspect cùng lúc,
   trạng thái schema tổng thể là `Đúng một phần`.
 
@@ -55,13 +60,14 @@ mọi foreign key đã tồn tại trong database production.
 | Bảng | Entity/file | Mục đích | Scope/quan hệ chính | Trạng thái/rủi ro |
 |---|---|---|---|---|
 | `users` | `auth/entities.ts` | Tài khoản, credential, trạng thái | User có nhiều membership | Cần policy PII/token rõ |
+| `refresh_sessions` | `auth/entities.ts` | Phiên refresh token theo family | user, expiry, revoke/replacement | Cần cleanup định kỳ và phát hiện reuse |
 | `shop_roles` | `shop/entities.ts` | Vai trò tùy chỉnh | Quyền lưu dạng JSON/string | Cần schema/version permission |
 | `shop_members` | `shop/entities.ts` | Membership user–shop | user, shop, role, memberType | Nguồn quyết định RBAC |
 | `notifications` | `shop/entities.ts` | Thông báo người dùng | user/shop tùy loại | Route user-scoped cần lọc chặt |
-| `shop_profiles` | `system/entities.ts` | Hồ sơ cửa hàng, MST, ngành | Root của shop scope | DDL runtime đang thêm field thuế |
+| `shop_profiles` | `system/entities.ts` | Hồ sơ cửa hàng, MST, ngành | Root của shop scope | Cần xác minh production đã chạy migration baseline |
 | `activity_logs` | `system/entities.ts` | Nhật ký hoạt động | actor, shop, action/entity | Chưa chứng minh bao phủ đầy đủ |
 | `invoice_scans` | `system/entities.ts` | Kết quả scan hóa đơn | shop, file/metadata | Cần retention và PII policy |
-| `otps` | DDL trong `index.ts` | OTP đăng ký/reset | email đang lưu ở cột tên `phone` | Không có entity/migration; cần hash |
+| `otps` | SQL migration, truy vấn trực tiếp trong `auth.service.ts` | OTP đăng ký/reset | email vẫn lưu ở cột legacy tên `phone` | OTP đã hash; cần entity/repository hoặc rename rõ nghĩa |
 
 ### 3.2 Sản phẩm
 
@@ -89,7 +95,8 @@ Nguồn: [`customer/entities.ts`](../backend/src/customer/entities.ts).
 | `debt_evidences` | Bằng chứng nợ | receivable | File access/retention |
 | `debt_payment_history` | Lịch sử thu nợ | receivable, cash transaction | Idempotency và immutable |
 
-Production hiện chưa dùng các bảng này cho màn Sổ nợ; Flutter dùng dữ liệu mẫu.
+Màn Sổ nợ hiện gọi API `/customer-receivables`; không còn dùng danh sách mẫu tại Flutter. Cần kiểm
+tra production để chứng minh số tổng khớp `receivables` và lịch sử thu nợ.
 
 ### 3.4 Nhà cung cấp và công nợ phải trả
 
@@ -148,7 +155,7 @@ Nguồn:
 | `budget_plans` | Kế hoạch ngân sách | shop, period | Version/status |
 | `cashflow_forecasts` | Dự báo dòng tiền | shop, period | Phân biệt actual/forecast |
 | `daily_closings` | Chốt ngày | shop, date | Unique shop+date, signed/locked |
-| `invoices` | Hóa đơn tài chính | shop, counterparty | Trùng tên với system Invoice |
+| `invoices` | Hóa đơn tài chính dùng chung | shop, counterparty, items | Một entity duy nhất tại `system/entities.ts` |
 | `tax_obligations` | Nghĩa vụ thuế | shop, period/rule | Không âm, nguồn rule |
 | `purchases_without_invoice` | Mua chưa hóa đơn | shop, supplier | Theo dõi bổ sung chứng từ |
 | `purchase_without_invoice_items` | Dòng mua chưa hóa đơn | parent, product/description | Tổng khớp header |
@@ -156,43 +163,26 @@ Nguồn:
 | `journal_lines` | Dòng bút toán | entry, account | Debit/credit hợp lệ |
 | `financial_ledger` | Sổ tài chính tổng hợp | shop, reference | Phạm vi chồng với journal/cash cần làm rõ |
 
-### 3.8 Hóa đơn hệ thống
+### 3.8 Hóa đơn và scan chứng từ
 
 Nguồn: [`system/entities.ts`](../backend/src/system/entities.ts).
 
 | Bảng | Mục đích | Quan hệ chính | Rủi ro |
 |---|---|---|---|
-| `invoices` | Một mô hình Invoice thứ hai | shop, invoice items | Trùng vật lý với finance Invoice |
-| `invoice_items` | Dòng hóa đơn system | system invoice | Có thể không tương thích finance Invoice |
+| `invoices` | Aggregate hóa đơn dùng chung | shop, invoice items, reference | Cần unique theo shop/số/ký hiệu/kỳ |
+| `invoice_items` | Dòng hóa đơn | invoice, product tùy chọn | Cần snapshot đơn vị/tên/thuế |
 
-## 4. Xung đột `invoices`
+## 4. Trạng thái hợp nhất `invoices`
 
-```mermaid
-flowchart TD
-    TABLE["PostgreSQL: invoices"]
-    FIN["finance.Invoice"]
-    SYS["system.Invoice"]
-    FIN --> TABLE
-    SYS --> TABLE
-    RF["finance.routes /invoices"] --> FIN
-    RS["system.routes /invoices"] --> SYS
-```
+Mâu thuẫn hai entity `Invoice` cùng dùng bảng `invoices` trong tài liệu cũ đã được xử lý ở source
+hiện tại:
 
-Mức độ: `Không chính xác` / P0.
+- chỉ còn một `@Entity('invoices')` trong `system/entities.ts`;
+- `FinanceService` import model này làm repository hóa đơn;
+- datasource đăng ký `SystemInvoice` và `SystemInvoiceItem` đúng một lần.
 
-Rủi ro:
-
-- TypeORM metadata có hai định nghĩa cột/quan hệ cho cùng bảng.
-- Express route được mount cùng prefix `/api`, route khai báo trước có thể shadow route sau.
-- Migration tương lai không biết model nào là nguồn đúng.
-- Dữ liệu hóa đơn/summary có thể được đọc bằng service khác với service ghi.
-
-Quyết định cần có trước khi sửa:
-
-1. Invoice nào là aggregate root?
-2. `invoice_scans` là dữ liệu nhập hay hóa đơn chính?
-3. Có cần tách `purchase_invoices`/`sales_invoices`?
-4. Contract `/api/invoices` hiện có consumer nào?
+Trạng thái: `Đã xác minh từ code`. Vẫn cần introspect production để xác minh cột/index thật khớp
+entity và không còn migration cũ tạo schema khác.
 
 ## 5. Shop scope và khóa dữ liệu
 
@@ -235,20 +225,12 @@ Các bảng cần kiểm tra migration/constraint cụ thể: `products`, `custo
 | `20260525_create_tax_rules.sql` | Tax rules | Cần nguồn/effective date/approval |
 | `QLKH.sql` | SQL khởi tạo/tổng hợp cũ | Không được coi là migration production tự động |
 
-## 8. DDL runtime cần loại bỏ
+## 8. DDL runtime
 
-[`index.ts`](../backend/src/index.ts) chạy `ALTER TABLE shop_profiles` và
-`CREATE TABLE IF NOT EXISTS otps` khi khởi động local lẫn Vercel initialization.
-
-Tác động:
-
-- cold start phụ thuộc quyền DDL và lock DB;
-- schema production có thể thay đổi ngoài lịch sử migration;
-- lỗi bị log rồi request vẫn có thể tiếp tục với schema thiếu;
-- khó rollback và audit.
-
-Mục tiêu V1.2: runtime chỉ kết nối; migration chạy riêng, có checksum, backup,
-staging rehearsal và approval.
+`index.ts` hiện chỉ khởi tạo datasource và không còn chạy `ALTER TABLE`/`CREATE TABLE` khi cold
+start. Đây là cải thiện đã xác minh từ code. Migration vẫn cần quy trình riêng có checksum, backup,
+staging rehearsal và approval; datasource hiện để `migrations: []`, nên ứng dụng chưa tự chứng minh
+production đã chạy đủ migration.
 
 ## 9. Dữ liệu chưa xác minh
 
@@ -260,3 +242,35 @@ staging rehearsal và approval.
 
 Để xác minh cần schema-only dump hoặc quyền read-only vào `information_schema` và
 query kiểm soát đã được duyệt; không cần quyền sửa dữ liệu.
+
+## 10. Đánh giá độ phù hợp của mô hình dữ liệu hiện tại
+
+Đối với cửa hàng phân bón, vật liệu xây dựng và đồ gia dụng, schema hiện đủ để chạy demo nghiệp vụ
+cơ bản nhưng chưa đủ chặt cho vận hành nhiều cửa hàng và báo cáo kiểm toán.
+
+| ID | Mức | Khoảng trống đã thấy trong entity/migration | Ảnh hưởng | Hướng mục tiêu |
+|---|---|---|---|---|
+| DM-01 | P0 | `inventory_stocks` chưa có unique `(shop_id, warehouse_id, product_id)` trong entity hoặc migration index hiện có | Có thể sinh nhiều dòng tồn cho cùng sản phẩm/kho và cộng trùng báo cáo | Unique constraint + upsert transaction + query phát hiện duplicate trước migration |
+| DM-02 | P1 | Phần lớn quantity đang suy ra kiểu integer; chỉ `purchase_without_invoice_items` dùng `numeric(18,3)` | Không phù hợp kg, mét, m², m³ hoặc bán lẻ một phần bao/cuộn | Chuẩn hóa quantity `numeric(18,3)` và snapshot đơn vị trên mọi dòng chứng từ |
+| DM-03 | P0 | `sales_return_items` không trỏ `sales_order_item_id`, không lưu cost snapshot hoặc lô hoàn | Không thể xác định chắc giá vốn hoàn một phần/đơn có cùng sản phẩm nhiều dòng | Liên kết dòng bán gốc, lưu returned cost và đảo đúng lot deduction |
+| DM-04 | P1 | `purchase_order_items` thiếu ordered/received/rejected quantity, đơn vị và lịch nhận | Không mô hình hóa nhập nhiều đợt, thiếu/thừa/hỏng | Receipt header/items riêng hoặc các cột nhận hàng có audit |
+| DM-05 | P1 | `inventory_movements` entity thiếu đơn giá, thành tiền, tồn trước/sau; DDL cũ lại có `cost_price` | XNT số lượng có thể chạy nhưng định giá và đối soát giá vốn yếu | Ledger kho immutable có quantity, unit cost, value, before/after và reference bắt buộc |
+| DM-06 | P1 | `products.tags` là `simple-array` trong khi có bảng `tags` riêng | Hai nguồn tag có thể lệch; lọc khó index | Bảng nối `product_tags(product_id, tag_id)` unique |
+| DM-07 | P1 | Nhiều `shop_id` nullable nhưng các khóa `name/sku/code` lại unique toàn cục | Cửa hàng khác có thể không dùng cùng tên “Kho chính”/“Sơn” hoặc SKU mong muốn | Chốt catalog dùng chung hay theo shop; unique composite đúng scope, shop_id NOT NULL cho dữ liệu shop |
+| DM-08 | P1 | `cash_accounts.balance` và `cash_transactions.running_balance` cùng lưu số dư | Sửa/xóa/backdate giao dịch có thể làm số dư lệch | Ledger bất biến + transaction posting; balance là read model có job đối soát |
+| DM-09 | P2 | Dòng bán/hóa đơn chưa snapshot đầy đủ tên, SKU và đơn vị tại thời điểm phát sinh | Đổi thông tin sản phẩm có thể làm chứng từ lịch sử hiển thị khác | Snapshot các trường pháp lý/hiển thị trên dòng chứng từ |
+| DM-10 | P2 | `activity_logs.old_value/new_value` là chuỗi giới hạn 2.000 ký tự | Khó truy vấn, có thể cắt payload lớn | JSONB có redaction PII, schema version và retention |
+
+### 10.1 Bảng bổ sung cho hệ thống báo cáo
+
+Không nên tạo bảng riêng cho từng biểu đồ. Nên giữ nguồn giao dịch chuẩn và bổ sung read model có
+thể tái tạo:
+
+1. `inventory_daily_snapshots`: tồn cuối ngày, giá trị tồn và phương pháp giá vốn theo shop/kho/SKU.
+2. `sales_daily_facts`: gross, discount, return, net, COGS, gross profit, order count theo ngày/shop.
+3. `payment_reconciliation_daily`: doanh thu, thanh toán theo phương thức và chênh lệch.
+4. `receivable_aging_snapshots` và `payable_aging_snapshots`: bucket tuổi nợ theo ngày chốt.
+5. Materialized view/read model cho ABC, sell-through, days cover, turnover và GMROI.
+
+Mỗi read model phải có `as_of`, `shop_id`, công thức/version và job đối soát với bảng giao dịch; không
+được trở thành nguồn ghi nghiệp vụ thứ hai.

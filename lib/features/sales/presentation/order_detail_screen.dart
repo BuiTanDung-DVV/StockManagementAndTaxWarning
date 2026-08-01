@@ -378,6 +378,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                     .toString();
                                 final retReason = (rMap['reason'] ?? '')
                                     .toString();
+                                final returnId = rMap['id'];
                                 return Container(
                                   margin: const EdgeInsets.only(top: 8),
                                   decoration: BoxDecoration(
@@ -390,10 +391,12 @@ class OrderDetailScreen extends ConsumerWidget {
                                     borderRadius: BorderRadius.circular(12),
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(12),
-                                      onTap: () => context.push(
-                                        '/returns/detail',
-                                        extra: ret,
-                                      ),
+                                      onTap: returnId == null
+                                          ? null
+                                          : () => context.push(
+                                              '/sales/returns/$returnId',
+                                              extra: ret,
+                                            ),
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Column(

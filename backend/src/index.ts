@@ -4,17 +4,20 @@ import cors = require('cors');
 import helmet from 'helmet';
 import morgan = require('morgan');
 import { AppDataSource } from './config/db.config';
-import { config } from './config/env.config';
+import { config, isAllowedOrigin, validateSecurityConfig } from './config/env.config';
+
+validateSecurityConfig();
 
 const app = express();
 
-app.use(express.json());
+app.disable('x-powered-by');
+if (process.env.VERCEL === '1') app.set('trust proxy', 1);
+app.use(express.json({ limit: '256kb' }));
 app.use(cors({
   origin: (origin, callback) => {
     if (
       !origin ||
-      config.allowedOrigins.indexOf(origin) !== -1 ||
-      /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+      isAllowedOrigin(origin)
     ) {
       callback(null, true);
     } else {

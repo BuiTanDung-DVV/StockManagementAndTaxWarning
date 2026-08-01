@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
+import '../providers/auth_provider.dart';
+import 'widgets/google_sign_in_button.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -90,16 +92,36 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return score;
   }
 
-  void _handleSocialRegister(String provider) {
-    ToastService.showInfo(
-      'Đăng ký qua $provider chưa được tích hợp. Vui lòng đăng ký bằng email và OTP.',
-    );
+  bool get _canSubmit {
+    final email = _emailCtrl.text.trim().toLowerCase();
+    return _fullNameCtrl.text.trim().length >= 2 &&
+        RegExp(r'^[^\s@]+@gmail\.com$').hasMatch(email) &&
+        _calculatePasswordStrength(_passwordCtrl.text) == 5 &&
+        _passwordCtrl.text == _confirmPasswordCtrl.text;
+  }
+
+  Future<void> _registerWithGoogle(String idToken) async {
+    final success = await ref
+        .read(authProvider.notifier)
+        .authenticateWithGoogle(
+          idToken: idToken,
+          createIfMissing: true,
+          accountType: _accountType,
+        );
+    if (!mounted) return;
+    if (success) {
+      ToastService.showSuccess('Đăng ký Google thành công!');
+      context.go('/onboarding');
+    } else {
+      final message = ref.read(authProvider).error;
+      if (message != null) ToastService.showError(message);
+    }
   }
 
   Future<void> _proceedToOtpVerification() async {
     _error = null;
     final fullName = _fullNameCtrl.text.trim();
-    final email = _emailCtrl.text.trim();
+    final email = _emailCtrl.text.trim().toLowerCase();
     final pass = _passwordCtrl.text;
     final confirmPass = _confirmPasswordCtrl.text;
 
@@ -108,17 +130,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    final emailRegex = RegExp(r'^[^\s@]+@gmail\.com$');
     if (!emailRegex.hasMatch(email)) {
-      setState(() => _error = 'Địa chỉ Email không hợp lệ');
+      setState(() => _error = 'Vui lòng sử dụng địa chỉ @gmail.com hợp lệ');
       return;
     }
 
     final strengthScore = _calculatePasswordStrength(pass);
-    if (pass.length < 8 || strengthScore < 3) {
+    if (pass.length < 8 || strengthScore < 5) {
       setState(
         () => _error =
-            'Mật khẩu chưa đạt tiêu chuẩn bảo quốc tế (cần tối thiểu 8 ký tự kết hợp chữ hoa, chữ thường, số hoặc ký tự đặc biệt)',
+            'Mật khẩu phải có ít nhất 8 ký tự, chữ hoa, chữ thường, số và ký tự đặc biệt',
       );
       return;
     }
@@ -230,30 +252,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Social Registration Options
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildSocialButton(
-                                  icon: Icons.g_mobiledata_rounded,
-                                  iconColor: Colors.redAccent,
-                                  label: 'Google',
-                                  onTap: () => _handleSocialRegister('Google'),
-                                  c: c,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildSocialButton(
-                                  icon: Icons.facebook_rounded,
-                                  iconColor: Colors.blueAccent,
-                                  label: 'Facebook',
-                                  onTap: () =>
-                                      _handleSocialRegister('Facebook'),
-                                  c: c,
-                                ),
-                              ),
-                            ],
+                          GoogleAuthButton(
+                            enabled: !_isLoading,
+                            isRegistration: true,
+                            onIdToken: _registerWithGoogle,
                           ),
                           const SizedBox(height: 20),
                           Row(
@@ -435,7 +437,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _isLoading
+                              onPressed: _isLoading || !_canSubmit
                                   ? null
                                   : _proceedToOtpVerification,
                               style: ElevatedButton.styleFrom(
@@ -617,42 +619,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSocialButton({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required VoidCallback onTap,
-    required AppThemeColors c,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.divider),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: iconColor, size: 26),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: c.textPrimary,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -1,5 +1,9 @@
 # Danh mục kiểm thử nghiệm thu
 
+> **Cập nhật 01/08/2026:** backend build/lint và P0 suite đạt `47/47`; Flutter analyze sạch,
+> Flutter suite đạt `57/57` và Web release build thành công. Vẫn chưa có test đủ mạnh cho giá bán
+> bị sửa từ client, giá vốn hoàn một phần và phân trang 300 sản phẩm.
+
 > **Bằng chứng hiện có 25/07/2026:** backend P0 suite đạt `28/28` trên local cho
 > permission, debt, sales metric, invoice metadata và tax policy. Các test
 > Flutter cho reporting period, CSV công nợ và mobile AI/POS đã được bổ sung;
@@ -18,10 +22,17 @@
 | TC-DATA-04 | Metadata/route invoice | Một table owner, một route set, CRUD không regression | Metadata test đạt; CRUD production chưa xác minh |
 | TC-TAX-06 | Declared < paid, số âm/NaN cũ | Owed = 0; overpaid tách riêng; UI không hiện nghĩa vụ âm | Unit test đạt; production chưa xác minh |
 | TC-TAX-07 | MST `0123456789` và biến thể đơn vị phụ thuộc | 422, không tạo XML | Unit test đạt; production chưa xác minh |
-| TC-DEBT-04 | API receivable → UI → CSV | Cùng số dòng và tổng còn nợ; không âm | Backend/source review đạt một phần; Flutter test chưa chạy lại; production chưa đối soát |
-| TC-CSV-01 | Tên có dấu phẩy/nháy và ô bắt đầu `=+-@` | CSV UTF-8 đúng và không thực thi formula | Test đã bổ sung nhưng chưa chạy lại; browser production chưa xác minh |
-| TC-MOB-01 | POS 390×844 với cart và AI | Checkout không bị nav/AI che | Test đã bổ sung nhưng chưa chạy lại; viewport production chưa xác minh |
-| TC-PERIOD-01 | Ngày đầu/cuối tháng, tháng 1 | Dashboard/sales/finance dùng cùng from/to | Test đã bổ sung nhưng chưa chạy lại; API production chưa đối soát |
+| TC-DEBT-04 | API receivable → UI → CSV | Cùng số dòng và tổng còn nợ; không âm | Flutter test đạt; production chưa đối soát |
+| TC-CSV-01 | Tên có dấu phẩy/nháy và ô bắt đầu `=+-@` | CSV UTF-8 đúng và không thực thi formula | Flutter test đạt; browser production chưa xác minh |
+| TC-MOB-01 | POS 390×844 với cart và AI | Checkout không bị nav/AI che | Flutter test đạt; viewport production chưa xác minh |
+| TC-PERIOD-01 | Ngày đầu/cuối tháng, tháng 1 | Dashboard/sales/finance dùng cùng from/to | Flutter test đạt; API production chưa đối soát |
+| TC-SALE-08 | Client gửi `unitPrice` khác giá/policy backend | Backend từ chối hoặc áp dụng giá hợp lệ; override cần quyền+lý do+audit | Chưa có test, P0 mở |
+| TC-SALE-09 | Đơn 10 dòng/sản phẩm, hoàn 2 rồi hoàn tiếp 3 | COGS hoàn lần lượt đúng 2 và 3; tổng không vượt COGS đã bán | Chưa có test, P0 mở |
+| TC-PAGE-01 | 300 sản phẩm/khách/NCC, tìm bản ghi ở trang cuối | UI duyệt/tìm/chọn được đủ; không lặp/mất; filter reset trang | Chưa có test, P0 mở |
+| TC-ROUTE-01 | Quét mọi literal `context.go/push` và reload detail URL | Không có path dùng nhưng chưa khai báo; detail tải lại bằng `:id` | Static route registry đạt; reload detail còn cần integration test |
+| TC-AUTH-05 | Build metadata và khởi tạo datasource sau auth hardening | Không có cột TypeORM kiểu `Object`; datasource init thành công | Metadata và audit DB chỉ đọc đạt; production chưa chạy migration auth |
+| TC-INV-07 | Hai request đồng thời tạo/cập nhật cùng tồn SKU/kho | Chỉ một dòng `(shop,warehouse,product)`; quantity cân | Chưa có unique constraint/test |
+| TC-RBAC-08 | Menu/router/API cho tax estimate, tax config, logs, AI knowledge | Cùng module/action cho owner/view/edit/none | Hiện mapping không khớp |
 
 ## 1. Tiền điều kiện chung
 
