@@ -1,5 +1,40 @@
 # Ma trận truy vết yêu cầu
 
+> **Trạng thái hiện hành 01/08/2026 — production `093b17ac`, local `cc800da3`:**
+> bảng E2E ngay dưới là nguồn trạng thái mới nhất. Các bảng baseline 25/07 được giữ phía sau để
+> truy vết lịch sử, không được dùng để kết luận production hiện tại đã đạt.
+
+## 0. Ma trận xác minh luồng end-to-end hiện hành
+
+Quy ước: `Đã xác minh`, `Đúng một phần`, `Không chính xác`, `Bị chặn`. Một luồng chỉ được ghi
+`Đã xác minh` khi yêu cầu, UI, API, dữ liệu và test cùng chứng minh một kết quả.
+
+| Luồng/yêu cầu | UI/điểm vào | API và dữ liệu chính | Bằng chứng production | Bằng chứng local/test | Trạng thái | Việc bắt buộc để đóng |
+|---|---|---|---|---|---|---|
+| AUTH — đăng ký, OTP, login, refresh, logout | `/login`, `/register`, `/verify-otp` | `/auth/*`; `users`, `otps`, refresh-token family | Login và protected route hoạt động ở commit cũ | Auth hardening + 47/47 backend P0 đạt; migration auth chưa chạy production | Bị chặn | Cấu hình 3 secret riêng, backup, migration, cold-start và test OTP/refresh/reuse/logout production |
+| SALE — POS, giá bán, thanh toán | `/pos`, `/sales` | `/sales-orders`, payments; products, orders, cash, receivables | POS/list tải được và hiện giá bán | Backend vẫn nhận `unitPrice` từ client; chưa có test pricing policy | Không chính xác | Backend quyết định giá; override cần quyền/lý do/audit; TC-SALE-08/01/02 đạt |
+| SALE — detail, hoàn/hủy | `/sales/:id`, modal hoàn | order detail, cancel, return; items, COGS, movements | List/detail cùng mã khác khách; hoàn không chọn dòng/số lượng | `findOne` thiếu relation customer; return chưa có item-level COGS | Không chính xác | Join customer; return theo item/quantity/cost lot; test nhiều lần hoàn và idempotency |
+| PRODUCT/MEDIA — ảnh và giá | `/products`, `/products/:id`, form | product CRUD + Cloudinary lifecycle; `products.image_url` | List có ảnh thật nhưng detail hiện icon mặc định | Lifecycle thay/xóa ảnh đạt unit test | Đúng một phần | Một DTO/image contract cho list/detail/form; regression ảnh cũ bị xóa sau replace |
+| INV/PURCHASE — tồn, nhập, kiểm kê, XNT | `/inventory`, `/purchase-orders`, `/stock-take`, `/xnt-report` | inventory, PO, stock take, movements, lots | KPI `20`/`112` mâu thuẫn; form PO 404; XNT mobile mất cột; có quantity 0 | KPI/min-stock đã sửa local; route form đã khai báo; chưa có invariant DB/concurrency test | Không chính xác | Deploy bản sửa sau gate; quantity > 0; unique tồn; XNT reconciliation và responsive test |
+| DEBT — công nợ và thu nợ | `/customer-debts`, `/debt-aging`, customer detail | receivables, payment history, cash transactions | 453 khoản nợ tải thật; thiếu pagination; nợ vượt hạn mức không cảnh báo | Helper thu nợ/remaining đạt unit test | Đúng một phần | Server pagination; exposure/limit control; thu nợ cập nhật debt+cash trong một transaction |
+| FIN — sổ quỹ, chi phí, lương, chốt ca, P&L | `/finance`, `/expense-ledger`, `/salary-ledger`, `/daily-closing`, `/profit-loss` | cash transactions, summaries, closings | Chi phí tổng 0 nhưng có dòng ngoài kỳ; tháng lương sai; ô trống tạo chênh lệch âm | Source xác nhận ba nguyên nhân; chưa có test chống tái phát | Không chính xác | Một period contract; nullable closing cash; TC-FIN-04/05/06 và reconciliation đạt |
+| TAX — ước tính, cấu hình, nghĩa vụ, kê khai | `/tax-*`, `/tax-declaration` | `/tax/config`, `/tax/estimate`, `/tax/export-htkk`; tax rules/profile | Ngưỡng 1 tỷ có nguồn; kỳ/sort chưa đúng; chart mobile vỡ; “Nộp” chỉ mở hướng dẫn | Tax policy/MST 47/47 suite đạt | Đúng một phần, rủi ro cao | Rule version/effective date; sort kỳ; đổi đúng copy; XML qua XSD/HTKK fixture |
+| RBAC/MULTI-SHOP | menu, settings, chọn cửa hàng | middleware permission + shop scope; memberships, roles | “Tất cả cửa hàng” từng làm lỗi UI/khó quay lại; label quyền lẫn key kỹ thuật | Parser/scope/permission unit test đạt; route-policy FE/BE còn lệch | Không chính xác | Ma trận module×action dùng chung; negative test owner/view/edit/none ở single/all shops |
+| REPORT/EXPORT — bảng, biểu đồ, file | dashboard và mọi màn báo cáo | summary/read model/export endpoints | Có chart/KPI cơ bản nhưng thiếu drill-down, pagination, scope/filter/asOf; “Excel” có chỗ là CSV | Benchmark và grain dữ liệu đã lập; chưa có report contract test toàn miền | Đúng một phần | Metric contract; AppPagedTable; export toàn tập; reconciliation + checksum + encoding test |
+| AI/AUDIT | launcher, AI knowledge, activity log | knowledge documents, activity logs | AI che CTA; log ghi chung “Hệ thống/Cập nhật thông tin” | Có source quản lý tài liệu; chưa đủ actor/entity/before-after | Đúng một phần | Collision manager; source version/effective date; audit schema và negative-redaction test |
+| RESPONSIVE/ACCESSIBILITY | toàn app | UI/component layer | 47 ảnh mobile: card reflow khá, nhưng XNT/chart/CTA còn lỗi | Chưa có keyboard, screen reader, zoom 200%, contrast gate | Không chính xác; accessibility bị chặn | Matrix viewport, screenshot regression, focus/semantic/zoom/contrast chuyên biệt |
+| DATA QUALITY — invoice, master data, freshness | report/detail/export | invoices/items, products, movements, migrations | 60 invoice đầu vào thiếu item; 558 invoice không tự cân bằng giảm giá; tên sản phẩm chậm luân chuyển bị thiếu | Validator đọc đã phát hiện; chưa có migration/backfill được duyệt | Không chính xác | Data-quality gate trước báo cáo/export; backfill có đối soát và rollback |
+
+### Bằng chứng kiểm thử mới nhất
+
+- Backend `npm run test:p0` tại local `cc800da3`: **47/47 đạt**, gồm auth, permission, shop scope,
+  tax, debt, sales metric, invoice metadata và media lifecycle.
+- `flutter test` chạy lại tại cùng HEAD ngày 01/08/2026 bị timeout sau **180,6 giây trước khi có output**;
+  không ghi nhận pass/fail từ lần chạy này. Kết quả 57/57 trong tài liệu là bằng chứng của lần chạy trước,
+  còn code Flutter không đổi sau `66ccbe70` nhưng toolchain hiện vẫn thiếu tính lặp lại.
+- Production vẫn ở `093b17ac`; mọi fix local phải giữ trạng thái `Chưa xác minh production` cho đến khi
+  deployment và regression test hoàn tất.
+
 > **Delta 25/07/2026:** trạng thái `Code/test đạt` dưới đây là bằng chứng local
 > sau `bba0c5f5`; cột production cố ý để `Chưa xác minh` cho đến khi deploy.
 
@@ -29,7 +64,7 @@ Liên kết test: [`../backend/test/`](../backend/test/) và
 - `TC`: mã kiểm thử tại [11_ACCEPTANCE_TEST_CATALOG.md](11_ACCEPTANCE_TEST_CATALOG.md).
 - Trạng thái là kết quả của baseline ngày 25/07/2026, không phải cam kết tương lai.
 
-## 2. Ma trận
+## 2. Ma trận baseline 25/07/2026 — lưu lịch sử
 
 | ID | Yêu cầu | UI | API chính | Dữ liệu chính | TC | Trạng thái |
 |---|---|---|---|---|---|---|

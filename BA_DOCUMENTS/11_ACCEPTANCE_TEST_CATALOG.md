@@ -1,8 +1,9 @@
 # Danh mục kiểm thử nghiệm thu
 
-> **Cập nhật 01/08/2026:** backend build/lint và P0 suite đạt `47/47`; Flutter analyze sạch,
-> Flutter suite đạt `57/57` và Web release build thành công. Vẫn chưa có test đủ mạnh cho giá bán
-> bị sửa từ client, giá vốn hoàn một phần và phân trang 300 sản phẩm.
+> **Cập nhật kiểm tra lại tại local `cc800da3`, 01/08/2026:** backend build + P0 suite đạt `47/47`.
+> `flutter test` chạy lại bị timeout sau 180,6 giây trước khi có output, nên lần này không tạo bằng chứng
+> pass/fail. Kết quả Flutter analyze sạch, `57/57` test và Web release build là bằng chứng của lần chạy
+> trước; code Flutter không đổi sau `66ccbe70`, nhưng khả năng chạy lặp lại của toolchain vẫn phải xử lý.
 
 > **Bằng chứng hiện có 25/07/2026:** backend P0 suite đạt `28/28` trên local cho
 > permission, debt, sales metric, invoice metadata và tax policy. Các test
@@ -33,6 +34,17 @@
 | TC-AUTH-05 | Build metadata và khởi tạo datasource sau auth hardening | Không có cột TypeORM kiểu `Object`; datasource init thành công | Metadata và audit DB chỉ đọc đạt; production chưa chạy migration auth |
 | TC-INV-07 | Hai request đồng thời tạo/cập nhật cùng tồn SKU/kho | Chỉ một dòng `(shop,warehouse,product)`; quantity cân | Chưa có unique constraint/test |
 | TC-RBAC-08 | Menu/router/API cho tax estimate, tax config, logs, AI knowledge | Cùng module/action cho owner/view/edit/none | Hiện mapping không khớp |
+| TC-SALE-10 | Mở cùng một đơn từ list, detail và invoice | `customerId/name`, tổng, thanh toán và trạng thái giống nhau | Production sai tên khách; chưa có contract test |
+| TC-INV-08 | 300 sản phẩm, nhiều kho, min-stock riêng | KPI tổng dùng server total; low-stock dùng `min_stock`; đổi trang không đổi tổng | Fix local có; production chưa deploy/test |
+| TC-DATA-05 | Tạo/import/duyệt chứng từ có quantity 0 hoặc âm | UI/API/DB từ chối; không ghi movement, COGS hoặc tổng | Production còn bản ghi quantity 0; chưa có DB constraint |
+| TC-FIN-04 | Sổ chi phí tháng không có dữ liệu nhưng có giao dịch tháng trước | KPI/chart/list/export cùng rỗng; đổi sang tháng trước thì tổng bằng tổng dòng | Production KPI và list khác kỳ |
+| TC-FIN-05 | Sổ lương tháng 8 với giao dịch ngày 10/07 | Dòng tháng 7 không xuất hiện; header/tổng/list/export cùng `from/to` | Production đang tính sai kỳ |
+| TC-FIN-06 | Mở chốt ca nhưng chưa nhập tiền thực tế | Hiện “Chưa đối soát”, không tính chênh lệch và không cho khóa | Production ép ô trống thành 0 |
+| TC-ROUTE-02 | Reload/share PO detail và transaction detail | Tải bằng `:id`; id thiếu/sai trả 404 UI; không hiện sửa/xóa khi entity không hợp lệ | Production dựng `PO-null`/`-0 đ` |
+| TC-MOB-02 | XNT và ngưỡng thuế ở 390×844/zoom 200% | Đọc đủ cột hoặc card; mốc 900 triệu/1 tỷ không vỡ chữ | Production bị cắt/vỡ nhãn |
+| TC-MEDIA-01 | List/detail/form cùng sản phẩm có ảnh; thay ảnh | Cùng ảnh/thumbnail contract; ảnh cũ bị xóa; fallback chỉ khi tải lỗi | Lifecycle unit test đạt; production detail chưa dùng ảnh |
+| TC-REP-02 | Một filter áp dụng KPI, chart, bảng và export | Cùng `shop/from/to/status/timezone/asOf`; tổng đối soát bằng dòng | Chưa có metric contract toàn hệ thống |
+| TC-TAX-08 | Nghĩa vụ nhiều năm/quý và hành động nộp | Sắp mới→cũ; CTA nói đúng khả năng; chỉ ghi “Nộp” khi có tích hợp/receipt | Production sort sai và CTA chỉ mở disclaimer |
 
 ## 1. Tiền điều kiện chung
 

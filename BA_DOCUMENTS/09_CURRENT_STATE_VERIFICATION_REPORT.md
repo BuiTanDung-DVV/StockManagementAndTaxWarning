@@ -1,9 +1,10 @@
 # Báo cáo xác minh tính chính xác hiện tại
 
-> **Cập nhật source audit 01/08/2026:** production sau đăng nhập chưa được chụp lại trong vòng này.
-> Các kết luận mới bên dưới được xác minh từ code/test local và phải được smoke test lại trước khi
-> coi là trạng thái production. Phạm vi ảnh xem
-> [ma trận 55 route](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md).
+> **Cập nhật production vòng 3 ngày 01/08/2026:** đã chụp và mở kiểm tra 99 ảnh production
+> (52 desktop, 47 mobile), bao phủ 49 route/màn protected. Production đang ở `093b17ac`, local
+> ở `cc800da3` và đi trước 6 commit. Phạm vi, ảnh và giới hạn xem tại
+> [ma trận 55 route](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md) và
+> [báo cáo trực quan vòng 3](25_PRODUCTION_VISUAL_AUDIT_RUN3_20260801.md).
 
 > **Cập nhật production 26/07/2026:** bản vá và vòng nâng cấp UI thứ nhất đã được
 > triển khai từ commit ứng dụng `17dd84d4b46994c921d373d03273bb39b9787ac4`.
@@ -20,10 +21,16 @@
 | CUR-05 | Route CTA kho và hoàn trả | Đúng một phần | Đã khai báo `/purchase-orders/form`, chuyển CTA hoàn trả sang `/sales/returns/:id` và route registry test đạt; deep-link chi tiết vẫn cần bỏ phụ thuộc `state.extra` | Cao |
 | CUR-06 | Guard route và API | Đúng một phần | Tax estimate/activity/AI knowledge/tax config có mapping quyền lệch | Cao |
 | CUR-07 | Invoice entity | Đã xác minh từ code | 51 entity/51 bảng duy nhất; một model `invoices` | Trung bình; chờ introspect DB |
-| CUR-08 | Sổ nợ | Đúng một phần | Flutter gọi `/customer-receivables`; chưa đối soát UI–API–DB có dữ liệu | Cao |
-| CUR-09 | Bộ test backend P0 | Đã xác minh | Build/lint và 47/47 test đạt | Trung bình; test chưa phủ CUR-01/02 đầy đủ |
-| CUR-10 | Flutter analyze/test/build | Đã xác minh local | Analyze sạch, 57/57 test đạt, Web release build thành công | Trung bình; chưa thay thế smoke test production |
+| CUR-08 | Sổ nợ | Đúng một phần | Production tải 453 khoản phải thu thật; chưa phân trang, chưa đối soát thu nợ và khách vượt hạn mức không có cảnh báo | Cao |
+| CUR-09 | Bộ test backend P0 | Đã xác minh local | Build + 47/47 test đạt lại tại `cc800da3` | Trung bình; test chưa phủ CUR-01/02 và các lỗi kỳ tài chính |
+| CUR-10 | Flutter analyze/test/build | Đúng một phần | Lần trước analyze sạch, 57/57 test và Web build đạt; lần chạy lại tại `cc800da3` timeout 180,6 giây trước output | Trung bình; toolchain chưa lặp lại ổn định |
 | CUR-11 | Accessibility | Bị chặn | Chưa test keyboard, focus, zoom 200%, screen reader | Trung bình |
+| CUR-12 | KPI kho và ngưỡng cảnh báo | Không chính xác production | Production hiển thị tổng 20 nhưng dưới định mức 112; local đã sửa dùng server total và `min_stock` | Rất cao |
+| CUR-13 | Định danh khách ở đơn bán | Không chính xác | Cùng `SOY109500`: list là Đội thầu Minh Tâm, detail là Khách mua lẻ; API detail thiếu join customer | Rất cao |
+| CUR-14 | Kỳ chi phí/lương và chốt ca | Không chính xác | Summary/list khác kỳ; tháng 8 chứa dòng 10/07; ô thực tế trống tạo chênh lệch âm 1,919 tỷ | Rất cao |
+| CUR-15 | Toàn vẹn invoice/chứng từ | Không chính xác | 60 invoice đầu vào thiếu item, 558 invoice không tự cân bằng discount, chứng từ có quantity 0 | Rất cao |
+| CUR-16 | Deep-link và route nhập hàng | Không chính xác production | Form PO Page Not Found; PO/transaction detail dựng `PO-null`/`-0 đ` và vẫn có action | Cao |
+| CUR-17 | Thuế và báo cáo mobile | Đúng một phần, rủi ro cao | Ngưỡng 1 tỷ có nguồn chính thức; kỳ/sort/CTA chưa đúng, chart ngưỡng vỡ nhãn | Cao |
 
 ## Snapshot production đã xác minh ngày 26/07/2026
 
