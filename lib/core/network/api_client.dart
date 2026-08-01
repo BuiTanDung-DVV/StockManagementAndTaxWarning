@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'auth_token_storage.dart';
+import 'configure_dio.dart';
 
 /// Custom App API Exception
 class ApiException implements Exception {
@@ -42,17 +46,24 @@ class ApiClient {
   String? _token;
   String? _refreshToken;
   String? _shopId;
-  bool _isRefreshing = false;
+  Future<bool>? _refreshFuture;
+  final AuthTokenStorage _tokenStorage;
 
-  ApiClient() {
+  ApiClient({AuthTokenStorage? tokenStorage})
+    : _tokenStorage = tokenStorage ?? SecureAuthTokenStorage() {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 60),
         receiveTimeout: const Duration(seconds: 60),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-Platform': kIsWeb ? 'web' : 'native',
+          if (kIsWeb) 'X-Requested-With': 'XMLHttpRequest',
+        },
       ),
     );
+    configureDioForPlatform(_dio);
 
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -67,32 +78,16 @@ class ApiClient {
         },
         onError: (e, handler) async {
           // 401 → Try to refresh token
-          if (e.response?.statusCode == 401) {
-            if (_refreshToken != null && !_isRefreshing) {
-              _isRefreshing = true;
-              try {
-                final refreshDio = Dio(BaseOptions(baseUrl: baseUrl));
-                final res = await refreshDio.post(
-                  '/auth/refresh-token',
-                  data: {'refresh_token': _refreshToken},
-                );
-
-                if (res.data['success'] == true && res.data['data'] != null) {
-                  final newAccess = res.data['data']['access_token'];
-                  final newRefresh = res.data['data']['refresh_token'];
-                  await saveToken(newAccess, newRefresh);
-
-                  // Retry requested failed API
-                  final opts = e.requestOptions;
-                  opts.headers['Authorization'] = 'Bearer $newAccess';
-                  final retryRes = await _dio.fetch(opts);
-                  _isRefreshing = false;
-                  return handler.resolve(retryRes);
-                }
-              } catch (_) {
-                // Ignore and let it fall through
-              }
-              _isRefreshing = false;
+          if (e.response?.statusCode == 401 &&
+              !_isPublicAuthRequest(e.requestOptions) &&
+              e.requestOptions.extra['authRetried'] != true) {
+            final refreshed = await _refreshOnce();
+            if (refreshed && _token != null) {
+              final opts = e.requestOptions;
+              opts.extra['authRetried'] = true;
+              opts.headers['Authorization'] = 'Bearer $_token';
+              final retryRes = await _dio.fetch(opts);
+              return handler.resolve(retryRes);
             }
             await clearToken();
           }
@@ -168,6 +163,68 @@ class ApiClient {
         },
       ),
     );
+  }
+
+  bool _isPublicAuthRequest(RequestOptions options) {
+    final path = options.path.toLowerCase();
+    return path.contains('auth/login') ||
+        path.contains('auth/register') ||
+        path.contains('auth/google') ||
+        path.contains('auth/refresh-token') ||
+        path.contains('auth/forgot-password') ||
+        path.contains('auth/reset-password') ||
+        path.contains('auth/send-otp');
+  }
+
+  Dio _createSessionDio() {
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-Platform': kIsWeb ? 'web' : 'native',
+          if (kIsWeb) 'X-Requested-With': 'XMLHttpRequest',
+        },
+      ),
+    );
+    configureDioForPlatform(dio);
+    return dio;
+  }
+
+  Future<bool> _performRefresh() async {
+    if (!kIsWeb && (_refreshToken == null || _refreshToken!.isEmpty)) {
+      return false;
+    }
+    try {
+      final response = await _createSessionDio().post(
+        'auth/refresh-token',
+        data: kIsWeb ? <String, dynamic>{} : {'refresh_token': _refreshToken},
+      );
+      final body = response.data;
+      if (body is! Map || body['success'] != true || body['data'] is! Map) {
+        return false;
+      }
+      final data = Map<String, dynamic>.from(body['data'] as Map);
+      final access = data['access_token']?.toString();
+      if (access == null || access.isEmpty) return false;
+      await saveToken(access, data['refresh_token']?.toString());
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _refreshOnce() {
+    final active = _refreshFuture;
+    if (active != null) return active;
+    final future = _performRefresh();
+    _refreshFuture = future;
+    unawaited(
+      future.whenComplete(() {
+        if (identical(_refreshFuture, future)) _refreshFuture = null;
+      }),
+    );
+    return future;
   }
 
   void setToken(String? token) => _token = token;
@@ -295,27 +352,61 @@ class ApiClient {
 
   Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('auth_token');
-    _refreshToken = prefs.getString('refresh_token');
     _shopId = prefs.getString('shop_id');
+    if (kIsWeb) {
+      await _refreshOnce();
+      return;
+    }
+
+    _token = await _tokenStorage.read('auth_token');
+    _refreshToken = await _tokenStorage.read('refresh_token');
+
+    // One-time migration from legacy SharedPreferences storage.
+    final legacyAccess = prefs.getString('auth_token');
+    final legacyRefresh = prefs.getString('refresh_token');
+    if (_token == null && legacyAccess != null) {
+      await _tokenStorage.write('auth_token', legacyAccess);
+      _token = legacyAccess;
+    }
+    if (_refreshToken == null && legacyRefresh != null) {
+      await _tokenStorage.write('refresh_token', legacyRefresh);
+      _refreshToken = legacyRefresh;
+    }
+    await prefs.remove('auth_token');
+    await prefs.remove('refresh_token');
   }
 
   Future<void> saveToken(String token, [String? refreshToken]) async {
     _token = token;
     _refreshToken = refreshToken ?? _refreshToken;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
+    if (kIsWeb) return;
+    await _tokenStorage.write('auth_token', token);
     if (refreshToken != null) {
-      await prefs.setString('refresh_token', refreshToken);
+      await _tokenStorage.write('refresh_token', refreshToken);
     }
   }
 
   Future<void> clearToken() async {
     _token = null;
     _refreshToken = null;
+    if (!kIsWeb) {
+      await _tokenStorage.delete('auth_token');
+      await _tokenStorage.delete('refresh_token');
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('refresh_token');
+  }
+
+  Future<void> revokeSession() async {
+    try {
+      await _createSessionDio().post(
+        'auth/logout',
+        data: kIsWeb ? <String, dynamic>{} : {'refresh_token': _refreshToken},
+      );
+    } finally {
+      await clearToken();
+    }
   }
 }
 

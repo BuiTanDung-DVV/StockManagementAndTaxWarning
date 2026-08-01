@@ -8,6 +8,7 @@ import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/app_version_widget.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
+import 'widgets/google_sign_in_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -36,6 +37,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .login(_usernameController.text.trim(), _passwordController.text);
     if (!success || !mounted) return;
 
+    _navigateAfterAuthentication();
+  }
+
+  Future<void> _loginWithGoogle(String idToken) async {
+    final success = await ref
+        .read(authProvider.notifier)
+        .authenticateWithGoogle(idToken: idToken, createIfMissing: false);
+    if (!success || !mounted) return;
+    _navigateAfterAuthentication();
+  }
+
+  void _navigateAfterAuthentication() {
     final auth = ref.read(authProvider);
     if (!auth.isOnboarded) {
       context.go('/onboarding');
@@ -68,6 +81,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 setState(() => _obscurePassword = !_obscurePassword);
               },
               onLogin: _login,
+              onGoogleIdToken: _loginWithGoogle,
               onForgotPassword: () => context.push('/forgot-password'),
               onRegister: () => context.push('/register'),
             );
@@ -263,6 +277,7 @@ class _LoginForm extends StatelessWidget {
   final String? error;
   final VoidCallback onTogglePassword;
   final VoidCallback onLogin;
+  final Future<void> Function(String idToken) onGoogleIdToken;
   final VoidCallback onForgotPassword;
   final VoidCallback onRegister;
 
@@ -275,6 +290,7 @@ class _LoginForm extends StatelessWidget {
     required this.error,
     required this.onTogglePassword,
     required this.onLogin,
+    required this.onGoogleIdToken,
     required this.onForgotPassword,
     required this.onRegister,
   });
@@ -311,7 +327,7 @@ class _LoginForm extends StatelessWidget {
               autofillHints: const [AutofillHints.username],
               onSubmitted: (_) => passwordFocus.requestFocus(),
               decoration: const InputDecoration(
-                labelText: 'Số điện thoại hoặc tên đăng nhập',
+                labelText: 'Gmail hoặc tên đăng nhập',
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -360,6 +376,8 @@ class _LoginForm extends StatelessWidget {
                     )
                   : const Text('Đăng nhập'),
             ),
+            const SizedBox(height: AppSpacing.sm),
+            GoogleAuthButton(enabled: !loading, onIdToken: onGoogleIdToken),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               alignment: WrapAlignment.spaceBetween,

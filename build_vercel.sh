@@ -20,13 +20,20 @@ echo "📦 Đang tải các thư viện (packages)..."
 flutter pub get
 
 echo "🔨 Đang tiến hành Build Web..."
-# Nếu trên Vercel có cài biến API_URL thì tự động truyền vào, nếu không thì build mặc định
-if [ -z "$API_URL" ]; then
-  echo "⚠️ Không tìm thấy biến môi trường API_URL. Build với cấu hình mặc định."
-  flutter build web --release
+# Truyền các cấu hình public vào Flutter bằng dart-define mà không in giá trị ra build log.
+BUILD_ARGS=(--release)
+if [ -n "$API_URL" ]; then
+  BUILD_ARGS+=(--dart-define="API_URL=$API_URL")
 else
-  echo "✅ Đã nhận được API_URL: $API_URL. Đang build với --dart-define"
-  flutter build web --release --dart-define=API_URL=$API_URL
+  echo "⚠️ Không tìm thấy biến môi trường API_URL. Build với cấu hình mặc định."
 fi
+
+if [ -n "$GOOGLE_WEB_CLIENT_ID" ]; then
+  BUILD_ARGS+=(--dart-define="GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID")
+else
+  echo "⚠️ Thiếu GOOGLE_WEB_CLIENT_ID; đăng nhập Google trên Web sẽ không hoạt động."
+fi
+
+flutter build web "${BUILD_ARGS[@]}"
 
 echo "✨ Hoàn thành quá trình Build!"

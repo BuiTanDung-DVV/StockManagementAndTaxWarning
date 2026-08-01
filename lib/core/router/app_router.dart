@@ -22,6 +22,7 @@ import '../../features/suppliers/presentation/supplier_detail_screen.dart';
 import '../../features/inventory/presentation/inventory_screen.dart';
 import '../../features/inventory/presentation/stock_take_screen.dart';
 import '../../features/inventory/presentation/purchase_order_screen.dart';
+import '../../features/inventory/presentation/purchase_order_form_screen.dart';
 import '../../features/inventory/presentation/purchase_order_detail_screen.dart';
 import '../../features/finance/presentation/transaction_detail_screen.dart';
 import '../../features/sales/presentation/return_detail_screen.dart';
@@ -214,6 +215,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(
         path: '/verify-otp',
+        redirect: (_, state) {
+          final extra = state.extra;
+          if (extra is! Map<String, dynamic> ||
+              (extra['email']?.toString().isEmpty ?? true) ||
+              (extra['password']?.toString().isEmpty ?? true)) {
+            return '/register';
+          }
+          return null;
+        },
         builder: (_, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
           return OtpVerificationScreen(
@@ -322,6 +332,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/purchase-orders',
             builder: (_, _) => const PurchaseOrderScreen(),
+          ),
+          GoRoute(
+            path: '/purchase-orders/form',
+            builder: (_, _) => const PurchaseOrderFormScreen(),
           ),
           GoRoute(
             path: '/xnt-report',

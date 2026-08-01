@@ -98,21 +98,16 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _sendOtp() async {
-    final phone = _phoneCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim().toLowerCase();
     if (phone.isEmpty) {
-      setState(() => _error = 'Vui lòng nhập số điện thoại hoặc email');
+      setState(() => _error = 'Vui lòng nhập địa chỉ Gmail');
       return;
     }
 
-    final phoneRegex = RegExp(r'^(0|\+84)\d{8,11}$');
-    final emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
+    final emailRegex = RegExp(r'^[^\s@]+@gmail\.com$');
 
-    if (!phoneRegex.hasMatch(phone) && !emailRegex.hasMatch(phone)) {
-      setState(
-        () => _error = 'Định dạng số điện thoại hoặc email không hợp lệ',
-      );
+    if (!emailRegex.hasMatch(phone)) {
+      setState(() => _error = 'Vui lòng nhập địa chỉ @gmail.com hợp lệ');
       return;
     }
 
@@ -153,7 +148,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _submitReset() async {
-    final phone = _phoneCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim().toLowerCase();
     final otpCode = _otpCtrl.text.trim();
     final pass = _passwordCtrl.text;
     final confirmPass = _confirmPasswordCtrl.text;
@@ -176,8 +171,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       return;
     }
 
-    if (pass.length < 6) {
-      setState(() => _error = 'Mật khẩu mới phải từ 6 ký tự trở lên');
+    final strongPassword =
+        pass.length >= 8 &&
+        RegExp(r'[A-Z]').hasMatch(pass) &&
+        RegExp(r'[a-z]').hasMatch(pass) &&
+        RegExp(r'\d').hasMatch(pass) &&
+        RegExp(r'[^A-Za-z0-9]').hasMatch(pass);
+    if (!strongPassword) {
+      setState(
+        () => _error =
+            'Mật khẩu phải có ít nhất 8 ký tự, chữ hoa, chữ thường, số và ký tự đặc biệt',
+      );
       return;
     }
 
@@ -295,7 +299,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         ? 'Mật khẩu của bạn đã được thay đổi. Hãy đăng nhập lại bằng mật khẩu mới.'
                         : _otpSent
                         ? 'Vui lòng nhập mã xác thực OTP đã gửi đến ${_phoneCtrl.text} cùng mật khẩu mới.'
-                        : 'Nhập địa chỉ Email hoặc SĐT đã đăng ký. Chúng tôi sẽ gửi mã xác thực để khôi phục.',
+                        : 'Nhập địa chỉ Gmail đã đăng ký. Chúng tôi sẽ gửi mã xác thực để khôi phục.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 13,
@@ -332,7 +336,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         controller: _phoneCtrl,
                         focusNode: _phoneFocus,
                         hasFocus: _phoneHasFocus,
-                        hintText: 'Nhập Email hoặc số điện thoại đăng ký',
+                        hintText: 'Nhập địa chỉ Gmail đã đăng ký',
                         icon: Icons.contact_mail_rounded,
                         c: c,
                         theme: theme,

@@ -12,6 +12,7 @@ import '../../settings/providers/system_provider.dart';
 import '../../settings/providers/notification_provider.dart';
 import '../../settings/providers/costing_provider.dart';
 import '../../settings/providers/tax_config_provider.dart';
+import '../services/google_auth_service.dart';
 
 // ─── Auth State ───
 class AuthState {
@@ -147,7 +148,9 @@ class AuthNotifier extends Notifier<AuthState> {
       return true;
     } catch (e) {
       String msg = 'Không thể đăng nhập. Vui lòng thử lại';
-      if (e is DioException && e.error is ApiException) {
+      if (e is ApiException) {
+        msg = e.message;
+      } else if (e is DioException && e.error is ApiException) {
         msg = (e.error as ApiException).message;
       }
       final lowerMsg = msg.toLowerCase();
@@ -172,6 +175,81 @@ class AuthNotifier extends Notifier<AuthState> {
             'Không thể kết nối đến máy chủ. Vui lòng kiểm tra đường truyền mạng.';
       }
       state = state.copyWith(isLoading: false, error: msg);
+      return false;
+    }
+  }
+
+  Future<bool> _acceptAuthResponse(dynamic data) async {
+    if (data is! Map) return false;
+    final response = Map<String, dynamic>.from(data);
+    final token = response['access_token']?.toString() ?? '';
+    if (token.isEmpty) return false;
+    await _api.saveToken(token, response['refresh_token']?.toString());
+    final user = response['user'] is Map
+        ? Map<String, dynamic>.from(response['user'] as Map)
+        : null;
+    final shops = response['shops'] as List? ?? const [];
+    ref.read(shopProvider.notifier).initFromLogin(shops);
+    state = AuthState(
+      isLoggedIn: true,
+      token: token,
+      user: user,
+      accountType: user?['accountType'] as String? ?? 'PERSONAL',
+      isOnboarded: user?['isOnboarded'] as bool? ?? false,
+    );
+    return true;
+  }
+
+  Future<bool> registerWithOtp({
+    required String email,
+    required String password,
+    required String fullName,
+    required String accountType,
+    required String otpCode,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final data = await _api.post(
+        '/auth/register',
+        data: {
+          'username': email.trim().toLowerCase(),
+          'password': password,
+          'fullName': fullName.trim(),
+          'accountType': accountType,
+          'otpCode': otpCode,
+        },
+      );
+      return await _acceptAuthResponse(data);
+    } catch (error) {
+      final message = error is ApiException
+          ? error.message
+          : 'Không thể hoàn tất đăng ký. Vui lòng thử lại.';
+      state = state.copyWith(isLoading: false, error: message);
+      return false;
+    }
+  }
+
+  Future<bool> authenticateWithGoogle({
+    required String idToken,
+    required bool createIfMissing,
+    String accountType = 'PERSONAL',
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final data = await _api.post(
+        '/auth/google',
+        data: {
+          'idToken': idToken,
+          'createIfMissing': createIfMissing,
+          'accountType': accountType,
+        },
+      );
+      return await _acceptAuthResponse(data);
+    } catch (error) {
+      final message = error is ApiException
+          ? error.message
+          : 'Không thể xác thực tài khoản Google.';
+      state = state.copyWith(isLoading: false, error: message);
       return false;
     }
   }
@@ -248,7 +326,12 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> logout() async {
     state = const AuthState();
-    await _api.clearToken();
+    try {
+      await _api.revokeSession();
+    } catch (_) {
+      // Local credentials are cleared even when the server is unreachable.
+    }
+    await GoogleAuthService.instance.signOut();
     ref.read(shopProvider.notifier).clear();
 
     // Invalidate all data providers to clear cache and prevent data leaks
@@ -295,10 +378,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<List<Map<String, dynamic>>> searchShops(String query) async {
     if (query.trim().isEmpty) return [];
     try {
-      final response = await _api.get(
-        '/shops/search',
-        params: {'q': query},
-      );
+      final response = await _api.get('/shops/search', params: {'q': query});
       if (response is List) {
         return response
             .map((e) => Map<String, dynamic>.from(e as Map))

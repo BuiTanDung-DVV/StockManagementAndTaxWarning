@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/toast_service.dart';
+import '../providers/auth_provider.dart';
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
   final String email;
@@ -23,7 +25,8 @@ class OtpVerificationScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
+  ConsumerState<OtpVerificationScreen> createState() =>
+      _OtpVerificationScreenState();
 }
 
 class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
@@ -73,7 +76,13 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
 
     try {
       final api = ref.read(apiClientProvider);
-      await api.post('/auth/send-otp', data: {'identifier': widget.email});
+      await api.post(
+        '/auth/send-otp',
+        data: {
+          'identifier': widget.email.toLowerCase(),
+          'isRegistration': true,
+        },
+      );
       ToastService.showSuccess('Đã gửi lại mã xác thực OTP tới email của bạn!');
       _startTimer();
     } catch (e) {
@@ -90,6 +99,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   }
 
   Future<void> _verifyAndRegister() async {
+    if (_isLoading) return;
     final otpCode = _otpCtrl.text.trim();
     if (otpCode.isEmpty || otpCode.length < 6) {
       setState(() => _error = 'Vui lòng nhập đủ 6 chữ số mã OTP');
@@ -102,24 +112,27 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     });
 
     try {
-      final api = ref.read(apiClientProvider);
-      await api.post(
-        '/auth/register',
-        data: {
-          'username': widget.email,
-          'passwordHash': widget.password,
-          'fullName': widget.fullName,
-          'accountType': widget.accountType,
-          'otpCode': otpCode,
-        },
-      );
+      final success = await ref
+          .read(authProvider.notifier)
+          .registerWithOtp(
+            email: widget.email,
+            password: widget.password,
+            fullName: widget.fullName,
+            accountType: widget.accountType,
+            otpCode: otpCode,
+          );
+      if (!success) {
+        throw ApiException(
+          ref.read(authProvider).error ?? 'Xác thực OTP thất bại',
+        );
+      }
 
       if (!mounted) return;
       setState(() => _isLoading = false);
       ToastService.showSuccess('Đăng ký tài khoản thành công!');
-      
+
       // Chuyển tới màn hình đăng nhập hoặc cập nhật thông tin
-      context.go('/login');
+      context.go('/onboarding');
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -213,7 +226,9 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                       border: Border.all(
                         color: _otpHasFocus
                             ? AppColors.primary
-                            : (_error != null ? AppColors.danger : c.inputBorder),
+                            : (_error != null
+                                  ? AppColors.danger
+                                  : c.inputBorder),
                         width: _otpHasFocus ? 1.5 : 1.0,
                       ),
                       boxShadow: [
@@ -231,6 +246,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       maxLength: 6,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       style: GoogleFonts.outfit(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -252,7 +268,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                         ),
                       ),
                       onChanged: (val) {
-                        if (val.length == 6) {
+                        if (val.length == 6 && !_isLoading) {
                           _verifyAndRegister();
                         }
                       },
@@ -334,7 +350,9 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                             ? const SizedBox(
                                 width: 14,
                                 height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : Text(
                                 _countdownSeconds > 0

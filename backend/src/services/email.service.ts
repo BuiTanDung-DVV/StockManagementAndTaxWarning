@@ -15,16 +15,17 @@ export class EmailService {
 
     async sendOtp(email: string, otpCode: string): Promise<boolean> {
         try {
-            console.log(`[Email Service] Sending OTP to ${email}`);
-
             const isSandbox = !process.env.SMTP_USER || process.env.SMTP_USER === 'your-email@gmail.com';
             
             if (isSandbox) {
-                console.log(`=========================================`);
-                console.log(`[EMAIL SANDBOX] To: ${email}`);
-                console.log(`[EMAIL SANDBOX] OTP: ${otpCode}`);
-                console.log(`=========================================`);
-                return true;
+                const debugEnabled = process.env.NODE_ENV !== 'production'
+                    && process.env.OTP_DEBUG_RESPONSE === 'true';
+                if (debugEnabled) {
+                    console.log(`[EMAIL SANDBOX] OTP for ${email}: ${otpCode}`);
+                    return true;
+                }
+                console.error('[Email Service] SMTP is not configured');
+                return false;
             }
 
             const mailOptions = {
@@ -51,7 +52,7 @@ export class EmailService {
                                     <div style="display: inline-block; background-color: #eff6ff; border: 1px dashed #3b82f6; padding: 16px 36px; border-radius: 12px;">
                                         <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 800; letter-spacing: 6px; color: #1d4ed8;">${otpCode}</span>
                                     </div>
-                                    <p style="font-size: 12px; color: #64748b; margin: 12px 0 0 0;">Mã OTP này có hiệu lực trong vòng <strong>2 phút</strong></p>
+                                    <p style="font-size: 12px; color: #64748b; margin: 12px 0 0 0;">Mã OTP này có hiệu lực trong vòng <strong>5 phút</strong></p>
                                 </div>
 
                                 <!-- Warning Alert Box -->
@@ -72,10 +73,12 @@ export class EmailService {
             };
 
             await this.transporter.sendMail(mailOptions);
-            console.log('[Email Service] OTP sent successfully to', email);
             return true;
         } catch (error) {
-            console.error('[Email Service] Error sending email:', error);
+            console.error(
+                '[Email Service] Error sending email:',
+                error instanceof Error ? error.message : 'Unknown error',
+            );
             return false;
         }
     }

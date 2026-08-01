@@ -4,7 +4,7 @@ import { config } from './env.config';
 import { AuditLogSubscriber } from '../system/audit-log.subscriber';
 
 // Import tường minh các entities từ các modules tương ứng để tránh lỗi quét thư mục động trên Vercel Serverless
-import { User } from '../auth/entities';
+import { RefreshSession, User } from '../auth/entities';
 import { ShopRole, ShopMember, Notification } from '../shop/entities';
 import { Customer, Receivable, DebtEvidence, DebtPaymentHistory } from '../customer/entities';
 import { Supplier, Payable } from '../supplier/entities';
@@ -32,7 +32,7 @@ export const AppDataSource = new DataSource({
   },
   synchronize: false, // Schema managed by Supabase — never auto-sync
   entities: [
-    User, ShopRole, ShopMember, Notification, Customer, Receivable, DebtEvidence, DebtPaymentHistory,
+    User, RefreshSession, ShopRole, ShopMember, Notification, Customer, Receivable, DebtEvidence, DebtPaymentHistory,
     Supplier, Payable, Category, Tag, Product, CostType, ProductCostItem, ProductBatch, UnitConversion,
     ProductPriceHistory, Warehouse, InventoryStock, InventoryMovement, PurchaseOrder, PurchaseOrderItem,
     StockTake, StockTakeItem, InventoryLot, SalesOrder, SalesOrderItem, SalesOrderPayment, SalesReturn,

@@ -70,7 +70,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         '/profile',
         data: {
           'fullName': _nameCtrl.text.trim(),
-          'email': _emailCtrl.text.trim(),
           'phone': _phoneCtrl.text.trim(),
         },
       );
@@ -230,12 +229,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildGlowingField(
-                    labelText: 'Email',
+                    labelText: 'Gmail đã xác minh',
                     controller: _emailCtrl,
                     focusNode: _emailFocus,
                     hasFocus: _emailHasFocus,
                     icon: Icons.mail_outline_rounded,
                     keyboardType: TextInputType.emailAddress,
+                    readOnly: true,
                     c: c,
                     theme: theme,
                   ),
@@ -325,6 +325,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required AppThemeColors c,
     required ThemeData theme,
     TextInputType? keyboardType,
+    bool readOnly = false,
   }) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -343,6 +344,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         controller: controller,
         focusNode: focusNode,
         keyboardType: keyboardType,
+        readOnly: readOnly,
         style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
         decoration: InputDecoration(
           labelText: labelText,
@@ -372,5 +374,4 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
-
 }
