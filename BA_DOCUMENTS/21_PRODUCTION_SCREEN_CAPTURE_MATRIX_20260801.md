@@ -17,13 +17,20 @@ trạng thái quan trọng. Phạm vi hiện tại gồm:
 | Hạng mục | Kết quả |
 |---|---|
 | URL production | `https://smartstock-tax.vercel.app/#/login` |
-| Kích thước đã quan sát | `1280×720` |
-| Màn đã có ảnh hợp lệ | Đăng nhập desktop |
-| Chụp tiếp bằng Browser | Bị chặn: canvas Flutter làm lệnh chụp hết thời gian hai lần |
-| Trình duyệt Chrome dự phòng | Không khả dụng trong phiên hiện tại |
-| Phiên đăng nhập test | Chưa có |
+| Kích thước đã quan sát | Desktop `1440×900`; mobile `390×844` |
+| Màn đã có ảnh hợp lệ | 10 trạng thái của đăng nhập, đăng ký, quên mật khẩu và auth redirect |
+| Chụp bằng Browser | Hoạt động; ảnh đã lưu ở `screenshots/20260801-production-audit-run2/` |
+| Route bảo vệ | Mở trực tiếp `/inventory` khi chưa đăng nhập chuyển đúng về `/login` |
+| Phiên đăng nhập test | Đã đăng nhập bằng tài khoản test khai báo trong dự án |
+| Smoke route protected | 47/47 giữ đúng route; không có console warning/error |
+| Smoke API đọc | 48/48 endpoint hợp lệ trả 200/success |
+| Chụp protected | Bị chặn: `Page.captureScreenshot` timeout với Flutter canvas |
 
 Không kết luận màn sau đăng nhập “đạt” khi chưa có ảnh và chưa thao tác trực tiếp.
+
+Các ô `Chờ đăng nhập` bên dưới được giữ như trạng thái **ảnh**; route và API đã được smoke test theo
+[báo cáo authenticated smoke](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md), nhưng chưa có ảnh mới
+để đánh giá trực quan từng màn.
 
 ## 3. Ma trận 55 route
 
@@ -33,10 +40,10 @@ Quy ước trạng thái ảnh: `Đã chụp`, `Chờ đăng nhập`, `Chờ d�
 
 | # | Route | Màn hình/trạng thái phải kiểm tra | Desktop | Mobile |
 |---:|---|---|---|---|
-| 1 | `/login` | Mặc định, sai mật khẩu, hiện/ẩn mật khẩu, loading | Đã chụp mặc định | Bị chặn công cụ |
-| 2 | `/register` | Form, validation, loại tài khoản, gửi OTP | Bị chặn công cụ | Bị chặn công cụ |
+| 1 | `/login` | Mặc định, sai mật khẩu, hiện/ẩn mật khẩu, loading | Đã chụp mặc định + auth redirect | Đã chụp mặc định + submit rỗng |
+| 2 | `/register` | Form, validation, loại tài khoản, gửi OTP | Đã chụp mặc định | Đã chụp mặc định + submit rỗng |
 | 3 | `/verify-otp` | OTP đúng/sai/hết hạn, gửi lại, quay lại | Chờ luồng đăng ký | Chờ luồng đăng ký |
-| 4 | `/forgot-password` | Gửi yêu cầu, lỗi email, thành công | Bị chặn công cụ | Bị chặn công cụ |
+| 4 | `/forgot-password` | Gửi yêu cầu, lỗi email, thành công | Đã chụp mặc định | Đã chụp mặc định + submit rỗng |
 | 5 | `/onboarding` | Tạo cửa hàng, validation, hoàn tất | Chờ tài khoản mới | Chờ tài khoản mới |
 | 6 | `/waiting-approval` | Chờ duyệt, refresh trạng thái, đăng xuất | Chờ tài khoản nhân viên | Chờ tài khoản nhân viên |
 

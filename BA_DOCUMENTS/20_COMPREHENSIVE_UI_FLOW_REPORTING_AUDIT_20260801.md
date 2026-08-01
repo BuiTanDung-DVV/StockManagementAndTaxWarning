@@ -21,8 +21,8 @@ tăng độ nổi bật của card, biểu đồ và hiệu ứng.
 
 | Nguồn | Kết quả | Trạng thái |
 |---|---|---|
-| Production `smartstock-tax.vercel.app` | Chụp được màn đăng nhập desktop hiện tại | Đã xác minh |
-| Production sau đăng nhập | Phiên production không có tài khoản; trình chụp bị ngắt khi đổi route | Bị chặn |
+| Production `smartstock-tax.vercel.app` | Chụp 10 trạng thái public ở desktop/mobile: đăng nhập, đăng ký, quên mật khẩu, validation và auth redirect | Đã xác minh |
+| Production sau đăng nhập | 47 route protected mở đúng, không redirect login; 48/48 API đọc đạt; ảnh canvas protected vẫn bị timeout | Đã xác minh route/API, bị chặn ảnh |
 | Frontend Flutter | Kiểm kê 57 file màn hình và hơn 50 route | Đã xác minh từ code |
 | Backend Express/TypeORM | Đối chiếu route, service và công thức tổng hợp | Đã xác minh từ code |
 | Bộ test backend P0 | Build/lint và 47/47 test đạt | Đã xác minh |
@@ -32,7 +32,16 @@ tăng độ nổi bật của card, biểu đồ và hiệu ứng.
 
 Ảnh được chấp nhận trong vòng đánh giá hiện tại:
 
-- [01 — Đăng nhập desktop](screenshots/20260801-production-audit/01-login-current.png)
+- [01 — Đăng nhập desktop](screenshots/20260801-production-audit-run2/01-login-desktop.png)
+- [02 — Đăng nhập mobile](screenshots/20260801-production-audit-run2/02-login-mobile.png)
+- [03 — Đăng ký mobile](screenshots/20260801-production-audit-run2/03-register-mobile.png)
+- [04 — Đăng ký desktop](screenshots/20260801-production-audit-run2/04-register-desktop.png)
+- [05 — Quên mật khẩu mobile](screenshots/20260801-production-audit-run2/05-forgot-password-mobile.png)
+- [06 — Quên mật khẩu desktop](screenshots/20260801-production-audit-run2/06-forgot-password-desktop.png)
+- [07 — Validation đăng nhập mobile](screenshots/20260801-production-audit-run2/07-login-validation-mobile.png)
+- [08 — Validation đăng ký mobile](screenshots/20260801-production-audit-run2/08-register-validation-mobile.png)
+- [09 — Validation quên mật khẩu mobile](screenshots/20260801-production-audit-run2/09-forgot-password-validation-mobile.png)
+- [10 — Auth redirect desktop](screenshots/20260801-production-audit-run2/10-inventory-auth-redirect-desktop.png)
 
 Không sử dụng ảnh chụp lỗi responsive hoặc ảnh chưa tải ổn định làm bằng chứng.
 
@@ -40,7 +49,7 @@ Không sử dụng ảnh chụp lỗi responsive hoặc ảnh chưa tải ổn �
 
 | Bước | Hành trình | Sức khỏe | Nhận xét chính |
 |---:|---|---|---|
-| 1 | Đăng nhập | Khá | Bố cục hai cột rõ, CTA chính nổi bật; logo quá nhỏ và vùng trái hơi trống ở desktop rộng |
+| 1 | Đăng nhập | Đúng một phần | Bố cục hai cột rõ; submit rỗng vẫn gọi API rồi hiện lỗi chung, chưa có validation từng trường |
 | 2 | Khôi phục phiên | Đúng một phần | Bản production vẫn cần kiểm thử refresh token đồng thời; bản local đang thay đổi cơ chế auth |
 | 3 | Chọn cửa hàng / tất cả cửa hàng | Đúng một phần | API tổng hợp hỗ trợ nhiều shop ở một số endpoint, nhưng không phải mọi báo cáo đều hỗ trợ cùng phạm vi |
 | 4 | Dashboard | Đúng một phần | Có kỳ so sánh, top 10, ưu tiên nghiệp vụ; quyền `finance` đang chi phối phần lớn KPI doanh thu |
@@ -56,6 +65,19 @@ Không sử dụng ảnh chụp lỗi responsive hoặc ảnh chưa tải ổn �
 | 14 | Thuế | Đúng một phần | Có cấu hình và XML; chưa thể coi XML đạt chuẩn nếu chưa import thành công vào HTKK |
 | 15 | Cài đặt / RBAC | Đúng một phần | Phạm vi rộng; hai route nhân viên trùng mục đích và ma trận quyền khó quét trên mobile |
 | 16 | Trợ lý AI | Đúng một phần | Đã giảm che khuất; dữ liệu trả lời cần luôn kèm nguồn, kỳ và cửa hàng đang áp dụng |
+
+### Nhận xét trực quan luồng public
+
+- Đăng nhập desktop có phân cấp tốt hơn các màn public còn lại; bản mobile co giãn đúng và CTA đủ rõ.
+- Đăng ký và quên mật khẩu desktop dùng form hẹp kiểu mobile ở giữa vùng trống rất lớn, làm giao diện
+  thiếu ngữ cảnh, kém cân bằng và không tận dụng màn hình rộng.
+- Production còn nút Facebook nhưng bản local đã bỏ; đây là chênh lệch phiên bản cần kiểm lại sau deploy.
+- Production ghi “Email hoặc số điện thoại” ở quên mật khẩu trong khi backend auth local chỉ chấp nhận
+  Gmail. Nội dung UI và contract auth phải dùng một định nghĩa.
+- Lỗi đăng nhập tồn tại khi điều hướng sang route bảo vệ rồi quay về `/login`; provider chưa xóa error khi
+  người dùng nhập lại hoặc khi router chuyển màn.
+- Flutter canvas trong ảnh chỉ công bố nút “Enable accessibility”; chưa đủ bằng chứng để kết luận keyboard,
+  focus, screen reader, contrast hoặc zoom đạt chuẩn.
 
 ## 4. Phát hiện tính đúng dữ liệu và code
 
@@ -98,6 +120,31 @@ hoặc lỗi truy vấn cột chưa tồn tại.
 
 **Hướng xử lý phát hành:** sao lưu DB, cấu hình ba secret khác nhau, chạy migration có kiểm soát rồi
 smoke test cold-start, login, OTP, refresh và logout trước khi chuyển production.
+
+### P0-13 — KPI tổng sản phẩm ở Kho chỉ đếm trang đầu
+
+Endpoint `/inventory/stock` trả `PagedResult` với giới hạn mặc định 20. `stockProvider` bỏ các trường
+`total/page/totalPages` và chỉ trả `items`; `_InventoryMetricStrip` lại dùng `items.length`. Vì vậy cửa hàng
+có 250 sản phẩm vẫn hiển thị “Tổng sản phẩm: 20”.
+
+**Ảnh hưởng:** dashboard kho hiển thị sai quy mô tồn, người dùng có thể tin rằng dữ liệu đã mất.
+
+**Hướng sửa:** tạo endpoint summary riêng hoặc giữ `PagedResult` trong provider và dùng `total`; đồng thời
+không dùng danh sách trang đầu để tính KPI.
+
+**Nghiệm thu:** DB có 250 sản phẩm thì KPI là 250 ở mọi trang; đổi kho/cửa hàng cập nhật đúng; tổng không
+thay đổi khi chuyển trang danh sách.
+
+**Trạng thái local:** đã sửa để giữ metadata phân trang và dùng `total`; unit test hồi quy và analyze đạt.
+
+### P0-14 — Cảnh báo “Dưới định mức” dùng sai ngưỡng
+
+Frontend cũ luôn gọi `/inventory/low-stock?threshold=10`, trong khi nhãn UI là “Dưới định mức”. Đối soát
+production cho thấy shop 34 có 112 dòng `≤10` nhưng 0 dòng dưới `products.min_stock`; shop 35 tương ứng
+24 và 0. Vì vậy cảnh báo đúng về phép so sánh nhưng sai ý nghĩa nghiệp vụ được trình bày.
+
+**Trạng thái local:** provider mặc định không gửi threshold để backend dùng định mức từng sản phẩm. Nếu
+cần ngưỡng cố định, phải là filter có nhãn và cấu hình rõ.
 
 ### P1-01 — Top sản phẩm chưa phải số liệu thuần
 
@@ -155,6 +202,18 @@ refresh/deep-link có thể mất dữ liệu. Chi tiết và ma trận nghiệm
 Backend vẫn chặn request nên chưa có bằng chứng lộ dữ liệu, nhưng người dùng có thể vào màn rồi gặp
 403 hoặc bị frontend chặn dù API cho phép. Cần tạo một route-policy duy nhất dùng chung cho menu,
 router và contract test API.
+
+### P1-07 — Sổ công nợ tải toàn bộ dữ liệu nhưng bảng không có phân trang
+
+`/customer-receivables` trả toàn bộ khoản đang mở; shop 34 hiện có 453 khoản mở (hơn 1.300 bản ghi
+receivable lịch sử trong DB).
+Frontend dựng toàn bộ dòng trong `AppDataTable`, không sort, không phân trang, không virtualize và export
+trực tiếp danh sách đã tải.
+
+**Ảnh hưởng:** tải chậm, cuộn dài, tốn bộ nhớ trình duyệt và khó kiểm soát tổng theo bộ lọc.
+
+**Hướng sửa:** phân trang server, lọc theo khách hàng/hạn nợ/trạng thái, sticky header; mobile dùng card
+tóm tắt; export server-side theo đúng tập lọc.
 
 ## 5. Đánh giá giao diện và hệ thống thiết kế
 
@@ -215,6 +274,7 @@ router và contract test API.
 | Lightspeed | Year-over-year sales/profit, dusty inventory, low stock, turns, GMROI, margin alert | Ưu tiên tồn chậm, vòng quay, GMROI và cảnh báo biên lợi nhuận |
 | Odoo | Graph + pivot, chọn measure, group by và drill-down | Báo cáo nâng cao dùng pivot thay vì tạo quá nhiều dashboard cố định |
 | Dynamics 365 Commerce | Gross sales, tender type, tax, discount và price override theo cửa hàng | Dashboard đa cửa hàng cần so sánh location và các ngoại lệ giá/chiết khấu |
+| QuickBooks | P&L, cash flow, AR aging summary/detail và đối chiếu inventory valuation | Tách báo cáo điều hành khỏi báo cáo đối soát; mọi tổng phải drill-down đến chứng từ |
 
 Nguồn chính thức:
 
@@ -224,7 +284,10 @@ Nguồn chính thức:
 - [Square sales summary](https://squareup.com/help/us/en/article/5381-in-app-summaries-and-reports)
 - [Lightspeed Analytics reports](https://retail-support.lightspeedhq.com/hc/en-us/articles/4410657877659-About-Lightspeed-Analytics-reporting)
 - [Odoo reporting](https://www.odoo.com/documentation/17.0/applications/essentials/reporting.html)
+- [Odoo inventory forecast](https://www.odoo.com/documentation/19.0/applications/inventory_and_mrp/inventory/warehouses_storage/reporting/forecast.html)
 - [Dynamics 365 store performance](https://learn.microsoft.com/en-us/dynamics365/commerce/store-performance-information)
+- [QuickBooks AR aging](https://quickbooks.intuit.com/learn-support/en-us/help-article/accounts-receivable-reports/run-accounts-receivable-aging-report/L4N7PC2hg_US_en_US)
+- [QuickBooks inventory valuation reconciliation](https://quickbooks.intuit.com/learn-support/en-us/help-article/list-management/balance-sheet-inventory-stock-valuation-reports/L02dbIDsy_US_en_US)
 
 ## 7. Bộ biểu đồ mục tiêu
 
@@ -281,6 +344,27 @@ Quy tắc hiển thị:
 - Tổng số dòng, tổng giá trị theo tập đã lọc và trạng thái tải phải luôn nhìn thấy.
 - Export toàn bộ tập lọc, không chỉ trang hiện tại.
 
+### 8.1 Thiết kế dữ liệu phục vụ báo cáo
+
+Không nên để từng màn tự cộng lại dữ liệu nghiệp vụ theo công thức riêng. Giữ entity giao dịch hiện có làm
+nguồn sự thật và bổ sung read model/materialized view sau khi contract metric được duyệt:
+
+| Read model đề xuất | Grain (một dòng đại diện) | Chỉ số chính |
+|---|---|---|
+| `reporting_daily_sales` | cửa hàng × ngày × kênh × trạng thái thanh toán | gross, discount, return, net revenue, COGS, gross profit, orders, units, AOV |
+| `reporting_inventory_snapshot` | cửa hàng × kho × sản phẩm × ngày | tồn đầu, nhập, xuất, điều chỉnh, trả, giữ chỗ, khả dụng, tồn cuối, đơn giá, giá trị |
+| `reporting_ar_aging_snapshot` | cửa hàng × khách hàng × ngày chốt | current, 1–30, 31–60, 61–90, trên 90 ngày, tổng phải thu |
+| `reporting_ap_aging_snapshot` | cửa hàng × nhà cung cấp × ngày chốt | các bucket tuổi nợ, tổng phải trả, quá hạn |
+| `reporting_cashflow_daily` | cửa hàng × ngày × phương thức | thu thực tế, chi thực tế, thu/chi dự báo, số dư đầu/cuối |
+
+Quy tắc bắt buộc:
+
+1. Mọi response báo cáo có `shopScope`, `from`, `to`, `timezone`, `asOf`, `currency`, `filters` và phiên bản công thức.
+2. Một metric chỉ có một định nghĩa dùng chung cho dashboard, màn chi tiết và export.
+3. Dữ liệu tổng hợp phải drill-down được đến chứng từ nguồn và có tổng kiểm soát đối chiếu.
+4. Snapshot không ghi đè lịch sử; thay đổi hồi tố phải có job tái dựng và audit.
+5. Không chạy DDL/tạo view trong cold-start serverless; dùng migration được phê duyệt và đo thời gian refresh.
+
 ## 9. Lộ trình triển khai
 
 ### P0 — Toàn vẹn và không mất dữ liệu trên giao diện
@@ -325,3 +409,6 @@ Quy tắc hiển thị:
 
 Phạm vi route và trạng thái bắt buộc: xem
 [21 — Ma trận chụp và kiểm thử toàn bộ giao diện production](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md).
+
+Kết quả smoke test route/API sau đăng nhập:
+[22 — Smoke test production sau đăng nhập](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md).

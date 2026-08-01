@@ -147,6 +147,7 @@ class _PurchaseOrderFormScreenState
       await ref.read(inventoryRepoProvider).createPurchaseOrder(payload);
       ref.invalidate(purchaseOrdersProvider);
       ref.invalidate(stockProvider(null));
+      ref.invalidate(stockPageProvider(null));
       ref.invalidate(productListProvider((page: 1, search: null, tag: null)));
       ref.invalidate(lowStockProvider);
 

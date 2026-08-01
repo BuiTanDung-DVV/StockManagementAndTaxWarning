@@ -104,6 +104,7 @@ API `/customer-receivables` thay cho dữ liệu hard-code. Chi tiết mới nh�
 | [14 - Responsive fill layout](14_RESPONSIVE_FILL_LAYOUT_UPGRADE.md) | Quy tắc, thành phần và kiểm thử cho bố cục tự co giãn theo vùng chứa |
 | [20 - Audit UI, luồng và báo cáo 01/08](20_COMPREHENSIVE_UI_FLOW_REPORTING_AUDIT_20260801.md) | Đánh giá toàn hệ thống, benchmark, cấu trúc bảng/biểu đồ và lộ trình P0–V2.0 |
 | [21 - Ma trận chụp production](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md) | Phạm vi 55 route, màn con, trạng thái và tiêu chí ảnh desktop/mobile |
+| [22 - Smoke test production sau đăng nhập](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md) | 48 API đọc, 47 route protected, đối soát hai shop và sai lệch Kho/Công nợ |
 
 ## 5. Nguồn bằng chứng
 
@@ -116,6 +117,8 @@ API `/customer-receivables` thay cho dữ liệu hard-code. Chi tiết mới nh�
 - Vòng kiểm tra 01/08: backend build/lint và P0 suite `47/47` đạt; Flutter analyze sạch,
   Flutter suite `57/57` đạt và Flutter Web release build thành công. Kiểm toán DB chỉ đọc cũng chạy được;
   migration auth production vẫn là điều kiện chặn phát hành backend.
+- Ảnh public production vòng 01/08: [`screenshots/20260801-production-audit-run2/`](screenshots/20260801-production-audit-run2/)
+  gồm 10 trạng thái desktop/mobile; 55 route sau đăng nhập vẫn chờ phiên test hợp lệ.
 
 ## 6. Quy tắc quản trị tài liệu
 

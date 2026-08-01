@@ -19,7 +19,10 @@ class InventoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppThemeColors.of(context);
-    final stockAsync = ref.watch(stockProvider(null));
+    final stockPageAsync = ref.watch(stockPageProvider(null));
+    final stockAsync = stockPageAsync.whenData(
+      (page) => (page['items'] as List?) ?? const <dynamic>[],
+    );
     final lowStockAsync = ref.watch(lowStockProvider);
     final expiringAsync = ref.watch(expiringProductsProvider);
     final slowMovingAsync = ref.watch(slowMovingProvider);
@@ -44,6 +47,7 @@ class InventoryScreen extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(stockProvider);
+            ref.invalidate(stockPageProvider);
             ref.invalidate(lowStockProvider);
             ref.invalidate(expiringProductsProvider);
             ref.invalidate(slowMovingProvider);
@@ -67,6 +71,11 @@ class InventoryScreen extends ConsumerWidget {
                   ),
                   _InventoryMetricStrip(
                     stock: stockAsync,
+                    totalProducts: stockPageAsync.when(
+                      data: inventoryProductTotal,
+                      loading: () => null,
+                      error: (_, _) => null,
+                    ),
                     lowStock: lowStockAsync,
                     expiring: expiringAsync,
                   ),
@@ -221,11 +230,13 @@ class _InventoryQuickAction extends StatelessWidget {
 
 class _InventoryMetricStrip extends StatelessWidget {
   final AsyncValue<List<dynamic>> stock;
+  final int? totalProducts;
   final AsyncValue<List<dynamic>> lowStock;
   final AsyncValue<List<dynamic>> expiring;
 
   const _InventoryMetricStrip({
     required this.stock,
+    required this.totalProducts,
     required this.lowStock,
     required this.expiring,
   });
@@ -235,11 +246,13 @@ class _InventoryMetricStrip extends StatelessWidget {
     final metrics = [
       _InventoryMetric(
         label: 'Tổng sản phẩm',
-        value: stock.when(
-          data: (items) => '${items.length}',
-          loading: () => 'Đang tải',
-          error: (_, _) => 'Chưa tải',
-        ),
+        value: totalProducts != null
+            ? '$totalProducts'
+            : stock.when(
+                data: (items) => '${items.length}',
+                loading: () => 'Đang tải',
+                error: (_, _) => 'Chưa tải',
+              ),
         context: 'Trong kho hiện tại',
         assetPath: AppAssets.inventory,
       ),
@@ -270,6 +283,12 @@ class _InventoryMetricStrip extends StatelessWidget {
 
     return _SimpleMetricStrip(metrics: metrics);
   }
+}
+
+int inventoryProductTotal(Map<String, dynamic> page) {
+  final total = int.tryParse(page['total']?.toString() ?? '');
+  if (total != null && total >= 0) return total;
+  return (page['items'] as List?)?.length ?? 0;
 }
 
 class _SimpleMetricStrip extends StatelessWidget {
