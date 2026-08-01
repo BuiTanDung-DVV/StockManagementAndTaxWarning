@@ -7,8 +7,24 @@ const financeService = new FinanceService();
 
 
 export const getCashTransactions = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.getCashTransactions((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.type as string, req.query.from as string, req.query.to as string) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    try {
+        res.json({
+            success: true,
+            data: await financeService.getCashTransactions(
+                (req as any).shopId,
+                +(req.query.page || 1),
+                +(req.query.limit || 20),
+                req.query.type as string,
+                req.query.from as string,
+                req.query.to as string,
+                req.query.category as string,
+            ),
+        });
+    }
+    catch (e: any) {
+        const invalidPeriod = String(e.message).startsWith('Invalid ');
+        res.status(invalidPeriod ? 400 : 500).json({ success: false, message: e.message });
+    }
 };
 export const createCashTransaction = async (req: Request, res: Response) => {
     try { 
@@ -41,7 +57,10 @@ export const getInvoiceReconciliation = async (req: Request, res: Response) => {
 };
 export const getExpensesByCategory = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.getExpensesByCategory((req as any).shopId, req.query.from as string, req.query.to as string) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const invalidPeriod = String(e.message).startsWith('Invalid ');
+        res.status(invalidPeriod ? 400 : 500).json({ success: false, message: e.message });
+    }
 };
 
 export const getDailyClosings = async (req: Request, res: Response) => {

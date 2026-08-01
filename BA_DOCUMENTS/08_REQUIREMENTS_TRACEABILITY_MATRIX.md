@@ -17,7 +17,7 @@ Quy ước: `Đã xác minh`, `Đúng một phần`, `Không chính xác`, `Bị
 | PRODUCT/MEDIA — ảnh và giá | `/products`, `/products/:id`, form | product CRUD + Cloudinary lifecycle; `products.image_url` | List có ảnh thật nhưng detail hiện icon mặc định | Lifecycle thay/xóa ảnh đạt unit test | Đúng một phần | Một DTO/image contract cho list/detail/form; regression ảnh cũ bị xóa sau replace |
 | INV/PURCHASE — tồn, nhập, kiểm kê, XNT | `/inventory`, `/purchase-orders`, `/stock-take`, `/xnt-report` | inventory, PO, stock take, movements, lots | KPI `20`/`112` mâu thuẫn; form PO 404; XNT mobile mất cột; có quantity 0 | KPI/min-stock đã sửa local; route form đã khai báo; chưa có invariant DB/concurrency test | Không chính xác | Deploy bản sửa sau gate; quantity > 0; unique tồn; XNT reconciliation và responsive test |
 | DEBT — công nợ và thu nợ | `/customer-debts`, `/debt-aging`, customer detail | receivables, payment history, cash transactions | 453 khoản nợ tải thật; thiếu pagination; nợ vượt hạn mức không cảnh báo | Helper thu nợ/remaining đạt unit test | Đúng một phần | Server pagination; exposure/limit control; thu nợ cập nhật debt+cash trong một transaction |
-| FIN — sổ quỹ, chi phí, lương, chốt ca, P&L | `/finance`, `/expense-ledger`, `/salary-ledger`, `/daily-closing`, `/profit-loss` | cash transactions, summaries, closings | Chi phí tổng 0 nhưng có dòng ngoài kỳ; tháng lương sai; ô trống tạo chênh lệch âm | Source xác nhận ba nguyên nhân; chưa có test chống tái phát | Không chính xác | Một period contract; nullable closing cash; TC-FIN-04/05/06 và reconciliation đạt |
+| FIN — sổ quỹ, chi phí, lương, chốt ca, P&L | `/finance`, `/expense-ledger`, `/salary-ledger`, `/daily-closing`, `/profit-loss` | cash transactions, summaries, closings | Chi phí tổng 0 nhưng có dòng ngoài kỳ; tháng lương sai; ô trống tạo chênh lệch âm trên production hiện tại | Local đã dùng cùng kỳ cho tổng/list, lọc lương tại API, giữ tiền thực tế nullable; backend P0 49/49, Flutter mục tiêu 5/5 và analyze sạch | Đúng một phần — production chưa deploy | Deploy khi được duyệt; chạy TC-FIN-04/05/06 với dữ liệu production và đối soát DB |
 | TAX — ước tính, cấu hình, nghĩa vụ, kê khai | `/tax-*`, `/tax-declaration` | `/tax/config`, `/tax/estimate`, `/tax/export-htkk`; tax rules/profile | Ngưỡng 1 tỷ có nguồn; kỳ/sort chưa đúng; chart mobile vỡ; “Nộp” chỉ mở hướng dẫn | Tax policy/MST 47/47 suite đạt | Đúng một phần, rủi ro cao | Rule version/effective date; sort kỳ; đổi đúng copy; XML qua XSD/HTKK fixture |
 | RBAC/MULTI-SHOP | menu, settings, chọn cửa hàng | middleware permission + shop scope; memberships, roles | “Tất cả cửa hàng” từng làm lỗi UI/khó quay lại; label quyền lẫn key kỹ thuật | Parser/scope/permission unit test đạt; route-policy FE/BE còn lệch | Không chính xác | Ma trận module×action dùng chung; negative test owner/view/edit/none ở single/all shops |
 | REPORT/EXPORT — bảng, biểu đồ, file | dashboard và mọi màn báo cáo | summary/read model/export endpoints | Có chart/KPI cơ bản nhưng thiếu drill-down, pagination, scope/filter/asOf; “Excel” có chỗ là CSV | Benchmark và grain dữ liệu đã lập; chưa có report contract test toàn miền | Đúng một phần | Metric contract; AppPagedTable; export toàn tập; reconciliation + checksum + encoding test |
@@ -27,11 +27,10 @@ Quy ước: `Đã xác minh`, `Đúng một phần`, `Không chính xác`, `Bị
 
 ### Bằng chứng kiểm thử mới nhất
 
-- Backend `npm run test:p0` tại local `cc800da3`: **47/47 đạt**, gồm auth, permission, shop scope,
-  tax, debt, sales metric, invoice metadata và media lifecycle.
-- `flutter test` chạy lại tại cùng HEAD ngày 01/08/2026 bị timeout sau **180,6 giây trước khi có output**;
-  không ghi nhận pass/fail từ lần chạy này. Kết quả 57/57 trong tài liệu là bằng chứng của lần chạy trước,
-  còn code Flutter không đổi sau `66ccbe70` nhưng toolchain hiện vẫn thiếu tính lặp lại.
+- Backend `npm run test:p0` trong gói sửa kỳ tài chính local ngày 01/08/2026: **49/49 đạt**;
+  `npm run lint` và TypeScript build đều sạch.
+- Flutter analyze toàn dự án sạch; **5/5 test mục tiêu** kỳ báo cáo/chốt ca đạt. Kết quả 57/57 toàn suite
+  và Web release build vẫn là bằng chứng lần trước; production chưa deploy gói sửa này.
 - Production vẫn ở `093b17ac`; mọi fix local phải giữ trạng thái `Chưa xác minh production` cho đến khi
   deployment và regression test hoàn tất.
 

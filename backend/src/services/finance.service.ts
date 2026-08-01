@@ -3,7 +3,7 @@ import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPla
 import { Invoice } from '../system/entities';
 import { JournalLine } from '../finance/ledger.entity';
 import { ActivityLog } from '../system/entities';
-import { EntityManager } from 'typeorm';
+import { Between, EntityManager } from 'typeorm';
 import { SystemService } from './system.service';
 import { COGSService } from './cogs.service';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
@@ -13,6 +13,10 @@ import {
     calculateOutstandingTax,
     normalizeNonNegative,
 } from '../tax/tax-policy';
+import {
+    normalizeCashTransactionQuery,
+    resolveCurrentMonthExpensePeriod,
+} from '../finance/finance-period.utils';
 
 export class FinanceService {
     private cashTxRepo = AppDataSource.getRepository(CashTransaction);
@@ -56,15 +60,51 @@ export class FinanceService {
 
 
     // Cash Transactions
-    async getCashTransactions(shopId: number, page = 1, limit = 20, type?: string, from?: string, to?: string) {
+    async getCashTransactions(
+        shopId: number,
+        page = 1,
+        limit = 20,
+        type?: string,
+        from?: string,
+        to?: string,
+        category?: string,
+    ) {
+        const query = normalizeCashTransactionQuery({
+            page,
+            limit,
+            type,
+            category,
+            from,
+            to,
+        });
         const qb = this.cashTxRepo.createQueryBuilder('t')
             .where('t.shop_id = :shopId', { shopId });
-        if (type) qb.andWhere('t.type = :type', { type });
-        if (from) qb.andWhere('t.transaction_date >= :from', { from: new Date(from) });
-        if (to) qb.andWhere('t.transaction_date <= :to', { to: new Date(to) });
+        if (query.type) qb.andWhere('t.type = :type', { type: query.type });
+        if (query.category) {
+            qb.andWhere('t.category = :category', { category: query.category });
+        }
+        if (query.fromDate) {
+            qb.andWhere('t.transaction_date >= :from', { from: query.fromDate });
+        }
+        if (query.toDate) {
+            qb.andWhere('t.transaction_date <= :to', { to: query.toDate });
+        }
+
+        const totalRow = await qb.clone()
+            .select('COALESCE(SUM(t.amount), 0)', 'filteredAmountTotal')
+            .getRawOne();
         const [items, total] = await qb.orderBy('t.transaction_date', 'DESC')
-            .skip((page - 1) * limit).take(limit).getManyAndCount();
-        return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+            .skip((query.page - 1) * query.limit)
+            .take(query.limit)
+            .getManyAndCount();
+        return {
+            items,
+            total,
+            page: query.page,
+            limit: query.limit,
+            totalPages: Math.ceil(total / query.limit),
+            filteredAmountTotal: Number(totalRow?.filteredAmountTotal || 0),
+        };
     }
     async createCashTransaction(shopId: number, dto: Partial<CashTransaction>, manager?: EntityManager) {
         const repo = manager ? manager.getRepository(CashTransaction) : this.cashTxRepo;
@@ -335,9 +375,7 @@ export class FinanceService {
 
     // Expenses by category
     async getExpensesByCategory(shopId: number, from?: string, to?: string) {
-        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const toDate = to ? new Date(to) : new Date();
-        toDate.setHours(23, 59, 59, 999);
+        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
 
         const rows = await this.cashTxRepo.createQueryBuilder('t')
             .select('t.category', 'category')
@@ -353,7 +391,11 @@ export class FinanceService {
 
         // Recent expense transactions
         const [recentItems] = await this.cashTxRepo.findAndCount({
-            where: { shopId, type: 'EXPENSE' },
+            where: {
+                shopId,
+                type: 'EXPENSE',
+                transactionDate: Between(fromDate, toDate),
+            },
             order: { transactionDate: 'DESC' },
             take: 10,
         });

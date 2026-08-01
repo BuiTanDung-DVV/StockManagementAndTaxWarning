@@ -22,11 +22,13 @@ class FinanceRepository {
     int page = 1,
     int limit = 20,
     String? type,
+    String? category,
     String? from,
     String? to,
   }) async {
     final params = <String, dynamic>{'page': '$page', 'limit': '$limit'};
     if (type != null) params['type'] = type;
+    if (category != null) params['category'] = category;
     if (from != null) params['from'] = from;
     if (to != null) params['to'] = to;
     return await _api.get('/cash-transactions', params: params);
@@ -206,13 +208,22 @@ final financeRepoProvider = Provider<FinanceRepository>((ref) {
 final transactionsProvider =
     FutureProvider.family<
       Map<String, dynamic>,
-      ({int page, String? type, String? from, String? to})
+      ({
+        int page,
+        int limit,
+        String? type,
+        String? category,
+        String? from,
+        String? to,
+      })
     >((ref, args) {
       return ref
           .watch(financeRepoProvider)
           .findTransactions(
             page: args.page,
+            limit: args.limit,
             type: args.type,
+            category: args.category,
             from: args.from,
             to: args.to,
           );

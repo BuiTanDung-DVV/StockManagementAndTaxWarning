@@ -12,7 +12,7 @@
         "test:permissions": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js",
         "test:tax": "npm run build && node --test test/tax-policy.test.js",
         "test:auth": "npm run build && node --test test/auth-security.test.js",
-        "test:p0": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js test/tax-policy.test.js test/debt.utils.test.js test/sales-metric.utils.test.js test/invoice-metadata.test.js test/image-storage.utils.test.js test/product-image-lifecycle.test.js test/shop-payment-qr-lifecycle.test.js test/auth-security.test.js",
+        "test:p0": "npm run build && node --test test/permission.utils.test.js test/shop-scope.utils.test.js test/tax-policy.test.js test/debt.utils.test.js test/sales-metric.utils.test.js test/invoice-metadata.test.js test/image-storage.utils.test.js test/product-image-lifecycle.test.js test/shop-payment-qr-lifecycle.test.js test/auth-security.test.js test/finance-period.utils.test.js",
         "seed:three-years": "tsx src/scripts/seed-three-year-store.ts",
         "audit:data": "tsx src/scripts/audit-store-data.ts",
         "validate:data": "tsx src/scripts/validate-store-data.ts",

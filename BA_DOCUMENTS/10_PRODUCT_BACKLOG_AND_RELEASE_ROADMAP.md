@@ -20,6 +20,7 @@
 | Customer debt/CSV | Đã nối API thật, chuẩn hóa remaining và CSV an toàn; Flutter tests đạt; production hiển thị empty state thật | Đối soát API–DB–CSV khi có dữ liệu; bổ sung kỳ xuất rõ |
 | Mobile POS/AI | CTA/giỏ đã hiển thị ở 390×844, AI không che POS; Flutter tests đạt | Test bàn phím ảo và thiết bị thật |
 | Reporting period | Đã dùng helper chung ở dashboard/sales/finance | Chuẩn hóa timezone backend và thêm `period/asOf` vào response |
+| Kỳ chi phí/lương và chốt ca | Đã sửa local: cùng `from/to` cho tổng/danh sách, lọc lương server-side, ô tiền thực tế nullable; backend P0 49/49 và Flutter mục tiêu 5/5 đạt | Chưa đóng P0-17/21/22 cho tới khi deploy và chạy TC-FIN-04/05/06 trên production |
 
 ### Backlog còn mở sau bản vá
 

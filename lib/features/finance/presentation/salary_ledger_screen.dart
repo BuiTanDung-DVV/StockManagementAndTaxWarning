@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/utils/reporting_period.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,9 +23,16 @@ class SalaryLedgerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Fetch SALARY-type expense transactions
+    final period = currentMonthReportingPeriod(DateTime.now());
     final txAsync = ref.watch(
-      transactionsProvider((page: 1, type: 'EXPENSE', from: null, to: null)),
+      transactionsProvider((
+        page: 1,
+        limit: 100,
+        type: 'EXPENSE',
+        category: 'SALARY',
+        from: period.from,
+        to: period.to,
+      )),
     );
 
     return Scaffold(
@@ -36,16 +44,9 @@ class SalaryLedgerScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (data) {
-          final allItems = (data['items'] as List?) ?? [];
-          // Filter only SALARY category
-          final items = allItems
-              .where((t) => t['category'] == 'SALARY')
-              .toList();
-
-          final totalSalary = items.fold<num>(
-            0,
-            (s, t) => s + asNum(t['amount']),
-          );
+          final items = (data['items'] as List?) ?? [];
+          final totalSalary = asNum(data['filteredAmountTotal']);
+          final totalTransactions = (data['total'] as num?)?.toInt() ?? 0;
 
           if (items.isEmpty) {
             return AppEmpty(
@@ -106,7 +107,7 @@ class SalaryLedgerScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${items.length} giao dịch',
+                          '$totalTransactions giao dịch',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 11,
