@@ -260,6 +260,7 @@ cơ bản nhưng chưa đủ chặt cho vận hành nhiều cửa hàng và báo
 | DM-08 | P1 | `cash_accounts.balance` và `cash_transactions.running_balance` cùng lưu số dư | Sửa/xóa/backdate giao dịch có thể làm số dư lệch | Ledger bất biến + transaction posting; balance là read model có job đối soát |
 | DM-09 | P2 | Dòng bán/hóa đơn chưa snapshot đầy đủ tên, SKU và đơn vị tại thời điểm phát sinh | Đổi thông tin sản phẩm có thể làm chứng từ lịch sử hiển thị khác | Snapshot các trường pháp lý/hiển thị trên dòng chứng từ |
 | DM-10 | P2 | `activity_logs.old_value/new_value` là chuỗi giới hạn 2.000 ký tự | Khó truy vấn, có thể cắt payload lớn | JSONB có redaction PII, schema version và retention |
+| DM-11 | P0 | 60 invoice đầu vào không có item; 558 invoice bán có line gross nhưng header net discount và schema thiếu `discount_amount` | Invoice không tự drill-down/đối soát, báo cáo thuế phải join ngầm sang đơn/PO | Header gross/discount/tax/total tự cân bằng, item bắt buộc, backfill có reconciliation và rollback |
 
 ### 10.1 Bảng bổ sung cho hệ thống báo cáo
 
@@ -274,3 +275,6 @@ thể tái tạo:
 
 Mỗi read model phải có `as_of`, `shop_id`, công thức/version và job đối soát với bảng giao dịch; không
 được trở thành nguồn ghi nghiệp vụ thứ hai.
+
+Định nghĩa KPI, blueprint report/table và kết quả 24 quy tắc đối soát mới nhất được ghi tại
+[KPI, report, table và data benchmark](23_KPI_REPORT_TABLE_AND_DATA_BENCHMARK_20260801.md).

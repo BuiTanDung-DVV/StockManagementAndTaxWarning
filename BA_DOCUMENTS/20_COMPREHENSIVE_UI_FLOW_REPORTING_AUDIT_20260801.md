@@ -4,7 +4,7 @@
 
 SmartStock đã có phạm vi chức năng rộng, app shell tương đối nhất quán và phần lớn màn hình đã
 dùng API thay vì dữ liệu mẫu tại giao diện. Tuy nhiên hệ thống chưa nên được coi là hoàn thiện cho
-cửa hàng có vài trăm sản phẩm vì ba vấn đề ảnh hưởng trực tiếp đến tính đúng và khả năng vận hành:
+cửa hàng có vài trăm sản phẩm vì bốn nhóm vấn đề ảnh hưởng trực tiếp đến tính đúng và khả năng vận hành:
 
 1. Nhiều danh sách chỉ tải trang đầu tiên (mặc định 20 dòng) nhưng không có điều khiển chuyển
    trang hoặc tải tiếp. Người dùng có thể không nhìn thấy phần lớn sản phẩm, khách hàng, nhà cung
@@ -13,6 +13,8 @@ cửa hàng có vài trăm sản phẩm vì ba vấn đề ảnh hưởng trực
    hoàn một phần. Lợi nhuận gộp vì vậy có thể bị thổi phồng.
 3. Báo cáo sản phẩm bán chạy đang xếp theo doanh thu và số lượng bán gộp, chưa trừ hàng hoàn.
    Nhãn “bán chạy” hiện không đồng nghĩa với doanh thu thuần hoặc số lượng thuần.
+4. Đối soát 24 quy tắc phát hiện 60 hóa đơn đầu vào không có dòng hàng và 558 hóa đơn bán không
+   tự cân bằng giảm giá vì schema invoice thiếu `discount_amount`.
 
 Ưu tiên đúng là sửa tính toàn vẹn dữ liệu và khả năng truy cập toàn bộ bản ghi trước, sau đó mới
 tăng độ nổi bật của card, biểu đồ và hiệu ứng.
@@ -27,7 +29,7 @@ tăng độ nổi bật của card, biểu đồ và hiệu ứng.
 | Backend Express/TypeORM | Đối chiếu route, service và công thức tổng hợp | Đã xác minh từ code |
 | Bộ test backend P0 | Build/lint và 47/47 test đạt | Đã xác minh |
 | Flutter analyze/test/build | Analyze sạch, 57/57 test đạt, Web release build thành công | Đã xác minh local |
-| Kiểm toán dữ liệu DB | Bản compiled chạy chỉ đọc thành công; mỗi cửa hàng có 250 sản phẩm và dữ liệu ba năm | Đã xác minh local/DB |
+| Kiểm toán dữ liệu DB | 24 quy tắc chạy chỉ đọc trên hai shop; 21 đạt, 2 lỗi invoice và 1 cảnh báo freshness mỗi shop | Đã xác minh, còn lỗi P0 |
 | Accessibility | Chưa chạy keyboard, screen reader, contrast và zoom chuyên biệt | Chưa xác minh |
 
 Ảnh được chấp nhận trong vòng đánh giá hiện tại:
@@ -44,6 +46,9 @@ tăng độ nổi bật của card, biểu đồ và hiệu ứng.
 - [10 — Auth redirect desktop](screenshots/20260801-production-audit-run2/10-inventory-auth-redirect-desktop.png)
 
 Không sử dụng ảnh chụp lỗi responsive hoặc ảnh chưa tải ổn định làm bằng chứng.
+
+Khung KPI, benchmark hệ thống lớn, blueprint bảng/report và grain dữ liệu mục tiêu nằm tại
+[KPI, report, table và data benchmark](23_KPI_REPORT_TABLE_AND_DATA_BENCHMARK_20260801.md).
 
 ## 3. Đánh giá theo hành trình
 

@@ -2,10 +2,10 @@
 
 > **Cập nhật ngày 01/08/2026:** đã kiểm kê lại cấu trúc UI, luồng dữ liệu, bảng biểu và
 > benchmark báo cáo với Shopify, Square, Lightspeed, Odoo và Dynamics 365. Xem
-> [Audit tổng thể UI, luồng và hệ thống báo cáo](20_COMPREHENSIVE_UI_FLOW_REPORTING_AUDIT_20260801.md).
-> Vòng chụp production sau đăng nhập đang bị chặn vì chưa có phiên tài khoản test an toàn và
-> công cụ chụp canvas Flutter hết thời gian phản hồi;
-> không dùng ảnh cũ để khẳng định trạng thái hiện tại.
+> [Audit tổng thể UI, luồng và hệ thống báo cáo](20_COMPREHENSIVE_UI_FLOW_REPORTING_AUDIT_20260801.md)
+> và [Khung KPI, bảng dữ liệu và benchmark](23_KPI_REPORT_TABLE_AND_DATA_BENCHMARK_20260801.md).
+> Đã xác minh 47 route protected và 48 API đọc bằng phiên production; công cụ chụp canvas Flutter
+> protected vẫn hết thời gian phản hồi, vì vậy chưa dùng ảnh cũ để khẳng định giao diện hiện tại.
 
 > **Cập nhật ngày 30/07/2026:** đã chụp và audit 43 route production ở desktop
 > `1280×800` và mobile `390×844` (86 ảnh). Xem
@@ -77,6 +77,9 @@ xử lý các vấn đề ưu tiên sau:
    cấu hình ba secret riêng và chạy migration có kiểm soát.
 5. `inventory_stocks` chưa có unique `(shop_id, warehouse_id, product_id)` trong entity/migration
    hiện có; `sales_return_items` cũng thiếu liên kết dòng bán gốc và cost snapshot.
+6. Đối soát mở rộng phát hiện mỗi shop có 30 hóa đơn đầu vào không có dòng hàng; 268 hóa đơn bán
+   ở shop 34 và 290 ở shop 35 không tự đối soát được vì header lưu sau giảm giá nhưng invoice thiếu
+   trường `discount_amount`.
 
 Hai kết luận cũ đã được đóng ở source hiện tại: chỉ còn một entity `invoices`, và màn Sổ nợ đã dùng
 API `/customer-receivables` thay cho dữ liệu hard-code. Chi tiết mới nhất nằm tại
@@ -105,6 +108,7 @@ API `/customer-receivables` thay cho dữ liệu hard-code. Chi tiết mới nh�
 | [20 - Audit UI, luồng và báo cáo 01/08](20_COMPREHENSIVE_UI_FLOW_REPORTING_AUDIT_20260801.md) | Đánh giá toàn hệ thống, benchmark, cấu trúc bảng/biểu đồ và lộ trình P0–V2.0 |
 | [21 - Ma trận chụp production](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md) | Phạm vi 55 route, màn con, trạng thái và tiêu chí ảnh desktop/mobile |
 | [22 - Smoke test production sau đăng nhập](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md) | 48 API đọc, 47 route protected, đối soát hai shop và sai lệch Kho/Công nợ |
+| [23 - KPI, report, table và data benchmark](23_KPI_REPORT_TABLE_AND_DATA_BENCHMARK_20260801.md) | Benchmark chính thức, KPI catalog, report/table blueprint, data grain và kết quả 24 quy tắc chất lượng dữ liệu |
 
 ## 5. Nguồn bằng chứng
 
