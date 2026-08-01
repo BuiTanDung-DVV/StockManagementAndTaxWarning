@@ -1,11 +1,15 @@
 # Ma trận chụp và kiểm thử toàn bộ giao diện production — 01/08/2026
 
+Ma trận này theo dõi bằng chứng ảnh production. Kiểm kê component và hướng triển khai cho 59 file màn hình nằm tại
+[Ma trận thành phần và triển khai giao diện](24_SCREEN_COMPONENT_IMPLEMENTATION_MATRIX_20260801.md).
+
 ## 1. Mục đích
 
 Ma trận này khóa phạm vi vòng kiểm tra lại production để không bỏ sót màn hình, màn con hoặc
 trạng thái quan trọng. Phạm vi hiện tại gồm:
 
-- 55 route được khai báo trong `app_router.dart`;
+- 56 route duy nhất được khai báo trong `app_router.dart`; bảng route chính bên dưới có 55 dòng vì
+  `/purchase-orders/form` đang được theo dõi ở nhóm màn con;
 - 6 màn con mở bằng `Navigator` hoặc phụ thuộc hành động trước đó;
 - các trạng thái dùng chung: chọn một cửa hàng/tất cả cửa hàng, AI đóng/mở/ẩn, loading, empty,
   error, bộ lọc, phân trang, upload ảnh và responsive.
@@ -32,7 +36,7 @@ Các ô `Chờ đăng nhập` bên dưới được giữ như trạng thái **�
 [báo cáo authenticated smoke](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md), nhưng chưa có ảnh mới
 để đánh giá trực quan từng màn.
 
-## 3. Ma trận 55 route
+## 3. Ma trận route chính
 
 Quy ước trạng thái ảnh: `Đã chụp`, `Chờ đăng nhập`, `Chờ dữ liệu`, `Bị chặn công cụ`.
 

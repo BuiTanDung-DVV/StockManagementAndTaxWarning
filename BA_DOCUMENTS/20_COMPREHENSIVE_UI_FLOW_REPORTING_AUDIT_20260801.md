@@ -49,6 +49,8 @@ Không sử dụng ảnh chụp lỗi responsive hoặc ảnh chưa tải ổn �
 
 Khung KPI, benchmark hệ thống lớn, blueprint bảng/report và grain dữ liệu mục tiêu nằm tại
 [KPI, report, table và data benchmark](23_KPI_REPORT_TABLE_AND_DATA_BENCHMARK_20260801.md).
+Ma trận triển khai từ source cho toàn bộ 59 file màn hình nằm tại
+[Ma trận thành phần và triển khai giao diện](24_SCREEN_COMPONENT_IMPLEMENTATION_MATRIX_20260801.md).
 
 ## 3. Đánh giá theo hành trình
 

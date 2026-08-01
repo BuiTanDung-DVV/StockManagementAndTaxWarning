@@ -109,6 +109,7 @@ API `/customer-receivables` thay cho dữ liệu hard-code. Chi tiết mới nh�
 | [21 - Ma trận chụp production](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md) | Phạm vi 55 route, màn con, trạng thái và tiêu chí ảnh desktop/mobile |
 | [22 - Smoke test production sau đăng nhập](22_PRODUCTION_AUTHENTICATED_SMOKE_TEST_20260801.md) | 48 API đọc, 47 route protected, đối soát hai shop và sai lệch Kho/Công nợ |
 | [23 - KPI, report, table và data benchmark](23_KPI_REPORT_TABLE_AND_DATA_BENCHMARK_20260801.md) | Benchmark chính thức, KPI catalog, report/table blueprint, data grain và kết quả 24 quy tắc chất lượng dữ liệu |
+| [24 - Ma trận thành phần 59 màn](24_SCREEN_COMPONENT_IMPLEMENTATION_MATRIX_20260801.md) | Kiểm kê header, guide, action, chart, table, pagination và mẫu triển khai cho từng màn |
 
 ## 5. Nguồn bằng chứng
 
