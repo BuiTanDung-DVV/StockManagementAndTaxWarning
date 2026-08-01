@@ -257,6 +257,197 @@ async function main(): Promise<void> {
       `,
       'Bộ dữ liệu 3 năm yêu cầu có hoạt động mỗi ngày.',
     );
+    await add(
+      'Không trùng tồn theo cửa hàng, sản phẩm và kho',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM (
+          SELECT product_id, warehouse_id
+          FROM inventory_stocks
+          WHERE shop_id = $1
+          GROUP BY product_id, warehouse_id
+          HAVING COUNT(*) > 1
+        ) duplicated_stock_grain
+      `,
+      'Grain chuẩn của tồn hiện tại là một dòng cho mỗi shop/product/warehouse.',
+    );
+    await add(
+      'SKU không trùng trong cùng cửa hàng',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM (
+          SELECT LOWER(TRIM(sku))
+          FROM products
+          WHERE shop_id = $1
+          GROUP BY LOWER(TRIM(sku))
+          HAVING COUNT(*) > 1
+        ) duplicated_skus
+      `,
+    );
+    await add(
+      'Tên danh mục không trùng trong cùng cửa hàng',
+      'WARNING',
+      `
+        SELECT COUNT(*) AS violations
+        FROM (
+          SELECT LOWER(TRIM(name))
+          FROM categories
+          WHERE shop_id = $1
+          GROUP BY LOWER(TRIM(name))
+          HAVING COUNT(*) > 1
+        ) duplicated_categories
+      `,
+    );
+    await add(
+      'Sản phẩm hoạt động có giá và đơn vị hợp lệ',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM products
+        WHERE shop_id = $1
+          AND is_active = true
+          AND (
+            COALESCE(TRIM(unit), '') = ''
+            OR cost_price < 0
+            OR selling_price <= 0
+            OR selling_price < cost_price
+          )
+      `,
+    );
+    await add(
+      'Sản phẩm hoạt động có định mức tồn',
+      'WARNING',
+      `
+        SELECT COUNT(*) AS violations
+        FROM products
+        WHERE shop_id = $1
+          AND is_active = true
+          AND COALESCE(min_stock, 0) <= 0
+      `,
+      'Thiếu định mức làm cảnh báo dưới định mức không tạo được tín hiệu hành động.',
+    );
+    await add(
+      'Sản phẩm hoạt động có ảnh',
+      'WARNING',
+      `
+        SELECT COUNT(*) AS violations
+        FROM products
+        WHERE shop_id = $1
+          AND is_active = true
+          AND COALESCE(TRIM(image_url), '') = ''
+      `,
+    );
+    await add(
+      'Hàng hoàn không vượt số lượng đã bán',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM (
+          SELECT
+            sold.order_id,
+            sold.product_id,
+            sold.sold_quantity,
+            COALESCE(returned.returned_quantity, 0) AS returned_quantity
+          FROM (
+            SELECT order_id, product_id, SUM(quantity) AS sold_quantity
+            FROM sales_order_items
+            WHERE shop_id = $1
+            GROUP BY order_id, product_id
+          ) sold
+          LEFT JOIN (
+            SELECT r.order_id, ri.product_id, SUM(ri.quantity) AS returned_quantity
+            FROM sales_returns r
+            JOIN sales_return_items ri ON ri.return_id = r.id
+            WHERE r.shop_id = $1
+              AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+            GROUP BY r.order_id, ri.product_id
+          ) returned
+            ON returned.order_id = sold.order_id
+            AND returned.product_id = sold.product_id
+          WHERE COALESCE(returned.returned_quantity, 0) > sold.sold_quantity
+        ) excessive_returns
+      `,
+    );
+    await add(
+      'Hóa đơn có đầy đủ dòng hàng',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM invoices i
+        WHERE i.shop_id = $1
+          AND NOT EXISTS (
+            SELECT 1 FROM invoice_items ii WHERE ii.invoice_id = i.id
+          )
+      `,
+      'Hóa đơn không có dòng hàng không thể drill-down hoặc đối soát thuế độc lập.',
+    );
+    await add(
+      'Chiết khấu hóa đơn được mô hình hóa để tự đối soát',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM (
+          SELECT i.id
+          FROM invoices i
+          JOIN invoice_items ii ON ii.invoice_id = i.id
+          WHERE i.shop_id = $1
+          GROUP BY i.id
+          HAVING ABS(COALESCE(i.subtotal, 0) - COALESCE(SUM(ii.subtotal), 0)) > 1
+            OR ABS(COALESCE(i.tax_amount, 0) - COALESCE(SUM(ii.tax_amount), 0)) > 1
+            OR ABS(
+              COALESCE(i.total_amount, 0) -
+              (COALESCE(i.subtotal, 0) + COALESCE(i.tax_amount, 0))
+            ) > 1
+        ) invalid_invoices
+      `,
+      'Header hiện dùng giá trị sau giảm nhưng invoice không có discount_amount; phải join đơn bán mới giải thích được chênh lệch.',
+    );
+    await add(
+      'Dữ liệu lõi có đầy đủ cửa hàng sở hữu',
+      'ERROR',
+      `
+        SELECT SUM(violations)::int AS violations
+        FROM (
+          SELECT COUNT(*) AS violations FROM products WHERE shop_id IS NULL AND $1 > 0
+          UNION ALL SELECT COUNT(*) FROM customers WHERE shop_id IS NULL AND $1 > 0
+          UNION ALL SELECT COUNT(*) FROM suppliers WHERE shop_id IS NULL AND $1 > 0
+          UNION ALL SELECT COUNT(*) FROM sales_orders WHERE shop_id IS NULL AND $1 > 0
+          UNION ALL SELECT COUNT(*) FROM sales_order_items WHERE shop_id IS NULL AND $1 > 0
+          UNION ALL SELECT COUNT(*) FROM inventory_stocks WHERE shop_id IS NULL AND $1 > 0
+          UNION ALL SELECT COUNT(*) FROM inventory_movements WHERE shop_id IS NULL AND $1 > 0
+          UNION ALL SELECT COUNT(*) FROM cash_transactions WHERE shop_id IS NULL AND $1 > 0
+          UNION ALL SELECT COUNT(*) FROM invoices WHERE shop_id IS NULL AND $1 > 0
+        ) missing_shop_scope
+      `,
+      'Bảng nghiệp vụ lõi không được có bản ghi không xác định cửa hàng.',
+    );
+    await add(
+      'Tham chiếu tồn kho không chéo cửa hàng',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM inventory_stocks s
+        JOIN products p ON p.id = s.product_id
+        JOIN warehouses w ON w.id = s.warehouse_id
+        WHERE s.shop_id = $1
+          AND (p.shop_id != $1 OR w.shop_id != $1)
+      `,
+    );
+    await add(
+      'Dữ liệu bán hàng còn mới',
+      'WARNING',
+      `
+        SELECT CASE
+          WHEN MAX(order_date)::date >= CURRENT_DATE - 1 THEN 0
+          ELSE 1
+        END AS violations
+        FROM sales_orders
+        WHERE shop_id = $1
+      `,
+      'Cảnh báo khi không có đơn hôm nay hoặc hôm qua; dữ liệu demo cần được nối dài định kỳ.',
+    );
 
     const periodRows = await AppDataSource.query(`
       SELECT
