@@ -2,7 +2,9 @@
 
 > **Cập nhật gate phát hành local, 02/08/2026:** backend build + lint + P0 suite đạt `57/57`,
 > audit dependency production không có lỗ hổng; Flutter analyze sạch, toàn bộ `61/61` test và Web release build đạt.
-> Production chưa deploy gói sửa này; migration auth còn chờ phê duyệt vì sẽ hủy 14 OTP đang chờ.
+> Production chưa deploy gói sửa này. Migration auth đã được phê duyệt, chạy thành công và
+> xác minh ngày 02/08/2026: `refresh_sessions`, `users.auth_version`, `otps.purpose` sẵn sàng;
+> 14 OTP thử nghiệm đã được hủy và số OTP đang chờ còn `0`.
 
 > **Bằng chứng hiện có 25/07/2026:** backend P0 suite đạt `28/28` trên local cho
 > permission, debt, sales metric, invoice metadata và tax policy. Các test
@@ -30,7 +32,7 @@
 | TC-SALE-09 | Đơn 10 dòng/sản phẩm, hoàn 2 rồi hoàn tiếp 3 | COGS hoàn lần lượt đúng 2 và 3; tổng không vượt COGS đã bán | Summary COGS theo dòng đã sửa và data gate hai shop đạt; service chủ động chặn hoàn một phần, nên test nhiều lần vẫn P0 mở |
 | TC-PAGE-01 | 300 sản phẩm/khách/NCC, tìm bản ghi ở trang cuối | UI duyệt/tìm/chọn được đủ; không lặp/mất; filter reset trang | Chưa có test, P0 mở |
 | TC-ROUTE-01 | Quét mọi literal `context.go/push` và reload detail URL | Không có path dùng nhưng chưa khai báo; detail tải lại bằng `:id` | Static route registry đạt; reload detail còn cần integration test |
-| TC-AUTH-05 | Build metadata và khởi tạo datasource sau auth hardening | Không có cột TypeORM kiểu `Object`; datasource init thành công | Metadata và audit DB chỉ đọc đạt; production chưa chạy migration auth |
+| TC-AUTH-05 | Build metadata và khởi tạo datasource sau auth hardening | Không có cột TypeORM kiểu `Object`; datasource init thành công | Metadata test đạt; migration production và kiểm tra schema độc lập đạt ngày 02/08/2026 |
 | TC-INV-07 | Hai request đồng thời tạo/cập nhật cùng tồn SKU/kho | Chỉ một dòng `(shop,warehouse,product)`; quantity cân | Chưa có unique constraint/test |
 | TC-RBAC-08 | Menu/router/API cho tax estimate, tax config, logs, AI knowledge | Cùng module/action cho owner/view/edit/none | Hiện mapping không khớp |
 | TC-SALE-10 | Mở cùng một đơn từ list, detail và invoice | `customerId/name`, tổng, thanh toán và trạng thái giống nhau | Production sai tên khách; chưa có contract test |
