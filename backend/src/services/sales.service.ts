@@ -15,6 +15,7 @@ import { InventoryMovement, InventoryStock } from '../inventory/entities';
 import { InventoryLot } from '../inventory/lot.entity';
 import { EntityManager } from 'typeorm';
 import { normalizeSalesStatusFilter } from '../sales/sales-metric.utils';
+import { assertAllowedUnitPrice } from '../sales/sales-pricing.utils';
 
 export class SalesService {
     private orderRepo = AppDataSource.getRepository(SalesOrder);
@@ -270,14 +271,23 @@ export class SalesService {
             const manager = queryRunner.manager;
 
             const orderDate = dto.orderDate ? new Date(dto.orderDate) : new Date();
+            if (Number.isNaN(orderDate.getTime())) {
+                throw new Error('Validation: Order date is invalid');
+            }
 
             const customer = dto.customerId
                 ? await manager.findOne(Customer, { where: { id: Number(dto.customerId), shopId } })
                 : null;
+            if (dto.customerId && !customer) {
+                throw new Error('Validation: Customer not found');
+            }
 
             let subtotal = 0;
             let totalCogs = 0;
             const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
+            if (rawItems.length === 0) {
+                throw new Error('Validation: Order must contain at least one item');
+            }
             const allLotDeductions: { lotId: number; qty: number }[] = [];
             const itemLotDeductions: { itemIndex: number, lotId: number, qty: number }[] = [];
             const stockDeductions: { productId: number; quantity: number }[] = [];
@@ -285,16 +295,22 @@ export class SalesService {
             const items: SalesOrderItem[] = [];
             for (const i of rawItems) {
                 const quantity = Number(i.quantity || 0);
-                const unitPrice = Number(i.unitPrice || 0);
-                if (quantity <= 0) throw new Error('Validation: Quantity must be greater than 0');
-                if (unitPrice < 0) throw new Error('Validation: Unit price cannot be negative');
-                const lineSubtotal = quantity * unitPrice;
-                subtotal += lineSubtotal;
+                if (!Number.isFinite(quantity) || quantity <= 0) {
+                    throw new Error('Validation: Quantity must be greater than 0');
+                }
 
                 const product = i.productId
                     ? await manager.findOne(Product, { where: { id: Number(i.productId), shopId } })
                     : null;
                 if (!product) throw new Error('Validation: Product not found');
+                const unitPrice = assertAllowedUnitPrice(
+                    i.unitPrice,
+                    product,
+                    quantity,
+                    orderDate,
+                );
+                const lineSubtotal = quantity * unitPrice;
+                subtotal += lineSubtotal;
                 await this.assertStockAvailable(shopId, product.id, quantity, manager);
                 stockDeductions.push({ productId: product.id, quantity });
 
@@ -330,9 +346,23 @@ export class SalesService {
 
             const discountAmount = Number(dto.discountAmount || 0);
             const taxAmount = Number(dto.taxAmount || 0);
+            if (
+                !Number.isFinite(discountAmount)
+                || discountAmount < 0
+                || discountAmount > subtotal
+            ) {
+                throw new Error('Validation: Discount must be between 0 and subtotal');
+            }
+            if (!Number.isFinite(taxAmount) || taxAmount < 0) {
+                throw new Error('Validation: Tax amount must be a non-negative number');
+            }
             const totalAmount = subtotal - discountAmount + taxAmount;
             const paidAmount = Number(dto.paidAmount || 0);
-            if (paidAmount < 0 || paidAmount > totalAmount) {
+            if (
+                !Number.isFinite(paidAmount)
+                || paidAmount < 0
+                || paidAmount > totalAmount
+            ) {
                 throw new Error('Validation: Paid amount must be between 0 and order total');
             }
             const unpaidAmount = Math.max(totalAmount - paidAmount, 0);
