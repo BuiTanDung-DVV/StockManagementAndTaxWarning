@@ -22,12 +22,12 @@
 | CUR-06 | Guard route và API | Đúng một phần | Tax estimate/activity/AI knowledge/tax config có mapping quyền lệch | Cao |
 | CUR-07 | Invoice entity | Đã xác minh từ code | 51 entity/51 bảng duy nhất; một model `invoices` | Trung bình; chờ introspect DB |
 | CUR-08 | Sổ nợ | Đúng một phần | Production tải 453 khoản phải thu thật; chưa phân trang, chưa đối soát thu nợ và khách vượt hạn mức không có cảnh báo | Cao |
-| CUR-09 | Bộ test backend P0 | Đã xác minh local | Build, lint và 55/55 test đạt ngày 02/08/2026; đã phủ kỳ tài chính, giá bán hợp lệ và đồng nhất khách hàng list/detail | Trung bình; chưa phủ CUR-02 và chưa thay thế smoke test production |
+| CUR-09 | Bộ test backend P0 | Đã xác minh local | Build, lint và 56/56 test đạt ngày 02/08/2026; đã phủ kỳ tài chính, giá bán hợp lệ, đồng nhất khách hàng list/detail và khóa an toàn migration auth | Trung bình; chưa phủ CUR-02 và chưa thay thế smoke test production |
 | CUR-10 | Flutter analyze/test/build | Đúng một phần | Analyze toàn dự án sạch; 5/5 test mục tiêu kỳ báo cáo/chốt ca đạt. Kết quả 57/57 và Web build vẫn là bằng chứng lần trước | Trung bình; chưa chạy lại toàn bộ suite/Web build trong gói này |
 | CUR-11 | Accessibility | Bị chặn | Chưa test keyboard, focus, zoom 200%, screen reader | Trung bình |
 | CUR-12 | KPI kho và ngưỡng cảnh báo | Không chính xác production | Production hiển thị tổng 20 nhưng dưới định mức 112; local đã sửa dùng server total và `min_stock` | Rất cao |
 | CUR-13 | Định danh khách ở đơn bán | Không chính xác | Cùng `SOY109500`: list là Đội thầu Minh Tâm, detail là Khách mua lẻ; API detail thiếu join customer | Rất cao |
-| CUR-14 | Kỳ chi phí/lương và chốt ca | Đúng một phần — đã sửa local, production chưa deploy | Backend dùng cùng kỳ cho tổng và danh sách chi phí; sổ lương lọc `SALARY` theo tháng tại API; chốt ca giữ trạng thái “Chưa đối soát” khi ô thực tế trống. Backend P0 55/55, Flutter toàn bộ 61/61 và analyze sạch | Rất cao cho tới khi smoke test production |
+| CUR-14 | Kỳ chi phí/lương và chốt ca | Đúng một phần — đã sửa local, production chưa deploy | Backend dùng cùng kỳ cho tổng và danh sách chi phí; sổ lương lọc `SALARY` theo tháng tại API; chốt ca giữ trạng thái “Chưa đối soát” khi ô thực tế trống. Backend P0 56/56, Flutter toàn bộ 61/61 và analyze sạch | Rất cao cho tới khi smoke test production |
 | CUR-15 | Toàn vẹn invoice/chứng từ | Không chính xác | 60 invoice đầu vào thiếu item, 558 invoice không tự cân bằng discount, chứng từ có quantity 0 | Rất cao |
 | CUR-16 | Deep-link và route nhập hàng | Không chính xác production | Form PO Page Not Found; PO/transaction detail dựng `PO-null`/`-0 đ` và vẫn có action | Cao |
 | CUR-17 | Thuế và báo cáo mobile | Đúng một phần, rủi ro cao | Ngưỡng 1 tỷ có nguồn chính thức; kỳ/sort/CTA chưa đúng, chart ngưỡng vỡ nhãn | Cao |

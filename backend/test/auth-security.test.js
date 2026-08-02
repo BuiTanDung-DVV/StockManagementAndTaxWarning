@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
 const { createHmac } = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 const jwt = require('jsonwebtoken');
 
@@ -148,4 +150,16 @@ test('refresh token reuse commits family revocation before returning 401', async
   }
   assert.equal(familyRevoked, true);
   assert.equal(transactionCommitted, true);
+});
+
+test('auth migration requires explicit OTP reset confirmation and is idempotent', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'scripts', 'apply-auth-migration.ts'),
+    'utf8',
+  );
+
+  assert.match(source, /CONFIRM_AUTH_MIGRATION/);
+  assert.match(source, /RESET_PENDING_OTP_20260801/);
+  assert.match(source, /if \(before\.ready\)/);
+  assert.match(source, /không chạy lại migration/);
 });

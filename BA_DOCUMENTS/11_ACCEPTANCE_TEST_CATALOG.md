@@ -1,6 +1,6 @@
 # Danh mục kiểm thử nghiệm thu
 
-> **Cập nhật gate phát hành local, 02/08/2026:** backend build + lint + P0 suite đạt `55/55`,
+> **Cập nhật gate phát hành local, 02/08/2026:** backend build + lint + P0 suite đạt `56/56`,
 > audit dependency production không có lỗ hổng; Flutter analyze sạch, toàn bộ `61/61` test và Web release build đạt.
 > Production chưa deploy gói sửa này; migration auth còn chờ phê duyệt vì sẽ hủy 14 OTP đang chờ.
 
@@ -36,7 +36,7 @@
 | TC-SALE-10 | Mở cùng một đơn từ list, detail và invoice | `customerId/name`, tổng, thanh toán và trạng thái giống nhau | Production sai tên khách; chưa có contract test |
 | TC-INV-08 | 300 sản phẩm, nhiều kho, min-stock riêng | KPI tổng dùng server total; low-stock dùng `min_stock`; đổi trang không đổi tổng | Fix local có; production chưa deploy/test |
 | TC-DATA-05 | Tạo/import/duyệt chứng từ có quantity 0 hoặc âm | UI/API/DB từ chối; không ghi movement, COGS hoặc tổng | Production còn bản ghi quantity 0; chưa có DB constraint |
-| TC-FIN-04 | Sổ chi phí tháng không có dữ liệu nhưng có giao dịch tháng trước | KPI/chart/list/export cùng rỗng; đổi sang tháng trước thì tổng bằng tổng dòng | Logic kỳ và truy vấn recent list đã sửa local; backend P0 55/55 đạt; production chưa deploy/test |
+| TC-FIN-04 | Sổ chi phí tháng không có dữ liệu nhưng có giao dịch tháng trước | KPI/chart/list/export cùng rỗng; đổi sang tháng trước thì tổng bằng tổng dòng | Logic kỳ và truy vấn recent list đã sửa local; backend P0 56/56 đạt; production chưa deploy/test |
 | TC-FIN-05 | Sổ lương tháng 8 với giao dịch ngày 10/07 | Dòng tháng 7 không xuất hiện; header/tổng/list/export cùng `from/to` | Đã lọc tháng + `SALARY` server-side và dùng tổng toàn bộ tập lọc; production chưa deploy/test |
 | TC-FIN-06 | Mở chốt ca nhưng chưa nhập tiền thực tế | Hiện “Chưa đối soát”, không tính chênh lệch và không cho khóa | Unit test ô trống/0/sai/âm đạt; production chưa deploy/test |
 | TC-ROUTE-02 | Reload/share PO detail và transaction detail | Tải bằng `:id`; id thiếu/sai trả 404 UI; không hiện sửa/xóa khi entity không hợp lệ | Production dựng `PO-null`/`-0 đ` |
