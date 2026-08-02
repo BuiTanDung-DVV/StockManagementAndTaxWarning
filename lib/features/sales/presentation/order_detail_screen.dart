@@ -79,14 +79,18 @@ class OrderDetailScreen extends ConsumerWidget {
           // Payment status
           final bool isFullyPaid = remaining <= 0;
           final bool isCancelled = status == 'CANCELLED';
-          final bool isReturned = returnStatus == 'RETURNED';
+          final bool isPartiallyReturned = returnStatus == 'PARTIAL_RETURN';
+          final bool isFullyReturned = returnStatus == 'FULL_RETURN';
+          final bool isReturned = isPartiallyReturned || isFullyReturned;
 
           Color statusColor;
           String statusLabel;
 
           if (isReturned) {
             statusColor = AppColors.danger;
-            statusLabel = 'Đã trả hàng';
+            statusLabel = isFullyReturned
+                ? 'Đã hoàn toàn bộ'
+                : 'Đã hoàn một phần';
           } else {
             switch (status) {
               case 'COMPLETED':

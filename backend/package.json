@@ -16,6 +16,7 @@
         "seed:three-years": "tsx src/scripts/seed-three-year-store.ts",
         "audit:data": "tsx src/scripts/audit-store-data.ts",
         "validate:data": "tsx src/scripts/validate-store-data.ts",
+        "validate:auth-schema": "npm run build && node dist/scripts/check-auth-schema.js",
         "validate:migration": "tsx src/scripts/validate-ai-knowledge-migration.ts",
         "migrate:20260728": "tsx src/scripts/apply-database-migrations.ts"
     },
