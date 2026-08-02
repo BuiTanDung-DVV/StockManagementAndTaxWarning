@@ -51,6 +51,17 @@ test('sales detail loads the same customer relation as the sales list', () => {
   );
 });
 
+test('sales creation rejects invalid identity, date and empty orders', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'services', 'sales.service.ts'),
+    'utf8',
+  );
+
+  assert.match(source, /Order date is invalid/);
+  assert.match(source, /Customer not found/);
+  assert.match(source, /Order must contain at least one item/);
+});
+
 test('top products report exposes quantity, unit and up to ten products', () => {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'src', 'services', 'sales.service.ts'),

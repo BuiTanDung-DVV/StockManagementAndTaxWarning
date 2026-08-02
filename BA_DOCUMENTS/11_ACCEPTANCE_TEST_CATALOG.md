@@ -1,8 +1,8 @@
 # Danh mục kiểm thử nghiệm thu
 
-> **Cập nhật gói sửa kỳ tài chính local, 01/08/2026:** backend build + lint + P0 suite đạt `49/49`;
-> Flutter analyze toàn dự án sạch và `5/5` test mục tiêu kỳ báo cáo/chốt ca đạt. Kết quả toàn bộ `57/57`
-> test và Web release build vẫn là bằng chứng của lần chạy trước; production chưa deploy gói sửa này.
+> **Cập nhật gate phát hành local, 02/08/2026:** backend build + lint + P0 suite đạt `55/55`,
+> audit dependency production không có lỗ hổng; Flutter analyze sạch, toàn bộ `61/61` test và Web release build đạt.
+> Production chưa deploy gói sửa này; migration auth còn chờ phê duyệt vì sẽ hủy 14 OTP đang chờ.
 
 > **Bằng chứng hiện có 25/07/2026:** backend P0 suite đạt `28/28` trên local cho
 > permission, debt, sales metric, invoice metadata và tax policy. Các test
@@ -26,7 +26,7 @@
 | TC-CSV-01 | Tên có dấu phẩy/nháy và ô bắt đầu `=+-@` | CSV UTF-8 đúng và không thực thi formula | Flutter test đạt; browser production chưa xác minh |
 | TC-MOB-01 | POS 390×844 với cart và AI | Checkout không bị nav/AI che | Flutter test đạt; viewport production chưa xác minh |
 | TC-PERIOD-01 | Ngày đầu/cuối tháng, tháng 1 | Dashboard/sales/finance dùng cùng from/to | Flutter test đạt; API production chưa đối soát |
-| TC-SALE-08 | Client gửi `unitPrice` khác giá/policy backend | Backend từ chối hoặc áp dụng giá hợp lệ; override cần quyền+lý do+audit | Chưa có test, P0 mở |
+| TC-SALE-08 | Client gửi `unitPrice` khác giá/policy backend | Backend từ chối hoặc áp dụng giá hợp lệ; override cần quyền+lý do+audit | Unit test giá bán lẻ/sỉ/khuyến mại và giá sửa trái phép đạt local; override có kiểm soát và production chưa xác minh |
 | TC-SALE-09 | Đơn 10 dòng/sản phẩm, hoàn 2 rồi hoàn tiếp 3 | COGS hoàn lần lượt đúng 2 và 3; tổng không vượt COGS đã bán | Chưa có test, P0 mở |
 | TC-PAGE-01 | 300 sản phẩm/khách/NCC, tìm bản ghi ở trang cuối | UI duyệt/tìm/chọn được đủ; không lặp/mất; filter reset trang | Chưa có test, P0 mở |
 | TC-ROUTE-01 | Quét mọi literal `context.go/push` và reload detail URL | Không có path dùng nhưng chưa khai báo; detail tải lại bằng `:id` | Static route registry đạt; reload detail còn cần integration test |
@@ -36,7 +36,7 @@
 | TC-SALE-10 | Mở cùng một đơn từ list, detail và invoice | `customerId/name`, tổng, thanh toán và trạng thái giống nhau | Production sai tên khách; chưa có contract test |
 | TC-INV-08 | 300 sản phẩm, nhiều kho, min-stock riêng | KPI tổng dùng server total; low-stock dùng `min_stock`; đổi trang không đổi tổng | Fix local có; production chưa deploy/test |
 | TC-DATA-05 | Tạo/import/duyệt chứng từ có quantity 0 hoặc âm | UI/API/DB từ chối; không ghi movement, COGS hoặc tổng | Production còn bản ghi quantity 0; chưa có DB constraint |
-| TC-FIN-04 | Sổ chi phí tháng không có dữ liệu nhưng có giao dịch tháng trước | KPI/chart/list/export cùng rỗng; đổi sang tháng trước thì tổng bằng tổng dòng | Logic kỳ và truy vấn recent list đã sửa local; backend P0 49/49 đạt; production chưa deploy/test |
+| TC-FIN-04 | Sổ chi phí tháng không có dữ liệu nhưng có giao dịch tháng trước | KPI/chart/list/export cùng rỗng; đổi sang tháng trước thì tổng bằng tổng dòng | Logic kỳ và truy vấn recent list đã sửa local; backend P0 55/55 đạt; production chưa deploy/test |
 | TC-FIN-05 | Sổ lương tháng 8 với giao dịch ngày 10/07 | Dòng tháng 7 không xuất hiện; header/tổng/list/export cùng `from/to` | Đã lọc tháng + `SALARY` server-side và dùng tổng toàn bộ tập lọc; production chưa deploy/test |
 | TC-FIN-06 | Mở chốt ca nhưng chưa nhập tiền thực tế | Hiện “Chưa đối soát”, không tính chênh lệch và không cho khóa | Unit test ô trống/0/sai/âm đạt; production chưa deploy/test |
 | TC-ROUTE-02 | Reload/share PO detail và transaction detail | Tải bằng `:id`; id thiếu/sai trả 404 UI; không hiện sửa/xóa khi entity không hợp lệ | Production dựng `PO-null`/`-0 đ` |
