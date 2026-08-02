@@ -80,7 +80,8 @@ class OrderDetailScreen extends ConsumerWidget {
           final bool isFullyPaid = remaining <= 0;
           final bool isCancelled = status == 'CANCELLED';
           final bool isPartiallyReturned = returnStatus == 'PARTIAL_RETURN';
-          final bool isFullyReturned = returnStatus == 'FULL_RETURN';
+          final bool isFullyReturned =
+              returnStatus == 'FULL_RETURN' || returnStatus == 'RETURNED';
           final bool isReturned = isPartiallyReturned || isFullyReturned;
 
           Color statusColor;

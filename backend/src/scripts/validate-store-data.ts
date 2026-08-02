@@ -371,6 +371,22 @@ async function main(): Promise<void> {
       `,
     );
     await add(
+      'Phiếu hoàn có đầy đủ dòng hàng',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM sales_returns r
+        WHERE r.shop_id = $1
+          AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+          AND NOT EXISTS (
+            SELECT 1
+            FROM sales_return_items ri
+            WHERE ri.return_id = r.id
+          )
+      `,
+      'Thiếu dòng hoàn thì không thể đảo doanh thu, giá vốn và tồn kho chính xác.',
+    );
+    await add(
       'Hóa đơn có đầy đủ dòng hàng',
       'ERROR',
       `

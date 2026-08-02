@@ -81,15 +81,31 @@ export class SalesService {
                 toDate,
             })
             .getRawOne();
-        const returnedCogsResult = await this.returnRepo.createQueryBuilder('r')
-            .innerJoin('r.order', 'ro')
-            .select('COALESCE(SUM(ro.total_cogs), 0)', 'returnedCogs')
-            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND r.status != 'CANCELLED'`, {
-                ...shopParams,
-                fromDate,
-                toDate,
-            })
-            .getRawOne();
+        const returnCogsShopCondition = Array.isArray(shopId)
+            ? 'r.shop_id = ANY($1)'
+            : 'r.shop_id = $1';
+        const [returnedCogsResult] = await AppDataSource.query(`
+            SELECT COALESCE(SUM(ri.quantity * sold.unit_cost), 0) AS "returnedCogs"
+            FROM sales_returns r
+            JOIN sales_return_items ri ON ri.return_id = r.id
+            JOIN (
+                SELECT
+                    order_id,
+                    product_id,
+                    COALESCE(
+                        SUM(quantity * cost_price) / NULLIF(SUM(quantity), 0),
+                        0
+                    ) AS unit_cost
+                FROM sales_order_items
+                GROUP BY order_id, product_id
+            ) sold
+              ON sold.order_id = r.order_id
+             AND sold.product_id = ri.product_id
+            WHERE ${returnCogsShopCondition}
+              AND r.return_date >= $2
+              AND r.return_date <= $3
+              AND r.status != 'CANCELLED'
+        `, [shopId, fromDate, toDate]);
 
         const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
         const dateFormat = diffDays > 60 ? 'YYYY-MM' : 'YYYY-MM-DD';
@@ -832,7 +848,7 @@ export class SalesService {
 
             const savedReturn = await manager.save(SalesReturn, entity) as unknown as SalesReturn;
 
-            order.returnStatus = 'RETURNED';
+            order.returnStatus = 'FULL_RETURN';
             await manager.save(SalesOrder, order);
 
             const receivable = await manager.findOne(Receivable, {

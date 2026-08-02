@@ -28,6 +28,16 @@ test('net amount uses the same income minus expense definition', () => {
   assert.equal(calculateNetAmount(500_000, 125_000), 375_000);
 });
 
+test('returned COGS is calculated from returned quantity and sold unit cost', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'services', 'sales.service.ts'),
+    'utf8',
+  );
+
+  assert.match(source, /SUM\(ri\.quantity \* sold\.unit_cost\)/);
+  assert.doesNotMatch(source, /SUM\(ro\.total_cogs\)/);
+});
+
 test('sales list query uses TypeORM entity property paths', () => {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'src', 'services', 'sales.service.ts'),
