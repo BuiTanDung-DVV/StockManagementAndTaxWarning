@@ -11,7 +11,7 @@ Quy ước: `Đã xác minh`, `Đúng một phần`, `Không chính xác`, `Bị
 
 | Luồng/yêu cầu | UI/điểm vào | API và dữ liệu chính | Bằng chứng production | Bằng chứng local/test | Trạng thái | Việc bắt buộc để đóng |
 |---|---|---|---|---|---|---|
-| AUTH — đăng ký, OTP, login, refresh, logout | `/login`, `/register`, `/verify-otp` | `/auth/*`; `users`, `otps`, refresh-token family | Login và protected route hoạt động ở commit cũ | Auth hardening + backend P0 56/56 đạt; schema check xác nhận migration auth chưa chạy và còn 14 OTP chờ | Bị chặn | Phê duyệt hủy OTP cũ, backup, migration, cold-start và test OTP/refresh/reuse/logout production |
+| AUTH — đăng ký, OTP, login, refresh, logout | `/login`, `/register`, `/verify-otp` | `/auth/*`; `users`, `otps`, refresh-token family | Login và protected route hoạt động ở commit cũ | Auth hardening + backend P0 57/57 đạt; schema check xác nhận migration auth chưa chạy và còn 14 OTP chờ | Bị chặn | Phê duyệt hủy OTP cũ, backup, migration, cold-start và test OTP/refresh/reuse/logout production |
 | SALE — POS, giá bán, thanh toán | `/pos`, `/sales` | `/sales-orders`, payments; products, orders, cash, receivables | POS/list tải được và hiện giá bán | Local chỉ nhận giá bán lẻ/sỉ/khuyến mại đã cấu hình; chặn giá tùy ý, giảm giá sai và đơn rỗng; pricing test đạt | Đúng một phần — production chưa deploy | Smoke test giá bán; thiết kế override cần quyền/lý do/audit; TC-SALE-08/01/02 đạt production |
 | SALE — detail, hoàn/hủy | `/sales/:id`, modal hoàn | order detail, cancel, return; items, COGS, movements | List/detail cùng mã khác khách; hoàn không chọn dòng/số lượng | `findOne` thiếu relation customer; return chưa có item-level COGS | Không chính xác | Join customer; return theo item/quantity/cost lot; test nhiều lần hoàn và idempotency |
 | PRODUCT/MEDIA — ảnh và giá | `/products`, `/products/:id`, form | product CRUD + Cloudinary lifecycle; `products.image_url` | List có ảnh thật nhưng detail hiện icon mặc định | Lifecycle thay/xóa ảnh đạt unit test | Đúng một phần | Một DTO/image contract cho list/detail/form; regression ảnh cũ bị xóa sau replace |
@@ -27,7 +27,7 @@ Quy ước: `Đã xác minh`, `Đúng một phần`, `Không chính xác`, `Bị
 
 ### Bằng chứng kiểm thử mới nhất
 
-- Backend `npm run test:p0` ngày 02/08/2026: **56/56 đạt**; lint và TypeScript build sạch;
+- Backend `npm run test:p0` ngày 02/08/2026: **57/57 đạt**; lint và TypeScript build sạch;
   dependency production không có lỗ hổng theo `npm audit --omit=dev --audit-level=high`.
 - Flutter analyze toàn dự án sạch, **61/61 test đạt** và Web release build thành công; production chưa deploy gói sửa này.
 - Production vẫn ở `093b17ac`; mọi fix local phải giữ trạng thái `Chưa xác minh production` cho đến khi

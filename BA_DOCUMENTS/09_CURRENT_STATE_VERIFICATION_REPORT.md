@@ -15,19 +15,19 @@
 | ID | Hạng mục | Trạng thái | Bằng chứng hiện tại | Ảnh hưởng |
 |---|---|---|---|---|
 | CUR-01 | Backend quyết định giá bán | Đúng một phần — đã sửa local, production chưa deploy | Backend chỉ chấp nhận giá bán lẻ, giá sỉ đủ số lượng hoặc giá khuyến mại còn hiệu lực đã cấu hình; chặn giá tùy ý, số tiền không hữu hạn và giảm giá ngoài khoảng. Chưa có luồng override giá có quyền/lý do/audit | Rất cao cho tới khi smoke test production |
-| CUR-02 | Giá vốn hoàn một phần | Không chính xác | Summary cộng `total_cogs` của toàn đơn cho từng return | Rất cao |
+| CUR-02 | Giá vốn hoàn một phần | Đúng một phần — đã sửa summary local, nghiệp vụ hoàn một phần chưa mở | Summary đảo giá vốn theo số lượng hoàn × đơn giá vốn đã bán; phiếu hoàn thiếu dòng được data gate chặn. Service hiện chỉ cho hoàn toàn bộ để không ghi dữ liệu một phần thiếu contract | Rất cao cho tới khi có item-level contract và smoke test production |
 | CUR-03 | Danh sách dữ liệu lớn | Không chính xác | Nhiều provider cố định `page: 1`; backend mặc định 20 | Rất cao |
 | CUR-04 | Auth local khởi tạo datasource | Đúng một phần | Đã khai báo kiểu cột rõ ràng; metadata regression test và kiểm toán DB chỉ đọc đạt. Production chưa có migration auth | Rất cao; chặn deploy backend mới |
 | CUR-05 | Route CTA kho và hoàn trả | Đúng một phần | Đã khai báo `/purchase-orders/form`, chuyển CTA hoàn trả sang `/sales/returns/:id` và route registry test đạt; deep-link chi tiết vẫn cần bỏ phụ thuộc `state.extra` | Cao |
 | CUR-06 | Guard route và API | Đúng một phần | Tax estimate/activity/AI knowledge/tax config có mapping quyền lệch | Cao |
 | CUR-07 | Invoice entity | Đã xác minh từ code | 51 entity/51 bảng duy nhất; một model `invoices` | Trung bình; chờ introspect DB |
 | CUR-08 | Sổ nợ | Đúng một phần | Production tải 453 khoản phải thu thật; chưa phân trang, chưa đối soát thu nợ và khách vượt hạn mức không có cảnh báo | Cao |
-| CUR-09 | Bộ test backend P0 | Đã xác minh local | Build, lint và 56/56 test đạt ngày 02/08/2026; đã phủ kỳ tài chính, giá bán hợp lệ, đồng nhất khách hàng list/detail và khóa an toàn migration auth | Trung bình; chưa phủ CUR-02 và chưa thay thế smoke test production |
+| CUR-09 | Bộ test backend P0 | Đã xác minh local | Build, lint và 57/57 test đạt ngày 02/08/2026; đã phủ kỳ tài chính, giá bán, giá vốn hoàn, đồng nhất khách hàng và khóa migration auth | Trung bình; chưa thay thế smoke test production |
 | CUR-10 | Flutter analyze/test/build | Đúng một phần | Analyze toàn dự án sạch; 5/5 test mục tiêu kỳ báo cáo/chốt ca đạt. Kết quả 57/57 và Web build vẫn là bằng chứng lần trước | Trung bình; chưa chạy lại toàn bộ suite/Web build trong gói này |
 | CUR-11 | Accessibility | Bị chặn | Chưa test keyboard, focus, zoom 200%, screen reader | Trung bình |
 | CUR-12 | KPI kho và ngưỡng cảnh báo | Không chính xác production | Production hiển thị tổng 20 nhưng dưới định mức 112; local đã sửa dùng server total và `min_stock` | Rất cao |
 | CUR-13 | Định danh khách ở đơn bán | Không chính xác | Cùng `SOY109500`: list là Đội thầu Minh Tâm, detail là Khách mua lẻ; API detail thiếu join customer | Rất cao |
-| CUR-14 | Kỳ chi phí/lương và chốt ca | Đúng một phần — đã sửa local, production chưa deploy | Backend dùng cùng kỳ cho tổng và danh sách chi phí; sổ lương lọc `SALARY` theo tháng tại API; chốt ca giữ trạng thái “Chưa đối soát” khi ô thực tế trống. Backend P0 56/56, Flutter toàn bộ 61/61 và analyze sạch | Rất cao cho tới khi smoke test production |
+| CUR-14 | Kỳ chi phí/lương và chốt ca | Đúng một phần — đã sửa local, production chưa deploy | Backend dùng cùng kỳ cho tổng và danh sách chi phí; sổ lương lọc `SALARY` theo tháng tại API; chốt ca giữ trạng thái “Chưa đối soát” khi ô thực tế trống. Backend P0 57/57, Flutter toàn bộ 61/61 và analyze sạch | Rất cao cho tới khi smoke test production |
 | CUR-15 | Toàn vẹn invoice/chứng từ | Không chính xác | 60 invoice đầu vào thiếu item, 558 invoice không tự cân bằng discount, chứng từ có quantity 0 | Rất cao |
 | CUR-16 | Deep-link và route nhập hàng | Không chính xác production | Form PO Page Not Found; PO/transaction detail dựng `PO-null`/`-0 đ` và vẫn có action | Cao |
 | CUR-17 | Thuế và báo cáo mobile | Đúng một phần, rủi ro cao | Ngưỡng 1 tỷ có nguồn chính thức; kỳ/sort/CTA chưa đúng, chart ngưỡng vỡ nhãn | Cao |

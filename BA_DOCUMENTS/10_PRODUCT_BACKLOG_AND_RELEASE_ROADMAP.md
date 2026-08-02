@@ -20,7 +20,8 @@
 | Customer debt/CSV | Đã nối API thật, chuẩn hóa remaining và CSV an toàn; Flutter tests đạt; production hiển thị empty state thật | Đối soát API–DB–CSV khi có dữ liệu; bổ sung kỳ xuất rõ |
 | Mobile POS/AI | CTA/giỏ đã hiển thị ở 390×844, AI không che POS; Flutter tests đạt | Test bàn phím ảo và thiết bị thật |
 | Reporting period | Đã dùng helper chung ở dashboard/sales/finance | Chuẩn hóa timezone backend và thêm `period/asOf` vào response |
-| Kỳ chi phí/lương và chốt ca | Đã sửa local: cùng `from/to` cho tổng/danh sách, lọc lương server-side, ô tiền thực tế nullable; backend P0 56/56 và Flutter toàn bộ 61/61 đạt | Chưa đóng P0-17/21/22 cho tới khi deploy và chạy TC-FIN-04/05/06 trên production |
+| Kỳ chi phí/lương và chốt ca | Đã sửa local: cùng `from/to` cho tổng/danh sách, lọc lương server-side, ô tiền thực tế nullable; backend P0 57/57 và Flutter toàn bộ 61/61 đạt | Chưa đóng P0-17/21/22 cho tới khi deploy và chạy TC-FIN-04/05/06 trên production |
+| Giá vốn hoàn hàng | Summary local đã đảo theo dòng hoàn × giá vốn bán; dữ liệu hai shop đều 0 phiếu hoàn thiếu dòng và 0 lượng hoàn vượt bán | Hoàn một phần vẫn bị chặn cho tới khi có `sales_order_item_id`, kiểm soát hoàn nhiều lần và migration/backfill được duyệt |
 | Giá bán và định danh đơn | Đã sửa local: backend khóa giá theo cấu hình bán lẻ/sỉ/khuyến mại; list/detail cùng tải quan hệ khách; chặn ngày, khách và đơn rỗng không hợp lệ | Chưa đóng P0-08/19 cho tới khi smoke test production; override giá có quyền/lý do/audit vẫn là backlog |
 
 ### Backlog còn mở sau bản vá
