@@ -246,7 +246,10 @@ export class SalesService {
     }
 
     async findById(shopId: number, id: number) {
-        const order = await this.orderRepo.findOne({ where: { id, shopId }, relations: ['items', 'items.product', 'payments'] });
+        const order = await this.orderRepo.findOne({
+            where: { id, shopId },
+            relations: ['customer', 'items', 'items.product', 'payments'],
+        });
         if (!order) throw new Error('Order not found');
 
         const returns = await this.returnRepo.find({
