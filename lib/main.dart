@@ -20,8 +20,13 @@ Duration? _providerRetry(int retryCount, Object error) {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('vi_VN', null);
-  Intl.defaultLocale = 'vi_VN';
+  try {
+    await initializeDateFormatting('vi_VN', null);
+    Intl.defaultLocale = 'vi_VN';
+  } catch (_) {
+    // Fallback if locale data fails to load
+    Intl.defaultLocale = 'en_US';
+  }
 
   // Load auth token from storage before app starts
   final apiClient = ApiClient();
@@ -59,7 +64,6 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme(brandColor.color),
       darkTheme: AppTheme.darkTheme(brandColor.color),
       themeMode: themeMode,
-      locale: const Locale('vi', 'VN'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -71,6 +75,17 @@ class MyApp extends ConsumerWidget {
         Locale('en', 'US'),
         Locale('en'),
       ],
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (locale != null) {
+          for (final supportedLocale in supportedLocales) {
+            if (supportedLocale.languageCode == locale.languageCode) {
+              return supportedLocale;
+            }
+          }
+        }
+        // Fallback mặc định về Tiếng Việt ('vi', 'VN')
+        return const Locale('vi', 'VN');
+      },
       routerConfig: router,
     );
   }
