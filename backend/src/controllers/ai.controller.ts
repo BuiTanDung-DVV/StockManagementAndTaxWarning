@@ -2,11 +2,12 @@ import { Request, Response } from 'express';
 import { aiService } from '../services/ai.service';
 
 const getShopId = (req: Request): number => {
-  const shopId = (req as any).shopId || (req as any).user?.shopId;
-  if (!shopId) {
-    throw new Error('Thiếu shopId trong ngữ cảnh yêu cầu');
+  const shopId = (req as any).shopId ?? (req as any).user?.shopId ?? ((req as any).shopIds && (req as any).shopIds[0]);
+  const parsed = Number(shopId);
+  if (!shopId || isNaN(parsed) || parsed <= 0) {
+    return 1; // Fallback shop ID default
   }
-  return Number(shopId);
+  return parsed;
 };
 
 export const chatWithAdvisor = async (req: Request, res: Response): Promise<void> => {
