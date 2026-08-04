@@ -12,10 +12,18 @@ class GoogleAuthService {
   GoogleAuthService._();
 
   static final GoogleAuthService instance = GoogleAuthService._();
-  static const _webClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
-  static const _serverClientId = String.fromEnvironment(
+  static const _defaultWebClientId =
+      '124075638912-hk0076lmjvgqa0iqec75aerpoe4lcpfq.apps.googleusercontent.com';
+  static const _envWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+  static String get _webClientId =>
+      _envWebClientId.isNotEmpty ? _envWebClientId : _defaultWebClientId;
+
+  static const _envServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
   );
+  static String get _serverClientId =>
+      _envServerClientId.isNotEmpty ? _envServerClientId : _defaultWebClientId;
+
   static const _iosClientId = String.fromEnvironment('GOOGLE_IOS_CLIENT_ID');
 
   final GoogleSignIn _signIn = GoogleSignIn.instance;
@@ -27,19 +35,8 @@ class GoogleAuthService {
 
   Future<void> _initializeOnce() async {
     if (kIsWeb) {
-      if (_webClientId.isEmpty) {
-        throw const GoogleAuthConfigurationException(
-          'Thiếu GOOGLE_WEB_CLIENT_ID khi build Flutter Web.',
-        );
-      }
       await _signIn.initialize(clientId: _webClientId);
       return;
-    }
-
-    if (_serverClientId.isEmpty) {
-      throw const GoogleAuthConfigurationException(
-        'Thiếu GOOGLE_SERVER_CLIENT_ID khi build ứng dụng.',
-      );
     }
     final isApple =
         defaultTargetPlatform == TargetPlatform.iOS ||
