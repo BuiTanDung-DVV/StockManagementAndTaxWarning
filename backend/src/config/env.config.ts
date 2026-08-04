@@ -71,8 +71,11 @@ export const config = {
 };
 
 export function isAllowedOrigin(origin: string): boolean {
-  return config.allowedOrigins.includes(origin)
-    || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+  if (!origin) return true;
+  if (config.allowedOrigins.includes(origin)) return true;
+  if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return true;
+  if (/\.vercel\.app$/.test(origin)) return true;
+  return false;
 }
 
 export function validateSecurityConfig(): void {
