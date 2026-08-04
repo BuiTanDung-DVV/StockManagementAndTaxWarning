@@ -18,7 +18,7 @@ const { AppDataSource } = require('../dist/config/db.config');
 const { config } = require('../dist/config/env.config');
 const { AuthService } = require('../dist/services/auth.service');
 
-const validPassword = 'MatKhau@123';
+const validPassword = `DummyTestPass_${Date.now()}@123`;
 
 test('registration normalizes a verified Gmail-shaped identifier', () => {
   const result = registerSchema.parse({
