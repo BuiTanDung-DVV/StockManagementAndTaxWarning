@@ -521,29 +521,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       label = 'Cực mạnh';
     }
 
-    final hasLen = pass.length >= 8;
-    final hasUpper = pass.contains(RegExp(r'[A-Z]'));
-    final hasLower = pass.contains(RegExp(r'[a-z]'));
-    final hasDigit = pass.contains(RegExp(r'[0-9]'));
-    final hasSpecial = pass.contains(
-      RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]'),
-    );
+    final isFocused = _passwordFocus.hasFocus;
+    final isStrongEnough = score >= 4;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: List.generate(5, (index) {
-              final active = index < score;
+            children: List.generate(4, (index) {
+              final active = index < (score >= 4 ? 4 : score);
               return Expanded(
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
-                  height: 4,
-                  margin: EdgeInsets.only(right: index == 4 ? 0 : 4),
+                  height: 3,
+                  margin: EdgeInsets.only(right: index == 3 ? 0 : 4),
                   decoration: BoxDecoration(
-                    color: active ? color : c.divider,
+                    color: active ? color : c.divider.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -556,31 +551,50 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             children: [
               Text(
                 'Độ mạnh mật khẩu:',
-                style: TextStyle(fontSize: 12, color: c.textSecondary),
+                style: TextStyle(fontSize: 11, color: c.textSecondary),
               ),
               Text(
                 label,
                 style: GoogleFonts.outfit(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 4,
-            children: [
-              _buildCriteriaItem('Từ 8 ký tự', hasLen, c),
-              _buildCriteriaItem('Chữ hoa (A-Z)', hasUpper, c),
-              _buildCriteriaItem('Chữ thường (a-z)', hasLower, c),
-              _buildCriteriaItem('Chữ số (0-9)', hasDigit, c),
-              _buildCriteriaItem('Ký tự đặc biệt', hasSpecial, c),
-            ],
-          ),
-          const SizedBox(height: 6),
+          if (isFocused && !isStrongEnough) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                _buildCriteriaItem('Từ 8 ký tự', pass.length >= 8, c),
+                _buildCriteriaItem(
+                  'Chữ hoa (A-Z)',
+                  pass.contains(RegExp(r'[A-Z]')),
+                  c,
+                ),
+                _buildCriteriaItem(
+                  'Chữ thường (a-z)',
+                  pass.contains(RegExp(r'[a-z]')),
+                  c,
+                ),
+                _buildCriteriaItem(
+                  'Chữ số (0-9)',
+                  pass.contains(RegExp(r'[0-9]')),
+                  c,
+                ),
+                _buildCriteriaItem(
+                  'Ký tự đặc biệt',
+                  pass.contains(
+                    RegExp(r'[!@#$%^&*(),.?":{}|<>\-_+=\/\\[\]~`:]'),
+                  ),
+                  c,
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -594,7 +608,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           met
               ? Icons.check_circle_rounded
               : Icons.radio_button_unchecked_rounded,
-          size: 14,
+          size: 13,
           color: met ? AppColors.success : c.textMuted,
         ),
         const SizedBox(width: 4),
@@ -615,24 +629,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (confirmPass.isEmpty) return const SizedBox.shrink();
 
     final match = _passwordCtrl.text == confirmPass;
-    return Padding(
-      padding: const EdgeInsets.only(top: 6, bottom: 4),
+    if (match)
+      return const SizedBox.shrink(); // Silent success when passwords match
+
+    return const Padding(
+      padding: EdgeInsets.only(top: 6, bottom: 4),
       child: Row(
         children: [
-          Icon(
-            match ? Icons.check_circle_rounded : Icons.cancel_rounded,
-            size: 15,
-            color: match ? AppColors.success : AppColors.danger,
-          ),
-          const SizedBox(width: 6),
+          Icon(Icons.cancel_rounded, size: 14, color: AppColors.danger),
+          SizedBox(width: 6),
           Text(
-            match
-                ? 'Mật khẩu xác nhận trùng khớp'
-                : 'Mật khẩu xác nhận chưa khớp',
+            'Mật khẩu xác nhận chưa khớp',
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: match ? AppColors.success : AppColors.danger,
+              fontWeight: FontWeight.w500,
+              color: AppColors.danger,
             ),
           ),
         ],
