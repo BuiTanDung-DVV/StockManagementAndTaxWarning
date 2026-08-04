@@ -46,14 +46,14 @@ class AiDocument {
   };
 
   factory AiDocument.fromJson(Map<String, dynamic> json) => AiDocument(
-    id: json['id'] ?? '',
+    id: json['id'] != null ? json['id'].toString() : '',
     title: json['title'] ?? '',
     category: json['category'] ?? 'Chung',
     content: json['content'] ?? '',
-    isActive: json['isActive'] ?? true,
+    isActive: json['isActive'] ?? json['is_active'] ?? true,
     createdAt: json['createdAt'] != null
         ? DateTime.parse(json['createdAt'])
-        : DateTime.now(),
+        : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
   );
 }
 
@@ -69,7 +69,7 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
 
   Future<void> _loadFromBackend() async {
     try {
-      final response = await _api.get('/ai-knowledge');
+      final response = await _api.get('/ai/knowledge');
       if (response is List) {
         state = response
             .whereType<Map>()
@@ -88,7 +88,7 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
     required String content,
   }) async {
     final response = await _api.post(
-      '/ai-knowledge',
+      '/ai/knowledge',
       data: {
         'title': title.trim(),
         'category': category.trim(),
@@ -100,7 +100,7 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
   }
 
   Future<void> removeDocument(String id) async {
-    await _api.delete('/ai-knowledge/$id');
+    await _api.delete('/ai/knowledge/$id');
     state = state.where((d) => d.id != id).toList();
   }
 
@@ -109,7 +109,7 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
     if (matches.isEmpty) return;
     final current = matches.first;
     final response = await _api.put(
-      '/ai-knowledge/$id',
+      '/ai/knowledge/$id',
       data: {'isActive': !current.isActive},
     );
     final updated = AiDocument.fromJson(

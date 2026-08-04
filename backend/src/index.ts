@@ -50,6 +50,7 @@ import cogsRoutes from './routes/cogs.routes';
 import taxConfigRoutes from './routes/tax-config.routes';
 import taxRoutes from './routes/tax.routes';
 import tagRoutes from './routes/tag.routes';
+import aiRoutes from './routes/ai.routes';
 
 import { authenticateJwt, requireShopId } from './middleware/auth.middleware';
 
@@ -78,6 +79,7 @@ apiRouter.use('/cogs', cogsRoutes);
 apiRouter.use('/', taxConfigRoutes);
 apiRouter.use('/tax', taxRoutes);
 apiRouter.use('/tags', tagRoutes);
+apiRouter.use('/ai', aiRoutes);
 
 app.use('/api', apiRouter);
 

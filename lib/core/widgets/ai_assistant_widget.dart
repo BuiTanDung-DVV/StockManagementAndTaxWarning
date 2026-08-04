@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../features/settings/providers/ai_knowledge_provider.dart';
 import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
+import '../network/api_client.dart';
 
 class AiAssistantOpenNotifier extends Notifier<bool> {
   @override
@@ -135,58 +135,66 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
     });
   }
 
-  void _handleSend(String question) {
+  Future<void> _handleSend(String question) async {
     final query = question.trim();
     if (query.isEmpty) return;
 
     setState(() {
       _messages.add(_AssistantMessage(fromUser: true, text: query));
       _queryController.clear();
+      _messages.add(const _AssistantMessage(
+        fromUser: false,
+        text: 'Đang kết nối với Trợ lý AI...',
+      ));
     });
 
-    final activeDocs = ref
-        .read(aiKnowledgeProvider)
-        .where((document) => document.isActive)
-        .toList();
+    try {
+      final api = ref.read(apiClientProvider);
+      final response = await api.post(
+        '/ai/chat',
+        data: {
+          'question': query,
+        },
+      );
 
-    Future<void>.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) return;
 
-      final normalizedQuery = query.toLowerCase();
-      AiDocument? matchedDocument;
-      for (final document in activeDocs) {
-        final searchable = '${document.title} ${document.content}'
-            .toLowerCase();
-        final hasMatch = normalizedQuery
-            .split(RegExp(r'\s+'))
-            .where((word) => word.length > 3)
-            .any(searchable.contains);
-        if (hasMatch) {
-          matchedDocument = document;
-          break;
-        }
+      Map<String, dynamic> data = {};
+      if (response is Map<String, dynamic>) {
+        data = response;
       }
 
+      final answer = data['answer']?.toString() ??
+          data['data']?['answer']?.toString() ??
+          'Trợ lý AI đã ghi nhận thông tin.';
+      final provider = data['provider']?.toString() ??
+          data['data']?['provider']?.toString() ??
+          'AI Assistant';
+
       setState(() {
-        if (matchedDocument == null) {
-          _messages.add(
-            const _AssistantMessage(
-              fromUser: false,
-              text:
-                  'Chưa có đủ nguồn đang bật để trả lời câu hỏi này. Hãy kiểm tra nguồn tài liệu hoặc bổ sung tài liệu phù hợp.',
-            ),
-          );
-        } else {
-          _messages.add(
-            _AssistantMessage(
-              fromUser: false,
-              text: matchedDocument.content.trim(),
-              source: matchedDocument.title,
-            ),
-          );
+        if (_messages.isNotEmpty && _messages.last.text == 'Đang kết nối với Trợ lý AI...') {
+          _messages.removeLast();
         }
+        _messages.add(_AssistantMessage(
+          fromUser: false,
+          text: answer,
+          source: provider,
+        ));
       });
-    });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        if (_messages.isNotEmpty && _messages.last.text == 'Đang kết nối với Trợ lý AI...') {
+          _messages.removeLast();
+        }
+        _messages.add(_AssistantMessage(
+          fromUser: false,
+          text: 'Lỗi kết nối với Trợ lý AI: ${error.toString()}',
+          source: 'Lỗi hệ thống',
+        ));
+      });
+    }
   }
 
   @override
