@@ -114,3 +114,7 @@ replace_*.js
 test-*.js
 tmp*.txt
 /tmp/
+
+# Google OAuth Client Secrets
+google_client_secret_*.json
+client_secret_*.json
