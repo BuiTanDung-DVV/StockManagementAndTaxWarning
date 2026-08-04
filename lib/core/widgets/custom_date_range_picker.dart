@@ -45,7 +45,7 @@ class _CustomDateRangePickerContentState
       initialDate: initial,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
-      locale: Locale('vi'),
+      locale: const Locale('vi', 'VN'),
       builder: (context, child) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         return Theme(
