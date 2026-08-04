@@ -261,7 +261,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         isRegistration: true,
                         onIdToken: _registerWithGoogle,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 32),
                       Row(
                         children: [
                           Expanded(child: Divider(color: c.divider)),
