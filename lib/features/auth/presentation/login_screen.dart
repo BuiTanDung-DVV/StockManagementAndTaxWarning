@@ -43,7 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _loginWithGoogle(String idToken) async {
     final success = await ref
         .read(authProvider.notifier)
-        .authenticateWithGoogle(idToken: idToken, createIfMissing: false);
+        .authenticateWithGoogle(idToken: idToken, createIfMissing: true);
     if (!success || !mounted) return;
     _navigateAfterAuthentication();
   }
