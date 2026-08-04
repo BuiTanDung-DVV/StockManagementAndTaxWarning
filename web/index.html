@@ -93,6 +93,25 @@
       document.getElementById("splash-branding")?.remove();
       document.body.style.background = "transparent";
     }
+
+    // Polyfill / Guard for Intl.Locale to prevent V8 RangeError on malformed browser locale strings (e.g. vi_VN -> vi-VN)
+    if (typeof Intl !== 'undefined' && Intl.Locale) {
+      (function() {
+        const OriginalIntlLocale = Intl.Locale;
+        Intl.Locale = function(tag, options) {
+          try {
+            if (typeof tag === 'string') {
+              const normalizedTag = tag.replace(/_/g, '-');
+              return new OriginalIntlLocale(normalizedTag, options);
+            }
+            return new OriginalIntlLocale(tag, options);
+          } catch (e) {
+            return new OriginalIntlLocale('vi-VN');
+          }
+        };
+        Intl.Locale.prototype = OriginalIntlLocale.prototype;
+      })();
+    }
   </script>
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 </head>
