@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_sign_in_web/web_only.dart' as google_web;
 import '../../../../core/theme/app_theme.dart';
 import '../../services/google_auth_service.dart';
 
@@ -156,29 +155,7 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
             ),
           );
         }
-        return SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: Center(
-            child: IgnorePointer(
-              ignoring: !widget.enabled,
-              child: Opacity(
-                opacity: widget.enabled ? 1 : 0.55,
-                child: google_web.renderButton(
-                  configuration: google_web.GSIButtonConfiguration(
-                    type: google_web.GSIButtonType.standard,
-                    theme: google_web.GSIButtonTheme.outline,
-                    size: google_web.GSIButtonSize.large,
-                    text: google_web.GSIButtonText.continueWith,
-                    shape: google_web.GSIButtonShape.rectangular,
-                    minimumWidth: 400,
-                    locale: 'vi',
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
+        return _buildFallbackButton(context);
       },
     );
   }
