@@ -78,7 +78,7 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
 
         return SizedBox(
           width: double.infinity,
-          height: 50,
+          height: 60,
           child: Center(
             child: IgnorePointer(
               ignoring: !widget.enabled,
