@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -497,23 +498,58 @@ class _MessageBlock extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            SelectableText(
               message.text,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: colors.textPrimary,
                 height: 1.5,
               ),
             ),
-            if (message.source != null) ...[
-              const SizedBox(height: 10),
-              Text(
-                'Nguồn: ${message.source}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: primary,
-                  fontWeight: FontWeight.w600,
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (message.source != null)
+                  Expanded(
+                    child: Text(
+                      'Nguồn: ${message.source}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                InkWell(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: message.text));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã sao chép nội dung câu trả lời!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.copy_rounded, size: 14, color: colors.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Sao chép',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ],
         ),
       ),
