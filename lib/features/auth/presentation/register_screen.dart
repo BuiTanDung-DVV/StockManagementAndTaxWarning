@@ -233,283 +233,263 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     horizontal: 32,
                     vertical: 16,
                   ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: viewportConstraints.maxHeight - 32,
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Tạo tài khoản mới',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: c.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _accountType == 'SHOP'
+                            ? 'để bắt đầu quản lý bán hàng & kho hàng doanh nghiệp'
+                            : 'để xin gia nhập và làm việc tại cửa hàng',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: c.textSecondary, fontSize: 13),
+                      ),
+                      const SizedBox(height: 24),
+
+                      GoogleAuthButton(
+                        enabled: !_isLoading,
+                        isRegistration: true,
+                        onIdToken: _registerWithGoogle,
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
                         children: [
-                          Text(
-                            'Tạo tài khoản mới',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: c.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _accountType == 'SHOP'
-                                ? 'để bắt đầu quản lý bán hàng & kho hàng doanh nghiệp'
-                                : 'để xin gia nhập và làm việc tại cửa hàng',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: c.textSecondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          GoogleAuthButton(
-                            enabled: !_isLoading,
-                            isRegistration: true,
-                            onIdToken: _registerWithGoogle,
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              Expanded(child: Divider(color: c.divider)),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: Text(
-                                  'HOẶC ĐĂNG KÝ BẰNG EMAIL',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: c.textMuted,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                              Expanded(child: Divider(color: c.divider)),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Account Type Selection
-                          SegmentedButton<String>(
-                            segments: [
-                              ButtonSegment<String>(
-                                value: 'SHOP',
-                                label: Text(
-                                  'Chủ cửa hàng',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                icon: const Icon(Icons.store_rounded, size: 18),
-                              ),
-                              ButtonSegment<String>(
-                                value: 'PERSONAL',
-                                label: Text(
-                                  'Nhân viên',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.person_rounded,
-                                  size: 18,
-                                ),
-                              ),
-                            ],
-                            selected: {_accountType},
-                            onSelectionChanged: (Set<String> newSelection) {
-                              setState(() {
-                                _accountType = newSelection.first;
-                              });
-                            },
-                            style: SegmentedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Full Name Input
-                          _buildGlowingField(
-                            controller: _fullNameCtrl,
-                            focusNode: _fullNameFocus,
-                            hasFocus: _fullNameHasFocus,
-                            hintText: 'Họ và tên của bạn',
-                            icon: Icons.person_outline_rounded,
-                            c: c,
-                            theme: theme,
-                            onChanged: (_) => _onFieldChanged(),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Email Input
-                          _buildGlowingField(
-                            controller: _emailCtrl,
-                            focusNode: _emailFocus,
-                            hasFocus: _emailHasFocus,
-                            hintText: 'Địa chỉ Email (Gmail)',
-                            icon: Icons.email_outlined,
-                            c: c,
-                            theme: theme,
-                            onChanged: (_) => _onFieldChanged(),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Password Input
-                          _buildGlowingField(
-                            controller: _passwordCtrl,
-                            focusNode: _passwordFocus,
-                            hasFocus: _passwordHasFocus,
-                            hintText: 'Mật khẩu',
-                            icon: Icons.lock_outline_rounded,
-                            c: c,
-                            theme: theme,
-                            obscureText: _obscure,
-                            onChanged: (_) => _onFieldChanged(),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscure
-                                    ? Icons.visibility_off_rounded
-                                    : Icons.visibility_rounded,
+                          Expanded(child: Divider(color: c.divider)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'HOẶC ĐĂNG KÝ BẰNG EMAIL',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
                                 color: c.textMuted,
-                                size: 20,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _obscure = !_obscure),
-                            ),
-                          ),
-                          _buildPasswordStrengthMeter(c),
-
-                          // Confirm Password Input
-                          _buildGlowingField(
-                            controller: _confirmPasswordCtrl,
-                            focusNode: _confirmPasswordFocus,
-                            hasFocus: _confirmPasswordHasFocus,
-                            hintText: 'Xác nhận mật khẩu',
-                            icon: Icons.lock_clock_outlined,
-                            c: c,
-                            theme: theme,
-                            obscureText: _obscureConfirm,
-                            onChanged: (_) => _onFieldChanged(),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirm
-                                    ? Icons.visibility_off_rounded
-                                    : Icons.visibility_rounded,
-                                color: c.textMuted,
-                                size: 20,
-                              ),
-                              onPressed: () => setState(
-                                () => _obscureConfirm = !_obscureConfirm,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
-                          _buildConfirmPasswordMatchIndicator(c),
-
-                          if (_error != null) ...[
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.danger.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.error_outline_rounded,
-                                    color: AppColors.danger,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _error!,
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.danger,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 28),
-
-                          // Submit Action
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _isLoading || !_canSubmit
-                                  ? null
-                                  : _proceedToOtpVerification,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Đăng Ký & Nhận Mã OTP',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(child: Divider(color: c.divider)),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: Text(
-                                  'hoặc',
-                                  style: GoogleFonts.inter(
-                                    color: c.textMuted,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                              Expanded(child: Divider(color: c.divider)),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          GoogleAuthButton(
-                            enabled: !_isLoading,
-                            isRegistration: true,
-                            onIdToken: _registerWithGoogle,
-                          ),
-                          const SizedBox(height: 16),
+                          Expanded(child: Divider(color: c.divider)),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 20),
+
+                      // Account Type Selection
+                      SegmentedButton<String>(
+                        segments: [
+                          ButtonSegment<String>(
+                            value: 'SHOP',
+                            label: Text(
+                              'Chủ cửa hàng',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            icon: const Icon(Icons.store_rounded, size: 18),
+                          ),
+                          ButtonSegment<String>(
+                            value: 'PERSONAL',
+                            label: Text(
+                              'Nhân viên',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            icon: const Icon(Icons.person_rounded, size: 18),
+                          ),
+                        ],
+                        selected: {_accountType},
+                        onSelectionChanged: (Set<String> newSelection) {
+                          setState(() {
+                            _accountType = newSelection.first;
+                          });
+                        },
+                        style: SegmentedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Full Name Input
+                      _buildGlowingField(
+                        controller: _fullNameCtrl,
+                        focusNode: _fullNameFocus,
+                        hasFocus: _fullNameHasFocus,
+                        hintText: 'Họ và tên của bạn',
+                        icon: Icons.person_outline_rounded,
+                        c: c,
+                        theme: theme,
+                        onChanged: (_) => _onFieldChanged(),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Email Input
+                      _buildGlowingField(
+                        controller: _emailCtrl,
+                        focusNode: _emailFocus,
+                        hasFocus: _emailHasFocus,
+                        hintText: 'Địa chỉ Email (Gmail)',
+                        icon: Icons.email_outlined,
+                        c: c,
+                        theme: theme,
+                        onChanged: (_) => _onFieldChanged(),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Password Input
+                      _buildGlowingField(
+                        controller: _passwordCtrl,
+                        focusNode: _passwordFocus,
+                        hasFocus: _passwordHasFocus,
+                        hintText: 'Mật khẩu',
+                        icon: Icons.lock_outline_rounded,
+                        c: c,
+                        theme: theme,
+                        obscureText: _obscure,
+                        onChanged: (_) => _onFieldChanged(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscure
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                            color: c.textMuted,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                        ),
+                      ),
+                      _buildPasswordStrengthMeter(c),
+
+                      // Confirm Password Input
+                      _buildGlowingField(
+                        controller: _confirmPasswordCtrl,
+                        focusNode: _confirmPasswordFocus,
+                        hasFocus: _confirmPasswordHasFocus,
+                        hintText: 'Xác nhận mật khẩu',
+                        icon: Icons.lock_clock_outlined,
+                        c: c,
+                        theme: theme,
+                        obscureText: _obscureConfirm,
+                        onChanged: (_) => _onFieldChanged(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirm
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                            color: c.textMuted,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscureConfirm = !_obscureConfirm,
+                          ),
+                        ),
+                      ),
+                      _buildConfirmPasswordMatchIndicator(c),
+
+                      if (_error != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppColors.danger,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _error!,
+                                  style: GoogleFonts.inter(
+                                    color: AppColors.danger,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 28),
+
+                      // Submit Action
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isLoading || !_canSubmit
+                              ? null
+                              : _proceedToOtpVerification,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  'Đăng Ký & Nhận Mã OTP',
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: c.divider)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'hoặc',
+                              style: GoogleFonts.inter(
+                                color: c.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: c.divider)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      GoogleAuthButton(
+                        enabled: !_isLoading,
+                        isRegistration: true,
+                        onIdToken: _registerWithGoogle,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 );
               },
