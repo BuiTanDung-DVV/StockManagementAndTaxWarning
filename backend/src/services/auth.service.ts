@@ -36,10 +36,18 @@ const MAX_OTP_ATTEMPTS = 5;
 const MAX_OTP_SENDS = 3;
 
 export class AuthService {
-  private userRepo = AppDataSource.getRepository(User);
-  private memberRepo = AppDataSource.getRepository(ShopMember);
-  private shopRepo = AppDataSource.getRepository(ShopProfile);
-  private sessionRepo = AppDataSource.getRepository(RefreshSession);
+  private get userRepo() {
+    return AppDataSource.getRepository(User);
+  }
+  private get memberRepo() {
+    return AppDataSource.getRepository(ShopMember);
+  }
+  private get shopRepo() {
+    return AppDataSource.getRepository(ShopProfile);
+  }
+  private get sessionRepo() {
+    return AppDataSource.getRepository(RefreshSession);
+  }
   private emailService = new EmailService();
   private googleClient = new OAuth2Client();
 
