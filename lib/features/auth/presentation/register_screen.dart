@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
+import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
 import 'widgets/google_sign_in_button.dart';
 
@@ -101,6 +102,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _registerWithGoogle(String idToken) async {
+    setState(() => _isLoading = true);
     final success = await ref
         .read(authProvider.notifier)
         .authenticateWithGoogle(
@@ -109,12 +111,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           accountType: _accountType,
         );
     if (!mounted) return;
+    setState(() => _isLoading = false);
     if (success) {
-      ToastService.showSuccess('Đăng ký Google thành công!');
-      context.go('/onboarding');
+      ToastService.showSuccess('Xác thực Google thành công!');
+      final auth = ref.read(authProvider);
+      if (!auth.isOnboarded) {
+        context.go('/onboarding');
+      } else {
+        final shopState = ref.read(shopProvider);
+        context.go(shopState.isPending ? '/waiting-approval' : '/');
+      }
     } else {
       final message = ref.read(authProvider).error;
-      if (message != null) ToastService.showError(message);
+      if (message != null) {
+        setState(() => _error = message);
+        ToastService.showError(message);
+      }
     }
   }
 
@@ -468,6 +480,31 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                       ),
                                     ),
                             ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: c.divider)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Text(
+                                  'hoặc',
+                                  style: GoogleFonts.inter(
+                                    color: c.textMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              Expanded(child: Divider(color: c.divider)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          GoogleAuthButton(
+                            enabled: !_isLoading,
+                            isRegistration: true,
+                            onIdToken: _registerWithGoogle,
                           ),
                           const SizedBox(height: 16),
                         ],

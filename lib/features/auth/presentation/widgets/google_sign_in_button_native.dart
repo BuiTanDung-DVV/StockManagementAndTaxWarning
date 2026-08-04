@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../services/google_auth_service.dart';
 
 class GoogleAuthButton extends StatefulWidget {
@@ -29,9 +31,20 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
       await widget.onIdToken(token);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      final errorStr = error.toString().toLowerCase();
+      if (!errorStr.contains('canceled') &&
+          !errorStr.contains('cancelled') &&
+          !errorStr.contains('dismissed')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error.toString().replaceAll('Exception: ', ''),
+              style: GoogleFonts.inter(fontSize: 13),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -39,19 +52,58 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final isInteractive = widget.enabled && !_loading;
+
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: widget.enabled && !_loading ? _authenticate : null,
-        icon: _loading
-            ? const SizedBox.square(
-                dimension: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.g_mobiledata_rounded, color: Colors.redAccent),
-        label: Text(
-          widget.isRegistration ? 'Đăng ký với Google' : 'Đăng nhập với Google',
+      height: 48,
+      child: OutlinedButton(
+        onPressed: isInteractive ? _authenticate : null,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: c.card,
+          foregroundColor: c.textPrimary,
+          side: BorderSide(color: c.divider, width: 1.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
+        child: _loading
+            ? SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.primary,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    child: Text(
+                      'G',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Tiếp tục với Google',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isInteractive ? c.textPrimary : c.textMuted,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
