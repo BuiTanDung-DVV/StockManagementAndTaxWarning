@@ -156,19 +156,25 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
             ),
           );
         }
-        return IgnorePointer(
-          ignoring: !widget.enabled,
-          child: Opacity(
-            opacity: widget.enabled ? 1 : 0.55,
-            child: google_web.renderButton(
-              configuration: google_web.GSIButtonConfiguration(
-                type: google_web.GSIButtonType.standard,
-                theme: google_web.GSIButtonTheme.outline,
-                size: google_web.GSIButtonSize.large,
-                text: google_web.GSIButtonText.continueWith,
-                shape: google_web.GSIButtonShape.pill,
-                minimumWidth: 320,
-                locale: 'vi',
+        return SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: Center(
+            child: IgnorePointer(
+              ignoring: !widget.enabled,
+              child: Opacity(
+                opacity: widget.enabled ? 1 : 0.55,
+                child: google_web.renderButton(
+                  configuration: google_web.GSIButtonConfiguration(
+                    type: google_web.GSIButtonType.standard,
+                    theme: google_web.GSIButtonTheme.outline,
+                    size: google_web.GSIButtonSize.large,
+                    text: google_web.GSIButtonText.continueWith,
+                    shape: google_web.GSIButtonShape.pill,
+                    minimumWidth: 320,
+                    locale: 'vi',
+                  ),
+                ),
               ),
             ),
           ),
