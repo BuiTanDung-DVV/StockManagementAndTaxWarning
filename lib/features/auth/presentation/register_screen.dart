@@ -466,29 +466,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: c.divider)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'hoặc',
-                              style: GoogleFonts.inter(
-                                color: c.textMuted,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: c.divider)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      GoogleAuthButton(
-                        enabled: !_isLoading,
-                        isRegistration: true,
-                        onIdToken: _registerWithGoogle,
-                      ),
-                      const SizedBox(height: 16),
                     ],
                   ),
                 );
@@ -629,8 +606,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (confirmPass.isEmpty) return const SizedBox.shrink();
 
     final match = _passwordCtrl.text == confirmPass;
-    if (match)
+    if (match) {
       return const SizedBox.shrink(); // Silent success when passwords match
+    }
 
     return const Padding(
       padding: EdgeInsets.only(top: 6, bottom: 4),
