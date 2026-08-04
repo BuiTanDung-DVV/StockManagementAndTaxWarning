@@ -54,15 +54,15 @@ export const config = {
       'http://localhost:3000',
       'http://localhost:5000',
       'http://localhost:8080',
-      'http://localhost:5173', // Vite default port
-      'https://smartstock-tax.vercel.app', // Production deployed frontend
+      'http://localhost:5173',
+      'https://smartstock-app.vercel.app',
+      'https://smartstock-tax.vercel.app',
       'https://stock-management-and-tax-warning.vercel.app',
     ];
     
     const origins = process.env.ALLOWED_ORIGINS;
     if (origins) {
       const parsed = origins.split(',').map(o => o.trim());
-      // Always include production and standard local dev origins to prevent Vercel configuration errors
       return Array.from(new Set([...parsed, ...defaultOrigins]));
     }
     return defaultOrigins;
@@ -80,4 +80,3 @@ export function validateSecurityConfig(): void {
     throw new Error('FATAL SECURITY ERROR: authentication secrets must be different');
   }
 }
-
