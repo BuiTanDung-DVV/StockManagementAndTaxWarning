@@ -195,7 +195,7 @@ class AuthNotifier extends Notifier<AuthState> {
       token: token,
       user: user,
       accountType: user?['accountType'] as String? ?? 'PERSONAL',
-      isOnboarded: user?['isOnboarded'] as bool? ?? false,
+      isOnboarded: user?['isOnboarded'] as bool? ?? true,
     );
     return true;
   }

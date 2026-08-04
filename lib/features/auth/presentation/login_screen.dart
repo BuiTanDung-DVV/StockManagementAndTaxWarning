@@ -376,7 +376,21 @@ class _LoginForm extends StatelessWidget {
                     )
                   : const Text('Đăng nhập'),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(child: Divider(color: colors.divider)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'hoặc',
+                    style: TextStyle(color: colors.textMuted, fontSize: 12),
+                  ),
+                ),
+                Expanded(child: Divider(color: colors.divider)),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
             GoogleAuthButton(enabled: !loading, onIdToken: onGoogleIdToken),
             const SizedBox(height: AppSpacing.sm),
             Wrap(

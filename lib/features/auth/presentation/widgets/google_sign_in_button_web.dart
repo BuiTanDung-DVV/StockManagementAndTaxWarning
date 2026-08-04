@@ -59,7 +59,12 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
           );
         }
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
         }
         return IgnorePointer(
           ignoring: !widget.enabled,
@@ -70,9 +75,7 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
                 type: google_web.GSIButtonType.standard,
                 theme: google_web.GSIButtonTheme.outline,
                 size: google_web.GSIButtonSize.large,
-                text: widget.isRegistration
-                    ? google_web.GSIButtonText.signupWith
-                    : google_web.GSIButtonText.signinWith,
+                text: google_web.GSIButtonText.continueWith,
                 shape: google_web.GSIButtonShape.pill,
                 minimumWidth: 320,
                 locale: 'vi',
