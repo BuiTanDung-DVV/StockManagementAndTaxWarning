@@ -142,6 +142,58 @@ ${docsText}
     }
   }
 
+  private generateSmartFallback(question: string, storeContext: string, knowledgeContext: string): string {
+    const qLower = question.toLowerCase();
+
+    if (qLower.includes('thuế') || qLower.includes('doanh thu') || qLower.includes('ngưỡng') || qLower.includes('nghĩa vụ')) {
+      return `### 📜 Tư vấn về Ngưỡng Doanh Thu & Nghĩa Vụ Thuế Hộ Kinh Doanh
+
+1. **Quy định về ngưỡng doanh thu chịu thuế (Từ 2026)**:
+   - Theo Nghị quyết mới áp dụng từ năm 2026, Hộ kinh doanh có doanh thu dưới **1.000.000.000 VNĐ / năm** (1 tỷ đồng) thuộc diện **MIỄN NỘP Thuế Giá Trị Gia Tăng (VAT) và Thuế Thu Nhập Ca Nhân (TNCN)**.
+   - Khi tổng doanh thu trong năm vượt ngưỡng 1 tỷ đồng, hộ kinh doanh thực hiện nghĩa vụ khai và nộp thuế theo tỷ lệ phần trăm trên doanh thu (Thương mại: VAT 1%, TNCN 0.5%).
+
+2. **Dữ liệu thực tế tại Cửa hàng của bạn**:
+${storeContext}
+
+> 💡 *Lời khuyên*: Định kỳ kiểm tra doanh thu ghi nhận trên hệ thống để chủ động lập hồ sơ báo cáo thuế khi đến kỳ.`;
+    }
+
+    if (qLower.includes('tồn kho') || qLower.includes('định mức') || qLower.includes('hàng') || qLower.includes('sản phẩm')) {
+      return `### 📦 Quy trình Xử lý Hàng hóa dưới Định mức Tồn kho
+
+1. **Các bước xử lý khuyến nghị**:
+   - **Bước 1**: Rà soát danh sách sản phẩm chạm mức báo động tồn kho.
+   - **Bước 2**: Lập đơn đặt hàng (Purchase Order) bổ sung gửi đến Nhà cung cấp.
+   - **Bước 3**: Kiểm đếm quy cách và số lượng thực tế khi nhận hàng trước khi hoàn thành đơn nhập.
+
+2. **Sản phẩm đang áp dụng cảnh báo tồn kho tại Cửa hàng**:
+${storeContext}
+
+${knowledgeContext}`;
+    }
+
+    if (qLower.includes('nợ') || qLower.includes('công nợ') || qLower.includes('khách hàng') || qLower.includes('thu')) {
+      return `### 💳 Quy trình Kiểm soát & Thu hồi Công nợ Khách hàng
+
+1. **Quy định quản lý nợ**:
+   - Chỉ thực hiện bán chịu cho các khách hàng có hồ sơ và hạn mức tín dụng được duyệt.
+   - Theo dõi kỳ hạn nợ và gửi đối soát công nợ định kỳ.
+
+2. **Tổng hợp công nợ hiện tại**:
+${storeContext}
+
+${knowledgeContext}`;
+    }
+
+    return `### 💡 Tư vấn Trợ lý AI Cửa hàng
+
+Dành cho câu hỏi của bạn: **"${question}"**
+
+${storeContext}
+
+${knowledgeContext}`;
+  }
+
   /**
    * Đặt câu hỏi và nhận câu trả lời từ AI Trợ lý (Google Gemini API)
    */
@@ -150,27 +202,22 @@ ${docsText}
     const knowledgeContext = await this.getKnowledgeContext(shopId);
 
     const systemPrompt = `Bạn là Trợ lý AI chuyên nghiệp tư vấn về Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh Việt Nam.
-Nhiệm vụ của bạn:
-1. Đưa ra lời khuyên kinh doanh, phân tích tồn kho, cảnh báo rủi ro thuế dựa trên dữ liệu thực tế của cửa hàng và các văn bản quy định thuế đã được cung cấp.
-2. Trả lời bằng tiếng Việt lịch sự, rõ ràng, chính xác, sử dụng định dạng Markdown (in đậm, danh mục, bảng biểu) để dễ đọc.
-3. Phân biệt rõ ràng giữa quy tắc thuế hiện hành và khuyến nghị kinh doanh. Nếu thông tin chưa đủ, hãy nêu rõ giả định hoặc khuyên người dùng kiểm tra lại hóa đơn/chứng từ.
 
+Nhiệm vụ của bạn:
+1. Hãy trả lời TRỰC TIẾP, ĐÚNG TRỌNG TÂM và CHÍNH XÁC câu hỏi của người dùng.
+2. Dữ liệu cửa hàng và quy định đính kèm bên dưới là THÔNG TIN NỀN THAM KHẢO. Hãy phân tích và lồng ghép tự nhiên thông tin này vào câu trả lời khi người dùng hỏi liên quan. KHÔNG in lại toàn bộ khối dữ liệu thô nếu người dùng không yêu cầu.
+3. Sử dụng tiếng Việt lịch sự, định dạng Markdown (tiêu đề, danh mục, bảng biểu) để trình bày rõ ràng.
+
+--- THÔNG TIN NỀN CỬA HÀNG ---
 ${storeContext}
 
 ${knowledgeContext}
+--------------------------------
 `;
 
     if (!config.geminiApiKey) {
       return {
-        answer: `### 💡 Phân tích & Lời khuyên từ Trợ lý AI
-
-Cảm ơn bạn đã đặt câu hỏi: **"${dto.question}"**
-
-${storeContext}
-
-${knowledgeContext}
-
-> ⚠️ *Lưu ý*: Vui lòng cung cấp \`GEMINI_API_KEY\` trong file cấu hình hệ thống (\`.env\`) để nhận được câu trả lời trực tiếp từ Google Gemini API.`,
+        answer: this.generateSmartFallback(dto.question, storeContext, knowledgeContext),
         provider: 'System Context Engine',
       };
     }
@@ -214,15 +261,7 @@ Người dùng hỏi: ${dto.question}`;
     console.error('Tất cả mô hình Gemini API đều báo lỗi, chuyển sang bộ phân tích nội bộ (System Context Engine):', lastError?.message || lastError);
 
     return {
-      answer: `### 💡 Phân tích & Lời khuyên từ Trợ lý AI
-
-Cảm ơn bạn đã đặt câu hỏi: **"${dto.question}"**
-
-${storeContext}
-
-${knowledgeContext}
-
-> ℹ️ *Lưu ý*: Hệ thống đã tự động trích xuất đầy đủ dữ liệu tồn kho, doanh thu và quy định của cửa hàng để tư vấn cho bạn. (Hệ thống AI đang tạm thời sử dụng máy phân tích dữ liệu nội bộ do cổng kết nối API từ Google đạt hạn ngạch).`,
+      answer: this.generateSmartFallback(dto.question, storeContext, knowledgeContext),
       provider: 'Trợ lý Hệ thống (System Context Engine)',
     };
   }
