@@ -49,6 +49,7 @@ export const config = {
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
   get allowedOrigins(): string[] {
     const defaultOrigins = [
       'http://localhost:3000',
