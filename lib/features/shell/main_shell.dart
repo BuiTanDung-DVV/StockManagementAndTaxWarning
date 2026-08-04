@@ -527,13 +527,13 @@ class _DesktopSidebar extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'SmartStock',
+                            'SmartStock POS & Tax',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   color: _ShellPalette.text,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w800,
                                   letterSpacing: -0.35,
                                 ),
                           ),
@@ -541,7 +541,7 @@ class _DesktopSidebar extends StatelessWidget {
                           Text(
                             shopName?.trim().isNotEmpty == true
                                 ? shopName!
-                                : 'Quản lý cửa hàng',
+                                : 'Bán hàng, Kho & Cảnh báo thuế',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
