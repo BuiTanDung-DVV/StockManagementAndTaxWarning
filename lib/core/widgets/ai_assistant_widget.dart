@@ -577,7 +577,8 @@ class _MessageBlock extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
