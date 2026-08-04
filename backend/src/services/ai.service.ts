@@ -175,30 +175,44 @@ ${knowledgeContext}
       };
     }
 
-    try {
-      const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const genAI = new GoogleGenerativeAI(config.geminiApiKey);
+    const modelCandidates = [
+      'gemini-2.0-flash',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-2.0-flash-lite',
+    ];
 
-      const historyPrompt = dto.history && dto.history.length > 0
-        ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
-        : '';
+    let lastError: any;
+    for (const modelName of modelCandidates) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const historyPrompt = dto.history && dto.history.length > 0
+          ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
+          : '';
 
-      const fullPrompt = `${systemPrompt}
+        const fullPrompt = `${systemPrompt}
 
 ${historyPrompt ? `--- LỊCH SỬ TRÒ CHUYỆN ---:\n${historyPrompt}\n---------------------------\n` : ''}
 Người dùng hỏi: ${dto.question}`;
 
-      const result = await model.generateContent(fullPrompt);
-      const responseText = result.response.text();
+        const result = await model.generateContent(fullPrompt);
+        const responseText = result.response.text();
 
-      return {
-        answer: responseText,
-        provider: 'Google Gemini 1.5 Flash',
-      };
-    } catch (err: any) {
-      console.error('Lỗi khi gọi Gemini API:', err?.message || err);
-      throw new Error(`Lỗi kết nối với Google Gemini API: ${err?.message || 'Không thể lấy phản hồi'}`);
+        return {
+          answer: responseText,
+          provider: `Google Gemini (${modelName})`,
+        };
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Gemini Model ${modelName} failed, trying next model candidate:`, err?.message || err);
+      }
     }
+
+    console.error('Tất cả mô hình Gemini API đều báo lỗi:', lastError?.message || lastError);
+    throw new Error(`Lỗi kết nối với Google Gemini API: ${lastError?.message || 'Không thể kết nối mô hình Gemini'}`);
   }
 
   /**

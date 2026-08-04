@@ -116,18 +116,14 @@ class ApiClient {
                 errorMessage = 'Không tìm thấy tài khoản';
               } else if (lowerMsg.contains('account is inactive')) {
                 errorMessage = 'Tài khoản đã bị khóa hoặc chưa kích hoạt';
-              } else if (lowerMsg.contains('not found')) {
-                if (lowerMsg.contains('customer')) {
-                  errorMessage = 'Không tìm thấy thông tin khách hàng';
-                } else if (lowerMsg.contains('invoice')) {
-                  errorMessage = 'Không tìm thấy hóa đơn';
-                } else if (lowerMsg.contains('purchaseorder')) {
-                  errorMessage = 'Không tìm thấy đơn nhập hàng';
-                } else if (lowerMsg.contains('warehouse')) {
-                  errorMessage = 'Không tìm thấy kho hàng';
-                } else {
-                  errorMessage = 'Không tìm thấy dữ liệu';
-                }
+              } else if (lowerMsg.contains('customer not found')) {
+                errorMessage = 'Không tìm thấy thông tin khách hàng';
+              } else if (lowerMsg.contains('invoice not found')) {
+                errorMessage = 'Không tìm thấy hóa đơn';
+              } else if (lowerMsg.contains('purchaseorder not found')) {
+                errorMessage = 'Không tìm thấy đơn nhập hàng';
+              } else if (lowerMsg.contains('warehouse not found')) {
+                errorMessage = 'Không tìm thấy kho hàng';
               } else if (lowerMsg.contains('contain at least 3 character')) {
                 errorMessage =
                     'Gmail hoặc tên đăng nhập phải từ 3 ký tự trở lên';
