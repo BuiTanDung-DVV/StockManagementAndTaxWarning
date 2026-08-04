@@ -30,8 +30,8 @@ const accountTypeSchema = z.enum(['SHOP', 'PERSONAL']);
 
 const bcryptPasswordInputSchema = z
   .string()
-  .min(1)
-  .max(64)
+  .min(1, 'Vui lòng nhập mật khẩu')
+  .max(64, 'Mật khẩu không được vượt quá 64 ký tự')
   .refine((value) => Buffer.byteLength(value, 'utf8') <= 72, {
     message: 'Mật khẩu quá dài',
   });
@@ -39,13 +39,13 @@ const bcryptPasswordInputSchema = z
 export const registerSchema = z.object({
   username: gmailSchema,
   password: securePasswordSchema,
-  fullName: z.string().trim().min(2).max(100),
+  fullName: z.string().trim().min(2, 'Họ và tên phải có ít nhất 2 ký tự').max(100, 'Họ và tên quá dài'),
   accountType: accountTypeSchema.default('PERSONAL'),
   otpCode: z.string().regex(/^\d{6}$/, 'Mã OTP phải gồm đúng 6 chữ số'),
 }).strict();
 
 export const loginSchema = z.object({
-  username: z.string().trim().min(3).max(254),
+  username: z.string().trim().min(3, 'Gmail hoặc tên đăng nhập phải từ 3 ký tự trở lên').max(254, 'Tên đăng nhập quá dài'),
   password: bcryptPasswordInputSchema,
 }).strict();
 

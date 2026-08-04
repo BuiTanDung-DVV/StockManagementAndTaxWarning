@@ -128,6 +128,14 @@ class ApiClient {
                 } else {
                   errorMessage = 'Không tìm thấy dữ liệu';
                 }
+              } else if (lowerMsg.contains('contain at least 3 character')) {
+                errorMessage =
+                    'Gmail hoặc tên đăng nhập phải từ 3 ký tự trở lên';
+              } else if (lowerMsg.contains('contain at least 2 character')) {
+                errorMessage = 'Họ và tên phải có ít nhất 2 ký tự';
+              } else if (lowerMsg.contains('contain at least')) {
+                errorMessage =
+                    'Thông tin nhập vào quá ngắn, vui lòng kiểm tra lại';
               } else if (lowerMsg.contains('internal server error')) {
                 errorMessage = 'Lỗi máy chủ nội bộ';
               } else if (lowerMsg.contains('bad request')) {

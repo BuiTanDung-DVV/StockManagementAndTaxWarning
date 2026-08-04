@@ -392,7 +392,7 @@ class _LoginForm extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             GoogleAuthButton(enabled: !loading, onIdToken: onGoogleIdToken),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.lg),
             Wrap(
               alignment: WrapAlignment.spaceBetween,
               spacing: AppSpacing.sm,

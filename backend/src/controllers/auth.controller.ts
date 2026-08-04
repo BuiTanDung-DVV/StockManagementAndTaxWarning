@@ -66,11 +66,26 @@ function sendAuth(req: Request, res: Response, result: Record<string, any>, mess
   return res.json({ success: true, data: result, message });
 }
 
+function formatZodErrorMessage(issue?: { message?: string }): string {
+  if (!issue?.message) return 'Dữ liệu nhập vào không hợp lệ';
+  const msg = issue.message;
+  if (msg.includes('at least 3 character')) {
+    return 'Gmail hoặc tên đăng nhập phải từ 3 ký tự trở lên';
+  }
+  if (msg.includes('at least 2 character')) {
+    return 'Họ và tên phải từ 2 ký tự trở lên';
+  }
+  if (msg.includes('Required') || msg.includes('expected')) {
+    return 'Vui lòng điền đầy đủ thông tin bắt buộc';
+  }
+  return msg;
+}
+
 function handleError(res: Response, error: unknown): void {
   if (error instanceof ZodError) {
     res.status(422).json({
       success: false,
-      message: error.issues[0]?.message || 'Dữ liệu không hợp lệ',
+      message: formatZodErrorMessage(error.issues[0]),
       code: 'VALIDATION_ERROR',
     });
     return;
