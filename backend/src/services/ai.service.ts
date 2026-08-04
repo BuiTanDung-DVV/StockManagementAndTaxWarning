@@ -143,7 +143,20 @@ ${docsText}
   }
 
   private generateSmartFallback(question: string, storeContext: string, knowledgeContext: string): string {
-    const qLower = question.toLowerCase();
+    const qLower = question.toLowerCase().trim();
+
+    if (qLower.includes('hello') || qLower.includes('hi') || qLower.includes('chào') || qLower.includes('chao')) {
+      return `### 👋 Chào bạn!
+
+Tôi là **Trợ lý AI chuyên nghiệp** tư vấn về Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.
+
+Bạn có thể đặt bất kỳ câu hỏi nào cho tôi về:
+- 📊 **Doanh thu & Nghĩa vụ Thuế**: Ngưỡng chịu thuế mới (1 tỷ VNĐ/năm từ 2026), thuế VAT & TNCN.
+- 📦 **Tồn kho & Định mức**: Danh sách hàng sắp hết, quy trình kiểm kê và nhập kho bổ sung.
+- 💳 **Công nợ khách hàng**: Hạn mức nợ, đối soát và thu hồi công nợ.
+
+Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây giờ?`;
+    }
 
     if (qLower.includes('thuế') || qLower.includes('doanh thu') || qLower.includes('ngưỡng') || qLower.includes('nghĩa vụ')) {
       return `### 📜 Tư vấn về Ngưỡng Doanh Thu & Nghĩa Vụ Thuế Hộ Kinh Doanh
