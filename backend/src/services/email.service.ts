@@ -1,27 +1,32 @@
 import * as nodemailer from 'nodemailer';
 
 export class EmailService {
-    private transporter: nodemailer.Transporter;
+    private transporter: nodemailer.Transporter | null = null;
 
     constructor() {
-        this.transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.SMTP_USER || 'your-email@gmail.com', // fallback or real env
-                pass: process.env.SMTP_PASS || 'your-app-password', // generated app password
-            },
-        });
+        this.initTransporter();
+    }
+
+    private initTransporter() {
+        const smtpUser = process.env.SMTP_USER;
+        const smtpPass = process.env.SMTP_PASS;
+
+        if (smtpUser && smtpPass) {
+            this.transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: smtpUser,
+                    pass: smtpPass,
+                },
+            });
+        }
     }
 
     async sendOtp(email: string, otpCode: string): Promise<boolean> {
         try {
-            const isSandbox = !process.env.SMTP_USER || process.env.SMTP_USER === 'your-email@gmail.com';
-            
-            if (isSandbox) {
-                const debugEnabled = process.env.NODE_ENV !== 'production'
-                    && process.env.OTP_DEBUG_RESPONSE === 'true';
-                if (debugEnabled) {
-                    console.log(`[EMAIL SANDBOX] OTP for ${email}: ${otpCode}`);
+            if (!this.transporter) {
+                if (process.env.OTP_DEBUG_RESPONSE === 'true') {
+                    console.log(`[Email Service - DEBUG] OTP for ${email}: ${otpCode}`);
                     return true;
                 }
                 console.error('[Email Service] SMTP is not configured');
@@ -29,23 +34,23 @@ export class EmailService {
             }
 
             const mailOptions = {
-                from: `"SmartStock & Tax Warning" <${process.env.SMTP_USER}>`,
+                from: `"SmartStock POS & Tax" <${process.env.SMTP_USER}>`,
                 to: email,
-                subject: 'Xác thực OTP - SmartStock',
+                subject: 'Xác thực OTP - SmartStock POS & Tax',
                 html: `
                     <div style="background-color: #f1f5f9; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
                         <div style="max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #e2e8f0;">
                             <!-- Header -->
                             <div style="background-color: #1e3a8a; padding: 24px; text-align: center;">
-                                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">SmartStock <span style="color: #3b82f6;">FinTech</span></h1>
-                                <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 13px; font-weight: 500;">Hệ thống Quản lý Bán hàng & Cảnh báo Thuế</p>
+                                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">SmartStock <span style="color: #3b82f6;">POS & Tax</span></h1>
+                                <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 13px; font-weight: 500;">Hệ thống Quản lý Bán hàng & Cảnh báo Thuế Hộ Kinh Doanh</p>
                             </div>
 
                             <!-- Body -->
                             <div style="padding: 32px 24px;">
                                 <h2 style="color: #0f172a; margin: 0 0 16px 0; font-size: 18px; font-weight: 700; text-align: center;">Xác thực tài khoản (OTP)</h2>
                                 <p style="font-size: 15px; color: #334155; line-height: 1.6; margin: 0 0 20px 0;">Chào bạn,</p>
-                                <p style="font-size: 15px; color: #334155; line-height: 1.6; margin: 0 0 24px 0;">Bạn đang thực hiện đăng ký hoặc đổi mật khẩu trên hệ thống <strong>SmartStock</strong>. Vui lòng nhập mã xác thực OTP dưới đây để tiếp tục:</p>
+                                <p style="font-size: 15px; color: #334155; line-height: 1.6; margin: 0 0 24px 0;">Bạn đang thực hiện đăng ký hoặc đổi mật khẩu trên hệ thống <strong>SmartStock POS & Tax</strong>. Vui lòng nhập mã xác thực OTP dưới đây để tiếp tục:</p>
 
                                 <!-- OTP Box -->
                                 <div style="text-align: center; margin: 32px 0;">
@@ -65,7 +70,7 @@ export class EmailService {
                             <!-- Footer -->
                             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
                                 <p style="font-size: 12px; color: #64748b; margin: 0 0 8px 0;">Hỗ trợ khách hàng: <a href="mailto:support@smartstock.vn" style="color: #2563eb; text-decoration: none; font-weight: 600;">support@smartstock.vn</a></p>
-                                <p style="font-size: 11px; color: #94a3b8; margin: 0;">Đây là email tự động từ SmartStock FinTech. Vui lòng không phản hồi email này.</p>
+                                <p style="font-size: 11px; color: #94a3b8; margin: 0;">Đây là email tự động từ SmartStock POS & Tax. Vui lòng không phản hồi email này.</p>
                             </div>
                         </div>
                     </div>
@@ -77,7 +82,7 @@ export class EmailService {
         } catch (error) {
             console.error(
                 '[Email Service] Error sending email:',
-                error instanceof Error ? error.message : 'Unknown error',
+                error instanceof Error ? error.message : 'Unknown error'
             );
             return false;
         }

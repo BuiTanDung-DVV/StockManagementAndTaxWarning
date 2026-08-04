@@ -556,13 +556,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         size: 44,
         semanticLabel: 'SmartStock',
       ),
-      applicationName: 'SmartStock',
+      applicationName: 'SmartStock POS & Tax',
       applicationVersion: packageInfo.version,
-      applicationLegalese: '© 2026 SmartStock.',
+      applicationLegalese: 'SmartStock - Quản lý bán hàng & Cảnh báo thuế Hộ Kinh Doanh',
       children: [
         const SizedBox(height: AppSpacing.md),
         const Text(
-          'Ứng dụng hỗ trợ quản lý bán hàng, tồn kho, tài chính và cảnh báo nghiệp vụ thuế cho hộ kinh doanh.',
+          'Hệ thống quản lý bán hàng (POS), tồn kho, dòng tiền và tự động cảnh báo nghĩa vụ thuế cho Hộ Kinh Doanh cá thể tại Việt Nam.',
           style: TextStyle(fontSize: 13, height: 1.45),
         ),
       ],

@@ -2,7 +2,7 @@
 export class SmsService {
     async sendOtp(phone: string, otpCode: string): Promise<boolean> {
         const provider = (process.env.SMS_PROVIDER || 'sandbox').toLowerCase();
-        const content = `[SmartStock] Ma OTP xac minh cua ban la: ${otpCode}. Co hieu luc trong 2 phut.`;
+        const content = `[SmartStock POS & Tax] Ma OTP xac minh cua ban la: ${otpCode}. Co hieu luc trong 2 phut.`;
 
         console.log(`[SMS Service] Sending OTP to ${phone} using provider: ${provider}`);
 
