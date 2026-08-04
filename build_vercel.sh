@@ -28,11 +28,8 @@ else
   echo "⚠️ Không tìm thấy biến môi trường API_URL. Build với cấu hình mặc định."
 fi
 
-if [ -n "$GOOGLE_WEB_CLIENT_ID" ]; then
-  BUILD_ARGS+=(--dart-define="GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID")
-else
-  echo "⚠️ Thiếu GOOGLE_WEB_CLIENT_ID; đăng nhập Google trên Web sẽ không hoạt động."
-fi
+GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-124075638912-hk0076lmjvgqa0iqec75aerpoe4lcpfq.apps.googleusercontent.com}"
+BUILD_ARGS+=(--dart-define="GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID")
 
 flutter build web "${BUILD_ARGS[@]}"
 
