@@ -27,6 +27,12 @@ export class TvplSearchService {
    * Tra cứu danh sách văn bản pháp luật mới nhất trên Thư Viện Pháp Luật theo tiêu đề / từ khóa (có Cache 1h & Timeout 1.2s)
    */
   async searchLegalDocumentsByTitle(keyword: string): Promise<TvplSearchResult[]> {
+    // Trên môi trường Vercel Serverless, dùng trực tiếp Chỉ mục TVPL Chuẩn để phản hồi tức thì 0ms (tránh bị Vercel block HTTPS scraping gây ECONNRESET/Timeout)
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      console.log(`[TVPL SEARCH SERVERLESS] Instant catalog return for keyword: "${keyword}"`);
+      return this.getDefaultTvplTaxResults(keyword);
+    }
+
     const cacheKey = keyword.trim().toLowerCase();
     const cached = this.cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
