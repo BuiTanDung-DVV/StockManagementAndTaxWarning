@@ -151,31 +151,39 @@ ${docsText}
     const storeContext = await this.getStoreContext(shopId);
     const knowledgeContext = await this.getKnowledgeContext(shopId);
 
-    // Tra cứu danh mục văn bản pháp luật chuẩn từ Thư Viện Pháp Luật theo từ khóa câu hỏi
-    const tvplResults = await tvplSearchService.searchLegalDocumentsByTitle(dto.question);
-    const tvplText = tvplResults.length > 0
-      ? `=== DANH MỤC VĂN BẢN TRÁC CỨU TỪ THƯ VIỆN PHÁP LUẬT (TVPL) ===\n` +
-        tvplResults.map((r, i) => `${i + 1}. [${r.title}] (${r.status} - Ngày áp dụng: ${r.effectiveDate})\n   🔗 Link TVPL: ${r.url}${r.summary ? `\n   📝 Tóm tắt: ${r.summary}` : ''}`).join('\n\n')
-      : '';
+    // Tra cứu TVPL hoàn toàn không bắt buộc - chạy non-blocking với timeout 1.5s
+    let tvplText = '';
+    try {
+      const tvplResults = await Promise.race([
+        tvplSearchService.searchLegalDocumentsByTitle(dto.question),
+        new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 1500)),
+      ]);
+      if (tvplResults && tvplResults.length > 0) {
+        tvplText = `=== THAM KHẢO VĂN BẢN (NẾU CÓ LIÊN QUAN) ===\n` +
+          tvplResults.map((r, i) => `${i + 1}. [${r.title}]\n   🔗 Link: ${r.url}`).join('\n');
+      }
+    } catch {
+      tvplText = '';
+    }
 
     const systemPrompt = `Bạn là Trợ lý AI thông minh chuyên tư vấn Quản lý Bán hàng, Tồn kho, Tài chính và Nghĩa vụ Thuế cho Hộ kinh doanh tại Việt Nam.
 
 Hướng dẫn trả lời:
-1. Trả lời linh hoạt, tự nhiên, đúng trọng tâm và dễ hiểu cho mọi câu hỏi của người dùng (từ quản lý lẻ, hàng tồn kho, công nợ, quy trình bán hàng đến chính sách thuế).
-2. Tự do vận dụng kiến thức chuyên môn rộng lớn của bạn về quản lý kinh doanh và pháp luật Việt Nam (Thông tư 88/2021/TT-BTC, Nghị định 123/2020/NĐ-CP, Nghị định 125/2020/NĐ-CP, Luật Quản lý thuế 38/2019/QH14, ngưỡng thuế 2025 - 2026,...). Không bị bắt buộc hoặc bó hẹp chỉ trong dữ liệu tra cứu.
-3. QUY TẮC VỀ LINK DẪN CHỨNG:
-   - Nếu trong khối "THÔNG TIN NỀN CỬA HÀNG & THAM KHẢO" bên dưới có sẵn đường link URL chuẩn từ Thư Viện Pháp Luật (TVPL), bạn có thể gắn link Markdown \`[📄 Tên văn bản](Link TVPL)\`.
-   - TUYỆT ĐỐI KHÔNG tự bịa ra hoặc tự tạo đường link URL không có thật. Nếu đề cập văn bản pháp luật mà không có link URL chuẩn trong khối đính kèm, hãy chỉ ghi tên văn bản rõ ràng (Ví dụ: Thông tư 88/2021/TT-BTC) mà KHÔNG kèm đường link Markdown.
-4. Lồng ghép tự nhiên thông tin thực tế của Cửa hàng (doanh thu, tồn kho cảnh báo, nợ) để đưa ra lời khuyên thiết thực nhất cho chủ cửa hàng.
-5. Trình bày bằng tiếng Việt thân thiện, rõ ràng, sử dụng định dạng Markdown mượt mà.
+1. Trả lời tự nhiên, thông minh, đúng trọng tâm cho MỌI câu hỏi của chủ cửa hàng (từ bán hàng, xuất nhập kho, quản lý nợ, tài chính đến quy định pháp luật).
+2. Tự do vận dụng kiến thức rộng lớn của bạn. KHÔNG bắt buộc và KHÔNG bị phụ thuộc vào việc phải tra cứu từ Thư Viện Pháp Luật.
+3. QUY TẮC LINK CHUẨN:
+   - Chỉ đính kèm link Markdown \`[📄 Tên văn bản](Link TVPL)\` khi đường link đó NẰM TRONG phần THAM KHẢO VĂN BẢN đính kèm bên dưới.
+   - TUYỆT ĐỐI KHÔNG tự tạo link URL không có thật. Nếu nêu tên văn bản mà không có link chuẩn đính kèm, hãy chỉ ghi rõ tên văn bản (Ví dụ: Thông tư 88/2021/TT-BTC) mà KHÔNG kèm link Markdown.
+4. Lồng ghép tự nhiên thông tin tình hình thực tế của Cửa hàng để đưa ra lời khuyên thực tế nhất.
+5. Trình bày tiếng Việt thân thiện, rõ ràng dạng Markdown.
 
---- THÔNG TIN NỀN CỬA HÀNG & THAM KHẢO ---
+--- THÔNG TIN CỬA HÀNG & THAM KHẢO ---
 ${storeContext}
 
 ${knowledgeContext}
 
 ${tvplText}
-------------------------------------------
+--------------------------------------
 `;
 
     const key = config.geminiApiKey;
