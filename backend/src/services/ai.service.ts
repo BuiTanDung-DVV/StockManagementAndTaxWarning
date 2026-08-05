@@ -183,18 +183,12 @@ ${tvplText}
     }
 
     const genAI = new GoogleGenerativeAI(key);
-    // Tất cả mô hình theo thứ tự ưu tiên (Gemini Flash Lite 500 RPD -> Flash -> Gemma 14.4K RPD):
+    // Mô hình chuẩn theo thứ tự ưu tiên (Gemini 1.5 Flash -> 2.0 Flash -> 1.5 Pro):
     const modelCandidates = [
-      'gemini-3.5-flash-lite',
-      'gemini-3.1-flash-lite',
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
-      'gemini-3-flash',
-      'gemini-2.5-flash',
+      'gemini-1.5-flash',
       'gemini-2.0-flash',
-      'gemma-4-31b',
-      'gemma-4-26b',
       'gemini-1.5-flash-latest',
+      'gemini-1.5-pro',
     ];
 
     let lastError: any;
