@@ -110,12 +110,12 @@ export class TvplSearchService {
         summary: 'Bắt buộc áp dụng Hóa đơn điện tử khởi tạo từ máy tính tiền đối với hộ kinh doanh bán lẻ, nhà hàng, dịch vụ.'
       },
       {
-        title: 'Nghị quyết nâng ngưỡng doanh thu chịu thuế GTGT & TNCN lên 1 tỷ VNĐ/năm từ 2026',
-        docNumber: 'Nghị quyết Quốc hội 2026',
-        url: 'https://thuvienphapluat.vn/van-ban/Thue-Phi-Le-Phi/Nghi-quyet-thue-ho-kinh-doanh-2026.aspx',
-        status: 'Mới ban hành áp dụng từ 2026',
-        effectiveDate: '01/01/2026',
-        summary: 'Nâng ngưỡng chịu thuế GTGT và TNCN cho Hộ kinh doanh từ 100 triệu VNĐ/năm lên 1 tỷ VNĐ/năm kể từ ngày 01/01/2026.'
+        title: 'Luật Quản lý thuế số 38/2019/QH14 & Quy định chính sách thuế Hộ kinh doanh',
+        docNumber: '38/2019/QH14',
+        url: 'https://thuvienphapluat.vn/van-ban/Thue-Phi-Le-Phi/Luat-Quan-ly-thue-2019-38-2019-QH14-416682.aspx',
+        status: 'Còn hiệu lực',
+        effectiveDate: '01/07/2020',
+        summary: 'Quy định khung pháp lý về đăng ký thuế, khai thuế, nộp thuế và chính sách ưu đãi thuế đối với Hộ kinh doanh.'
       },
       {
         title: 'Nghị định 125/2020/NĐ-CP Xử phạt vi phạm hành chính về thuế, hóa đơn',
