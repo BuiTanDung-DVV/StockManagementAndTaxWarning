@@ -158,125 +158,83 @@ ${docsText}
         tvplResults.map((r, i) => `${i + 1}. [${r.title}] (${r.status} - Ngày áp dụng: ${r.effectiveDate})\n   🔗 Link TVPL: ${r.url}${r.summary ? `\n   📝 Tóm tắt: ${r.summary}` : ''}`).join('\n\n')
       : '';
 
-    const systemPrompt = `Bạn là Trợ lý AI chuyên nghiệp tư vấn về Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh Việt Nam.
+    const systemPrompt = `Bạn là Trợ lý AI thông minh chuyên tư vấn Quản lý Bán hàng, Tồn kho, Tài chính và Nghĩa vụ Thuế cho Hộ kinh doanh tại Việt Nam.
 
-Nhiệm vụ của bạn:
-1. Hãy trả lời TRỰC TIẾP, ĐÚNG TRỌNG TÂM, NỔI BẬT VÀ CHÍNH XÁC câu hỏi của người dùng. Bạn được tự do tổng hợp kiến thức tổng quan từ Google Search, Thư Viện Pháp Luật, Tổng Cục Thuế, Cổng Thông Tin Chính Phủ và các nguồn chính thống.
-2. QUY TẮC NGUỒN VÀ DẪN LINK: Khi nhắc tới quy định, văn bản hay trang tra cứu, nếu có đường link URL chính xác 100% trong khối DANH MỤC THAM KHẢO đính kèm bên dưới, hãy đính kèm link dạng Markdown \`[📄 Tên tài liệu](Link URL)\`. Nếu không có link chuẩn trong khối tham khảo, hãy ghi rõ tên tài liệu/quy định mà không tự bịa link URL rác.
-3. Dữ liệu thực tế tại cửa hàng (doanh thu, công nợ, kho hàng) đính kèm bên dưới là THÔNG TIN NỀN BẮT BUỘC ĐỂ PHÂN TÍCH THỰC TẾ. Hãy lồng ghép tự nhiên thông tin này để tư vấn sát với tình hình thực tế của cửa hàng người dùng.
-4. Trình bày dạng Markdown khoa học, rõ ràng, dễ đọc, tối ưu cho người dùng.
+Hướng dẫn trả lời:
+1. Trả lời linh hoạt, tự nhiên, đúng trọng tâm và dễ hiểu cho mọi câu hỏi của người dùng (từ quản lý lẻ, hàng tồn kho, công nợ, quy trình bán hàng đến chính sách thuế).
+2. Tự do vận dụng kiến thức chuyên môn rộng lớn của bạn về quản lý kinh doanh và pháp luật Việt Nam (Thông tư 88/2021/TT-BTC, Nghị định 123/2020/NĐ-CP, Nghị định 125/2020/NĐ-CP, Luật Quản lý thuế 38/2019/QH14, ngưỡng thuế 2025 - 2026,...). Không bị bắt buộc hoặc bó hẹp chỉ trong dữ liệu tra cứu.
+3. QUY TẮC VỀ LINK DẪN CHỨNG:
+   - Nếu trong khối "THÔNG TIN NỀN CỬA HÀNG & THAM KHẢO" bên dưới có sẵn đường link URL chuẩn từ Thư Viện Pháp Luật (TVPL), bạn có thể gắn link Markdown \`[📄 Tên văn bản](Link TVPL)\`.
+   - TUYỆT ĐỐI KHÔNG tự bịa ra hoặc tự tạo đường link URL không có thật. Nếu đề cập văn bản pháp luật mà không có link URL chuẩn trong khối đính kèm, hãy chỉ ghi tên văn bản rõ ràng (Ví dụ: Thông tư 88/2021/TT-BTC) mà KHÔNG kèm đường link Markdown.
+4. Lồng ghép tự nhiên thông tin thực tế của Cửa hàng (doanh thu, tồn kho cảnh báo, nợ) để đưa ra lời khuyên thiết thực nhất cho chủ cửa hàng.
+5. Trình bày bằng tiếng Việt thân thiện, rõ ràng, sử dụng định dạng Markdown mượt mà.
 
---- THÔNG TIN CỬA HÀNG & THƯ VIỆN TRA CỨU MỞ RỘNG ---
+--- THÔNG TIN NỀN CỬA HÀNG & THAM KHẢO ---
 ${storeContext}
 
 ${knowledgeContext}
 
 ${tvplText}
-------------------------------------------------------
+------------------------------------------
 `;
 
-    const keys = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || config.geminiApiKey || '')
-      .split(',')
-      .map(k => k.trim())
-      .filter(Boolean);
+    const key = config.geminiApiKey;
+    console.log(`[AI DEBUG] GEMINI_API_KEY check: present=${!!key}, length=${key ? key.length : 0}`);
 
-    console.log(`[AI DEBUG] GEMINI_API_KEYS count: ${keys.length}`);
+    if (!key) {
+      throw new Error('[AI ERROR] GEMINI_API_KEY is empty on Vercel environment variables. Please set GEMINI_API_KEY in Vercel Settings.');
+    }
 
-    let lastError: any = null;
+    const genAI = new GoogleGenerativeAI(key);
+    // Tất cả mô hình theo thứ tự ưu tiên (Gemini Flash Lite 500 RPD -> Flash -> Gemma 14.4K RPD):
+    const modelCandidates = [
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-3-flash',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemma-4-31b',
+      'gemma-4-26b',
+      'gemini-1.5-flash-latest',
+    ];
 
-    if (keys.length > 0) {
-      const modelCandidates = [
-        'gemini-2.5-flash',
-        'gemini-3.5-flash-lite',
-        'gemini-3.1-flash-lite',
-        'gemini-3.5-flash',
-        'gemini-3.6-flash',
-        'gemini-3-flash',
-        'gemini-2.5-flash-lite',
-        'gemini-2-flash',
-        'gemini-2.0-flash',
-        'gemini-2.5-pro',
-        'gemini-3.1-pro',
-        'gemini-1.5-flash',
-        'gemini-1.5-pro',
-      ];
+    let lastError: any;
+    for (const modelName of modelCandidates) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const historyPrompt = dto.history && dto.history.length > 0
+          ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
+          : '';
 
-      for (const keyCandidate of keys) {
-        const genAI = new GoogleGenerativeAI(keyCandidate);
+        const fullPrompt = `${systemPrompt}
 
-        for (const modelName of modelCandidates) {
-          try {
-            const model = genAI.getGenerativeModel({
-              model: modelName,
-              systemInstruction: systemPrompt,
-              generationConfig: {
-                temperature: 0.3,
-                maxOutputTokens: 1024,
-              },
-            });
+${historyPrompt ? `--- LỊCH SỬ TRÒ CHUYỆN ---:\n${historyPrompt}\n---------------------------\n` : ''}
+Người dùng hỏi: ${dto.question}`;
 
-          const historyPrompt = dto.history && dto.history.length > 0
-            ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
-            : '';
+        const result = await model.generateContent(fullPrompt);
+        const responseText = result.response.text();
 
-          const userPrompt = historyPrompt
-            ? `Lịch sử cuộc trò chuyện:\n${historyPrompt}\n\nCâu hỏi hiện tại: ${dto.question}`
-            : dto.question;
-
-          const generatePromise = model.generateContent(userPrompt);
-          const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => reject(new Error(`Model ${modelName} timed out after 8s`)), 8000);
-          });
-
-          const result = await Promise.race([generatePromise, timeoutPromise]);
-          const responseText = result.response.text();
-
-          if (responseText && responseText.trim().length > 0) {
-            return {
-              answer: responseText,
-              provider: `Google Gemini (${modelName})`,
-            };
-          }
-        } catch (err: any) {
-          lastError = err;
+        if (responseText && responseText.trim().length > 0) {
+          return {
+            answer: responseText,
+            provider: `Google Gemini (${modelName})`,
+          };
         }
-        }
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Gemini Model ${modelName} call failed:`, err?.message || err);
       }
     }
 
-    console.warn('[AI SERVICE FALLBACK] Serving via Smart Knowledge Engine Fallback. Keys count:', keys.length, 'Last error:', lastError?.message);
-    return {
-      answer: this.formatSmartFallbackResponse(dto.question, storeContext),
-      provider: keys.length === 0
-        ? 'Trợ lý AI (Chờ cấu hình GEMINI_API_KEY trên Vercel)'
-        : `Trợ lý AI (Lỗi API: ${lastError?.message || 'Không thể kết nối Google AI'})`,
-    };
-  }
-
-  private formatSmartFallbackResponse(question: string, storeContext: string): string {
-    const qLower = question.toLowerCase();
-
-    let mainAnswer = '';
-    if (qLower.includes('thuế') || qLower.includes('2026') || qLower.includes('ngưỡng')) {
-      mainAnswer = `### 📌 Quy định về Ngưỡng Doanh thu Chịu Thuế Hộ Kinh Doanh (Áp dụng từ năm 2026):
-
-* **Thay đổi quan trọng từ 01/01/2026:** Ngưỡng doanh thu chịu thuế Giá trị gia tăng (GTGT) và Thuế Thu nhập cá nhân (TNCN) đối với Hộ kinh doanh được **nâng lên mức 1 tỷ VNĐ/năm** (thay cho ngưỡng 100 triệu VNĐ/năm của năm 2025).
-* **Nghĩa vụ Kế toán & Hóa đơn bắt buộc:**
-  - **Chế độ Kế toán:** Tuân thủ 5 loại sổ kế toán bắt buộc theo [📄 Thông tư 88/2021/TT-BTC Hướng dẫn chế độ kế toán Hộ kinh doanh](https://thuvienphapluat.vn/van-ban/Ke-toan-Kiem-toan/Thong-tu-88-2021-TT-BTC-huong-dan-che-do-ke-toan-cho-ho-kinh-doanh-ca-nhan-kinh-doanh-490333.aspx).
-  - **Hóa đơn điện tử:** Bắt buộc áp dụng Hóa đơn điện tử khởi tạo từ máy tính tiền theo [📄 Nghị định 123/2020/NĐ-CP Quy định về hóa đơn, chứng từ](https://thuvienphapluat.vn/van-ban/Thue-Phi-Le-Phi/Nghi-dinh-123-2020-ND-CP-quy-dinh-hoa-don-chung-tu-455838.aspx).`;
-    } else if (qLower.includes('công nợ') || qLower.includes('nợ')) {
-      mainAnswer = `### 💡 Quy Định & Quy Trình Quản Lý Công Nợ Hộ Kinh Doanh:
-
-* **Khái niệm:** **Công nợ** là số tiền phát sinh trong mua bán chưa thanh toán ngay (Bán chịu hoặc Nhập hàng chưa trả tiền).
-* **Sổ Kế toán bắt buộc:** Hộ kinh doanh phải lập và theo dõi Sổ công nợ theo [📄 Thông tư 88/2021/TT-BTC Hướng dẫn chế độ kế toán Hộ kinh doanh](https://thuvienphapluat.vn/van-ban/Ke-toan-Kiem-toan/Thong-tu-88-2021-TT-BTC-huong-dan-che-do-ke-toan-cho-ho-kinh-doanh-ca-nhan-kinh-doanh-490333.aspx).
-* **Quy trình kiểm soát:** Đôn đốc đối chiếu công nợ vào **cuối mỗi tuần** và kiểm soát nghiêm ngặt hạn mức nợ của từng khách hàng.`;
-    } else {
-      mainAnswer = `Chào bạn, tôi là Trợ lý AI chuyên tư vấn Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.\n\nBạn có thể hỏi tôi bất kỳ câu hỏi nào về **Thuế 2026, Thông tư 88, Nghị định 123, Công nợ hoặc Cảnh báo tồn kho cửa hàng**.`;
+    const errStr = (lastError?.message || '').toLowerCase();
+    if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('rate limit')) {
+      throw new Error('Hệ thống Google AI đang tạm thời vượt quá lượt truy vấn trong phút. Vui lòng đợi 15-30 giây rồi gửi lại câu hỏi.');
     }
 
-    const cleanStoreContext = storeContext.replace('=== DỮ LIỆU THỰC TẾ CỬA HÀNG (CẬP NHẬT TỰ ĐỘNG) ===', '').replace('=================================================', '').trim();
-
-    return `${mainAnswer}\n\n---\n\n### 📊 Tình Hình Dữ Liệu Thực Tế Tại Cửa Hàng Bạn:\n${cleanStoreContext}`;
+    console.error('Gemini Models failed:', lastError);
+    throw new Error('Không thể kết nối với Trợ lý AI lúc này. Vui lòng thử lại sau.');
   }
 
   /**
