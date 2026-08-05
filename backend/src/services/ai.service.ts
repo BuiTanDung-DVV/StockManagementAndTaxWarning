@@ -173,8 +173,11 @@ ${knowledgeContext}
     const genAI = new GoogleGenerativeAI(key);
     const modelCandidates = [
       'gemini-2.0-flash',
+      'gemini-1.5-flash-002',
+      'gemini-1.5-flash-001',
       'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-latest',
+      'gemini-1.5-pro-002',
+      'gemini-1.5-pro-001',
       'gemini-2.0-flash-lite',
     ];
 
@@ -209,7 +212,7 @@ Người dùng hỏi: ${dto.question}`;
 
     const allErrorsStr = errorsSummary.join(' | ');
     if (allErrorsStr.includes('429') || allErrorsStr.includes('Quota exceeded') || allErrorsStr.includes('rate-limits')) {
-      throw new Error('Mã Google Gemini API Key hiện tại (Free Tier) đang bị quá tải lượt hỏi trong phút từ Google (Rate Limit). Vui lòng đợi 15 - 20 giây rồi thử lại câu hỏi.');
+      throw new Error('Mã Google Gemini API Key hiện tại (Free Tier) đã chạm hạn mức số lượt hỏi trong ngày hoặc trong phút từ Google AI Studio (Lỗi 429 Quota Exceeded). Bạn vui lòng tạo 1 API Key mới tại aistudio.google.com hoặc đợi khoảng 1 phút rồi thử lại.');
     }
 
     console.error('All Gemini Models failed:', errorsSummary);
