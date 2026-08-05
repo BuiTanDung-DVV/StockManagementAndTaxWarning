@@ -171,8 +171,13 @@ ${knowledgeContext}
     }
 
     const genAI = new GoogleGenerativeAI(key);
-    // Chỉ thử tối đa 2 mô hình ổn định nhất để tránh lãng phí Quota 15 RPM của Google
-    const modelCandidates = ['gemini-1.5-flash', 'gemini-2.0-flash'];
+    // Danh sách mô hình cập nhật chuẩn theo bảng Quota Google AI Studio của bạn:
+    const modelCandidates = [
+      'gemini-2.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash-latest',
+    ];
 
     let lastError: any;
     for (const modelName of modelCandidates) {
