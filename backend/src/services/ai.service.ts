@@ -239,22 +239,23 @@ Người dùng hỏi: ${dto.question}`;
 
     let mainAnswer = '';
     if (qLower.includes('thuế') || qLower.includes('2026') || qLower.includes('ngưỡng')) {
-      mainAnswer = `### 📌 Quy định về Thuế Hộ Kinh Doanh mới nhất (Áp dụng năm 2025 & 2026):
+      mainAnswer = `### 📌 Quy định về Ngưỡng Doanh thu Chịu Thuế Hộ Kinh Doanh (Áp dụng từ năm 2026):
 
-* **Năm 2025:** Ngưỡng chịu thuế GTGT & TNCN là **trên 100 triệu VNĐ/năm**. Doanh thu từ 100 triệu VNĐ trở xuống được miễn thuế GTGT & TNCN.
-* **Năm 2026:** Ngưỡng chịu thuế GTGT & TNCN được nâng lên **1 tỷ VNĐ/năm**. Hộ kinh doanh có tổng doanh thu từ 1 tỷ VNĐ/năm trở xuống không phải nộp thuế GTGT & TNCN.
-* **Văn bản quy định bắt buộc:**
-  - **Sổ sách kế toán (5 loại sổ bắt buộc):** Tuân thủ theo [📄 Thông tư 88/2021/TT-BTC](https://thuvienphapluat.vn/van-ban/Ke-toan-Kiem-toan/Thong-tu-88-2021-TT-BTC-huong-dan-che-do-ke-toan-cho-ho-kinh-doanh-ca-nhan-kinh-doanh-490333.aspx).
-  - **Hóa đơn điện tử:** Áp dụng hóa đơn điện tử khởi tạo từ máy tính tiền theo [📄 Nghị định 123/2020/NĐ-CP](https://thuvienphapluat.vn/van-ban/Thue-Phi-Le-Phi/Nghi-dinh-123-2020-ND-CP-quy-dinh-hoa-don-chung-tu-455838.aspx).`;
+* **Thay đổi quan trọng từ 01/01/2026:** Ngưỡng doanh thu chịu thuế Giá trị gia tăng (GTGT) và Thuế Thu nhập cá nhân (TNCN) đối với Hộ kinh doanh được **nâng lên mức 1 tỷ VNĐ/năm** (thay cho ngưỡng 100 triệu VNĐ/năm của năm 2025).
+* **Nghĩa vụ Kế toán & Hóa đơn bắt buộc:**
+  - **Chế độ Kế toán:** Tuân thủ 5 loại sổ kế toán bắt buộc theo [📄 Thông tư 88/2021/TT-BTC Hướng dẫn chế độ kế toán Hộ kinh doanh](https://thuvienphapluat.vn/van-ban/Ke-toan-Kiem-toan/Thong-tu-88-2021-TT-BTC-huong-dan-che-do-ke-toan-cho-ho-kinh-doanh-ca-nhan-kinh-doanh-490333.aspx).
+  - **Hóa đơn điện tử:** Bắt buộc áp dụng Hóa đơn điện tử khởi tạo từ máy tính tiền theo [📄 Nghị định 123/2020/NĐ-CP Quy định về hóa đơn, chứng từ](https://thuvienphapluat.vn/van-ban/Thue-Phi-Le-Phi/Nghi-dinh-123-2020-ND-CP-quy-dinh-hoa-don-chung-tu-455838.aspx).`;
     } else if (qLower.includes('công nợ') || qLower.includes('nợ')) {
-      mainAnswer = `### 💡 Quản Lý Công Nợ Hộ Kinh Doanh:
-* **Công nợ phải thu:** Là khoản tiền khách hàng mua nợ. Hộ kinh doanh phải mở Sổ theo dõi công nợ theo [📄 Thông tư 88/2021/TT-BTC](https://thuvienphapluat.vn/van-ban/Ke-toan-Kiem-toan/Thong-tu-88-2021-TT-BTC-huong-dan-che-do-ke-toan-cho-ho-kinh-doanh-ca-nhan-kinh-doanh-490333.aspx).
-* **Quy trình thu hồi:** Đôn đốc đối chiếu công nợ cuối tuần và kiểm soát chặt chẽ hạn mức cho nợ.`;
+      mainAnswer = `### 💡 Quy Định & Quy Trình Quản Lý Công Nợ Hộ Kinh Doanh:
+
+* **Khái niệm:** **Công nợ** là số tiền phát sinh trong mua bán chưa thanh toán ngay (Bán chịu hoặc Nhập hàng chưa trả tiền).
+* **Sổ Kế toán bắt buộc:** Hộ kinh doanh phải lập và theo dõi Sổ công nợ theo [📄 Thông tư 88/2021/TT-BTC Hướng dẫn chế độ kế toán Hộ kinh doanh](https://thuvienphapluat.vn/van-ban/Ke-toan-Kiem-toan/Thong-tu-88-2021-TT-BTC-huong-dan-che-do-ke-toan-cho-ho-kinh-doanh-ca-nhan-kinh-doanh-490333.aspx).
+* **Quy trình kiểm soát:** Đôn đốc đối chiếu công nợ vào **cuối mỗi tuần** và kiểm soát nghiêm ngặt hạn mức nợ của từng khách hàng.`;
     } else {
-      mainAnswer = `Chào bạn, tôi là Trợ lý AI chuyên tư vấn Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.\n\nBạn có thể hỏi tôi về **Thuế 2026, Chế độ kế toán Thông tư 88, Hóa đơn điện tử Nghị định 123, Công nợ hoặc Tồn kho cửa hàng**.`;
+      mainAnswer = `Chào bạn, tôi là Trợ lý AI chuyên tư vấn Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.\n\nBạn có thể hỏi tôi bất kỳ câu hỏi nào về **Thuế 2026, Thông tư 88, Nghị định 123, Công nợ hoặc Cảnh báo tồn kho cửa hàng**.`;
     }
 
-    const cleanStoreContext = storeContext.replace('=== DỮ LIỆU THỰC TẾ CỬA HÀNG (CẬP NHẬT TỰ ĐỘNG) ===', '').trim();
+    const cleanStoreContext = storeContext.replace('=== DỮ LIỆU THỰC TẾ CỬA HÀNG (CẬP NHẬT TỰ ĐỘNG) ===', '').replace('=================================================', '').trim();
 
     return `${mainAnswer}\n\n---\n\n### 📊 Tình Hình Dữ Liệu Thực Tế Tại Cửa Hàng Bạn:\n${cleanStoreContext}`;
   }
