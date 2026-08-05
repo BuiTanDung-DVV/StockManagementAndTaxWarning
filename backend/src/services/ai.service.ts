@@ -142,10 +142,20 @@ ${docsText}
     }
   }
 
+  private removeAccents(str: string): string {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D');
+  }
+
   private generateSmartFallback(question: string, storeContext: string, knowledgeContext: string): string {
     const qLower = question.toLowerCase().trim();
+    const qNormalized = this.removeAccents(qLower);
 
-    if (qLower.includes('hello') || qLower.includes('hi') || qLower.includes('chào') || qLower.includes('chao')) {
+    // 1. Chào hỏi / Giao tiếp ban đầu
+    if (qNormalized.includes('hello') || qNormalized.includes('hi') || qNormalized.includes('chao')) {
       return `### 👋 Chào bạn!
 
 Tôi là **Trợ lý AI chuyên nghiệp** tư vấn về Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.
@@ -158,44 +168,71 @@ Bạn có thể đặt bất kỳ câu hỏi nào cho tôi về:
 Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây giờ?`;
     }
 
-    if (qLower.includes('thuế') || qLower.includes('doanh thu') || qLower.includes('ngưỡng') || qLower.includes('nghĩa vụ')) {
-      return `### 📜 Tư vấn về Ngưỡng Doanh Thu & Nghĩa Vụ Thuế Hộ Kinh Doanh
+    // 2. Ý định Công nợ (có dấu hoặc không dấu: cong no, no, khach hang, thu no)
+    if (qNormalized.includes('cong no') || qNormalized.includes('no') || qNormalized.includes('khach hang') || qNormalized.includes('thu no')) {
+      return `### 💳 Giải đáp về Công Nợ & Quy trình Quản lý Nợ Cửa hàng
 
-1. **Quy định về ngưỡng doanh thu chịu thuế (Từ 2026)**:
-   - Theo Nghị quyết mới áp dụng từ năm 2026, Hộ kinh doanh có doanh thu dưới **1.000.000.000 VNĐ / năm** (1 tỷ đồng) thuộc diện **MIỄN NỘP Thuế Giá Trị Gia Tăng (VAT) và Thuế Thu Nhập Ca Nhân (TNCN)**.
-   - Khi tổng doanh thu trong năm vượt ngưỡng 1 tỷ đồng, hộ kinh doanh thực hiện nghĩa vụ khai và nộp thuế theo tỷ lệ phần trăm trên doanh thu (Thương mại: VAT 1%, TNCN 0.5%).
+1. **Khái niệm Công nợ trong kinh doanh**:
+   - **Công nợ phải thu (Receivables)**: Số tiền khách hàng hoặc đối tác chưa thanh toán khi mua hàng hóa/dịch vụ từ cửa hàng của bạn.
+   - **Công nợ phải trả (Payables)**: Số tiền cửa hàng còn nợ nhà cung cấp khi nhập hàng hóa/vật tư.
 
-2. **Dữ liệu thực tế tại Cửa hàng của bạn**:
-${storeContext}
+2. **Quy trình quản lý công nợ chuẩn tại cửa hàng**:
+   - Chỉ thực hiện bán chịu đối với khách hàng đã được mở sổ nợ và duyệt hạn mức nợ.
+   - Ghi nhận chi tiết từng giao dịch nợ, ngày đến hạn và định kỳ gửi đối soát nợ cho khách hàng.
 
-> 💡 *Lời khuyên*: Định kỳ kiểm tra doanh thu ghi nhận trên hệ thống để chủ động lập hồ sơ báo cáo thuế khi đến kỳ.`;
-    }
-
-    if (qLower.includes('tồn kho') || qLower.includes('định mức') || qLower.includes('hàng') || qLower.includes('sản phẩm')) {
-      return `### 📦 Quy trình Xử lý Hàng hóa dưới Định mức Tồn kho
-
-1. **Các bước xử lý khuyến nghị**:
-   - **Bước 1**: Rà soát danh sách sản phẩm chạm mức báo động tồn kho.
-   - **Bước 2**: Lập đơn đặt hàng (Purchase Order) bổ sung gửi đến Nhà cung cấp.
-   - **Bước 3**: Kiểm đếm quy cách và số lượng thực tế khi nhận hàng trước khi hoàn thành đơn nhập.
-
-2. **Sản phẩm đang áp dụng cảnh báo tồn kho tại Cửa hàng**:
+3. **Tổng hợp tình hình công nợ thực tế tại Cửa hàng**:
 ${storeContext}
 
 ${knowledgeContext}`;
     }
 
-    if (qLower.includes('nợ') || qLower.includes('công nợ') || qLower.includes('khách hàng') || qLower.includes('thu')) {
-      return `### 💳 Quy trình Kiểm soát & Thu hồi Công nợ Khách hàng
+    // 3. Ý định Thuế & Doanh thu (thue, doanh thu, nguong, nghia vu)
+    if (qNormalized.includes('thue') || qNormalized.includes('doanh thu') || qNormalized.includes('nguong') || qNormalized.includes('nghia vu')) {
+      return `### 📜 Giải đáp về Thuế & Ngưỡng Doanh Thu Hộ Kinh Doanh
 
-1. **Quy định quản lý nợ**:
-   - Chỉ thực hiện bán chịu cho các khách hàng có hồ sơ và hạn mức tín dụng được duyệt.
-   - Theo dõi kỳ hạn nợ và gửi đối soát công nợ định kỳ.
+1. **Khái niệm & Quy định Ngưỡng thuế mới (Áp dụng 2026)**:
+   - **Thuế Hộ kinh doanh**: Bao gồm Thuế Giá trị gia tăng (VAT) và Thuế Thu nhập cá nhân (TNCN) tính theo % doanh thu.
+   - **Ngưỡng miễn thuế từ 2026**: Hộ kinh doanh có tổng doanh thu dưới **1.000.000.000 VNĐ / năm** (1 tỷ đồng) được **MIỄN NỘP thuế VAT và TNCN**.
+   - **Khi doanh thu trên 1 tỷ đồng / năm**: Hộ kinh doanh thực hiện nộp thuế theo tỷ lệ % doanh thu ngành nghề (Bán buôn, bán lẻ: VAT 1%, TNCN 0.5%).
 
-2. **Tổng hợp công nợ hiện tại**:
+2. **Tình hình doanh thu & nghĩa vụ thuế thực tế của Cửa hàng**:
+${storeContext}
+
+> 💡 *Lời khuyên*: Theo dõi định kỳ báo cáo doanh thu trên hệ thống để chủ động lập hồ sơ báo cáo thuế khi đến kỳ.`;
+    }
+
+    // 4. Ý định Tồn kho & Định mức (ton kho, dinh muc, hang, san pham)
+    if (qNormalized.includes('ton kho') || qNormalized.includes('dinh muc') || qNormalized.includes('hang') || qNormalized.includes('san pham')) {
+      return `### 📦 Giải đáp về Tồn Kho & Quy trình Hàng dưới Định mức
+
+1. **Định mức tồn kho là gì?**:
+   - **Mức báo động tồn kho (Safety Stock / Min Stock)**: Số lượng hàng hóa tối thiểu cần duy trì trong kho để đảm bảo hoạt động bán hàng không bị đứt gãy.
+   - Khi số lượng sản phẩm trong kho xuống chạm hoặc dưới định mức này, hệ thống sẽ phát cảnh báo để chủ cửa hàng lên đơn nhập bổ sung.
+
+2. **Các bước xử lý khuyến nghị**:
+   - **Bước 1**: Rà soát danh sách sản phẩm cảnh báo hết hàng trong hệ thống.
+   - **Bước 2**: Lập Đơn nhập hàng (Purchase Order) gửi đến nhà cung cấp.
+   - **Bước 3**: Kiểm đếm hàng hóa thực tế khi nhập kho trước khi xác nhận đơn nhập.
+
+3. **Sản phẩm đang áp dụng cảnh báo tồn kho tại Cửa hàng**:
 ${storeContext}
 
 ${knowledgeContext}`;
+    }
+
+    // 5. Các câu hỏi định nghĩa hoặc trợ giúp chung (la gi, giup, huong dan)
+    if (qNormalized.includes('la gi') || qNormalized.includes('giup') || qNormalized.includes('huong dan')) {
+      return `### 💡 Hướng dẫn & Tư vấn Trợ lý AI Cửa hàng
+
+Chào bạn! Dành cho câu hỏi của bạn: **"${question}"**
+
+Tôi là Trợ lý AI chuyên hỗ trợ các nghiệp vụ Quản lý Cửa hàng. Bạn có thể tra cứu cụ thể về:
+- 📊 **"Thuế là gì"** hoặc **"Ngưỡng doanh thu"**: Giải đáp quy định thuế hộ kinh doanh (miễn thuế dưới 1 tỷ/năm từ 2026).
+- 📦 **"Tồn kho là gì"** hoặc **"Định mức tồn kho"**: Hướng dẫn quy trình cảnh báo và nhập hàng bổ sung.
+- 💳 **"Công nợ là gì"**: Hướng dẫn quản lý sổ nợ khách hàng và thu hồi nợ.
+
+Dưới đây là thông số thực tế của cửa hàng hiện tại:
+${storeContext}`;
     }
 
     return `### 💡 Tư vấn Trợ lý AI Cửa hàng
