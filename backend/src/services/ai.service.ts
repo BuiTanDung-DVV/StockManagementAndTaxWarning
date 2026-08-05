@@ -172,10 +172,10 @@ ${knowledgeContext}
 
     const genAI = new GoogleGenerativeAI(key);
     const modelCandidates = [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b',
-      'gemini-1.5-pro',
       'gemini-2.0-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro-latest',
+      'gemini-2.0-flash-lite',
     ];
 
     const errorsSummary: string[] = [];
@@ -207,8 +207,13 @@ Người dùng hỏi: ${dto.question}`;
       }
     }
 
+    const allErrorsStr = errorsSummary.join(' | ');
+    if (allErrorsStr.includes('429') || allErrorsStr.includes('Quota exceeded') || allErrorsStr.includes('rate-limits')) {
+      throw new Error('Mã Google Gemini API Key hiện tại (Free Tier) đang bị quá tải lượt hỏi trong phút từ Google (Rate Limit). Vui lòng đợi 15 - 20 giây rồi thử lại câu hỏi.');
+    }
+
     console.error('All Gemini Models failed:', errorsSummary);
-    throw new Error(`[AI DIAGNOSTIC ERROR] All Gemini models failed. Details: ${errorsSummary.join(' | ')}`);
+    throw new Error(`[Lỗi kết nối Gemini API]: ${errorsSummary[0] || 'Không thể nhận phản hồi từ Google Gemini AI'}`);
   }
 
   /**
