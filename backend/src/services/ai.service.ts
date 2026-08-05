@@ -178,6 +178,8 @@ ${tvplText}
     const key = config.geminiApiKey;
     console.log(`[AI DEBUG] GEMINI_API_KEY check: present=${!!key}, length=${key ? key.length : 0}`);
 
+    let lastError: any = null;
+
     if (key) {
       const genAI = new GoogleGenerativeAI(key);
       const modelCandidates = [
@@ -223,15 +225,16 @@ ${tvplText}
             };
           }
         } catch (err: any) {
+          lastError = err;
           console.error(`[GEMINI ERROR] Model ${modelName} call failed:`, err?.message || err);
         }
       }
     }
 
-    console.warn('[AI SERVICE FALLBACK] Serving via Smart Knowledge Engine Fallback.');
+    console.warn('[AI SERVICE FALLBACK] Serving via Smart Knowledge Engine Fallback. Errors:', lastError);
     return {
       answer: this.formatSmartFallbackResponse(dto.question, storeContext),
-      provider: 'Trợ lý AI Cửa hàng & TVPL (Knowledge Engine)',
+      provider: lastError ? `Trợ lý AI (Offline Mode - ${lastError.message})` : 'Trợ lý AI Cửa hàng & TVPL (Knowledge Engine)',
     };
   }
 
