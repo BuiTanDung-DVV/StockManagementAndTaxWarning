@@ -142,100 +142,8 @@ ${docsText}
     }
   }
 
-  private removeAccents(str: string): string {
-    return str
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'D');
-  }
-
-  private generateProductionAnswer(question: string, storeContext: string, knowledgeContext: string): string {
-    const qLower = question.toLowerCase().trim();
-    const qNormalized = this.removeAccents(qLower);
-
-    // 1. Chào hỏi / Giao tiếp ban đầu
-    if (qNormalized.includes('hello') || qNormalized.includes('hi') || qNormalized.includes('chao')) {
-      return `### 👋 Chào bạn!
-
-Tôi là **Trợ lý AI chuyên nghiệp** tư vấn về Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.
-
-Bạn có thể đặt bất kỳ câu hỏi nào cho tôi về:
-- 📊 **Doanh thu & Nghĩa vụ Thuế**: Ngưỡng chịu thuế mới (1 tỷ VNĐ/năm từ 2026), thuế VAT & TNCN.
-- 📦 **Tồn kho & Định mức**: Danh sách hàng sắp hết, quy trình kiểm kê và nhập kho bổ sung.
-- 💳 **Công nợ khách hàng**: Hạn mức nợ, đối soát và thu hồi công nợ.
-
-Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây giờ?`;
-    }
-
-    // 2. Ý định Công nợ (cong no, no, khach hang, thu no)
-    if (qNormalized.includes('cong no') || qNormalized.includes('no') || qNormalized.includes('khach hang') || qNormalized.includes('thu no')) {
-      return `### 💳 Giải đáp về Công Nợ & Quy trình Quản lý Nợ Cửa hàng
-
-1. **Khái niệm Công nợ trong kinh doanh**:
-   - **Công nợ phải thu (Receivables)**: Số tiền khách hàng hoặc đối tác chưa thanh toán khi mua hàng hóa/dịch vụ từ cửa hàng.
-   - **Công nợ phải trả (Payables)**: Số tiền cửa hàng còn nợ nhà cung cấp khi nhập hàng hóa/vật tư.
-
-2. **Quy trình quản lý công nợ chuẩn tại cửa hàng**:
-   - Chỉ thực hiện bán chịu đối với khách hàng đã được mở sổ nợ và duyệt hạn mức nợ.
-   - Ghi nhận chi tiết từng giao dịch nợ, ngày đến hạn và định kỳ gửi đối soát nợ cho khách hàng.
-
-3. **Tổng hợp tình hình công nợ thực tế tại Cửa hàng**:
-${storeContext}
-
-${knowledgeContext}`;
-    }
-
-    // 3. Ý định Thuế & Doanh thu (thue, doanh thu, nguong, nghia vu)
-    if (qNormalized.includes('thue') || qNormalized.includes('doanh thu') || qNormalized.includes('nguong') || qNormalized.includes('nghia vu')) {
-      return `### 📜 Giải đáp về Thuế & Ngưỡng Doanh Thu Hộ Kinh Doanh
-
-1. **Khái niệm & Quy định Ngưỡng thuế mới (Áp dụng từ 2026)**:
-   - **Thuế Hộ kinh doanh**: Bao gồm Thuế Giá trị gia tăng (VAT) và Thuế Thu nhập cá nhân (TNCN) tính theo % doanh thu.
-   - **Ngưỡng miễn thuế từ 2026**: Hộ kinh doanh có tổng doanh thu dưới **1.000.000.000 VNĐ / năm** (1 tỷ đồng) được **MIỄN NỘP thuế VAT và TNCN**.
-   - **Khi doanh thu trên 1 tỷ đồng / năm**: Hộ kinh doanh thực hiện nộp thuế theo tỷ lệ % doanh thu ngành nghề (Bán buôn, bán lẻ: VAT 1%, TNCN 0.5%).
-
-2. **Tình hình doanh thu & nghĩa vụ thuế thực tế của Cửa hàng**:
-${storeContext}
-
-> 💡 *Lời khuyên*: Theo dõi định kỳ báo cáo doanh thu trên hệ thống để chủ động lập hồ sơ báo cáo thuế khi đến kỳ.`;
-    }
-
-    // 4. Ý định Tồn kho & Định mức (ton kho, dinh muc, hang, san pham)
-    if (qNormalized.includes('ton kho') || qNormalized.includes('dinh muc') || qNormalized.includes('hang') || qNormalized.includes('san pham')) {
-      return `### 📦 Giải đáp về Tồn Kho & Quy trình Hàng dưới Định mức
-
-1. **Định mức tồn kho là gì?**:
-   - **Mức báo động tồn kho (Safety Stock / Min Stock)**: Số lượng hàng hóa tối thiểu cần duy trì trong kho để đảm bảo hoạt động bán hàng không bị đứt gãy.
-   - Khi số lượng sản phẩm trong kho xuống chạm hoặc dưới định mức này, hệ thống sẽ phát cảnh báo để chủ cửa hàng lên đơn nhập bổ sung.
-
-2. **Các bước xử lý khuyến nghị**:
-   - **Bước 1**: Rà soát danh sách sản phẩm cảnh báo hết hàng trong hệ thống.
-   - **Bước 2**: Lập Đơn nhập hàng (Purchase Order) gửi đến nhà cung cấp.
-   - **Bước 3**: Kiểm đếm hàng hóa thực tế khi nhập kho trước khi xác nhận đơn nhập.
-
-3. **Sản phẩm đang áp dụng cảnh báo tồn kho tại Cửa hàng**:
-${storeContext}
-
-${knowledgeContext}`;
-    }
-
-    // 5. Ý định hỗ trợ / giải đáp tổng quan
-    return `### 💡 Hướng dẫn & Tư vấn Trợ lý AI Cửa hàng
-
-Chào bạn! Dành cho câu hỏi của bạn: **"${question}"**
-
-Tôi là Trợ lý AI chuyên hỗ trợ các nghiệp vụ Quản lý Cửa hàng. Bạn có thể tra cứu cụ thể về:
-- 📊 **"Thuế là gì"** hoặc **"Ngưỡng doanh thu"**: Giải đáp quy định thuế hộ kinh doanh (miễn thuế dưới 1 tỷ/năm từ 2026).
-- 📦 **"Tồn kho là gì"** hoặc **"Định mức tồn kho"**: Hướng dẫn quy trình cảnh báo và nhập hàng bổ sung.
-- 💳 **"Công nợ là gì"**: Hướng dẫn quản lý sổ nợ khách hàng và thu hồi nợ.
-
-Dưới đây là thông số thực tế của cửa hàng hiện tại:
-${storeContext}`;
-  }
-
   /**
-   * Đặt câu hỏi và nhận câu trả lời từ AI Trợ lý (Google Gemini API & Smart Business Engine)
+   * Đặt câu hỏi và nhận câu trả lời 100% từ Google Gemini API
    */
   async askAdvisor(shopId: number, dto: ChatRequestDto): Promise<{ answer: string; provider: string }> {
     const storeContext = await this.getStoreContext(shopId);
@@ -246,56 +154,57 @@ ${storeContext}`;
 Nhiệm vụ của bạn:
 1. Hãy trả lời TRỰC TIẾP, ĐÚNG TRỌNG TÂM và CHÍNH XÁC câu hỏi của người dùng.
 2. Dữ liệu cửa hàng và quy định đính kèm bên dưới là THÔNG TIN NỀN THAM KHẢO. Hãy phân tích và lồng ghép tự nhiên thông tin này vào câu trả lời khi người dùng hỏi liên quan. KHÔNG in lại toàn bộ khối dữ liệu thô nếu người dùng không yêu cầu.
-3. Trả lời bằng tiếng Việt tự nhiên, rõ ràng, định dạng Markdown (tiêu đề, danh mục, bảng biểu) để dễ đọc.
+3. Trả lời bằng tiếng Việt tự nhiên, rõ ràng, định dạng Markdown (tiêu đề, danh mục, bảng biểu) để trình bày rõ ràng.
 
---- THÔNG TIN NỀN CỬA HÀNG ---
+--- THÔNG TIN NỀN CỬA HÀNG & QUY ĐỊNH ---
 ${storeContext}
 
 ${knowledgeContext}
---------------------------------
+----------------------------------------
 `;
 
-    if (config.geminiApiKey) {
-      const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-      const modelCandidates = [
-        'gemini-1.5-flash',
-        'gemini-1.5-flash-8b',
-        'gemini-1.5-pro',
-        'gemini-2.0-flash',
-      ];
+    if (!config.geminiApiKey) {
+      throw new Error('Không thể kết nối với Trợ lý AI lúc này. Vui lòng thử lại sau ít phút.');
+    }
 
-      for (const modelName of modelCandidates) {
-        try {
-          const model = genAI.getGenerativeModel({ model: modelName });
-          const historyPrompt = dto.history && dto.history.length > 0
-            ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
-            : '';
+    const genAI = new GoogleGenerativeAI(config.geminiApiKey);
+    const modelCandidates = [
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-8b',
+      'gemini-1.5-pro',
+      'gemini-2.0-flash',
+    ];
 
-          const fullPrompt = `${systemPrompt}
+    let lastError: any;
+    for (const modelName of modelCandidates) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const historyPrompt = dto.history && dto.history.length > 0
+          ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
+          : '';
+
+        const fullPrompt = `${systemPrompt}
 
 ${historyPrompt ? `--- LỊCH SỬ TRÒ CHUYỆN ---:\n${historyPrompt}\n---------------------------\n` : ''}
 Người dùng hỏi: ${dto.question}`;
 
-          const result = await model.generateContent(fullPrompt);
-          const responseText = result.response.text();
+        const result = await model.generateContent(fullPrompt);
+        const responseText = result.response.text();
 
-          if (responseText && responseText.trim().length > 0) {
-            return {
-              answer: responseText,
-              provider: `Google Gemini (${modelName})`,
-            };
-          }
-        } catch (err: any) {
-          console.warn(`Gemini Model ${modelName} call failed, switching seamlessly:`, err?.message || err);
+        if (responseText && responseText.trim().length > 0) {
+          return {
+            answer: responseText,
+            provider: `Google Gemini (${modelName})`,
+          };
         }
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`Gemini Model ${modelName} call failed, trying next candidate:`, err?.message || err);
       }
     }
 
-    // Seamless production response: Never display raw technical errors to end users!
-    return {
-      answer: this.generateProductionAnswer(dto.question, storeContext, knowledgeContext),
-      provider: 'Trợ lý AI Cửa hàng',
-    };
+    console.error('Lỗi khi gọi Google Gemini API:', lastError?.message || lastError);
+    throw new Error('Không thể kết nối với Trợ lý AI lúc này. Vui lòng thử lại sau ít phút.');
   }
 
   /**
