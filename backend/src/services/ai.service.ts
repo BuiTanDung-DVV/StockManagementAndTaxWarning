@@ -244,10 +244,12 @@ ${tvplText}
       }
     }
 
-    console.warn('[AI SERVICE FALLBACK] Serving via Smart Knowledge Engine Fallback. Errors:', lastError);
+    console.warn('[AI SERVICE FALLBACK] Serving via Smart Knowledge Engine Fallback. Keys count:', keys.length, 'Last error:', lastError?.message);
     return {
       answer: this.formatSmartFallbackResponse(dto.question, storeContext),
-      provider: lastError ? `Trợ lý AI (Offline Mode - ${lastError.message})` : 'Trợ lý AI Cửa hàng & TVPL (Knowledge Engine)',
+      provider: keys.length === 0
+        ? 'Trợ lý AI (Chờ cấu hình GEMINI_API_KEY trên Vercel)'
+        : `Trợ lý AI (Lỗi API: ${lastError?.message || 'Không thể kết nối Google AI'})`,
     };
   }
 
