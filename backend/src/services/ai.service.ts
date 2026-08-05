@@ -171,10 +171,14 @@ ${knowledgeContext}
     }
 
     const genAI = new GoogleGenerativeAI(key);
-    // Danh sách mô hình cập nhật chuẩn theo bảng Quota Google AI Studio của bạn:
+    // Tất cả mô hình có Quota cao (500 RPD) từ bảng Google AI Studio của bạn:
     const modelCandidates = [
-      'gemini-2.5-flash',
+      'gemini-3.5-flash-lite',
       'gemini-3.1-flash-lite',
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-3-flash',
+      'gemini-2.5-flash',
       'gemini-2.0-flash',
       'gemini-1.5-flash-latest',
     ];
