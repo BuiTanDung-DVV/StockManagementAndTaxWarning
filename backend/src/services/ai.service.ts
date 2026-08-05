@@ -179,7 +179,11 @@ ${tvplText}
     console.log(`[AI DEBUG] GEMINI_API_KEY check: present=${!!key}, length=${key ? key.length : 0}`);
 
     if (!key) {
-      throw new Error('[AI ERROR] GEMINI_API_KEY is empty on Vercel environment variables. Please set GEMINI_API_KEY in Vercel Settings.');
+      console.warn('[AI WARN] GEMINI_API_KEY is not configured on Vercel. Serving via Offline Knowledge Catalog.');
+      return {
+        answer: `Dưới đây là thông tin tra cứu quy định pháp luật và dữ liệu thực tế tại cửa hàng của bạn cho câu hỏi "${dto.question}":\n\n${storeContext}\n\n${tvplText}\n\n*(Hệ thống đang phục vụ ở chế độ Tra cứu Tri thức Cửa hàng & Văn bản Pháp luật Chuẩn).*`,
+        provider: 'Hệ thống Tra cứu Tri thức Cửa hàng & TVPL (Offline Catalog)',
+      };
     }
 
     const genAI = new GoogleGenerativeAI(key);
