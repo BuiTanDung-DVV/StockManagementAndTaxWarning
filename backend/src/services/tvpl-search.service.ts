@@ -11,6 +11,8 @@ export interface TvplSearchResult {
 
 export class TvplSearchService {
   private static instance: TvplSearchService;
+  private cache = new Map<string, { timestamp: number; data: TvplSearchResult[] }>();
+  private readonly CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour TTL
 
   private constructor() {}
 
@@ -22,46 +24,62 @@ export class TvplSearchService {
   }
 
   /**
-   * Tra cứu danh sách văn bản pháp luật mới nhất trên Thư Viện Pháp Luật theo tiêu đề / từ khóa
+   * Tra cứu danh sách văn bản pháp luật mới nhất trên Thư Viện Pháp Luật theo tiêu đề / từ khóa (có Cache 1h & Timeout 1.2s)
    */
   async searchLegalDocumentsByTitle(keyword: string): Promise<TvplSearchResult[]> {
+    const cacheKey = keyword.trim().toLowerCase();
+    const cached = this.cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
+      console.log(`[TVPL SEARCH CACHE HIT] Fast return for keyword: "${keyword}"`);
+      return cached.data;
+    }
+
     try {
       const searchUrl = `https://thuvienphapluat.vn/phap-luat/tim-van-ban.aspx?keyword=${encodeURIComponent(keyword)}&sort=1`;
       console.log(`[TVPL SEARCH] Searching TVPL for keyword: "${keyword}"`);
 
-      const html = await this.fetchHtml(searchUrl);
-      const results: TvplSearchResult[] = [];
+      // Race with 1.2s fallback timeout
+      const searchPromise = this.fetchHtml(searchUrl).then((html) => {
+        const results: TvplSearchResult[] = [];
+        const regex = /<a[^>]+href=["']([^"']+)["'][^>]*class=["'][^"']*title-law[^"']*["'][^>]*>(.*?)<\/a>/gi;
+        let match: RegExpExecArray | null;
 
-      // Regex bóc tách tiêu đề và link văn bản từ HTML TVPL
-      const regex = /<a[^>]+href=["']([^"']+)["'][^>]*class=["'][^"']*title-law[^"']*["'][^>]*>(.*?)<\/a>/gi;
-      let match: RegExpExecArray | null;
+        while ((match = regex.exec(html)) !== null && results.length < 5) {
+          let href = match[1];
+          const title = match[2].replace(/<[^>]+>/g, '').trim();
 
-      while ((match = regex.exec(html)) !== null && results.length < 5) {
-        let href = match[1];
-        const title = match[2].replace(/<[^>]+>/g, '').trim();
+          if (title && title.length > 10) {
+            if (!href.startsWith('http')) {
+              href = `https://thuvienphapluat.vn${href.startsWith('/') ? '' : '/'}${href}`;
+            }
 
-        if (title && title.length > 10) {
-          if (!href.startsWith('http')) {
-            href = `https://thuvienphapluat.vn${href.startsWith('/') ? '' : '/'}${href}`;
+            results.push({
+              title,
+              url: href,
+              status: 'Còn hiệu lực',
+              effectiveDate: 'Mới cập nhật',
+            });
           }
-
-          results.push({
-            title,
-            url: href,
-            status: 'Còn hiệu lực',
-            effectiveDate: 'Mới cập nhật',
-          });
         }
-      }
 
-      if (results.length === 0) {
-        return this.getDefaultTvplTaxResults(keyword);
-      }
+        return results.length > 0 ? results : this.getDefaultTvplTaxResults(keyword);
+      });
 
-      return results;
+      const timeoutPromise = new Promise<TvplSearchResult[]>((resolve) => {
+        setTimeout(() => {
+          console.warn('[TVPL SEARCH TIMEOUT] Exceeded 1.2s, using default tax catalog');
+          resolve(this.getDefaultTvplTaxResults(keyword));
+        }, 1200);
+      });
+
+      const finalResults = await Promise.race([searchPromise, timeoutPromise]);
+      this.cache.set(cacheKey, { timestamp: Date.now(), data: finalResults });
+      return finalResults;
     } catch (error: any) {
       console.warn('[TVPL SEARCH WARN] Tra cứu TVPL trực tiếp quá hạn hoặc bị giới hạn, dùng dữ liệu chỉ mục TVPL chuẩn:', error?.message || error);
-      return this.getDefaultTvplTaxResults(keyword);
+      const fallback = this.getDefaultTvplTaxResults(keyword);
+      this.cache.set(cacheKey, { timestamp: Date.now(), data: fallback });
+      return fallback;
     }
   }
 
@@ -72,7 +90,7 @@ export class TvplSearchService {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
         },
-        timeout: 3500,
+        timeout: 1200,
       }, (res) => {
         let data = '';
         res.on('data', (chunk) => data += chunk);
