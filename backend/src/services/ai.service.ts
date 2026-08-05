@@ -163,11 +163,14 @@ ${knowledgeContext}
 ----------------------------------------
 `;
 
-    if (!config.geminiApiKey) {
-      throw new Error('[AI DIAGNOSTIC] GEMINI_API_KEY is empty or undefined on Vercel environment.');
+    const key = config.geminiApiKey;
+    console.log(`[AI DEBUG] GEMINI_API_KEY check: present=${!!key}, length=${key ? key.length : 0}`);
+
+    if (!key) {
+      throw new Error('[AI ERROR] GEMINI_API_KEY is empty on Vercel environment variables. Please set GEMINI_API_KEY in Vercel Settings.');
     }
 
-    const genAI = new GoogleGenerativeAI(config.geminiApiKey);
+    const genAI = new GoogleGenerativeAI(key);
     const modelCandidates = [
       'gemini-1.5-flash',
       'gemini-1.5-flash-8b',
