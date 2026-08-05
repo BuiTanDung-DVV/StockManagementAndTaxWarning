@@ -171,17 +171,10 @@ ${knowledgeContext}
     }
 
     const genAI = new GoogleGenerativeAI(key);
-    const modelCandidates = [
-      'gemini-2.0-flash',
-      'gemini-1.5-flash-002',
-      'gemini-1.5-flash-001',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-002',
-      'gemini-1.5-pro-001',
-      'gemini-2.0-flash-lite',
-    ];
+    // Chỉ thử tối đa 2 mô hình ổn định nhất để tránh lãng phí Quota 15 RPM của Google
+    const modelCandidates = ['gemini-1.5-flash', 'gemini-2.0-flash'];
 
-    const errorsSummary: string[] = [];
+    let lastError: any;
     for (const modelName of modelCandidates) {
       try {
         const model = genAI.getGenerativeModel({ model: modelName });
@@ -204,19 +197,18 @@ Người dùng hỏi: ${dto.question}`;
           };
         }
       } catch (err: any) {
-        const errMsg = err?.message || String(err);
-        errorsSummary.push(`[${modelName}]: ${errMsg}`);
-        console.warn(`Gemini Model ${modelName} call failed:`, errMsg);
+        lastError = err;
+        console.warn(`Gemini Model ${modelName} call failed:`, err?.message || err);
       }
     }
 
-    const allErrorsStr = errorsSummary.join(' | ');
-    if (allErrorsStr.includes('429') || allErrorsStr.includes('Quota exceeded') || allErrorsStr.includes('rate-limits')) {
-      throw new Error('Mã Google Gemini API Key hiện tại (Free Tier) đã chạm hạn mức số lượt hỏi trong ngày hoặc trong phút từ Google AI Studio (Lỗi 429 Quota Exceeded). Bạn vui lòng tạo 1 API Key mới tại aistudio.google.com hoặc đợi khoảng 1 phút rồi thử lại.');
+    const errStr = (lastError?.message || '').toLowerCase();
+    if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('rate limit')) {
+      throw new Error('Hệ thống Google AI đang tạm thời vượt quá lượt truy vấn trong phút. Vui lòng đợi 15-30 giây rồi gửi lại câu hỏi.');
     }
 
-    console.error('All Gemini Models failed:', errorsSummary);
-    throw new Error(`[Lỗi kết nối Gemini API]: ${errorsSummary[0] || 'Không thể nhận phản hồi từ Google Gemini AI'}`);
+    console.error('Gemini Models failed:', lastError);
+    throw new Error('Không thể kết nối với Trợ lý AI lúc này. Vui lòng thử lại sau.');
   }
 
   /**
