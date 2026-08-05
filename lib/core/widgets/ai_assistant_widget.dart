@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
@@ -519,10 +520,23 @@ class _MessageBlock extends StatelessWidget {
               else
                 MarkdownBody(
                   data: message.text,
+                  onTapLink: (text, href, title) async {
+                    if (href != null && href.isNotEmpty) {
+                      final uri = Uri.parse(href);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    }
+                  },
                   styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
                     p: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colors.textPrimary,
                       height: 1.5,
+                    ),
+                    a: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: primary,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
                     ),
                     h3: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -541,15 +555,55 @@ class _MessageBlock extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                if (message.source != null)
-                  Expanded(
-                    child: Text(
-                      'Nguồn: ${message.source}',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: primary,
-                        fontWeight: FontWeight.w600,
+                if (!message.fromUser)
+                  InkWell(
+                    onTap: () async {
+                      try {
+                        final api = ApiClient();
+                        final title = message.text.length > 40
+                            ? '${message.text.substring(0, 40).replaceAll('\n', ' ')}...'
+                            : message.text.replaceAll('\n', ' ');
+                        await api.post('/ai/knowledge', data: {
+                          'title': 'Văn bản tra cứu: $title',
+                          'category': 'TAX',
+                          'content': message.text,
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('✅ Đã thêm văn bản vào Thư viện Tri thức Cửa hàng!'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      } catch (err) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Văn bản đã có sẵn hoặc không thể lưu lúc này.'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppAssetIcon(assetPath: AppAssets.add, size: 14, color: primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            '+ Thêm vào Kho Tri Thức',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 InkWell(
