@@ -568,7 +568,7 @@ class _MessageBlock extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.copy_rounded, size: 14, color: colors.textSecondary),
+                        AppAssetIcon(assetPath: AppAssets.copy, size: 14, color: colors.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           'Sao chép',

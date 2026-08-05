@@ -28,6 +28,14 @@ abstract final class AppAssets {
   static const String emptyFinance = 'assets/icon/empty_finance.svg';
   static const String emptyDocument = 'assets/icon/empty_document.svg';
   static const String emptyTax = 'assets/icon/empty_tax.svg';
+  static const String copy = 'assets/icon/copy_icon.svg';
+  static const String delete = 'assets/icon/delete_icon.svg';
+  static const String eye = 'assets/icon/eye_icon.svg';
+  static const String toggleOn = 'assets/icon/toggle_on_icon.svg';
+  static const String toggleOff = 'assets/icon/toggle_off_icon.svg';
+  static const String storage = 'assets/icon/storage_icon.svg';
+  static const String book = 'assets/icon/book_icon.svg';
+  static const String externalLink = 'assets/icon/external_link_icon.svg';
 }
 
 class AppAssetIcon extends StatelessWidget {
