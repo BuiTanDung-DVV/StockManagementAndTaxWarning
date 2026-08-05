@@ -3,6 +3,8 @@ import { AppDataSource } from '../config/db.config';
 import { config } from '../config/env.config';
 import { AiKnowledgeDocument } from '../system/entities';
 
+import { tvplSearchService } from './tvpl-search.service';
+
 export interface ChatMessage {
   role: 'user' | 'model' | 'assistant';
   content: string;
@@ -149,18 +151,28 @@ ${docsText}
     const storeContext = await this.getStoreContext(shopId);
     const knowledgeContext = await this.getKnowledgeContext(shopId);
 
+    // Tra cứu danh mục văn bản pháp luật chuẩn từ Thư Viện Pháp Luật theo từ khóa câu hỏi
+    const tvplResults = await tvplSearchService.searchLegalDocumentsByTitle(dto.question);
+    const tvplText = tvplResults.length > 0
+      ? `=== DANH MỤC VĂN BẢN TRÁC CỨU TỪ THƯ VIỆN PHÁP LUẬT (TVPL) ===\n` +
+        tvplResults.map((r, i) => `${i + 1}. [${r.title}] (${r.status} - Ngày áp dụng: ${r.effectiveDate})\n   🔗 Link TVPL: ${r.url}${r.summary ? `\n   📝 Tóm tắt: ${r.summary}` : ''}`).join('\n\n')
+      : '';
+
     const systemPrompt = `Bạn là Trợ lý AI chuyên nghiệp tư vấn về Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh Việt Nam.
 
 Nhiệm vụ của bạn:
-1. Hãy trả lời TRỰC TIẾP, ĐÚNG TRỌNG TÂM và CHÍNH XÁC câu hỏi của người dùng.
-2. Dữ liệu cửa hàng và quy định đính kèm bên dưới là THÔNG TIN NỀN THAM KHẢO. Hãy phân tích và lồng ghép tự nhiên thông tin này vào câu trả lời khi người dùng hỏi liên quan. KHÔNG in lại toàn bộ khối dữ liệu thô nếu người dùng không yêu cầu.
-3. Trả lời bằng tiếng Việt tự nhiên, rõ ràng, định dạng Markdown (tiêu đề, danh mục, bảng biểu) để trình bày rõ ràng.
+1. Hãy trả lời TRỰC TIẾP, ĐÚNG TRỌNG TÂM và CHÍNH XÁC câu hỏi của người dùng dựa trên thông tin pháp luật mới nhất từ Thư Viện Pháp Luật (TVPL).
+2. Khi người dùng hỏi về Thuế, Kế toán, Hóa đơn hoặc quy định pháp luật: Hãy dẫn chứng rõ tên Văn bản (Ví dụ: Thông tư 88/2021/TT-BTC, Nghị định 123/2020/NĐ-CP, Nghị quyết Ngưỡng thuế 1 tỷ VNĐ 2026) và đính kèm đường link TVPL tương ứng theo dạng Markdown \`[📄 Tên văn bản](Link TVPL)\` để người dùng nhấp mở xem trực tiếp.
+3. Dữ liệu cửa hàng và danh mục văn bản TVPL đính kèm bên dưới là THÔNG TIN NỀN THAM KHẢO CHUẨN XÁC. Hãy phân tích và lồng ghép tự nhiên thông tin này vào câu trả lời.
+4. Trả lời bằng tiếng Việt tự nhiên, rõ ràng, trình bày dạng Markdown.
 
---- THÔNG TIN NỀN CỬA HÀNG & QUY ĐỊNH ---
+--- THÔNG TIN NỀN CỬA HÀNG & TRA CỨU THƯ VIỆN PHÁP LUẬT (TVPL) ---
 ${storeContext}
 
 ${knowledgeContext}
-----------------------------------------
+
+${tvplText}
+-------------------------------------------------------------------
 `;
 
     const key = config.geminiApiKey;
