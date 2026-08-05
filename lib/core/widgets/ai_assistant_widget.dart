@@ -61,8 +61,16 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   final List<_AssistantMessage> _messages = const [
     _AssistantMessage(
       fromUser: false,
-      text:
-          'Bạn có thể tra cứu hướng dẫn bán hàng, tồn kho, công nợ và tài liệu thuế đang được bật trong hệ thống.',
+      text: '''### 👋 Chào bạn!
+
+Tôi là **Trợ lý AI chuyên nghiệp** tư vấn về Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.
+
+Bạn có thể đặt bất kỳ câu hỏi nào cho tôi về:
+- 📊 **Doanh thu & Nghĩa vụ Thuế**: Ngưỡng chịu thuế mới (1 tỷ VNĐ/năm từ 2026), thuế VAT & TNCN.
+- 📦 **Tồn kho & Định mức**: Danh sách hàng sắp hết, quy trình kiểm kê và nhập kho bổ sung.
+- 💳 **Công nợ khách hàng**: Hạn mức nợ, đối soát và thu hồi công nợ.
+
+Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây giờ?''',
     ),
   ].toList();
 
