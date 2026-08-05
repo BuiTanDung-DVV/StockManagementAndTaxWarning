@@ -200,7 +200,13 @@ ${tvplText}
     let lastError: any;
     for (const modelName of modelCandidates) {
       try {
-        const model = genAI.getGenerativeModel({ model: modelName });
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1024,
+          },
+        });
         const historyPrompt = dto.history && dto.history.length > 0
           ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
           : '';
