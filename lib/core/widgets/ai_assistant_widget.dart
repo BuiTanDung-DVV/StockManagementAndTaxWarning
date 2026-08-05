@@ -667,7 +667,7 @@ class _MessageBlock extends ConsumerWidget {
                   try {
                     final title = doc['title'] ?? 'Văn bản tra cứu';
                     final url = doc['url'] ?? '';
-                    await ref.read(aiKnowledgeNotifierProvider.notifier).addDocument(
+                    await ref.read(aiKnowledgeProvider.notifier).addDocument(
                       title: title,
                       category: 'TAX',
                       content: 'Văn bản tra cứu Thư Viện Pháp Luật: $url',
