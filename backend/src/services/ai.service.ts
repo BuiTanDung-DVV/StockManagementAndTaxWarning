@@ -170,11 +170,9 @@ ${knowledgeContext}
     const genAI = new GoogleGenerativeAI(config.geminiApiKey);
     const modelCandidates = [
       'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-2.0-flash',
+      'gemini-1.5-flash-8b',
       'gemini-1.5-pro',
-      'gemini-2.0-flash-lite',
-      'gemini-2.0-flash-exp',
+      'gemini-2.0-flash',
     ];
 
     let lastError: any;
@@ -203,8 +201,19 @@ Người dùng hỏi: ${dto.question}`;
       }
     }
 
+    const errStr = (lastError?.message || '').toLowerCase();
+    let userMsg = 'Không thể kết nối với Google Gemini AI. Vui lòng kiểm tra lại GEMINI_API_KEY.';
+
+    if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('rate limit')) {
+      userMsg = 'Cổng kết nối Google Gemini API đang tạm thời chạm giới hạn lượt hỏi miễn phí trong phút (Rate Limit 15 câu/phút). Vui lòng thử lại sau 30 giây.';
+    } else if (errStr.includes('404') || errStr.includes('not found')) {
+      userMsg = 'Mô hình Google Gemini API tạm thời đang bảo trì hoặc chưa kích hoạt trên API Key. Vui lòng kiểm tra lại dự án Google AI Studio.';
+    } else if (lastError?.message) {
+      userMsg = `Lỗi Google Gemini API: ${lastError.message}`;
+    }
+
     console.error('Lỗi khi gọi Google Gemini API:', lastError?.message || lastError);
-    throw new Error(`Lỗi kết nối với Google Gemini API: ${lastError?.message || 'Không thể lấy phản hồi từ Google Gemini AI'}`);
+    throw new Error(userMsg);
   }
 
   /**
