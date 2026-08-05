@@ -551,41 +551,23 @@ class _MessageBlock extends StatelessWidget {
                     ),
                   ),
                 ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (!message.fromUser)
+              if (!message.fromUser) ...[
+                const SizedBox(height: 8),
+                _buildLegalDocumentCitations(context, message.text, primary, colors),
+              ],
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
                   InkWell(
-                    onTap: () async {
-                      try {
-                        final api = ApiClient();
-                        final title = message.text.length > 40
-                            ? '${message.text.substring(0, 40).replaceAll('\n', ' ')}...'
-                            : message.text.replaceAll('\n', ' ');
-                        await api.post('/ai/knowledge', data: {
-                          'title': 'Văn bản tra cứu: $title',
-                          'category': 'TAX',
-                          'content': message.text,
-                        });
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('✅ Đã thêm văn bản vào Thư viện Tri thức Cửa hàng!'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      } catch (err) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Văn bản đã có sẵn hoặc không thể lưu lúc này.'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      }
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: message.text));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Đã sao chép nội dung câu trả lời!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
                     },
                     borderRadius: BorderRadius.circular(4),
                     child: Padding(
@@ -593,54 +575,137 @@ class _MessageBlock extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          AppAssetIcon(assetPath: AppAssets.add, size: 14, color: primary),
+                          AppAssetIcon(assetPath: AppAssets.copy, size: 14, color: colors.textSecondary),
                           const SizedBox(width: 4),
                           Text(
-                            '+ Thêm vào Kho Tri Thức',
+                            'Sao chép',
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: primary,
-                              fontWeight: FontWeight.bold,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                InkWell(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: message.text));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã sao chép nội dung câu trả lời!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(4),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppAssetIcon(assetPath: AppAssets.copy, size: 14, color: colors.textSecondary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Sao chép',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: colors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
+
+  Widget _buildLegalDocumentCitations(BuildContext context, String text, Color primary, AppThemeColors colors) {
+    final regExp = RegExp(r'\[([^\]]+)\]\((https?:\/\/[^\)]+)\)');
+    final matches = regExp.allMatches(text);
+    if (matches.isEmpty) return const SizedBox.shrink();
+
+    final citations = <Map<String, String>>[];
+    for (final m in matches) {
+      final rawTitle = m.group(1) ?? '';
+      final url = m.group(2) ?? '';
+      final title = rawTitle.replaceAll('📄', '').trim();
+      if (title.isNotEmpty && url.isNotEmpty && !citations.any((c) => c['url'] == url)) {
+        citations.add({'title': title, 'url': url});
+      }
+    }
+
+    if (citations.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 12),
+        Text(
+          'Văn bản trích dẫn (${citations.length}):',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: colors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        ...citations.map((doc) => Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: primary.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: primary.withValues(alpha: 0.15)),
+          ),
+          child: Row(
+            children: [
+              AppAssetIcon(assetPath: AppAssets.emptyDocument, size: 16, color: primary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  doc['title'] ?? '',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: primary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () async {
+                  try {
+                    final api = ApiClient();
+                    await api.post('/ai/knowledge', data: {
+                      'title': doc['title'],
+                      'category': 'TAX',
+                      'content': 'Nguồn TVPL: ${doc['url']}',
+                    });
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('✅ Đã thêm "${doc['title']}" vào Thư viện Cửa hàng!'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } catch (err) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Văn bản này đã có sẵn trong Thư viện Cửa hàng.'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  }
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: primary,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppAssetIcon(assetPath: AppAssets.add, size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Thêm vào Thư viện',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )),
+      ],
+    );
   }
 }
 
