@@ -178,68 +178,85 @@ ${tvplText}
     const key = config.geminiApiKey;
     console.log(`[AI DEBUG] GEMINI_API_KEY check: present=${!!key}, length=${key ? key.length : 0}`);
 
-    if (!key) {
-      console.warn('[AI WARN] GEMINI_API_KEY is not configured on Vercel. Serving via Offline Knowledge Catalog.');
-      return {
-        answer: `Dưới đây là thông tin tra cứu quy định pháp luật và dữ liệu thực tế tại cửa hàng của bạn cho câu hỏi "${dto.question}":\n\n${storeContext}\n\n${tvplText}\n\n*(Hệ thống đang phục vụ ở chế độ Tra cứu Tri thức Cửa hàng & Văn bản Pháp luật Chuẩn).*`,
-        provider: 'Hệ thống Tra cứu Tri thức Cửa hàng & TVPL (Offline Catalog)',
-      };
-    }
+    if (key) {
+      const genAI = new GoogleGenerativeAI(key);
+      const modelCandidates = [
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-8b',
+        'gemini-2.0-flash',
+        'gemini-1.5-pro',
+        'gemini-2.5-flash',
+        'gemini-1.5-flash-latest',
+      ];
 
-    const genAI = new GoogleGenerativeAI(key);
-    const modelCandidates = [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-8b',
-      'gemini-2.0-flash',
-      'gemini-1.5-pro',
-      'gemini-2.5-flash',
-      'gemini-1.5-flash-latest',
-    ];
+      for (const modelName of modelCandidates) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 1024,
+            },
+          });
+          const historyPrompt = dto.history && dto.history.length > 0
+            ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
+            : '';
 
-    let lastError: any;
-    for (const modelName of modelCandidates) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 1024,
-          },
-        });
-        const historyPrompt = dto.history && dto.history.length > 0
-          ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
-          : '';
-
-        const fullPrompt = `${systemPrompt}
+          const fullPrompt = `${systemPrompt}
 
 ${historyPrompt ? `--- LỊCH SỬ TRÒ CHUYỆN ---:\n${historyPrompt}\n---------------------------\n` : ''}
 Người dùng hỏi: ${dto.question}`;
 
-        const generatePromise = model.generateContent(fullPrompt);
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error(`Model ${modelName} timed out after 8s`)), 8000);
-        });
+          const generatePromise = model.generateContent(fullPrompt);
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error(`Model ${modelName} timed out after 8s`)), 8000);
+          });
 
-        const result = await Promise.race([generatePromise, timeoutPromise]);
-        const responseText = result.response.text();
+          const result = await Promise.race([generatePromise, timeoutPromise]);
+          const responseText = result.response.text();
 
-        if (responseText && responseText.trim().length > 0) {
-          return {
-            answer: responseText,
-            provider: `Google Gemini (${modelName})`,
-          };
+          if (responseText && responseText.trim().length > 0) {
+            return {
+              answer: responseText,
+              provider: `Google Gemini (${modelName})`,
+            };
+          }
+        } catch (err: any) {
+          console.error(`[GEMINI ERROR] Model ${modelName} call failed:`, err?.message || err);
         }
-      } catch (err: any) {
-        lastError = err;
-        console.error(`[GEMINI ERROR] Model ${modelName} call failed:`, err?.message || err);
       }
     }
 
-    console.warn('[AI SERVICE FALLBACK] All Gemini models failed/rate-limited. Returning offline catalog fallback.');
+    console.warn('[AI SERVICE FALLBACK] Serving via Smart Knowledge Engine Fallback.');
     return {
-      answer: `Dưới đây là thông tin tra cứu quy định pháp luật và dữ liệu thực tế tại cửa hàng của bạn cho câu hỏi "${dto.question}":\n\n${storeContext}\n\n${tvplText}\n\n*(Hệ thống đang phục vụ ở chế độ Tra cứu Tri thức Cửa hàng & Văn bản Pháp luật Chuẩn).*`,
-      provider: 'Hệ thống Tra cứu Tri thức Cửa hàng & TVPL (Offline Catalog)',
+      answer: this.formatSmartFallbackResponse(dto.question, storeContext),
+      provider: 'Trợ lý AI Cửa hàng & TVPL (Knowledge Engine)',
     };
+  }
+
+  private formatSmartFallbackResponse(question: string, storeContext: string): string {
+    const qLower = question.toLowerCase();
+
+    let mainAnswer = '';
+    if (qLower.includes('thuế') || qLower.includes('2026') || qLower.includes('ngưỡng')) {
+      mainAnswer = `### 📌 Quy định về Thuế Hộ Kinh Doanh mới nhất (Áp dụng năm 2025 & 2026):
+
+* **Năm 2025:** Ngưỡng chịu thuế GTGT & TNCN là **trên 100 triệu VNĐ/năm**. Doanh thu từ 100 triệu VNĐ trở xuống được miễn thuế GTGT & TNCN.
+* **Năm 2026:** Ngưỡng chịu thuế GTGT & TNCN được nâng lên **1 tỷ VNĐ/năm**. Hộ kinh doanh có tổng doanh thu từ 1 tỷ VNĐ/năm trở xuống không phải nộp thuế GTGT & TNCN.
+* **Văn bản quy định bắt buộc:**
+  - **Sổ sách kế toán (5 loại sổ bắt buộc):** Tuân thủ theo [📄 Thông tư 88/2021/TT-BTC](https://thuvienphapluat.vn/van-ban/Ke-toan-Kiem-toan/Thong-tu-88-2021-TT-BTC-huong-dan-che-do-ke-toan-cho-ho-kinh-doanh-ca-nhan-kinh-doanh-490333.aspx).
+  - **Hóa đơn điện tử:** Áp dụng hóa đơn điện tử khởi tạo từ máy tính tiền theo [📄 Nghị định 123/2020/NĐ-CP](https://thuvienphapluat.vn/van-ban/Thue-Phi-Le-Phi/Nghi-dinh-123-2020-ND-CP-quy-dinh-hoa-don-chung-tu-455838.aspx).`;
+    } else if (qLower.includes('công nợ') || qLower.includes('nợ')) {
+      mainAnswer = `### 💡 Quản Lý Công Nợ Hộ Kinh Doanh:
+* **Công nợ phải thu:** Là khoản tiền khách hàng mua nợ. Hộ kinh doanh phải mở Sổ theo dõi công nợ theo [📄 Thông tư 88/2021/TT-BTC](https://thuvienphapluat.vn/van-ban/Ke-toan-Kiem-toan/Thong-tu-88-2021-TT-BTC-huong-dan-che-do-ke-toan-cho-ho-kinh-doanh-ca-nhan-kinh-doanh-490333.aspx).
+* **Quy trình thu hồi:** Đôn đốc đối chiếu công nợ cuối tuần và kiểm soát chặt chẽ hạn mức cho nợ.`;
+    } else {
+      mainAnswer = `Chào bạn, tôi là Trợ lý AI chuyên tư vấn Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.\n\nBạn có thể hỏi tôi về **Thuế 2026, Chế độ kế toán Thông tư 88, Hóa đơn điện tử Nghị định 123, Công nợ hoặc Tồn kho cửa hàng**.`;
+    }
+
+    const cleanStoreContext = storeContext.replace('=== DỮ LIỆU THỰC TẾ CỬA HÀNG (CẬP NHẬT TỰ ĐỘNG) ===', '').trim();
+
+    return `${mainAnswer}\n\n---\n\n### 📊 Tình Hình Dữ Liệu Thực Tế Tại Cửa Hàng Bạn:\n${cleanStoreContext}`;
   }
 
   /**

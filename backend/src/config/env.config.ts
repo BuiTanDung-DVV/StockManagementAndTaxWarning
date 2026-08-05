@@ -50,7 +50,7 @@ export const config = {
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
   get geminiApiKey(): string {
-    return process.env.GEMINI_API_KEY || '';
+    return process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GEMINI_KEY || '';
   },
   get allowedOrigins(): string[] {
     const defaultOrigins = [
