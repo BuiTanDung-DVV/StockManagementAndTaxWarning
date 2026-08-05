@@ -193,21 +193,22 @@ ${tvplText}
         try {
           const model = genAI.getGenerativeModel({
             model: modelName,
+            systemInstruction: systemPrompt,
             generationConfig: {
-              temperature: 0.2,
+              temperature: 0.3,
               maxOutputTokens: 1024,
             },
           });
+
           const historyPrompt = dto.history && dto.history.length > 0
             ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
             : '';
 
-          const fullPrompt = `${systemPrompt}
+          const userPrompt = historyPrompt
+            ? `Lịch sử cuộc trò chuyện:\n${historyPrompt}\n\nCâu hỏi hiện tại: ${dto.question}`
+            : dto.question;
 
-${historyPrompt ? `--- LỊCH SỬ TRÒ CHUYỆN ---:\n${historyPrompt}\n---------------------------\n` : ''}
-Người dùng hỏi: ${dto.question}`;
-
-          const generatePromise = model.generateContent(fullPrompt);
+          const generatePromise = model.generateContent(userPrompt);
           const timeoutPromise = new Promise<never>((_, reject) => {
             setTimeout(() => reject(new Error(`Model ${modelName} timed out after 8s`)), 8000);
           });
