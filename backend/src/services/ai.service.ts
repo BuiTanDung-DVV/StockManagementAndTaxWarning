@@ -210,7 +210,12 @@ ${tvplText}
 ${historyPrompt ? `--- LỊCH SỬ TRÒ CHUYỆN ---:\n${historyPrompt}\n---------------------------\n` : ''}
 Người dùng hỏi: ${dto.question}`;
 
-        const result = await model.generateContent(fullPrompt);
+        const generatePromise = model.generateContent(fullPrompt);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`Model ${modelName} timed out after 8s`)), 8000);
+        });
+
+        const result = await Promise.race([generatePromise, timeoutPromise]);
         const responseText = result.response.text();
 
         if (responseText && responseText.trim().length > 0) {
