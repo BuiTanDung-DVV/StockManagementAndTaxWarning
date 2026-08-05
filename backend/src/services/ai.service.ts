@@ -171,7 +171,7 @@ ${knowledgeContext}
     }
 
     const genAI = new GoogleGenerativeAI(key);
-    // Tất cả mô hình có Quota cao (500 RPD) từ bảng Google AI Studio của bạn:
+    // Tất cả mô hình theo thứ tự ưu tiên (Gemini Flash Lite 500 RPD -> Flash -> Gemma 14.4K RPD):
     const modelCandidates = [
       'gemini-3.5-flash-lite',
       'gemini-3.1-flash-lite',
@@ -180,6 +180,8 @@ ${knowledgeContext}
       'gemini-3-flash',
       'gemini-2.5-flash',
       'gemini-2.0-flash',
+      'gemma-4-31b',
+      'gemma-4-26b',
       'gemini-1.5-flash-latest',
     ];
 
