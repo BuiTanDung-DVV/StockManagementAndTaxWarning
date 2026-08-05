@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
 import '../network/api_client.dart';
+import '../../features/settings/providers/ai_knowledge_provider.dart';
 
 class AiAssistantOpenNotifier extends Notifier<bool> {
   @override
@@ -477,13 +478,13 @@ class _AssistantPanel extends StatelessWidget {
   }
 }
 
-class _MessageBlock extends StatelessWidget {
+class _MessageBlock extends ConsumerWidget {
   final _AssistantMessage message;
 
   const _MessageBlock({required this.message});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppThemeColors.of(context);
     final primary = Theme.of(context).colorScheme.primary;
 
@@ -553,7 +554,7 @@ class _MessageBlock extends StatelessWidget {
                 ),
               if (!message.fromUser) ...[
                 const SizedBox(height: 8),
-                _buildLegalDocumentCitations(context, message.text, primary, colors),
+                _buildLegalDocumentCitations(context, ref, message.text, primary, colors),
               ],
               const SizedBox(height: 8),
               Row(
@@ -596,7 +597,7 @@ class _MessageBlock extends StatelessWidget {
     );
   }
 
-  Widget _buildLegalDocumentCitations(BuildContext context, String text, Color primary, AppThemeColors colors) {
+  Widget _buildLegalDocumentCitations(BuildContext context, WidgetRef ref, String text, Color primary, AppThemeColors colors) {
     final regExp = RegExp(r'\[([^\]]+)\]\((https?:\/\/[^\)]+)\)');
     final matches = regExp.allMatches(text);
     if (matches.isEmpty) return const SizedBox.shrink();
@@ -638,30 +639,44 @@ class _MessageBlock extends StatelessWidget {
               AppAssetIcon(assetPath: AppAssets.emptyDocument, size: 16, color: primary),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(
-                  doc['title'] ?? '',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: primary,
+                child: InkWell(
+                  onTap: () async {
+                    final url = doc['url'];
+                    if (url != null && url.isNotEmpty) {
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    }
+                  },
+                  child: Text(
+                    doc['title'] ?? '',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 6),
               InkWell(
                 onTap: () async {
                   try {
-                    final api = ApiClient();
-                    await api.post('/ai/knowledge', data: {
-                      'title': doc['title'],
-                      'category': 'TAX',
-                      'content': 'Nguồn TVPL: ${doc['url']}',
-                    });
+                    final title = doc['title'] ?? 'Văn bản tra cứu';
+                    final url = doc['url'] ?? '';
+                    await ref.read(aiKnowledgeNotifierProvider.notifier).addDocument(
+                      title: title,
+                      category: 'TAX',
+                      content: 'Văn bản tra cứu Thư Viện Pháp Luật: $url',
+                    );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('✅ Đã thêm "${doc['title']}" vào Thư viện Cửa hàng!'),
+                          content: Text('✅ Đã thêm "$title" vào Thư viện Cửa hàng!'),
+                          backgroundColor: AppColors.success,
                           duration: const Duration(seconds: 2),
                         ),
                       );
@@ -669,9 +684,10 @@ class _MessageBlock extends StatelessWidget {
                   } catch (err) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text('Văn bản này đã có sẵn trong Thư viện Cửa hàng.'),
-                          duration: Duration(seconds: 2),
+                          backgroundColor: AppColors.warning,
+                          duration: const Duration(seconds: 2),
                         ),
                       );
                     }
