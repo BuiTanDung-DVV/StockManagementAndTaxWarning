@@ -164,7 +164,7 @@ ${knowledgeContext}
 `;
 
     if (!config.geminiApiKey) {
-      throw new Error('Không thể kết nối với Trợ lý AI lúc này. Vui lòng thử lại sau ít phút.');
+      throw new Error('[AI DIAGNOSTIC] GEMINI_API_KEY is empty or undefined on Vercel environment.');
     }
 
     const genAI = new GoogleGenerativeAI(config.geminiApiKey);
@@ -175,7 +175,7 @@ ${knowledgeContext}
       'gemini-2.0-flash',
     ];
 
-    let lastError: any;
+    const errorsSummary: string[] = [];
     for (const modelName of modelCandidates) {
       try {
         const model = genAI.getGenerativeModel({ model: modelName });
@@ -198,13 +198,14 @@ Người dùng hỏi: ${dto.question}`;
           };
         }
       } catch (err: any) {
-        lastError = err;
-        console.warn(`Gemini Model ${modelName} call failed, trying next candidate:`, err?.message || err);
+        const errMsg = err?.message || String(err);
+        errorsSummary.push(`[${modelName}]: ${errMsg}`);
+        console.warn(`Gemini Model ${modelName} call failed:`, errMsg);
       }
     }
 
-    console.error('Lỗi khi gọi Google Gemini API:', lastError?.message || lastError);
-    throw new Error('Không thể kết nối với Trợ lý AI lúc này. Vui lòng thử lại sau ít phút.');
+    console.error('All Gemini Models failed:', errorsSummary);
+    throw new Error(`[AI DIAGNOSTIC ERROR] All Gemini models failed. Details: ${errorsSummary.join(' | ')}`);
   }
 
   /**
