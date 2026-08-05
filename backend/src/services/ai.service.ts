@@ -183,12 +183,13 @@ ${tvplText}
     }
 
     const genAI = new GoogleGenerativeAI(key);
-    // Mô hình chuẩn theo thứ tự ưu tiên (Gemini 1.5 Flash -> 2.0 Flash -> 1.5 Pro):
     const modelCandidates = [
       'gemini-1.5-flash',
+      'gemini-1.5-flash-8b',
       'gemini-2.0-flash',
-      'gemini-1.5-flash-latest',
       'gemini-1.5-pro',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash-latest',
     ];
 
     let lastError: any;
@@ -226,17 +227,15 @@ Người dùng hỏi: ${dto.question}`;
         }
       } catch (err: any) {
         lastError = err;
-        console.warn(`Gemini Model ${modelName} call failed:`, err?.message || err);
+        console.error(`[GEMINI ERROR] Model ${modelName} call failed:`, err?.message || err);
       }
     }
 
-    const errStr = (lastError?.message || '').toLowerCase();
-    if (errStr.includes('429') || errStr.includes('quota') || errStr.includes('rate limit')) {
-      throw new Error('Hệ thống Google AI đang tạm thời vượt quá lượt truy vấn trong phút. Vui lòng đợi 15-30 giây rồi gửi lại câu hỏi.');
-    }
-
-    console.error('Gemini Models failed:', lastError);
-    throw new Error('Không thể kết nối với Trợ lý AI lúc này. Vui lòng thử lại sau.');
+    console.warn('[AI SERVICE FALLBACK] All Gemini models failed/rate-limited. Returning offline catalog fallback.');
+    return {
+      answer: `Dưới đây là thông tin tra cứu quy định pháp luật và dữ liệu thực tế tại cửa hàng của bạn cho câu hỏi "${dto.question}":\n\n${storeContext}\n\n${tvplText}\n\n*(Hệ thống đang phục vụ ở chế độ Tra cứu Tri thức Cửa hàng & Văn bản Pháp luật Chuẩn).*`,
+      provider: 'Hệ thống Tra cứu Tri thức Cửa hàng & TVPL (Offline Catalog)',
+    };
   }
 
   /**
