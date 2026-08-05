@@ -1,7 +1,9 @@
 #!/bin/bash
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
-echo "🚀 Bắt đầu cài đặt Flutter trên Vercel..."
+echo "🚀 Bắt đầu cài đặt Backend & Flutter trên Vercel..."
+echo "📦 Build backend TypeScript..."
+(cd backend && npm install && npm run build)
 # Tải Flutter bản stable mới nhất (chỉ lấy commit cuối cùng để tiết kiệm dung lượng và thời gian)
 if [ ! -d "flutter" ]; then
   git clone https://github.com/flutter/flutter.git -b stable --depth 1
