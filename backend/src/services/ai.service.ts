@@ -175,13 +175,16 @@ ${tvplText}
 ------------------------------------------------------
 `;
 
-    const key = config.geminiApiKey;
-    console.log(`[AI DEBUG] GEMINI_API_KEY check: present=${!!key}, length=${key ? key.length : 0}`);
+    const keys = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || config.geminiApiKey || '')
+      .split(',')
+      .map(k => k.trim())
+      .filter(Boolean);
+
+    console.log(`[AI DEBUG] GEMINI_API_KEYS count: ${keys.length}`);
 
     let lastError: any = null;
 
-    if (key) {
-      const genAI = new GoogleGenerativeAI(key);
+    if (keys.length > 0) {
       const modelCandidates = [
         'gemini-1.5-flash',
         'gemini-1.5-flash-8b',
@@ -191,16 +194,19 @@ ${tvplText}
         'gemini-1.5-flash-latest',
       ];
 
-      for (const modelName of modelCandidates) {
-        try {
-          const model = genAI.getGenerativeModel({
-            model: modelName,
-            systemInstruction: systemPrompt,
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 1024,
-            },
-          });
+      for (const keyCandidate of keys) {
+        const genAI = new GoogleGenerativeAI(keyCandidate);
+
+        for (const modelName of modelCandidates) {
+          try {
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              systemInstruction: systemPrompt,
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 1024,
+              },
+            });
 
           const historyPrompt = dto.history && dto.history.length > 0
             ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
@@ -226,7 +232,7 @@ ${tvplText}
           }
         } catch (err: any) {
           lastError = err;
-          console.error(`[GEMINI ERROR] Model ${modelName} call failed:`, err?.message || err);
+        }
         }
       }
     }
