@@ -88,7 +88,7 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                 Expanded(
                   child: Text(
                     'Gia nhập cửa hàng',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,

@@ -158,7 +158,7 @@ class AppKpiCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               value,
-              style: GoogleFonts.jetBrainsMono(
+              style: GoogleFonts.inter(
                 fontSize: 21,
                 fontWeight: FontWeight.w800,
                 color: c.textPrimary,
@@ -274,7 +274,7 @@ class AppSectionHeader extends StatelessWidget {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,

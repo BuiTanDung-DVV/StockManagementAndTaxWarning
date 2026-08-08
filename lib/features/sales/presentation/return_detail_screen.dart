@@ -47,7 +47,7 @@ class ReturnDetailScreen extends ConsumerWidget {
         ),
         title: Text(
           'Chi Tiết Đơn Trả Hàng',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -88,7 +88,7 @@ class ReturnDetailScreen extends ConsumerWidget {
                       ),
                       Text(
                         _currFmt.format(refundedAmount),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
@@ -102,7 +102,7 @@ class ReturnDetailScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             Text(
               'Danh sách sản phẩm trả',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -177,7 +177,7 @@ class ReturnDetailScreen extends ConsumerWidget {
                       if (unitPrice > 0)
                         Text(
                           _currFmt.format(subtotal),
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontWeight: FontWeight.bold,
                             color: c.textPrimary,
                             fontSize: 14,

@@ -232,7 +232,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       appBar: AppBar(
         title: Text(
           'Khôi Phục Mật Khẩu',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -287,7 +287,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   Text(
                     _success ? 'Đặt lại thành công!' : 'Khôi phục Mật khẩu',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -323,7 +323,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         ),
                         child: Text(
                           'Quay lại Đăng nhập',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -366,7 +366,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                 )
                               : Text(
                                   'Gửi Mã Xác Thực OTP',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -418,7 +418,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                       _countdownSeconds > 0
                                           ? '${_countdownSeconds}s'
                                           : 'Gửi lại',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.manrope(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
                                       ),
@@ -499,7 +499,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                 )
                               : Text(
                                   'Xác Nhận Đặt Lại Mật Khẩu',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),

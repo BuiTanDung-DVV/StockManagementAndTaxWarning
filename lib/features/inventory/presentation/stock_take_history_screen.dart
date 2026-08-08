@@ -25,7 +25,7 @@ class StockTakeHistoryScreen extends ConsumerWidget {
         ),
         title: Text(
           'Lịch sử kiểm kê',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -122,7 +122,7 @@ class StockTakeHistoryScreen extends ConsumerWidget {
                           children: [
                             Text(
                               code,
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                                 color: c.textPrimary,

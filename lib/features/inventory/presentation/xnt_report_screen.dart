@@ -42,7 +42,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
         ),
         title: Text(
           'Báo cáo XNT Kho',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -141,7 +141,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                       const SizedBox(width: 6),
                       Text(
                         'Kỳ báo cáo: $_from → $_to',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 12,
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
@@ -193,7 +193,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                 // Title
                 Text(
                   'Chi tiết sản phẩm',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,
@@ -235,7 +235,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                           DataColumn(
                             label: Text(
                               'Mã SP',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: c.textSecondary,
@@ -245,7 +245,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                           DataColumn(
                             label: Text(
                               'Tên sản phẩm',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: c.textSecondary,
@@ -255,7 +255,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                           DataColumn(
                             label: Text(
                               'Tồn đầu',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: c.textSecondary,
@@ -265,7 +265,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                           DataColumn(
                             label: Text(
                               'Nhập',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: c.textSecondary,
@@ -275,7 +275,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                           DataColumn(
                             label: Text(
                               'Xuất',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: c.textSecondary,
@@ -285,7 +285,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                           DataColumn(
                             label: Text(
                               'Tồn cuối',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: c.textSecondary,
@@ -381,7 +381,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                 // Slow-moving warnings
                 Text(
                   'Cảnh báo hàng chậm luân chuyển',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.warning,
@@ -469,7 +469,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                                 ),
                                 child: Text(
                                   '$days ngày đọng',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.warning,
@@ -514,7 +514,7 @@ class _MiniCard extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: Text(
               value,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: color,

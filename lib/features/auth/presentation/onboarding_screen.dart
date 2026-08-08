@@ -328,7 +328,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   const SizedBox(height: 24),
                   Text(
                     'Hoàn tất thông tin',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.5,
@@ -522,7 +522,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   'Bản đồ vị trí',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                     color: c.textPrimary,
@@ -709,7 +709,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                         ),
                                   title: Text(
                                     shop['shopName'] ?? '',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.manrope(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                       color: c.textPrimary,
@@ -824,7 +824,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 children: [
                                   Text(
                                     _selectedShop!['shopName'] ?? '',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.manrope(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 15,
                                       color: c.textPrimary,
@@ -934,7 +934,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 : !_needsShop
                                 ? 'Hoàn tất & Bắt đầu'
                                 : 'Gửi yêu cầu tham gia',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),

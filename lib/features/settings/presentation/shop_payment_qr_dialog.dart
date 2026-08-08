@@ -107,7 +107,7 @@ class _ShopPaymentQrDialogState extends ConsumerState<ShopPaymentQrDialog> {
                   Expanded(
                     child: Text(
                       'QR của cửa hàng',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: colors.textPrimary,
@@ -236,7 +236,7 @@ class _EmptyQrState extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             'Cửa hàng chưa có ảnh QR',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 17,
               fontWeight: FontWeight.w700,
               color: colors.textPrimary,

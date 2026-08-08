@@ -137,7 +137,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
         ),
         title: Text(
           'Kết ca & Khóa sổ',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -273,7 +273,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                   // Cash summary details
                   Text(
                     'Chi tiết két tiền mặt vật lý',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -339,7 +339,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                         ),
                         Text(
                           _fmt(closedDifference),
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                             color: closedDifference == 0
@@ -388,7 +388,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                   const SizedBox(height: 24),
                   Text(
                     'Thống kê tài khoản chuyển khoản',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -410,7 +410,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                   if (transactions.isNotEmpty) ...[
                     Text(
                       'Giao dịch chi tiết hôm nay',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: c.textPrimary,
@@ -495,7 +495,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                     children: [
                       Text(
                         'SỔ SÁCH TIỀN MẶT HÔM NAY',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
@@ -504,7 +504,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                       const SizedBox(height: 8),
                       Text(
                         _fmt(expectedCash),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 30,
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
@@ -556,7 +556,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                 // Count input
                 Text(
                   'Đối soát tiền mặt thực tế',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,
@@ -568,7 +568,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                   controller: _closingCashController,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,
@@ -582,7 +582,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                       color: theme.colorScheme.primary,
                     ),
                     suffixText: 'VNĐ',
-                    suffixStyle: GoogleFonts.outfit(
+                    suffixStyle: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.primary,
                     ),
@@ -642,7 +642,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                       ),
                       Text(
                         hasAssessment ? _fmt(differenceValue) : 'Chưa đối soát',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: !hasAssessment || differenceValue == 0
@@ -697,7 +697,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                   children: [
                     Text(
                       'Ghi chú / Giải trình',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: c.textPrimary,
@@ -808,7 +808,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 'Chốt ca & Khóa sổ',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                 ),
@@ -867,7 +867,7 @@ class _SummaryTile extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontWeight: FontWeight.bold,
               fontSize: 13,
               color: color,
@@ -915,7 +915,7 @@ class _DetailRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             amount,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontWeight: FontWeight.bold,
               fontSize: 13,
               color: isIncome ? AppColors.success : AppColors.danger,

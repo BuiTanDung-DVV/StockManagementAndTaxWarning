@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_app/core/theme/app_theme.dart';
 import 'package:flutter_app/features/dashboard/presentation/widgets/dashboard_widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,5 +93,41 @@ void main() {
     );
     expect(state.position.maxScrollExtent, greaterThan(0));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('comparison bars keep earlier period on the left', (
+    tester,
+  ) async {
+    final current = [
+      {'date': '2026-08-01', 'revenue': 20000000},
+    ];
+    final previous = [
+      {'date': '2026-07-01', 'revenue': 10000000},
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme(AppColors.primary),
+        home: Scaffold(
+          body: SizedBox(
+            width: 800,
+            child: ComparisonBarChart(
+              current,
+              previous,
+              'Tháng 08/2026',
+              'Tháng 07/2026',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<BarChart>(find.byType(BarChart));
+    final rods = chart.data.barGroups.single.barRods;
+    expect(rods[0].toY, 10000000);
+    expect(rods[0].color, const Color(0xFF6F9FA3));
+    expect(rods[1].toY, 20000000);
+    expect(rods[1].color, AppColors.primary);
   });
 }

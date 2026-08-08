@@ -147,7 +147,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       appBar: AppBar(
         title: Text(
           'Đổi Mật Khẩu',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -197,7 +197,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                         const SizedBox(height: 12),
                         Text(
                           'Bảo mật tài khoản',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: c.textPrimary,
@@ -220,7 +220,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
                   Text(
                     'Mật khẩu hiện tại',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -253,7 +253,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
                   Text(
                     'Mật khẩu mới',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -286,7 +286,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
                   Text(
                     'Xác nhận mật khẩu mới',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -372,7 +372,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                             )
                           : Text(
                               'Cập Nhật Mật Khẩu',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                                 fontSize: 16,
@@ -449,7 +449,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               ),
               Text(
                 label,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: color,

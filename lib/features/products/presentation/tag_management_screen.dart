@@ -60,7 +60,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                 children: [
                   Text(
                     tag == null ? 'Tạo Nhãn (Tag) Mới' : 'Chỉnh sửa Nhãn',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -180,7 +180,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                       ),
                       child: Text(
                         'Lưu thay đổi',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -206,7 +206,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
         backgroundColor: c.bg,
         title: Text(
           'Xóa nhãn?',
-          style: GoogleFonts.outfit(color: c.textPrimary),
+          style: GoogleFonts.manrope(color: c.textPrimary),
         ),
         content: Text(
           'Bạn có chắc muốn xóa nhãn "${tag.name}"? Các sản phẩm đang gắn nhãn này sẽ không bị ảnh hưởng.',
@@ -263,7 +263,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
         ),
         title: Text(
           'Cấu hình bộ lọc và nhãn',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -281,7 +281,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
         ),
         label: Text(
           'Tạo nhãn',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
@@ -299,7 +299,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Chưa có nhãn nào',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 20,
                       color: c.textSecondary,
                       fontWeight: FontWeight.bold,

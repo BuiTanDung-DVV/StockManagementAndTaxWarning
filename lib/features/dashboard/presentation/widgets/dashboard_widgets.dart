@@ -128,7 +128,7 @@ class TaxObligationReminder extends ConsumerWidget {
                           children: [
                             Text(
                               'Thuế $period',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                                 color: c.textPrimary,
@@ -298,7 +298,7 @@ class SummaryCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: GoogleFonts.jetBrainsMono(
+                style: GoogleFonts.inter(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: textColor,
@@ -529,7 +529,7 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
       bSpace = isMobile ? 6.0 : 8.0;
     }
 
-    final pastColor = Colors.grey.shade400;
+    const pastColor = Color(0xFF6F9FA3);
     final presentColor = theme.colorScheme.primary;
 
     for (int i = 0; i < maxLen; i++) {
@@ -555,6 +555,7 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
       barGroups.add(
         BarChartGroupData(
           x: i,
+          // Quy ước thời gian: kỳ trước ở trái, kỳ hiện tại/kỳ sau ở phải.
           barRods: [
             BarChartRodData(
               toY: rev2,
@@ -723,9 +724,9 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
                                         : '';
                                     return BarTooltipItem(
                                       '$dateLine$val đồng',
-                                      GoogleFonts.outfit(
+                                      GoogleFonts.manrope(
                                         color: rodIndex == 0
-                                            ? const Color(0xFF94A3B8)
+                                            ? const Color(0xFFB9ECE8)
                                             : Colors.white,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
@@ -932,7 +933,7 @@ class TopProductsChart extends StatelessWidget {
         children: [
           Text(
             'Top 5 Sản phẩm doanh thu cao',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: c.textPrimary,
@@ -962,7 +963,7 @@ class TopProductsChart extends StatelessWidget {
                     alignment: Alignment.center,
                     child: Text(
                       '${index + 1}',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                         color: theme.colorScheme.primary,
@@ -992,7 +993,7 @@ class TopProductsChart extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               _formatAmount(val),
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: c.textPrimary,
@@ -1125,7 +1126,7 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
         children: [
           Text(
             'Cơ cấu Hàng tồn kho (Theo Category)',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: c.textSecondary,
@@ -1320,7 +1321,7 @@ class CashFlowAreaChart extends StatelessWidget {
               children: [
                 Text(
                   'Dòng tiền ($label)',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textSecondary,
@@ -1340,7 +1341,7 @@ class CashFlowAreaChart extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'Thu',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 12,
                         color: c.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -1358,7 +1359,7 @@ class CashFlowAreaChart extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       'Chi',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 12,
                         color: c.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -1455,7 +1456,7 @@ class CashFlowAreaChart extends StatelessWidget {
                                   padding: const EdgeInsets.only(top: 10),
                                   child: Text(
                                     displayDate,
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.manrope(
                                       color: c.textMuted,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
@@ -1480,7 +1481,7 @@ class CashFlowAreaChart extends StatelessWidget {
                                           : v.toStringAsFixed(0));
                                 return Text(
                                   lbl,
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     color: c.textMuted,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -1524,7 +1525,7 @@ class CashFlowAreaChart extends StatelessWidget {
                                 final isIncome = spot.barIndex == 0;
                                 return LineTooltipItem(
                                   '${isIncome ? "Thu" : "Chi"}: $val đ',
-                                  GoogleFonts.outfit(
+                                  GoogleFonts.manrope(
                                     color: isIncome
                                         ? const Color(0xFF60A5FA)
                                         : const Color(0xFFF87171),
@@ -1655,7 +1656,7 @@ class LowStockTableWidget extends StatelessWidget {
                     const SizedBox(width: 10),
                     Text(
                       'Bảng Cảnh Báo Tồn Kho Dưới Định Mức',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: c.textPrimary,
@@ -1801,7 +1802,7 @@ class LowStockTableWidget extends StatelessWidget {
                       flex: 2,
                       child: Text(
                         '$qty',
-                        style: GoogleFonts.jetBrainsMono(
+                        style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: isCritical
@@ -1815,7 +1816,7 @@ class LowStockTableWidget extends StatelessWidget {
                       flex: 2,
                       child: Text(
                         '$minQty',
-                        style: GoogleFonts.jetBrainsMono(
+                        style: GoogleFonts.inter(
                           fontSize: 13,
                           color: c.textSecondary,
                         ),
@@ -1987,7 +1988,7 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
         children: [
           Text(
             'Phương thức Thanh toán',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: c.textSecondary,
@@ -2165,7 +2166,7 @@ class RecentOrdersDataTable extends StatelessWidget {
                     const SizedBox(width: 10),
                     Text(
                       'Bảng Giao Dịch Đơn Hàng Gần Đây',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: c.textPrimary,
@@ -2325,7 +2326,7 @@ class RecentOrdersDataTable extends StatelessWidget {
                       flex: 2,
                       child: Text(
                         '$orderCode',
-                        style: GoogleFonts.jetBrainsMono(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
@@ -2357,7 +2358,7 @@ class RecentOrdersDataTable extends StatelessWidget {
                       flex: 2,
                       child: Text(
                         _currFmt.format(total),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: c.textPrimary,
@@ -2452,7 +2453,7 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
                     const SizedBox(width: 10),
                     Text(
                       'Bảng Lịch Sử Chốt Ca Gần Đây',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: c.textPrimary,
@@ -2589,7 +2590,7 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
                             diff == 0
                                 ? 'Khớp két'
                                 : '$diffPrefix${_currFmt.format(diff)}',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                               color: diff == 0 ? AppColors.success : diffColor,
@@ -2671,7 +2672,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                             children: [
                               Text(
                                 'Xin chào, $userName 👋',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: c.textPrimary,
@@ -2737,7 +2738,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                               children: [
                                 Text(
                                   'Xin chào, $userName 👋',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                     color: c.textPrimary,
@@ -2992,11 +2993,25 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
   }
 }
 
-class DashboardPriorityList extends ConsumerWidget {
+class DashboardPriorityList extends ConsumerStatefulWidget {
   const DashboardPriorityList({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPriorityList> createState() =>
+      _DashboardPriorityListState();
+}
+
+class _DashboardPriorityListState extends ConsumerState<DashboardPriorityList> {
+  final ScrollController _priorityController = ScrollController();
+
+  @override
+  void dispose() {
+    _priorityController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final shopState = ref.watch(shopProvider);
     final entries = <Widget>[];
@@ -3139,11 +3154,24 @@ class DashboardPriorityList extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Ưu tiên hôm nay',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Việc cần làm',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.push('/notifications'),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(44, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child: const Text('Xem tất cả'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
@@ -3167,10 +3195,22 @@ class DashboardPriorityList extends ConsumerWidget {
               ),
             )
           else
-            for (var index = 0; index < entries.length; index++) ...[
-              if (index > 0) Divider(height: 1, color: colors.divider),
-              entries[index],
-            ],
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 344),
+              child: Scrollbar(
+                controller: _priorityController,
+                thumbVisibility: entries.length > 3,
+                child: ListView.separated(
+                  controller: _priorityController,
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                  itemCount: entries.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: colors.divider),
+                  itemBuilder: (context, index) => entries[index],
+                ),
+              ),
+            ),
         ],
       ),
     );

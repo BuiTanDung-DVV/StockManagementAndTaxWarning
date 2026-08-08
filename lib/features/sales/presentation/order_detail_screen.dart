@@ -32,7 +32,7 @@ class OrderDetailScreen extends ConsumerWidget {
         ),
         title: Text(
           'Chi Tiết Đơn Hàng',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -185,7 +185,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                   ),
                                   child: Text(
                                     statusLabel,
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.manrope(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                       color: statusColor,
@@ -222,7 +222,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                   ),
                                   child: Text(
                                     paymentLabel,
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.manrope(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                       color: paymentColor,
@@ -238,7 +238,7 @@ class OrderDetailScreen extends ConsumerWidget {
 
                       Text(
                         'Danh sách sản phẩm mua',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: c.textPrimary,
@@ -326,7 +326,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                 const SizedBox(width: 12),
                                 Text(
                                   _currFmt.format(subtotal),
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: FontWeight.bold,
                                     color: c.textPrimary,
                                     fontSize: 14,
@@ -363,7 +363,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                   const SizedBox(width: 8),
                                   Text(
                                     'Thông tin Trả Hàng',
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.manrope(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.danger,
@@ -503,7 +503,7 @@ class OrderDetailScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   'Dư nợ còn lại',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     color: remaining > 0
                                         ? AppColors.danger
                                         : AppColors.success,
@@ -513,7 +513,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                 ),
                                 Text(
                                   _currFmt.format(remaining),
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: FontWeight.w900,
                                     fontSize: 18,
                                     color: remaining > 0
@@ -532,7 +532,7 @@ class OrderDetailScreen extends ConsumerWidget {
                         const SizedBox(height: 24),
                         Text(
                           'Lịch sử giao dịch thanh toán',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: c.textPrimary,
@@ -586,7 +586,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                     children: [
                                       Text(
                                         '+${_currFmt.format(amt)}',
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.manrope(
                                           fontWeight: FontWeight.w800,
                                           color: AppColors.success,
                                           fontSize: 13,
@@ -652,7 +652,7 @@ class OrderDetailScreen extends ConsumerWidget {
                               ),
                               label: Text(
                                 'Thanh toán ngay (${_currFmt.format(remaining)})',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -690,7 +690,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                 ),
                                 label: Text(
                                   'Yêu Cầu Trả Hàng',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     color: AppColors.danger,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -800,7 +800,7 @@ void _showPaymentDialog(
             const SizedBox(height: 18),
             Text(
               'Thanh toán đơn hàng',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -820,7 +820,7 @@ void _showPaymentDialog(
             // Amount field
             Text(
               'Số tiền thanh toán (VNĐ)',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -866,7 +866,7 @@ void _showPaymentDialog(
             // Payment method
             Text(
               'Phương thức giao dịch',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -897,7 +897,7 @@ void _showPaymentDialog(
             // Notes
             Text(
               'Ghi chú bổ sung',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -941,7 +941,7 @@ void _showPaymentDialog(
                     ),
                     child: Text(
                       'Hủy bỏ',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         color: c.textSecondary,
                       ),
@@ -997,7 +997,7 @@ void _showPaymentDialog(
                     ),
                     label: Text(
                       'Xác Nhận',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -1066,7 +1066,7 @@ void _showReturnDialog(
             const SizedBox(height: 18),
             Text(
               'Trả hàng & Hoàn tiền sản phẩm',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.danger,
@@ -1086,7 +1086,7 @@ void _showReturnDialog(
             // Amount field
             Text(
               'Số tiền hoàn trả cho khách lẻ (VNĐ)',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -1132,7 +1132,7 @@ void _showReturnDialog(
             // Payment method
             Text(
               'Phương thức trả tiền',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -1163,7 +1163,7 @@ void _showReturnDialog(
             // Reason
             Text(
               'Lý do trả lại hàng',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -1207,7 +1207,7 @@ void _showReturnDialog(
                     ),
                     child: Text(
                       'Hủy bỏ',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         color: c.textSecondary,
                       ),
@@ -1279,7 +1279,7 @@ void _showReturnDialog(
                     ),
                     label: Text(
                       'Xác Nhận Trả',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -1364,7 +1364,7 @@ class _MethodChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected ? AppColors.primary : c.textSecondary,

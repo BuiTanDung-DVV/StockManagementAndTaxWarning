@@ -62,7 +62,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
         ),
         title: Text(
           'Báo cáo Kết quả Kinh doanh',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -75,7 +75,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
             icon: const Icon(Icons.date_range_rounded, size: 16),
             label: Text(
               label,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -147,7 +147,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                       const SizedBox(width: 8),
                       Text(
                         'Kỳ đối chiếu: $from → $to',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
@@ -215,7 +215,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                         children: [
                           Text(
                             'Cơ cấu dòng tiền & Lợi nhuận',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: c.textPrimary,
@@ -277,7 +277,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                                           value: item.value,
                                           title: item.pct,
                                           radius: radius,
-                                          titleStyle: GoogleFonts.outfit(
+                                          titleStyle: GoogleFonts.manrope(
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white,
                                             fontSize: isTouched ? 12 : 10,
@@ -356,7 +356,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                                   const Spacer(),
                                   Text(
                                     _fmt(sectionsList[_touchedIndex].value),
-                                    style: GoogleFonts.outfit(
+                                    style: GoogleFonts.manrope(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
                                       color: sectionsList[_touchedIndex].color,
@@ -428,7 +428,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                             const SizedBox(height: 2),
                             Text(
                               _fmt(grossProfit),
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                                 color: AppColors.success,
@@ -521,7 +521,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                             const SizedBox(height: 2),
                             Text(
                               _fmt(netProfit),
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20,
                                 color: Colors.white,
@@ -556,7 +556,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Chi tiết danh mục tài khoản',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,
@@ -676,7 +676,7 @@ class _DetailRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             amount,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontWeight: FontWeight.bold,
               fontSize: 14,
               color: isIncome ? AppColors.success : AppColors.danger,
@@ -720,7 +720,7 @@ class _ChartLegend extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           pct,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: c.textPrimary,

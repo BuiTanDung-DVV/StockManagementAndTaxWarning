@@ -24,7 +24,7 @@ class TaxWarningWidget extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           'Miễn trừ trách nhiệm',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             color: c.textPrimary,
             fontSize: 18,
@@ -78,7 +78,7 @@ class TaxWarningWidget extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Cảnh báo Nghĩa vụ Thuế',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.warning
@@ -149,7 +149,7 @@ class TaxWarningWidget extends StatelessWidget {
         Text(label, style: TextStyle(color: c.textPrimary, fontSize: 14)),
         Text(
           value,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             color: c.textPrimary,
             fontSize: 14,

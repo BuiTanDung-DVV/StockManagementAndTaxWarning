@@ -35,7 +35,7 @@ class DebtAgingScreen extends ConsumerWidget {
         ),
         title: Text(
           'Phân tích Tuổi nợ KH',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -89,7 +89,7 @@ class DebtAgingScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Không phát sinh nợ phải thu',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: c.textSecondary,
@@ -141,7 +141,7 @@ class DebtAgingScreen extends ConsumerWidget {
                       const SizedBox(height: 6),
                       Text(
                         _fmt(totalDebt),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 30,
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
@@ -159,7 +159,7 @@ class DebtAgingScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           'Tỷ lệ nợ quá hạn: ${(asNum(summary['overdueRatio']) * 100).toStringAsFixed(1)}%',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 12,
                             color: AppColors.danger,
                             fontWeight: FontWeight.bold,
@@ -196,7 +196,7 @@ class DebtAgingScreen extends ConsumerWidget {
 
                 Text(
                   'Phân loại theo kỳ hạn nợ',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,
@@ -237,7 +237,7 @@ class DebtAgingScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   Text(
                     'Khách hàng dư nợ cao nhất',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -264,7 +264,7 @@ class DebtAgingScreen extends ConsumerWidget {
                               children: [
                                 Text(
                                   item['customerName'] ?? '',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
                                     color: c.textPrimary,
@@ -287,7 +287,7 @@ class DebtAgingScreen extends ConsumerWidget {
                           const SizedBox(width: 12),
                           Text(
                             _fmt(asNum(item['total'])),
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.w800,
                               fontSize: 13,
                               color: AppColors.danger,
@@ -302,7 +302,7 @@ class DebtAgingScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 Text(
                   'Khách hàng nợ quá hạn lâu nhất',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,
@@ -363,7 +363,7 @@ class DebtAgingScreen extends ConsumerWidget {
                                 alignment: Alignment.center,
                                 child: Text(
                                   initialChar,
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     color: AppColors.danger,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
@@ -377,7 +377,7 @@ class DebtAgingScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       item['customerName'] ?? '',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.manrope(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13,
                                         color: c.textPrimary,
@@ -419,7 +419,7 @@ class DebtAgingScreen extends ConsumerWidget {
                                 icon: const Icon(Icons.send_rounded, size: 12),
                                 label: Text(
                                   'Nhắc nợ',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -453,7 +453,7 @@ class DebtAgingScreen extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           'Gửi tin nhắn nhắc nợ',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -544,7 +544,7 @@ class DebtAgingScreen extends ConsumerWidget {
             const SizedBox(height: 6),
             Text(
               label,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -601,7 +601,7 @@ class _AgingBar extends StatelessWidget {
               ),
               Text(
                 pct,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 12,
                   color: color,
                   fontWeight: FontWeight.w800,
@@ -643,7 +643,7 @@ class _AgingBar extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             amount,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 11,
               color: color,
               fontWeight: FontWeight.bold,

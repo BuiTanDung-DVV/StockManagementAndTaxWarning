@@ -70,7 +70,7 @@ class _InlineTagPickerState extends ConsumerState<InlineTagPicker> {
             children: [
               Text(
                 _isCreating ? 'Tạo nhãn mới' : 'Chọn nhãn',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: c.textPrimary,

@@ -24,7 +24,7 @@ class ActivityLogScreen extends ConsumerWidget {
         ),
         title: Text(
           'Nhật ký hoạt động',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -272,7 +272,7 @@ class ActivityLogScreen extends ConsumerWidget {
                         children: [
                           Text(
                             timeOnly,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                               color: c.textPrimary,

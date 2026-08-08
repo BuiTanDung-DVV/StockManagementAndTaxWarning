@@ -208,7 +208,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       appBar: AppBar(
         title: Text(
           'Đăng Ký Tài Khoản',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -240,7 +240,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       Text(
                         'Tạo tài khoản mới',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: c.textPrimary,
@@ -269,7 +269,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Text(
                               'HOẶC ĐĂNG KÝ BẰNG EMAIL',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: c.textMuted,
@@ -289,7 +289,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             value: 'SHOP',
                             label: Text(
                               'Chủ cửa hàng',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -300,7 +300,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             value: 'PERSONAL',
                             label: Text(
                               'Nhân viên',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -457,7 +457,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 )
                               : Text(
                                   'Đăng Ký & Nhận Mã OTP',
-                                  style: GoogleFonts.outfit(
+                                  style: GoogleFonts.manrope(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                     fontSize: 15,
@@ -532,7 +532,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
               Text(
                 label,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: color,

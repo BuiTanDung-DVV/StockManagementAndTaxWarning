@@ -49,16 +49,16 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 
   // Cool neutral palette used by established retail and finance products.
   static const light = AppThemeColors(
-    bg: Color(0xFFF2F5F8),
+    bg: Color(0xFFEEF3F7),
     surface: Color(0xFFFFFFFF),
     card: Color(0xFFFFFFFF),
-    cardAlt: Color(0xFFF7F9FB),
-    textPrimary: Color(0xFF172B3A),
-    textSecondary: Color(0xFF435667),
-    textMuted: Color(0xFF718295),
-    divider: Color(0xFFDFE6ED),
+    cardAlt: Color(0xFFF3F7FA),
+    textPrimary: Color(0xFF10283A),
+    textSecondary: Color(0xFF3F5668),
+    textMuted: Color(0xFF687F93),
+    divider: Color(0xFFD3DEE8),
     inputFill: Color(0xFFFFFFFF),
-    inputBorder: Color(0xFFCBD6E0),
+    inputBorder: Color(0xFFBFCEDB),
   );
 
   static AppThemeColors createLight(Color primary) => light;
@@ -188,7 +188,7 @@ class AppTheme {
     FontWeight fontWeight = FontWeight.normal,
     Color? color,
   }) {
-    return GoogleFonts.jetBrainsMono(
+    return GoogleFonts.inter(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color ?? AppThemeColors.of(context).textPrimary,
@@ -214,50 +214,50 @@ class AppTheme {
       Colors.white.withValues(alpha: 0.2),
       primaryColor,
     );
-    final outfitTextTheme = GoogleFonts.outfitTextTheme(base.textTheme);
+    final headingTextTheme = GoogleFonts.manropeTextTheme(base.textTheme);
     final bodyTextTheme = GoogleFonts.interTextTheme(base.textTheme);
 
     final textTheme = base.textTheme
         .copyWith(
-          displayLarge: outfitTextTheme.displayLarge?.copyWith(
+          displayLarge: headingTextTheme.displayLarge?.copyWith(
             letterSpacing: -1.5,
             height: 1.1,
             fontWeight: FontWeight.w800,
           ),
-          displayMedium: outfitTextTheme.displayMedium?.copyWith(
+          displayMedium: headingTextTheme.displayMedium?.copyWith(
             letterSpacing: -1.0,
             height: 1.1,
             fontWeight: FontWeight.w800,
           ),
-          displaySmall: outfitTextTheme.displaySmall?.copyWith(
+          displaySmall: headingTextTheme.displaySmall?.copyWith(
             letterSpacing: -0.5,
             height: 1.1,
             fontWeight: FontWeight.w700,
           ),
-          headlineLarge: outfitTextTheme.headlineLarge?.copyWith(
+          headlineLarge: headingTextTheme.headlineLarge?.copyWith(
             letterSpacing: -0.5,
             height: 1.2,
             fontWeight: FontWeight.w700,
           ),
-          headlineMedium: outfitTextTheme.headlineMedium?.copyWith(
+          headlineMedium: headingTextTheme.headlineMedium?.copyWith(
             letterSpacing: -0.25,
             height: 1.2,
             fontWeight: FontWeight.w700,
           ),
-          headlineSmall: outfitTextTheme.headlineSmall?.copyWith(
+          headlineSmall: headingTextTheme.headlineSmall?.copyWith(
             letterSpacing: 0,
             height: 1.2,
             fontWeight: FontWeight.w600,
           ),
-          titleLarge: outfitTextTheme.titleLarge?.copyWith(
+          titleLarge: headingTextTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w600,
             letterSpacing: -0.2,
           ),
-          titleMedium: outfitTextTheme.titleMedium?.copyWith(
+          titleMedium: headingTextTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
             letterSpacing: -0.1,
           ),
-          titleSmall: outfitTextTheme.titleSmall?.copyWith(
+          titleSmall: headingTextTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
           ),
           bodyLarge: bodyTextTheme.bodyLarge?.copyWith(letterSpacing: -0.01),
@@ -306,7 +306,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         shape: Border(bottom: BorderSide(color: colors.divider, width: 1)),
-        titleTextStyle: GoogleFonts.outfit(
+        titleTextStyle: GoogleFonts.manrope(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: colors.textPrimary,
@@ -316,7 +316,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colors.card,
-        elevation: 1,
+        elevation: 0,
         shadowColor: const Color(0x2417324D),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
@@ -444,6 +444,70 @@ class AppTheme {
           ),
         ),
       ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: colors.textSecondary,
+          backgroundColor: colors.cardAlt,
+          minimumSize: const Size(40, 40),
+          side: BorderSide(color: colors.divider),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_inputRadius),
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: colors.card,
+        selectedColor: primaryColor.withValues(alpha: 0.1),
+        disabledColor: colors.cardAlt,
+        side: BorderSide(color: colors.divider),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_inputRadius),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        labelStyle: bodyTextTheme.labelMedium?.copyWith(
+          color: colors.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+        secondaryLabelStyle: bodyTextTheme.labelMedium?.copyWith(
+          color: primaryColor,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size(44, 40)),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            return states.contains(WidgetState.selected)
+                ? primaryColor.withValues(alpha: 0.1)
+                : colors.surface;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            return states.contains(WidgetState.selected)
+                ? primaryColor
+                : colors.textSecondary;
+          }),
+          side: WidgetStatePropertyAll(BorderSide(color: colors.divider)),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(_inputRadius),
+            ),
+          ),
+          textStyle: WidgetStatePropertyAll(
+            bodyTextTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        iconColor: primaryColor,
+        textColor: colors.textPrimary,
+        subtitleTextStyle: bodyTextTheme.bodySmall?.copyWith(
+          color: colors.textSecondary,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_inputRadius),
+        ),
+      ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
@@ -477,7 +541,9 @@ class AppTheme {
         ),
       ),
       dataTableTheme: DataTableThemeData(
-        headingRowColor: WidgetStatePropertyAll(colors.cardAlt),
+        headingRowColor: WidgetStatePropertyAll(
+          Color.alphaBlend(primaryColor.withValues(alpha: 0.055), colors.cardAlt),
+        ),
         headingTextStyle: bodyTextTheme.labelSmall?.copyWith(
           color: colors.textSecondary,
           fontWeight: FontWeight.w700,

@@ -587,12 +587,26 @@ class _DesktopSidebar extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Trung tâm trợ giúp',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: _ShellPalette.text,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      children: [
+                        const AppAssetIcon(
+                          assetPath: AppAssets.help,
+                          size: 19,
+                          color: _ShellPalette.cyan,
+                          semanticLabel: 'Trung tâm trợ giúp',
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Trung tâm trợ giúp',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: _ShellPalette.text,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
