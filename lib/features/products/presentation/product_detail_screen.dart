@@ -37,7 +37,7 @@ class ProductDetailScreen extends ConsumerWidget {
         ),
         title: Text(
           'Chi Tiết Sản Phẩm',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -145,7 +145,7 @@ class ProductDetailScreen extends ConsumerWidget {
                     child: Text(
                       name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: c.textPrimary,
@@ -176,7 +176,7 @@ class ProductDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Mô tả sản phẩm',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
                           ),
@@ -245,7 +245,7 @@ class ProductDetailScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           stockStatus,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: statusColor,
@@ -261,7 +261,7 @@ class ProductDetailScreen extends ConsumerWidget {
                   padding: const EdgeInsets.only(left: 4, bottom: 8),
                   child: Text(
                     'Lịch sử xuất nhập',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -417,7 +417,7 @@ class _Section extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             title,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 15,
               fontWeight: FontWeight.bold,
               color: c.textPrimary,

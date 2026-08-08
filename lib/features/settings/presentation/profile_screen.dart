@@ -115,7 +115,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(
         title: Text(
           'Thông tin cá nhân',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -168,7 +168,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     ? _nameCtrl.text[0]
                                     : '?')
                                 .toUpperCase(),
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontSize: 36,
                               fontWeight: FontWeight.bold,
                               color: theme.colorScheme.primary,
@@ -198,7 +198,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 16),
                   Text(
                     auth.user?['username'] ?? '',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -269,7 +269,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           : const Icon(Icons.save_rounded, size: 20),
                       label: Text(
                         _saving ? 'Đang lưu...' : 'Lưu thay đổi',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -295,7 +295,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: const Icon(Icons.lock_reset_rounded, size: 20),
                       label: Text(
                         'Đổi mật khẩu bảo mật',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),

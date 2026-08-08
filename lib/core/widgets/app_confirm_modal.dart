@@ -60,7 +60,7 @@ class AppConfirmModal extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: GoogleFonts.outfit(
+        style: GoogleFonts.manrope(
           fontWeight: FontWeight.bold,
           fontSize: 20,
           color: c.textPrimary,
@@ -83,7 +83,7 @@ class AppConfirmModal extends StatelessWidget {
           ),
           child: Text(
             cancelText,
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
           ),
         ),
         ElevatedButton(
@@ -101,7 +101,7 @@ class AppConfirmModal extends StatelessWidget {
           ),
           child: Text(
             confirmText,
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
           ),
         ),
       ],

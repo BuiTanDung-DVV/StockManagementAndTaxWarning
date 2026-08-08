@@ -333,7 +333,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                             children: [
                               Text(
                                 _currFmt.format(price),
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontWeight: FontWeight.w800,
                                   fontSize: 14,
                                   color: c.textPrimary,
@@ -435,7 +435,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                           children: [
                                             Text(
                                               p['name'] ?? '',
-                                              style: GoogleFonts.outfit(
+                                              style: GoogleFonts.manrope(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 14,
                                                 color: c.textPrimary,

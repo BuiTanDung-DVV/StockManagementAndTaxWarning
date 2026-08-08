@@ -56,7 +56,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                             const SizedBox(width: 10),
                             Text(
                               'Thêm nguồn tham khảo',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -152,7 +152,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                       ),
                       label: Text(
                         'Lưu nguồn',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                           color: Colors.white,
@@ -186,7 +186,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Nguồn tài liệu tham khảo',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -219,7 +219,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Nguồn đang được sử dụng',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                             color: c.textPrimary,
@@ -346,7 +346,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                           const SizedBox(height: 10),
                           Text(
                             doc.title,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: c.textPrimary,

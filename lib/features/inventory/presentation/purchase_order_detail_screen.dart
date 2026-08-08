@@ -68,7 +68,7 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
         ),
         title: Text(
           'Chi Tiết Đơn Nhập',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -130,7 +130,7 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           statusLabel,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: statusColor,
@@ -145,7 +145,7 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             Text(
               'Danh sách sản phẩm',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -208,7 +208,7 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Text(
                         _currFmt.format(subtotal),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontWeight: FontWeight.bold,
                           color: c.textPrimary,
                           fontSize: 14,
@@ -239,7 +239,7 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                   ),
                   Text(
                     _currFmt.format(totalAmount),
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
                       color: theme.colorScheme.primary,
@@ -314,7 +314,7 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                     ),
                     label: Text(
                       'Duyệt Nhập Kho',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),

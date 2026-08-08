@@ -179,7 +179,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
         ),
         title: Text(
           'Phiếu Kiểm Kê Kho',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -275,7 +275,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                 ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
                 : Text(
                     '${index + 1}',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: isActive ? Colors.white : c.textSecondary,
@@ -286,7 +286,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
         const SizedBox(width: 8),
         Text(
           label,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontSize: 12,
             fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
             color: isActive ? theme.colorScheme.primary : c.textSecondary,
@@ -324,7 +324,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
         children: [
           Text(
             'Chọn Kho & Ghi chú',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: c.textPrimary,
@@ -362,7 +362,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                     return DropdownButtonFormField<int>(
                       initialValue: _warehouseId,
                       isExpanded: true,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: c.textPrimary,
@@ -447,7 +447,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
             children: [
               Text(
                 'Sản phẩm kiểm đếm (${_items.length})',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: c.textPrimary,
@@ -458,7 +458,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text(
                   'Thêm dòng',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -589,7 +589,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 '${item.systemQty}',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: c.textPrimary,
@@ -608,7 +608,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                           child: TextFormField(
                             controller: item.actualQtyCtrl,
                             keyboardType: TextInputType.number,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -671,7 +671,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 '${item.diff > 0 ? '+' : ''}${item.diff}',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: item.diff == 0
@@ -714,7 +714,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
         children: [
           Text(
             'Xác nhận bảng kiểm kê',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: c.textPrimary,
@@ -758,7 +758,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                     ),
                     Text(
                       '${_items.length}',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
@@ -775,7 +775,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                     ),
                     Text(
                       '$totalSystem',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
@@ -792,7 +792,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                     ),
                     Text(
                       '$totalActual',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
@@ -820,7 +820,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                       ),
                       child: Text(
                         '$totalDiff sản phẩm',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: totalDiff == 0
@@ -838,7 +838,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
           const SizedBox(height: 20),
           Text(
             'Danh sách kiểm kê đối chiếu',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: c.textPrimary,
@@ -905,7 +905,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                       const SizedBox(height: 2),
                       Text(
                         'Chênh lệch: ${item.diff > 0 ? '+' : ''}${item.diff}',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: item.diff == 0
@@ -1009,7 +1009,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 14),
                 label: Text(
                   'Quay lại',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: theme.colorScheme.primary),
@@ -1046,7 +1046,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                   _saving
                       ? 'ĐANG LƯU PHIẾU...'
                       : (isLastStep ? 'HOÀN THÀNH & LƯU' : 'TIẾP TỤC'),
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),

@@ -34,7 +34,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
         ),
         title: Text(
           'Đơn Mua Nhập Hàng',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -62,7 +62,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
         ),
         label: Text(
           'Tạo Đơn Nhập',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             color: Colors.white,
             fontSize: 14,
@@ -185,7 +185,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       code.toString(),
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.manrope(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
                                         color: c.textPrimary,
@@ -242,7 +242,7 @@ class PurchaseOrderScreen extends ConsumerWidget {
                           const SizedBox(width: 12),
                           Text(
                             _currFmt.format(totalAmount),
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.w800,
                               color: theme.colorScheme.primary,
                               fontSize: 14,

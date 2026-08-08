@@ -56,7 +56,7 @@ class TransactionDetailScreen extends ConsumerWidget {
         ),
         title: Text(
           'Chi Tiết Giao Dịch',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -100,7 +100,7 @@ class TransactionDetailScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Text(
               '${isIncome ? '+' : '-'}${_currFmt.format(amount)}',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontWeight: FontWeight.bold,
                 fontSize: 32,
                 color: isIncome ? AppColors.success : AppColors.danger,

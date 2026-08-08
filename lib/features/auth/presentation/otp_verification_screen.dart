@@ -156,7 +156,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
       appBar: AppBar(
         title: Text(
           'Xác Thực Tài Khoản',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -196,7 +196,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                   Text(
                     'Nhập mã xác thực',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -247,7 +247,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                       textAlign: TextAlign.center,
                       maxLength: 6,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 8.0,
@@ -255,7 +255,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                       ),
                       decoration: InputDecoration(
                         hintText: '••••••',
-                        hintStyle: GoogleFonts.outfit(
+                        hintStyle: GoogleFonts.manrope(
                           fontSize: 24,
                           letterSpacing: 8.0,
                           color: c.textMuted,
@@ -327,7 +327,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                             )
                           : Text(
                               'Xác nhận & Hoàn tất',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),

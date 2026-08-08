@@ -247,7 +247,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         ),
         title: Text(
           _isEdit ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm Mới',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -417,7 +417,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                               ? 'Đang tải ảnh...'
                               : 'Đang lưu lại...')
                         : (_isEdit ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm Mới'),
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
@@ -537,7 +537,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         const SizedBox(height: 8),
         Text(
           'Chọn ảnh sản phẩm',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontSize: 13,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.primary,
@@ -563,7 +563,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             color: c.textPrimary,

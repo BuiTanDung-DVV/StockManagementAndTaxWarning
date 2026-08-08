@@ -52,7 +52,7 @@ class SectionedFormDialog extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -96,7 +96,7 @@ class SectionedFormDialog extends StatelessWidget {
                     ),
                     child: Text(
                       cancelText,
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -123,7 +123,7 @@ class SectionedFormDialog extends StatelessWidget {
                           )
                         : Text(
                             saveText,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.w600,
                             ),
                           ),

@@ -64,7 +64,7 @@ class ChartCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: c.textPrimary,
@@ -144,7 +144,7 @@ class EmptyChartPlaceholder extends StatelessWidget {
               onPressed: onAction,
               child: Text(
                 actionLabel!,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),

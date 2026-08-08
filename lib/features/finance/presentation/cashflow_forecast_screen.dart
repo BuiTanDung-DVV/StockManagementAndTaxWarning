@@ -33,7 +33,7 @@ class CashflowForecastScreen extends ConsumerWidget {
         ),
         title: Text(
           'Dự Báo Dòng Tiền',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -80,7 +80,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                         padding: const EdgeInsets.only(left: 4, bottom: 12),
                         child: Text(
                           'Dự báo theo ngày',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: c.textPrimary,
@@ -115,7 +115,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                               ),
                               child: Text(
                                 'Xu hướng biến động dòng tiền',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   color: c.textSecondary,
@@ -246,7 +246,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                                               '';
                                           return LineTooltipItem(
                                             '$dateStr\n$formatted',
-                                            GoogleFonts.outfit(
+                                            GoogleFonts.manrope(
                                               color: c.textPrimary,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 11,
@@ -391,7 +391,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                                       ),
                                       Text(
                                         _fmt(balance),
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.manrope(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 15,
                                           color: isPositive
@@ -464,7 +464,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                         padding: const EdgeInsets.only(left: 4, bottom: 12),
                         child: Text(
                           'Kế hoạch & Ngân sách',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: c.textPrimary,
@@ -537,7 +537,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                                   Expanded(
                                     child: Text(
                                       b['name'] ?? '',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.manrope(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
                                         color: c.textPrimary,
@@ -650,7 +650,7 @@ class CashflowForecastScreen extends ConsumerWidget {
         icon: const Icon(Icons.trending_up_rounded),
         label: Text(
           'Thêm dự báo',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
@@ -671,7 +671,7 @@ class CashflowForecastScreen extends ConsumerWidget {
         builder: (context, setDialogState) => AlertDialog(
           title: Text(
             'Thêm dự báo dòng tiền',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -692,7 +692,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                   ),
                   title: Text(
                     DateFormat('dd/MM/yyyy').format(selectedDate),
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),

@@ -185,7 +185,7 @@ class _PurchaseOrderFormScreenState
         ),
         title: Text(
           'Đơn Mua Nhập Hàng',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -283,7 +283,7 @@ class _PurchaseOrderFormScreenState
                 ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
                 : Text(
                     '${index + 1}',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: isActive ? Colors.white : c.textSecondary,
@@ -294,7 +294,7 @@ class _PurchaseOrderFormScreenState
         const SizedBox(width: 8),
         Text(
           label,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontSize: 12,
             fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
             color: isActive ? theme.colorScheme.primary : c.textSecondary,
@@ -373,7 +373,7 @@ class _PurchaseOrderFormScreenState
                   const SizedBox(width: 10),
                   Text(
                     'Thông tin đối tác & Kho nhập',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: c.textPrimary,
@@ -580,7 +580,7 @@ class _PurchaseOrderFormScreenState
           children: [
             Text(
               'Danh sách sản phẩm nhập (${_items.length})',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -591,7 +591,7 @@ class _PurchaseOrderFormScreenState
               icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
               label: Text(
                 'Thêm dòng',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -632,7 +632,7 @@ class _PurchaseOrderFormScreenState
                       ),
                       child: Text(
                         '${idx + 1}',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
@@ -756,7 +756,7 @@ class _PurchaseOrderFormScreenState
                   alignment: Alignment.centerRight,
                   child: Text(
                     'Thành tiền: ${_currFmt.format(item.subtotal)}',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                       color: theme.colorScheme.primary,
@@ -790,7 +790,7 @@ class _PurchaseOrderFormScreenState
             children: [
               Text(
                 'TỔNG QUAN PHIẾU NHẬP HÀNG',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: theme.colorScheme.primary,
@@ -834,7 +834,7 @@ class _PurchaseOrderFormScreenState
             children: [
               Text(
                 'CHI TIẾT SẢN PHẨM (${_items.length})',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                   color: c.textSecondary,
@@ -875,7 +875,7 @@ class _PurchaseOrderFormScreenState
                       const SizedBox(width: 12),
                       Text(
                         _currFmt.format(item.subtotal),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: c.textPrimary,
@@ -916,7 +916,7 @@ class _PurchaseOrderFormScreenState
             children: [
               Text(
                 'Tổng thanh toán',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -924,7 +924,7 @@ class _PurchaseOrderFormScreenState
               ),
               Text(
                 _currFmt.format(_totalAmount),
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
@@ -992,7 +992,7 @@ class _PurchaseOrderFormScreenState
                   ),
                   child: Text(
                     'Quay lại',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -1024,7 +1024,7 @@ class _PurchaseOrderFormScreenState
                   _saving
                       ? 'Đang tạo...'
                       : (_currentStep == 2 ? 'Lưu Đơn Nhập' : 'Tiếp tục'),
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),

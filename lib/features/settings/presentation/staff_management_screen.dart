@@ -86,7 +86,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
             ),
             title: Text(
               'Thêm nhân viên',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
                 color: c.textPrimary,
@@ -211,7 +211,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                     : () => Navigator.pop(ctx, false),
                 child: Text(
                   'Hủy',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     color: c.textMuted,
                     fontWeight: FontWeight.w600,
                   ),
@@ -278,7 +278,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                       )
                     : Text(
                         'Thêm',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                        style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
                       ),
               ),
             ],
@@ -345,7 +345,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
             ),
             title: Text(
               'Đổi vai trò - ${member['fullName'] ?? member['username']}',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
                 color: c.textPrimary,
@@ -399,7 +399,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                 onPressed: () => Navigator.pop(ctx),
                 child: Text(
                   'Hủy',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     color: c.textMuted,
                     fontWeight: FontWeight.w600,
                   ),
@@ -421,7 +421,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                 ),
                 child: Text(
                   'Lưu',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -491,7 +491,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
           ),
           title: Text(
             'Quản lý nhân viên',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontWeight: FontWeight.bold,
               fontSize: 20,
               color: c.textPrimary,
@@ -509,11 +509,11 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
             indicatorColor: theme.colorScheme.primary,
             labelColor: theme.colorScheme.primary,
             unselectedLabelColor: c.textMuted,
-            labelStyle: GoogleFonts.outfit(
+            labelStyle: GoogleFonts.manrope(
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
-            unselectedLabelStyle: GoogleFonts.outfit(
+            unselectedLabelStyle: GoogleFonts.manrope(
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
@@ -546,7 +546,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
           icon: const Icon(Icons.person_add_rounded),
           label: Text(
             'Thêm nhân viên',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
           ),
           backgroundColor: theme.colorScheme.primary,
           foregroundColor: Colors.white,
@@ -657,7 +657,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
               children: [
                 Text(
                   m['fullName'] ?? m['username'] ?? 'N/A',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                     color: c.textPrimary,
@@ -743,7 +743,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                             : '?'))
                   .toString()
                   .toUpperCase(),
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.primary,
@@ -757,7 +757,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
               children: [
                 Text(
                   m['fullName'] ?? m['username'] ?? 'N/A',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                     color: c.textPrimary,
@@ -930,7 +930,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
               ),
               title: Text(
                 existing == null ? 'Tạo vai trò mới' : 'Sửa vai trò',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                   color: c.textPrimary,
@@ -963,7 +963,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Phân quyền chi tiết:',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                             color: c.textPrimary,
@@ -1001,7 +1001,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
                                   minWidth: 50,
                                   minHeight: 30,
                                 ),
-                                textStyle: GoogleFonts.outfit(
+                                textStyle: GoogleFonts.manrope(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1022,7 +1022,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
                   onPressed: () => Navigator.pop(ctx, false),
                   child: Text(
                     'Hủy',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       color: c.textMuted,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1044,7 +1044,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
                   ),
                   child: Text(
                     'Lưu',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -1131,7 +1131,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
         ),
         title: Text(
           'Quản lý vai trò',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -1144,7 +1144,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
         icon: const Icon(Icons.shield_outlined),
         label: Text(
           'Tạo vai trò mới',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
@@ -1218,7 +1218,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
               Expanded(
                 child: Text(
                   role['name'] ?? '',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     color: c.textPrimary,

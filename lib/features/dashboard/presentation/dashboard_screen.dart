@@ -115,6 +115,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             )),
           )
         : null;
+    final previousTopProductsAsync =
+        hasSalesInsights && shopState.userShops.isNotEmpty
+        ? ref.watch(
+            topProductsProvider((
+              from: periods.previousFrom,
+              to: periods.previousTo,
+            )),
+          )
+        : null;
 
     if (shopState.userShops.isEmpty) {
       return Scaffold(
@@ -226,8 +235,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         data: (cashData) => _DashboardMetricStrip(
                           metrics: _buildMetrics(
                             salesData: salesData,
+                            comparisonSalesData: comparisonAsync?.value,
                             cashData: cashData,
                             periodLabel: periods.currentLabel,
+                            previousPeriodLabel: periods.previousLabel,
                             asOf: today,
                           ),
                           showAllMobile: _showAllMobileMetrics,
@@ -240,8 +251,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         error: (_, _) => _DashboardMetricStrip(
                           metrics: _buildMetrics(
                             salesData: salesData,
+                            comparisonSalesData: comparisonAsync?.value,
                             cashData: const {},
                             periodLabel: periods.currentLabel,
+                            previousPeriodLabel: periods.previousLabel,
                             asOf: today,
                             cashAvailable: false,
                           ),
@@ -269,6 +282,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     comparisonSales: comparisonAsync,
                     recentTransactions: recentTransactionsAsync,
                     topProducts: topProductsAsync,
+                    previousTopProducts: previousTopProductsAsync,
                     currentLabel: periods.currentLabel,
                     previousLabel: periods.previousLabel,
                     filter: filter,
@@ -288,8 +302,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   List<_DashboardMetric> _buildMetrics({
     required Map<String, dynamic> salesData,
+    Map<String, dynamic>? comparisonSalesData,
     required Map<String, dynamic> cashData,
     required String periodLabel,
+    required String previousPeriodLabel,
     required DateTime asOf,
     bool cashAvailable = true,
   }) {
@@ -298,6 +314,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final profit =
         num.tryParse(salesData['grossProfit']?.toString() ?? '0') ?? 0;
     final orderCount = salesData['totalOrders'] ?? salesData['orderCount'] ?? 0;
+    final previousRevenue = num.tryParse(
+          comparisonSalesData?['totalRevenue']?.toString() ?? '0',
+        ) ??
+        0;
+    final previousProfit = num.tryParse(
+          comparisonSalesData?['grossProfit']?.toString() ?? '0',
+        ) ??
+        0;
+    final previousOrderCount = num.tryParse(
+          (comparisonSalesData?['totalOrders'] ??
+                  comparisonSalesData?['orderCount'] ??
+                  0)
+              .toString(),
+        ) ??
+        0;
     final cashBalance = cashAvailable
         ? num.tryParse(cashData['cashBalance']?.toString() ?? '0')
         : null;
@@ -309,6 +340,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         context: periodLabel,
         assetPath: AppAssets.revenue,
         color: AppColors.success,
+        comparison: _growthLabel(revenue, previousRevenue, previousPeriodLabel),
+        comparisonPositive: revenue >= previousRevenue,
       ),
       _DashboardMetric(
         label: 'Lợi nhuận gộp',
@@ -316,6 +349,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         context: periodLabel,
         assetPath: AppAssets.profit,
         color: profit < 0 ? AppColors.danger : AppColors.success,
+        comparison: _growthLabel(profit, previousProfit, previousPeriodLabel),
+        comparisonPositive: profit >= previousProfit,
       ),
       _DashboardMetric(
         label: 'Số dư quỹ',
@@ -332,8 +367,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         context: periodLabel,
         assetPath: AppAssets.orders,
         color: Theme.of(context).colorScheme.primary,
+        comparison: _growthLabel(
+          num.tryParse(orderCount.toString()) ?? 0,
+          previousOrderCount,
+          previousPeriodLabel,
+        ),
+        comparisonPositive:
+            (num.tryParse(orderCount.toString()) ?? 0) >= previousOrderCount,
       ),
     ];
+  }
+
+  String? _growthLabel(num current, num previous, String previousLabel) {
+    if (previous <= 0) return null;
+    final change = ((current - previous) / previous) * 100;
+    return '${change >= 0 ? '▲' : '▼'} ${NumberFormat('0.0', 'vi_VN').format(change.abs())}% so với $previousLabel';
   }
 }
 
@@ -641,6 +689,7 @@ class _DashboardWorkspace extends StatelessWidget {
   final AsyncValue<Map<String, dynamic>>? comparisonSales;
   final AsyncValue<List<dynamic>>? recentTransactions;
   final AsyncValue<List<dynamic>>? topProducts;
+  final AsyncValue<List<dynamic>>? previousTopProducts;
   final String currentLabel;
   final String previousLabel;
   final String filter;
@@ -651,6 +700,7 @@ class _DashboardWorkspace extends StatelessWidget {
     required this.comparisonSales,
     required this.recentTransactions,
     required this.topProducts,
+    required this.previousTopProducts,
     required this.currentLabel,
     required this.previousLabel,
     required this.filter,
@@ -670,8 +720,11 @@ class _DashboardWorkspace extends StatelessWidget {
     final priorities = const DashboardPriorityList();
     final products =
         topProducts?.when(
-          data: (items) =>
-              _TopProductsRevenueChart(items: items, period: currentLabel),
+          data: (items) => _TopProductsRevenueChart(
+            items: items,
+            previousItems: previousTopProducts?.value ?? const [],
+            period: currentLabel,
+          ),
           loading: () => const Padding(
             padding: EdgeInsets.only(top: AppSpacing.lg),
             child: AppShimmer(
@@ -743,9 +796,14 @@ class _DashboardWorkspace extends StatelessWidget {
 
 class _TopProductsRevenueChart extends StatelessWidget {
   final List<dynamic> items;
+  final List<dynamic> previousItems;
   final String period;
 
-  const _TopProductsRevenueChart({required this.items, required this.period});
+  const _TopProductsRevenueChart({
+    required this.items,
+    required this.previousItems,
+    required this.period,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -779,7 +837,7 @@ class _TopProductsRevenueChart extends StatelessWidget {
             ? const EmptyChartPlaceholder(
                 message: 'Chưa có doanh thu sản phẩm trong kỳ này.',
               )
-            : _TopProductsHorizontalBars(products),
+            : _TopProductsHorizontalBars(products, previousItems),
       ),
     );
   }
@@ -787,8 +845,9 @@ class _TopProductsRevenueChart extends StatelessWidget {
 
 class _TopProductsHorizontalBars extends StatelessWidget {
   final List<dynamic> products;
+  final List<dynamic> previousProducts;
 
-  const _TopProductsHorizontalBars(this.products);
+  const _TopProductsHorizontalBars(this.products, this.previousProducts);
 
   double _number(dynamic value) =>
       num.tryParse(value?.toString() ?? '0')?.toDouble() ?? 0;
@@ -802,6 +861,11 @@ class _TopProductsHorizontalBars extends StatelessWidget {
       (current, item) =>
           _number(item['value']) > current ? _number(item['value']) : current,
     );
+    final showGrowth = MediaQuery.sizeOf(context).width >= 700;
+    final previousRevenueByName = <String, double>{
+      for (final item in previousProducts)
+        item['name']?.toString() ?? '': _number(item['value']),
+    };
 
     return Column(
       children: [
@@ -842,6 +906,20 @@ class _TopProductsHorizontalBars extends StatelessWidget {
                   ),
                 ),
               ),
+              if (showGrowth) ...[
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 88,
+                  child: Text(
+                    'Tăng trưởng',
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -855,6 +933,11 @@ class _TopProductsHorizontalBars extends StatelessWidget {
               final revenue = _number(product['value']);
               final quantity = _number(product['quantity']);
               final progress = maxRevenue <= 0 ? 0.0 : revenue / maxRevenue;
+              final previousRevenue =
+                  previousRevenueByName[product['name']?.toString() ?? ''];
+              final growth = previousRevenue == null || previousRevenue <= 0
+                  ? null
+                  : ((revenue - previousRevenue) / previousRevenue) * 100;
 
               return _TopProductRankRow(
                 rank: index + 1,
@@ -863,6 +946,8 @@ class _TopProductsHorizontalBars extends StatelessWidget {
                 quantity: quantity,
                 unit: product['unit']?.toString() ?? 'sản phẩm',
                 progress: progress,
+                growth: growth,
+                showGrowth: showGrowth,
                 color: primary.withValues(alpha: 1 - index * 0.045),
               );
             },
@@ -880,6 +965,8 @@ class _TopProductRankRow extends StatelessWidget {
   final double quantity;
   final String unit;
   final double progress;
+  final double? growth;
+  final bool showGrowth;
   final Color color;
 
   const _TopProductRankRow({
@@ -889,6 +976,8 @@ class _TopProductRankRow extends StatelessWidget {
     required this.quantity,
     required this.unit,
     required this.progress,
+    required this.growth,
+    required this.showGrowth,
     required this.color,
   });
 
@@ -977,6 +1066,30 @@ class _TopProductRankRow extends StatelessWidget {
               ),
             ),
           ),
+          if (showGrowth) ...[
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 88,
+              child: Text(
+                growth == null
+                    ? 'Chưa đủ dữ liệu'
+                    : '${growth! >= 0 ? '▲' : '▼'} ${NumberFormat('0.0', 'vi_VN').format(growth!.abs())}%',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: AppTheme.tabularStyle(
+                  context,
+                  color: growth == null
+                      ? colors.textMuted
+                      : growth! >= 0
+                      ? AppColors.success
+                      : AppColors.danger,
+                  fontSize: growth == null ? 9 : 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1103,7 +1216,7 @@ class _DashboardMetricStrip extends StatelessWidget {
         }
 
         return Container(
-          height: 96,
+          height: 116,
           decoration: BoxDecoration(
             color: colors.surface,
             border: Border.all(color: colors.divider),
@@ -1194,6 +1307,20 @@ class _MetricCell extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
           ),
+          if (metric.comparison != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              metric.comparison!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: metric.comparisonPositive
+                    ? AppColors.success
+                    : AppColors.danger,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1248,6 +1375,20 @@ class _MetricRow extends StatelessWidget {
                     context,
                   ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
                 ),
+                if (metric.comparison != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    metric.comparison!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: metric.comparisonPositive
+                          ? AppColors.success
+                          : AppColors.danger,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1300,7 +1441,7 @@ class _MetricStripSkeleton extends StatelessWidget {
     return const AppShimmer(
       child: ShimmerBox(
         width: double.infinity,
-        height: 96,
+        height: 116,
         radius: AppRadius.card,
       ),
     );
@@ -1313,6 +1454,8 @@ class _DashboardMetric {
   final String context;
   final String assetPath;
   final Color color;
+  final String? comparison;
+  final bool comparisonPositive;
 
   const _DashboardMetric({
     required this.label,
@@ -1320,6 +1463,8 @@ class _DashboardMetric {
     required this.context,
     required this.assetPath,
     required this.color,
+    this.comparison,
+    this.comparisonPositive = true,
   });
 }
 
@@ -1350,8 +1495,10 @@ _DashboardPeriods _resolvePeriods(String filter, DateTime today) {
       currentTo: _dateOnly(today),
       previousFrom: _dateOnly(previousStart),
       previousTo: _dateOnly(weekStart.subtract(const Duration(days: 1))),
-      currentLabel: 'Tuần này',
-      previousLabel: 'Tuần trước',
+      currentLabel:
+          '${DateFormat('dd/MM').format(weekStart)}–${DateFormat('dd/MM/yyyy').format(today)}',
+      previousLabel:
+          '${DateFormat('dd/MM').format(previousStart)}–${DateFormat('dd/MM/yyyy').format(weekStart.subtract(const Duration(days: 1)))}',
     );
   }
 
@@ -1361,8 +1508,10 @@ _DashboardPeriods _resolvePeriods(String filter, DateTime today) {
       currentTo: _dateOnly(today),
       previousFrom: _dateOnly(DateTime(today.year, today.month - 11, 1)),
       previousTo: _dateOnly(DateTime(today.year, today.month - 5, 0)),
-      currentLabel: '6 tháng qua',
-      previousLabel: '6 tháng trước',
+      currentLabel:
+          '${DateFormat('MM/yyyy').format(DateTime(today.year, today.month - 5, 1))}–${DateFormat('MM/yyyy').format(today)}',
+      previousLabel:
+          '${DateFormat('MM/yyyy').format(DateTime(today.year, today.month - 11, 1))}–${DateFormat('MM/yyyy').format(DateTime(today.year, today.month - 6, 1))}',
     );
   }
 
@@ -1372,8 +1521,8 @@ _DashboardPeriods _resolvePeriods(String filter, DateTime today) {
       currentTo: _dateOnly(today),
       previousFrom: _dateOnly(DateTime(today.year - 1, 1, 1)),
       previousTo: _dateOnly(DateTime(today.year - 1, 12, 31)),
-      currentLabel: 'Năm nay',
-      previousLabel: 'Năm trước',
+      currentLabel: 'Năm ${today.year}',
+      previousLabel: 'Năm ${today.year - 1}',
     );
   }
 
@@ -1383,8 +1532,9 @@ _DashboardPeriods _resolvePeriods(String filter, DateTime today) {
     currentTo: current.to,
     previousFrom: _dateOnly(DateTime(today.year, today.month - 1, 1)),
     previousTo: _dateOnly(DateTime(today.year, today.month, 0)),
-    currentLabel: 'Tháng này',
-    previousLabel: 'Tháng trước',
+    currentLabel: 'Tháng ${DateFormat('MM/yyyy').format(today)}',
+    previousLabel:
+        'Tháng ${DateFormat('MM/yyyy').format(DateTime(today.year, today.month - 1, 1))}',
   );
 }
 

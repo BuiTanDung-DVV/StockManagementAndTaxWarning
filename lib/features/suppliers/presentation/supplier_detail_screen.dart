@@ -40,7 +40,7 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
         ),
         title: Text(
           'Chi Tiết Nhà Cung Cấp',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -130,7 +130,7 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                     child: Center(
                       child: Text(
                         name.isNotEmpty ? name[0].toUpperCase() : '?',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: AppColors.info,
@@ -146,7 +146,7 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                     child: Text(
                       name,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: c.textPrimary,

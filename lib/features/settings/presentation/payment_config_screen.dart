@@ -138,7 +138,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
       appBar: AppBar(
         title: Text(
           'Cấu hình thanh toán',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -212,7 +212,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                             children: [
                               Text(
                                 'VietQR - Thanh toán QR tự động',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: c.textPrimary,
@@ -238,7 +238,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                   // Bank selector label
                   Text(
                     'Ngân hàng thụ hưởng *',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                       color: c.textPrimary,
@@ -299,7 +299,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                   // Account number
                   Text(
                     'Số tài khoản ngân hàng *',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                       color: c.textPrimary,
@@ -325,7 +325,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                   // Account name
                   Text(
                     'Tên chủ tài khoản *',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                       color: c.textPrimary,
@@ -352,7 +352,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                   if (qrUrl.isNotEmpty) ...[
                     Text(
                       'Bản xem trước mã QR chuyển khoản',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                         color: c.textPrimary,
@@ -443,7 +443,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                             ),
                       label: Text(
                         _loading ? 'Đang lưu...' : 'Lưu cấu hình thanh toán',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),

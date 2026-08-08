@@ -174,7 +174,7 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
                   const SizedBox(width: 10),
                   Text(
                     'Tiếp tục với Google',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: isInteractive ? c.textPrimary : c.textMuted,

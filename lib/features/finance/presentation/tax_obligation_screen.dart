@@ -34,7 +34,7 @@ class TaxObligationScreen extends ConsumerWidget {
         ),
         title: Text(
           'Theo dõi Nghĩa vụ thuế',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -60,7 +60,7 @@ class TaxObligationScreen extends ConsumerWidget {
                 icon: const Icon(Icons.account_balance_rounded),
                 label: Text(
                   'Thêm kỳ thuế mới',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
                 ),
                 onPressed: () => _showAddDialog(context, ref),
               ),
@@ -116,7 +116,7 @@ class TaxObligationScreen extends ConsumerWidget {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           _fmt(totalOwed),
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             color: Colors.white,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -130,7 +130,7 @@ class TaxObligationScreen extends ConsumerWidget {
 
                 Text(
                   'Chi tiết các kỳ thuế',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,
@@ -186,7 +186,7 @@ class TaxObligationScreen extends ConsumerWidget {
                           children: [
                             Text(
                               t['period'] ?? 'Kỳ kê khai',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.manrope(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                                 color: c.textPrimary,
@@ -287,7 +287,7 @@ class TaxObligationScreen extends ConsumerWidget {
                               ),
                               Text(
                                 _fmt(remaining),
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.danger,
                                   fontSize: 14,
@@ -310,7 +310,7 @@ class TaxObligationScreen extends ConsumerWidget {
         icon: const Icon(Icons.account_balance_rounded),
         label: Text(
           'Khai thuế mới',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
@@ -376,7 +376,7 @@ class TaxObligationScreen extends ConsumerWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
           'Thêm kỳ nghĩa vụ thuế',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -479,7 +479,7 @@ class TaxObligationScreen extends ConsumerWidget {
           ),
           title: Text(
             'Cập nhật kỳ thuế',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),

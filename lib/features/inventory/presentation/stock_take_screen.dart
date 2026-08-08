@@ -25,7 +25,7 @@ class StockTakeScreen extends ConsumerWidget {
         ),
         title: Text(
           'Kiểm kê Kho',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -65,7 +65,7 @@ class StockTakeScreen extends ConsumerWidget {
         ),
         label: Text(
           'Tạo Phiếu Kiểm',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             color: Colors.white,
             fontSize: 14,
@@ -196,7 +196,7 @@ class StockTakeScreen extends ConsumerWidget {
                         children: [
                           Text(
                             '$qty',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.manrope(
                               fontWeight: FontWeight.w800,
                               fontSize: 18,
                               color: isLow

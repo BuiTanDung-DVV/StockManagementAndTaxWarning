@@ -71,7 +71,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
                     const SizedBox(height: 28),
                     Text(
                       'Đang chờ duyệt',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.5,
@@ -141,7 +141,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        textStyle: GoogleFonts.outfit(
+                        textStyle: GoogleFonts.manrope(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),

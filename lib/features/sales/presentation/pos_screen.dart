@@ -838,7 +838,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             children: [
               Text(
                 'Giỏ hàng (${cart.itemCount})',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: c.textPrimary,
@@ -1962,7 +1962,7 @@ class _CashConfirmDialogState extends State<_CashConfirmDialog> {
                     ),
                     Text(
                       _currFmt.format(change),
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.manrope(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: AppColors.success,

@@ -191,7 +191,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                 const SizedBox(height: 32),
                 Text(
                   'Thanh toán thành công!',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                     color: AppColors.success,
@@ -200,7 +200,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                 const SizedBox(height: 12),
                 Text(
                   _currFmt.format(widget.totalAmount),
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: c.textPrimary,
@@ -231,7 +231,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
         ),
         title: Text(
           'Thanh toán chuyển khoản',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -282,7 +282,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                     children: [
                       SelectableText(
                         _currFmt.format(widget.totalAmount),
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,
@@ -325,7 +325,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                         const SizedBox(width: 6),
                         Text(
                           'Mã đơn: ${widget.orderCode}',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
@@ -358,7 +358,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                 children: [
                   Text(
                     'Quét mã VietQR tự động nhập liệu',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.manrope(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                       color: const Color(0xFF1E293B), // High contrast slate-800
@@ -501,7 +501,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                     : const Icon(Icons.check_circle_rounded, size: 22),
                 label: Text(
                   _confirming ? 'ĐANG XÁC NHẬN...' : 'ĐÃ NHẬN TIỀN',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.manrope(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
@@ -529,7 +529,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
               ),
               label: Text(
                 'Hủy đơn hàng này',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.manrope(
                   color: AppColors.danger,
                   fontWeight: FontWeight.bold,
                 ),

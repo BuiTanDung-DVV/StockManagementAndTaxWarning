@@ -58,7 +58,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
         ),
         title: Text(
           'Công cụ Tính Thuế HKD 2026',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: c.textPrimary,
@@ -106,7 +106,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                       children: [
                         Text(
                           config.businessType.label,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
@@ -134,7 +134,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
             // Method selector
             Text(
               'Phương pháp tính',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -165,7 +165,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
             // Revenue input
             Text(
               'Doanh thu nhập vào',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -176,7 +176,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
               controller: _controller,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: c.textPrimary,
@@ -190,7 +190,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                   color: theme.colorScheme.primary,
                 ),
                 suffixText: 'VNĐ',
-                suffixStyle: GoogleFonts.outfit(
+                suffixStyle: GoogleFonts.manrope(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
                 ),
@@ -257,7 +257,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                       const SizedBox(width: 8),
                       Text(
                         'Cảnh Báo Ngưỡng Doanh Thu 2026',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.manrope(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: c.textPrimary,
@@ -376,7 +376,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                             children: [
                               Text(
                                 '0',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.manrope(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: c.textMuted,
@@ -394,7 +394,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                     children: [
                                       Text(
                                         '900M',
-                                        style: GoogleFonts.outfit(
+                                        style: GoogleFonts.manrope(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: _revenue >= 900000000.0
@@ -424,7 +424,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   children: [
                                     Text(
                                       '1 Tỷ',
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.manrope(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                         color: _revenue >= 1000000000.0
@@ -471,7 +471,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                       children: [
                         Text(
                           'Ngưỡng hiện tại: ${thresholds.getTierLabel(_revenue)}',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.manrope(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: thresholds.getColor(_revenue),
@@ -506,7 +506,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
             // Tax breakdown list (Sleek Ledger style)
             Text(
               'Chi tiết thuế phải nộp',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.manrope(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: c.textPrimary,
@@ -669,7 +669,7 @@ class _MethodTab extends StatelessWidget {
         child: Center(
           child: Text(
             label,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: active ? Colors.white : c.textSecondary,
@@ -712,7 +712,7 @@ class _TaxRow extends StatelessWidget {
           const SizedBox(width: 16),
           Text(
             amount,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.manrope(
               fontSize: isBold ? 17 : 14,
               fontWeight: isBold ? FontWeight.w800 : FontWeight.bold,
               color: color,
