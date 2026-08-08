@@ -37,7 +37,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscureConfirm = true;
   bool _isLoading = false;
   String? _error;
-  String _accountType = 'SHOP';
+  final String _registrationAccountType = 'PERSONAL';
 
   @override
   void initState() {
@@ -108,7 +108,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         .authenticateWithGoogle(
           idToken: idToken,
           createIfMissing: true,
-          accountType: _accountType,
+          accountType: _registrationAccountType,
         );
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -181,7 +181,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           'email': email,
           'fullName': fullName,
           'password': pass,
-          'accountType': _accountType,
+          'accountType': _registrationAccountType,
         },
       );
     } catch (e) {
@@ -248,9 +248,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        _accountType == 'SHOP'
-                            ? 'để bắt đầu quản lý bán hàng & kho hàng doanh nghiệp'
-                            : 'để xin gia nhập và làm việc tại cửa hàng',
+                        'Vai trò và thông tin cửa hàng sẽ được thiết lập ở bước tiếp theo.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: c.textSecondary, fontSize: 13),
                       ),
@@ -279,47 +277,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ),
                           Expanded(child: Divider(color: c.divider)),
                         ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Account Type Selection
-                      SegmentedButton<String>(
-                        segments: [
-                          ButtonSegment<String>(
-                            value: 'SHOP',
-                            label: Text(
-                              'Chủ cửa hàng',
-                              style: GoogleFonts.manrope(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            icon: const Icon(Icons.store_rounded, size: 18),
-                          ),
-                          ButtonSegment<String>(
-                            value: 'PERSONAL',
-                            label: Text(
-                              'Nhân viên',
-                              style: GoogleFonts.manrope(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            icon: const Icon(Icons.person_rounded, size: 18),
-                          ),
-                        ],
-                        selected: {_accountType},
-                        onSelectionChanged: (Set<String> newSelection) {
-                          setState(() {
-                            _accountType = newSelection.first;
-                          });
-                        },
-                        style: SegmentedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
                       ),
                       const SizedBox(height: 20),
 

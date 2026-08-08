@@ -88,8 +88,23 @@ test('profile updates cannot replace the verified Gmail identity', () => {
 
 test('onboarding rejects privilege fields supplied by the client', () => {
   assert.equal(completeOnboardingSchema.safeParse({
+    accountType: 'SHOP',
     fullName: 'Nguyen Van A',
     role: 'ADMIN',
+  }).success, false);
+});
+
+test('onboarding accepts business account types but rejects system roles', () => {
+  assert.equal(completeOnboardingSchema.safeParse({
+    fullName: 'Nguyen Van A',
+  }).success, false);
+  assert.equal(completeOnboardingSchema.safeParse({
+    accountType: 'SHOP',
+    fullName: 'Nguyen Van A',
+  }).success, true);
+  assert.equal(completeOnboardingSchema.safeParse({
+    accountType: 'ADMIN',
+    fullName: 'Nguyen Van A',
   }).success, false);
 });
 
@@ -102,6 +117,39 @@ test('auth entities build valid PostgreSQL metadata', async () => {
     assert.ok(column, `Missing metadata for User.${propertyName}`);
     assert.notEqual(column.type, Object, `User.${propertyName} must declare an explicit database type`);
   }
+
+  const accountTypeColumn = metadata.findColumnWithPropertyName('accountType');
+  assert.ok(accountTypeColumn, 'Missing metadata for User.accountType');
+  assert.equal(accountTypeColumn.isNullable, true);
+});
+
+test('account type migration is explicit, idempotent, and does not rewrite users', () => {
+  const migration = fs.readFileSync(
+    path.join(
+      __dirname,
+      '..',
+      'database',
+      '20260809_nullable_account_type_until_onboarding.sql',
+    ),
+    'utf8',
+  );
+  const runner = fs.readFileSync(
+    path.join(
+      __dirname,
+      '..',
+      'src',
+      'scripts',
+      'apply-nullable-account-type-migration.ts',
+    ),
+    'utf8',
+  );
+
+  assert.match(migration, /ALTER COLUMN account_type DROP DEFAULT/i);
+  assert.match(migration, /ALTER COLUMN account_type DROP NOT NULL/i);
+  assert.match(migration, /IF NOT EXISTS/i);
+  assert.doesNotMatch(migration, /UPDATE\s+users/i);
+  assert.match(runner, /CONFIRM_ACCOUNT_TYPE_MIGRATION/);
+  assert.match(runner, /NULLABLE_ACCOUNT_TYPE_20260809/);
 });
 
 test('refresh token reuse commits family revocation before returning 401', async () => {

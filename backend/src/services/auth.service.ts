@@ -10,6 +10,7 @@ import {
   ForgotPasswordDto,
   GoogleAuthDto,
   LoginDto,
+  CompleteOnboardingDto,
   RegisterDto,
   ResetPasswordDto,
   SendOtpDto,
@@ -248,7 +249,7 @@ export class AuthService {
         emailVerified: true,
         passwordHash: await bcrypt.hash(dto.password, 12),
         fullName: dto.fullName,
-        accountType: dto.accountType,
+        accountType: null,
         role: 'STAFF',
         isActive: true,
         isOnboarded: false,
@@ -330,7 +331,7 @@ export class AuthService {
           passwordHash: null,
           fullName: (payload.name || email.split('@')[0]).slice(0, 100),
           avatarUrl: payload.picture || undefined,
-          accountType: dto.accountType,
+          accountType: null,
           role: 'STAFF',
           isActive: true,
           isOnboarded: false,
@@ -522,27 +523,50 @@ export class AuthService {
     });
   }
 
-  async completeOnboarding(userId: number, dto: any) {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) throw new Error('User not found');
-
-    if (dto.username) {
-      const newUsername = dto.username.toString().trim();
-      const existing = await this.userRepo.findOne({ where: { username: newUsername } });
-      if (existing && existing.id !== user.id) throw new Error('Username already exists');
-      user.username = newUsername;
-    }
-    if (dto.phone) {
-      const newPhone = dto.phone.toString().trim();
-      const existing = await this.userRepo.findOne({ where: { phone: newPhone } });
-      if (existing && existing.id !== user.id) throw new Error('Phone already exists');
-      user.phone = newPhone;
-    }
-    if (dto.fullName) user.fullName = dto.fullName.toString().trim();
-    user.isOnboarded = true;
+  async completeOnboarding(userId: number, dto: CompleteOnboardingDto) {
     let status = 'ACTIVE';
+    let completedUser: User | null = null;
 
     await AppDataSource.transaction(async (manager) => {
+      const user = await manager
+        .getRepository(User)
+        .createQueryBuilder('user')
+        .setLock('pessimistic_write')
+        .where('user.id = :userId', { userId })
+        .getOne();
+      if (!user) throw new AuthError('Không tìm thấy tài khoản', 404, 'USER_NOT_FOUND');
+      if (user.isOnboarded) {
+        throw new AuthError(
+          'Tài khoản đã hoàn tất thiết lập',
+          409,
+          'ONBOARDING_ALREADY_COMPLETED',
+        );
+      }
+
+      if (dto.username) {
+        const existing = await manager.getRepository(User).findOne({
+          where: { username: dto.username },
+        });
+        if (existing && existing.id !== user.id) {
+          throw new AuthError('Tên đăng nhập đã tồn tại', 409, 'USERNAME_EXISTS');
+        }
+        user.username = dto.username;
+      }
+      if (dto.phone) {
+        const existing = await manager.getRepository(User).findOne({
+          where: { phone: dto.phone },
+        });
+        if (existing && existing.id !== user.id) {
+          throw new AuthError('Số điện thoại đã tồn tại', 409, 'PHONE_EXISTS');
+        }
+        user.phone = dto.phone;
+      }
+      user.fullName = dto.fullName;
+
+      // accountType chỉ mô tả luồng nghiệp vụ. Quyền OWNER/EMPLOYEE vẫn do
+      // backend cấp khi tạo cửa hàng hoặc gửi yêu cầu tham gia.
+      user.accountType = dto.accountType;
+      user.isOnboarded = true;
       await manager.save(user);
       if (user.accountType === 'SHOP') {
         const charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -582,14 +606,24 @@ export class AuthService {
               isActive: true,
             }));
             status = 'PENDING';
+          } else {
+            throw new AuthError(
+              'Vui lòng chọn cửa hàng hoặc nhập mã cửa hàng',
+              422,
+              'SHOP_REQUIRED',
+            );
           }
         }
       }
+      completedUser = user;
     });
+    if (!completedUser) {
+      throw new AuthError('Không thể hoàn tất thiết lập', 500, 'ONBOARDING_FAILED');
+    }
     return {
       updated: true,
       status,
-      user: this.safeUser(user),
+      user: this.safeUser(completedUser),
     };
   }
 }

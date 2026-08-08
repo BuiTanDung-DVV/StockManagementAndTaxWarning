@@ -88,6 +88,7 @@ export const updateProfileSchema = z.object({
 }).strict();
 
 export const completeOnboardingSchema = z.object({
+  accountType: accountTypeSchema,
   username: z.string().trim().min(4).max(50).regex(/^\S+$/).optional(),
   phone: z.string().trim().regex(/^(0|\+84)\d{8,9}$/).optional(),
   fullName: z.string().trim().min(2).max(100),
@@ -104,3 +105,4 @@ export type SendOtpDto = z.infer<typeof sendOtpSchema>;
 export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;
 export type GoogleAuthDto = z.infer<typeof googleAuthSchema>;
+export type CompleteOnboardingDto = z.infer<typeof completeOnboardingSchema>;

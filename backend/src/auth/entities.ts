@@ -36,8 +36,8 @@ export class User {
     @Column({ name: 'is_onboarded', default: false })
     isOnboarded: boolean;
 
-    @Column({ name: 'account_type', length: 20, default: 'PERSONAL' })
-    accountType: string; // 'SHOP' (hộ kinh doanh) | 'PERSONAL'
+    @Column({ name: 'account_type', type: 'varchar', length: 20, nullable: true })
+    accountType: string | null; // NULL until onboarding, then 'SHOP' | 'PERSONAL'
 
     @Column({ name: 'google_subject', type: 'varchar', length: 255, nullable: true, unique: true })
     googleSubject: string | null;
