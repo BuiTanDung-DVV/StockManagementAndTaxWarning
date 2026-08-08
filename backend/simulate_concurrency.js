@@ -4,14 +4,22 @@
  */
 
 const { Client } = require('pg');
+const { randomBytes } = require('crypto');
+require('dotenv').config();
 
 const BASE_URL = 'https://stock-management-and-tax-warning.vercel.app/api';
-const DB_CONNECTION_STRING = 'REDACTED_DATABASE_URL';
+const DB_CONNECTION_STRING = process.env.DATABASE_URL;
+const OWNER_USERNAME = process.env.SIM_OWNER_USERNAME;
+const OWNER_PASSWORD = process.env.SIM_OWNER_PASSWORD;
+if (!DB_CONNECTION_STRING || !OWNER_USERNAME || !OWNER_PASSWORD) {
+  throw new Error('DATABASE_URL, SIM_OWNER_USERNAME and SIM_OWNER_PASSWORD are required');
+}
 const SHOP_ID = 34; // Cửa Hàng VLXD & Nội Thất Kiến Tạo
 const SHOP_CODE = 'VL01';
 
 // Generate timestamp for uniqueness
 const timestamp = Date.now();
+const generatedPassword = randomBytes(24).toString('base64url');
 
 // Generate employee emails
 const emails = {
@@ -24,19 +32,19 @@ const usersData = {
   cashier: {
     username: emails.cashier,
     email: emails.cashier,
-    password: '123456',
+    password: generatedPassword,
     fullName: `Simulated Cashier ${timestamp}`
   },
   storekeeper: {
     username: emails.storekeeper,
     email: emails.storekeeper,
-    password: '123456',
+    password: generatedPassword,
     fullName: `Simulated Storekeeper ${timestamp}`
   },
   manager: {
     username: emails.manager,
     email: emails.manager,
-    password: '123456',
+    password: generatedPassword,
     fullName: `Simulated Manager ${timestamp}`
   }
 };
@@ -191,12 +199,12 @@ async function main() {
   console.log('--- Phase 4: Owner Log in, Retrieve and Approve Requests ---');
   
   // Log in as Owner
-  console.log('Logging in as Owner (admin@kientao.com)...');
+  console.log('Logging in as Owner...');
   const ownerLoginRes = await request('/auth/login', {
     method: 'POST',
     body: JSON.stringify({
-      username: 'admin@kientao.com',
-      password: '123456'
+      username: OWNER_USERNAME,
+      password: OWNER_PASSWORD
     })
   });
 

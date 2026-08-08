@@ -1,6 +1,10 @@
 const { Client } = require('pg');
+require('dotenv').config();
 
-const connectionString = 'REDACTED_DATABASE_URL';
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error('DATABASE_URL is required');
+}
 
 const client = new Client({
   connectionString,
