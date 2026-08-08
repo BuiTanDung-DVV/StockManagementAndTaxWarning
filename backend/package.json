@@ -19,7 +19,8 @@
         "validate:auth-schema": "npm run build && node dist/scripts/check-auth-schema.js",
         "validate:migration": "tsx src/scripts/validate-ai-knowledge-migration.ts",
         "migrate:auth": "npm run build && node dist/scripts/apply-auth-migration.js",
-        "migrate:20260728": "tsx src/scripts/apply-database-migrations.ts"
+        "migrate:20260728": "tsx src/scripts/apply-database-migrations.ts",
+        "migrate:account-type": "npm run build && node dist/scripts/apply-nullable-account-type-migration.js"
     },
     "dependencies": {
         "@google/generative-ai": "^0.24.1",

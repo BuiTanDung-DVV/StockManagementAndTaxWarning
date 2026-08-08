@@ -82,7 +82,7 @@ class AuthNotifier extends Notifier<AuthState> {
             isLoggedIn: true,
             token: _api.token,
             user: user,
-            accountType: user['accountType'] as String? ?? 'PERSONAL',
+            accountType: user['accountType'] as String?,
             isOnboarded: user['isOnboarded'] as bool? ?? true,
           );
         } else {
@@ -130,7 +130,7 @@ class AuthNotifier extends Notifier<AuthState> {
       final user = data['user'] is Map
           ? Map<String, dynamic>.from(data['user'])
           : null;
-      final accountType = user?['accountType'] as String? ?? 'PERSONAL';
+      final accountType = user?['accountType'] as String?;
       final isOnboarded = user?['isOnboarded'] as bool? ?? true;
 
       // Initialize shop provider with shops from login response
@@ -194,7 +194,7 @@ class AuthNotifier extends Notifier<AuthState> {
       isLoggedIn: true,
       token: token,
       user: user,
-      accountType: user?['accountType'] as String? ?? 'PERSONAL',
+      accountType: user?['accountType'] as String?,
       isOnboarded: user?['isOnboarded'] as bool? ?? true,
     );
     return true;
@@ -259,6 +259,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<bool> completeOnboarding({
+    required String accountType,
     String? username,
     String? phone,
     required String fullName,
@@ -270,7 +271,10 @@ class AuthNotifier extends Notifier<AuthState> {
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final Map<String, dynamic> data = {'fullName': fullName};
+      final Map<String, dynamic> data = {
+        'accountType': accountType,
+        'fullName': fullName,
+      };
       if (username != null && username.isNotEmpty) {
         data['username'] = username;
       }
@@ -303,6 +307,7 @@ class AuthNotifier extends Notifier<AuthState> {
       if (updatedUser != null) {
         state = state.copyWith(
           user: {...?state.user, ...updatedUser},
+          accountType: updatedUser['accountType'] as String?,
           isOnboarded: true,
           isLoading: false,
         );
