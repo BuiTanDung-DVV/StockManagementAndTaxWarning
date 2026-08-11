@@ -282,14 +282,10 @@ export class InventoryService {
                 p.name,
                 COALESCE(p.unit, 'Sản phẩm') AS unit,
                 COALESCE(c.name, 'Chưa phân loại') AS category,
-                GREATEST(
-                    COALESCE(sold.gross_revenue, 0) - COALESCE(returned.return_revenue, 0),
-                    0
-                ) AS revenue,
-                GREATEST(
-                    COALESCE(sold.gross_quantity, 0) - COALESCE(returned.return_quantity, 0),
-                    0
-                ) AS quantity_sold,
+                COALESCE(sold.gross_revenue, 0) - COALESCE(returned.return_revenue, 0)
+                    AS revenue,
+                COALESCE(sold.gross_quantity, 0) - COALESCE(returned.return_quantity, 0)
+                    AS quantity_sold,
                 COALESCE(stock.current_stock, 0) AS current_stock,
                 COALESCE(stock.current_stock, 0) * COALESCE(p.cost_price, 0) AS stock_value
             FROM products p
@@ -320,7 +316,7 @@ export class InventoryService {
                 to: toKey,
             },
             timezone: 'Asia/Ho_Chi_Minh',
-            definition: 'Phân nhóm theo tỷ trọng doanh thu hàng hóa thuần chưa VAT, sau chiết khấu và hàng trả trong kỳ.',
+            definition: 'Phân nhóm theo tỷ trọng doanh thu hàng hóa thuần chưa VAT, sau chiết khấu và hàng trả trong kỳ. SKU có hàng trả vượt bán được loại khỏi mẫu số ABC và công khai thành khoản điều chỉnh.',
         };
     }
 

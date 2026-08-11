@@ -13,35 +13,46 @@ export type InventoryAbcSourceRow = {
 export type InventoryAbcItem = InventoryAbcSourceRow & {
     rank: number;
     grade: 'A' | 'B' | 'C';
+    netRevenue: number;
     revenueShare: number;
     cumulativeShare: number;
 };
 
-const safeNumber = (value: unknown) => {
+const finiteNumber = (value: unknown) => {
     const parsed = Number(value);
-    return Number.isFinite(parsed) ? Math.max(parsed, 0) : 0;
+    return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const nonNegativeNumber = (value: unknown) => Math.max(finiteNumber(value), 0);
 
 export const classifyInventoryAbc = (rows: InventoryAbcSourceRow[]) => {
     const sorted = rows
         .map((row) => ({
             ...row,
-            revenue: safeNumber(row.revenue),
-            quantitySold: safeNumber(row.quantitySold),
-            currentStock: safeNumber(row.currentStock),
-            stockValue: safeNumber(row.stockValue),
+            netRevenue: finiteNumber(row.revenue),
+            // ABC shares need a non-negative contribution base. A product whose
+            // returns exceed sales is disclosed separately instead of inflating
+            // or reversing the cumulative Pareto curve.
+            revenue: nonNegativeNumber(row.revenue),
+            quantitySold: finiteNumber(row.quantitySold),
+            currentStock: nonNegativeNumber(row.currentStock),
+            stockValue: nonNegativeNumber(row.stockValue),
         }))
         .sort((left, right) => right.revenue - left.revenue || left.id - right.id);
-    const totalRevenue = sorted.reduce((sum, row) => sum + row.revenue, 0);
+    const totalRevenue = sorted.reduce((sum, row) => sum + row.netRevenue, 0);
+    const classificationRevenue = sorted.reduce((sum, row) => sum + row.revenue, 0);
+    const negativeReturnAdjustment = classificationRevenue - totalRevenue;
     let cumulativeRevenue = 0;
 
     const items: InventoryAbcItem[] = sorted.map((row, index) => {
-        const share = totalRevenue > 0 ? row.revenue / totalRevenue : 0;
-        cumulativeRevenue += row.revenue;
-        const cumulativeShare = totalRevenue > 0
-            ? cumulativeRevenue / totalRevenue
+        const share = classificationRevenue > 0
+            ? row.revenue / classificationRevenue
             : 0;
-        const grade: InventoryAbcItem['grade'] = totalRevenue <= 0
+        cumulativeRevenue += row.revenue;
+        const cumulativeShare = classificationRevenue > 0
+            ? cumulativeRevenue / classificationRevenue
+            : 0;
+        const grade: InventoryAbcItem['grade'] = classificationRevenue <= 0
             ? 'C'
             : index === 0 || cumulativeShare <= 0.8
                 ? 'A'
@@ -65,13 +76,18 @@ export const classifyInventoryAbc = (rows: InventoryAbcSourceRow[]) => {
             grade,
             skuCount: gradeItems.length,
             revenue,
-            revenueShare: totalRevenue > 0 ? revenue / totalRevenue : 0,
+            revenueShare: classificationRevenue > 0
+                ? revenue / classificationRevenue
+                : 0,
             stockValue: gradeItems.reduce((sum, item) => sum + item.stockValue, 0),
         };
     };
 
     return {
         totalRevenue,
+        classificationRevenue,
+        negativeReturnAdjustment,
+        returnedMoreThanSoldSkuCount: items.filter((item) => item.netRevenue < 0).length,
         totalStockValue: items.reduce((sum, item) => sum + item.stockValue, 0),
         skuCount: items.length,
         grades: [gradeSummary('A'), gradeSummary('B'), gradeSummary('C')],

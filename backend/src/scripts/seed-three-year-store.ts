@@ -1328,6 +1328,15 @@ async function seed(
             created_by: ownerId,
             created_at: paidAt,
           });
+          journalRows.push({
+            shop_id: shopId,
+            entry_date: paidAt,
+            reference_type: 'DEBT_COLLECTION',
+            reference_id: orderId,
+            description: `Thu công nợ ${order.code}`,
+            is_voided: false,
+            created_at: paidAt,
+          });
         }
       }
 
@@ -1505,6 +1514,20 @@ async function seed(
       const invoiceId = invoiceIdByOrder.get(orderId);
       if (!invoiceId) continue;
       for (const item of order.items) {
+        const itemIndex = order.items.indexOf(item);
+        const invoiceNetSubtotal = order.subtotal - order.discount;
+        const allocatedBefore = order.items
+          .slice(0, itemIndex)
+          .reduce(
+            (sum, previousItem) =>
+              sum + roundMoney(
+                invoiceNetSubtotal * previousItem.subtotal / order.subtotal,
+              ),
+            0,
+          );
+        const allocatedSubtotal = itemIndex === order.items.length - 1
+          ? invoiceNetSubtotal - allocatedBefore
+          : roundMoney(invoiceNetSubtotal * item.subtotal / order.subtotal);
         invoiceItemRows.push({
           invoice_id: invoiceId,
           product_id: Number(products[item.productIndex].id),
@@ -1512,7 +1535,7 @@ async function seed(
           unit: profile.products[item.productIndex].unit,
           quantity: item.quantity,
           unit_price: item.unitPrice,
-          subtotal: item.subtotal,
+          subtotal: allocatedSubtotal,
           tax_rate: 0,
           tax_amount: 0,
         });
@@ -1845,12 +1868,45 @@ async function seed(
       '',
       300,
     );
-    await bulkInsert(
+    const insertedPurchaseInvoices = await bulkInsert(
       runner, 'invoices',
       ['invoice_number', 'shop_id', 'invoice_symbol', 'invoice_type', 'invoice_date',
         'partner_name', 'reference_type', 'reference_id', 'subtotal', 'tax_amount',
         'total_amount', 'payment_method', 'payment_status', 'notes', 'created_by', 'created_at'],
-      purchaseInvoiceRows, '', 300,
+      purchaseInvoiceRows, 'id, reference_id', 300,
+    );
+    const purchaseInvoiceItemRows: Row[] = [];
+    for (const invoice of insertedPurchaseInvoices) {
+      const purchaseId = Number(invoice.reference_id);
+      const code = purchaseCodeById.get(purchaseId);
+      const items = code ? purchaseItemsByCode.get(code) ?? [] : [];
+      for (const item of items) {
+        const productIndex = products.findIndex(
+          (product) => Number(product.id) === Number(item.product_id),
+        );
+        purchaseInvoiceItemRows.push({
+          invoice_id: Number(invoice.id),
+          product_id: Number(item.product_id),
+          item_name: productIndex >= 0
+            ? profile.products[productIndex].name
+            : 'Hàng hóa nhập kho',
+          unit: productIndex >= 0 ? profile.products[productIndex].unit : 'Cái',
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          subtotal: Number(item.quantity) * Number(item.unit_price),
+          tax_rate: 0,
+          tax_amount: 0,
+        });
+      }
+    }
+    await bulkInsert(
+      runner,
+      'invoice_items',
+      ['invoice_id', 'product_id', 'item_name', 'unit', 'quantity', 'unit_price',
+        'subtotal', 'tax_rate', 'tax_amount'],
+      purchaseInvoiceItemRows,
+      '',
+      700,
     );
 
     const expenseRows: Row[] = [];
@@ -1901,7 +1957,7 @@ async function seed(
       cashRows.map((transaction) => ({
         shop_id: shopId,
         event_type: transaction.type === 'INCOME'
-          ? (transaction.reference_type === 'SALE_ORDER' ? 'SALE' : 'DEBT_COLLECTION')
+          ? (transaction.reference_type === 'SALES_ORDER' ? 'SALE' : 'DEBT_COLLECTION')
           : (transaction.category === 'SALARY' ? 'SALARY'
               : transaction.reference_type === 'PURCHASE_ORDER' ? 'PURCHASE' : 'EXPENSE'),
         amount: transaction.amount,
@@ -1919,13 +1975,35 @@ async function seed(
     const insertedJournals = await bulkInsert(
       runner, 'journal_entries',
       ['shop_id', 'entry_date', 'reference_type', 'reference_id', 'description', 'is_voided', 'created_at'],
-      journalRows, 'id, reference_id', 500,
+      journalRows, 'id, reference_type, reference_id', 500,
     );
     const orderById = new Map(generatedOrders.map((order) => [orderIds.get(order.code)!, order]));
     const journalLineRows: Row[] = [];
     for (const journal of insertedJournals) {
       const order = orderById.get(Number(journal.reference_id));
       if (!order) continue;
+      if (String(journal.reference_type) === 'DEBT_COLLECTION') {
+        if (order.debtPaid <= 0) continue;
+        const paidAt = addDays(order.date, 15);
+        const method = order.method === 'CASH' ? 'TRANSFER' : order.method;
+        journalLineRows.push(
+          {
+            journal_entry_id: Number(journal.id),
+            account_code: method === 'CASH' ? '111' : '112',
+            amount: order.debtPaid,
+            entry_type: 'DEBIT',
+            created_at: paidAt,
+          },
+          {
+            journal_entry_id: Number(journal.id),
+            account_code: '131',
+            amount: order.debtPaid,
+            entry_type: 'CREDIT',
+            created_at: paidAt,
+          },
+        );
+        continue;
+      }
       const cogs = order.items.reduce((sum, item) => sum + item.costPrice * item.quantity, 0);
       const originalDebt = order.total - order.initialPaid;
       if (order.initialPaid > 0) {

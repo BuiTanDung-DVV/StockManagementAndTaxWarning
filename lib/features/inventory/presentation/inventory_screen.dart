@@ -299,6 +299,16 @@ class _InventoryAbcPanel extends StatelessWidget {
                   .where((item) => _inventoryAbcNumber(item['revenue']) > 0)
                   .take(8)
                   .toList();
+              final netRevenue = _inventoryAbcNumber(data['totalRevenue']);
+              final classificationRevenue = _inventoryAbcNumber(
+                data['classificationRevenue'] ?? data['totalRevenue'],
+              );
+              final returnAdjustment = _inventoryAbcNumber(
+                data['negativeReturnAdjustment'],
+              );
+              final exceptionSkuCount = _inventoryAbcNumber(
+                data['returnedMoreThanSoldSkuCount'],
+              ).toInt();
 
               if (revenueItems.isEmpty) {
                 return const AppEmpty(
@@ -314,6 +324,13 @@ class _InventoryAbcPanel extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    _InventoryAbcReconciliation(
+                      netRevenue: netRevenue,
+                      classificationRevenue: classificationRevenue,
+                      returnAdjustment: returnAdjustment,
+                      exceptionSkuCount: exceptionSkuCount,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     LayoutBuilder(
                       builder: (context, constraints) {
                         final width = constraints.maxWidth >= 760
@@ -373,6 +390,74 @@ class _InventoryAbcPanel extends StatelessWidget {
                 ),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InventoryAbcReconciliation extends StatelessWidget {
+  final double netRevenue;
+  final double classificationRevenue;
+  final double returnAdjustment;
+  final int exceptionSkuCount;
+
+  const _InventoryAbcReconciliation({
+    required this.netRevenue,
+    required this.classificationRevenue,
+    required this.returnAdjustment,
+    required this.exceptionSkuCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final money = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    );
+    final hasAdjustment = returnAdjustment > 0.5;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: hasAdjustment
+            ? AppColors.warning.withValues(alpha: 0.08)
+            : colors.cardAlt,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        border: Border.all(
+          color: hasAdjustment
+              ? AppColors.warning.withValues(alpha: 0.3)
+              : colors.divider,
+        ),
+      ),
+      child: Wrap(
+        spacing: AppSpacing.lg,
+        runSpacing: AppSpacing.xs,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            'Doanh thu thuần đối soát: ${money.format(netRevenue)}',
+            style: AppTheme.tabularStyle(
+              context,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            hasAdjustment
+                ? 'Cơ sở ABC: ${money.format(classificationRevenue)} · $exceptionSkuCount SKU trả vượt bán'
+                : 'Cơ sở ABC đã khớp doanh thu thuần',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: hasAdjustment ? AppColors.warning : colors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
