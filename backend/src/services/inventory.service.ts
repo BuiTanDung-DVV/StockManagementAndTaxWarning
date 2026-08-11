@@ -4,6 +4,12 @@ import { Product, ProductBatch } from '../product/entities';
 import { COGSService } from './cogs.service';
 import { PostingService } from './posting.service';
 import { EntityManager } from 'typeorm';
+import {
+    resolveCurrentMonthExpensePeriod,
+    vietnamDateKey,
+} from '../finance/finance-period.utils';
+import { buildAllocatedMerchandiseRevenueSql } from '../sales/sales-accounting.utils';
+import { classifyInventoryAbc } from '../inventory/inventory-abc.utils';
 
 export class InventoryService {
     private stockRepo = AppDataSource.getRepository(InventoryStock);
@@ -220,6 +226,102 @@ export class InventoryService {
                 daysSinceLastSale,
             };
         });
+    }
+
+    async getAbcAnalysis(shopId: number | number[], from?: string, to?: string) {
+        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
+        const fromKey = vietnamDateKey(fromDate);
+        const toKey = vietnamDateKey(toDate);
+        const isArray = Array.isArray(shopId);
+        const productShopCondition = isArray ? 'p.shop_id = ANY($1)' : 'p.shop_id = $1';
+        const orderShopCondition = isArray ? 'o.shop_id = ANY($1)' : 'o.shop_id = $1';
+        const returnShopCondition = isArray ? 'r.shop_id = ANY($1)' : 'r.shop_id = $1';
+        const soldNetValueSql = buildAllocatedMerchandiseRevenueSql('oi.subtotal', 'o');
+        const returnedNetValueSql = buildAllocatedMerchandiseRevenueSql(
+            'ri.subtotal',
+            'returned_order',
+        );
+
+        const rows = await AppDataSource.query(`
+            WITH stock AS (
+                SELECT
+                    s.product_id,
+                    SUM(GREATEST(s.quantity, 0)) AS current_stock
+                FROM inventory_stocks s
+                WHERE ${isArray ? 's.shop_id = ANY($1)' : 's.shop_id = $1'}
+                GROUP BY s.product_id
+            ), sold AS (
+                SELECT
+                    oi.product_id,
+                    SUM(${soldNetValueSql}) AS gross_revenue,
+                    SUM(oi.quantity) AS gross_quantity
+                FROM sales_order_items oi
+                JOIN sales_orders o ON o.id = oi.order_id
+                WHERE ${orderShopCondition}
+                  AND o.order_date >= $2::date
+                  AND o.order_date < ($3::date + interval '1 day')
+                  AND o.status != 'CANCELLED'
+                GROUP BY oi.product_id
+            ), returned AS (
+                SELECT
+                    ri.product_id,
+                    SUM(${returnedNetValueSql}) AS return_revenue,
+                    SUM(ri.quantity) AS return_quantity
+                FROM sales_return_items ri
+                JOIN sales_returns r ON r.id = ri.return_id
+                JOIN sales_orders returned_order ON returned_order.id = r.order_id
+                WHERE ${returnShopCondition}
+                  AND r.return_date >= $2::date
+                  AND r.return_date < ($3::date + interval '1 day')
+                  AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+                GROUP BY ri.product_id
+            )
+            SELECT
+                p.id,
+                p.sku,
+                p.name,
+                COALESCE(p.unit, 'Sản phẩm') AS unit,
+                COALESCE(c.name, 'Chưa phân loại') AS category,
+                GREATEST(
+                    COALESCE(sold.gross_revenue, 0) - COALESCE(returned.return_revenue, 0),
+                    0
+                ) AS revenue,
+                GREATEST(
+                    COALESCE(sold.gross_quantity, 0) - COALESCE(returned.return_quantity, 0),
+                    0
+                ) AS quantity_sold,
+                COALESCE(stock.current_stock, 0) AS current_stock,
+                COALESCE(stock.current_stock, 0) * COALESCE(p.cost_price, 0) AS stock_value
+            FROM products p
+            LEFT JOIN categories c ON c.id = p.category_id
+            LEFT JOIN stock ON stock.product_id = p.id
+            LEFT JOIN sold ON sold.product_id = p.id
+            LEFT JOIN returned ON returned.product_id = p.id
+            WHERE ${productShopCondition}
+            ORDER BY revenue DESC, p.id ASC
+        `, [shopId, fromKey, toKey]);
+
+        const analysis = classifyInventoryAbc(rows.map((row: any) => ({
+            id: Number(row.id),
+            sku: row.sku,
+            name: row.name,
+            unit: row.unit,
+            category: row.category,
+            revenue: Number(row.revenue || 0),
+            quantitySold: Number(row.quantity_sold || 0),
+            currentStock: Number(row.current_stock || 0),
+            stockValue: Number(row.stock_value || 0),
+        })));
+
+        return {
+            ...analysis,
+            period: {
+                from: fromKey,
+                to: toKey,
+            },
+            timezone: 'Asia/Ho_Chi_Minh',
+            definition: 'Phân nhóm theo tỷ trọng doanh thu hàng hóa thuần chưa VAT, sau chiết khấu và hàng trả trong kỳ.',
+        };
     }
 
 

@@ -35,6 +35,14 @@ class InventoryRepository {
     return res as List<dynamic>? ?? [];
   }
 
+  Future<Map<String, dynamic>> getAbcAnalysis(String from, String to) async {
+    final result = await _api.get(
+      '/inventory/abc-analysis',
+      params: {'from': from, 'to': to},
+    );
+    return Map<String, dynamic>.from(result as Map);
+  }
+
   Future<Map<String, dynamic>> getXNTReport(
     String from,
     String to, {
@@ -183,6 +191,16 @@ final purchaseOrdersProvider = FutureProvider.family<Map<String, dynamic>, int>(
 final inventoryCategoriesSummaryProvider = FutureProvider<List<dynamic>>((ref) {
   return ref.watch(inventoryRepoProvider).getCategoriesSummary();
 });
+
+final inventoryAbcProvider =
+    FutureProvider.family<
+      Map<String, dynamic>,
+      ({String from, String to})
+    >((ref, args) {
+      return ref
+          .watch(inventoryRepoProvider)
+          .getAbcAnalysis(args.from, args.to);
+    });
 
 final stockTakesProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,

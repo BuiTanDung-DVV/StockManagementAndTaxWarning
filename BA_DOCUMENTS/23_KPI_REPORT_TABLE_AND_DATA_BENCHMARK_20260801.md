@@ -117,7 +117,7 @@ Không hard-code “triệu”, “tỷ” vào dữ liệu. API trả `value` v
 | Dashboard | Top 10 sản phẩm thuần | Thanh ngang, tên trái, số lượng và doanh thu cuối thanh | SKU, đơn vị, gross, return, net, margin |
 | Sales | Sales trend | Line/bar đổi được; tuần/ngày/tháng; compare | Date, order, net sales, AOV, UPT, return |
 | Sales | Nhu cầu theo thời gian | Heatmap ngày trong tuần × giờ | Hour/day, orders, net sales, margin |
-| Inventory | ABC/Pareto | Cột doanh thu + đường tích lũy 80/95/100% | SKU, grade, revenue share, stock, value |
+| Inventory | ABC/Pareto | Đã triển khai local: thẻ A/B/C và thanh ngang top SKU theo doanh thu hàng hóa thuần chưa VAT | API trả SKU, grade, revenue share, cumulative share, quantity sold, stock và stock value; UI desktop/mobile dùng cùng dữ liệu |
 | Inventory | Days on hand/sell-through | Thanh ngang Top/Bottom hoặc scatter | SKU, unit, ending qty, avg sold/day, days |
 | Inventory | Aging/slow moving | Cột chồng theo 0–30/31–60/61–90/>90 ngày | Lot, received date, qty, cost value |
 | Inventory | Valuation at date | Trend giá trị tồn + breakdown category | Product/lot, qty, unit cost, total, method |
@@ -260,4 +260,3 @@ nghiệm thu với dữ liệu đối chứng.
 - Desktop 1440×900 và mobile 390×844 không overflow; mobile không bắt buộc cuộn ngang bảng nghiệp vụ chính.
 - Biểu đồ có unit, tooltip số đầy đủ, empty/loading/error và bảng drill-down.
 - Accessibility chỉ được ghi đạt sau test keyboard, focus, contrast, zoom và screen reader chuyên biệt.
-

@@ -48,6 +48,8 @@ const vietnamDate = (date: Date) => {
     return `${value('year')}-${value('month')}-${value('day')}`;
 };
 
+export const vietnamDateKey = (date: Date) => vietnamDate(date);
+
 export const normalizeCashTransactionQuery = (
     input: CashTransactionQueryInput,
 ): NormalizedCashTransactionQuery => {

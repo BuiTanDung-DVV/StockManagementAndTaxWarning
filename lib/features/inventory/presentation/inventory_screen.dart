@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
@@ -28,6 +29,13 @@ class InventoryScreen extends ConsumerWidget {
     final expiringAsync = ref.watch(expiringProductsProvider);
     final slowMovingAsync = ref.watch(slowMovingProvider);
     final categoriesAsync = ref.watch(inventoryCategoriesSummaryProvider);
+    final abcPeriod = comparisonReportingDates('year', DateTime.now());
+    final abcAsync = ref.watch(
+      inventoryAbcProvider((
+        from: abcPeriod.currentFrom,
+        to: abcPeriod.currentTo,
+      )),
+    );
     final shopState = ref.watch(shopProvider);
     final warehousesAsync = shopState.isAllShops
         ? null
@@ -100,6 +108,7 @@ class InventoryScreen extends ConsumerWidget {
             ref.invalidate(expiringProductsProvider);
             ref.invalidate(slowMovingProvider);
             ref.invalidate(inventoryCategoriesSummaryProvider);
+            ref.invalidate(inventoryAbcProvider);
             if (!shopState.isAllShops) ref.invalidate(warehousesProvider);
           },
           child: SingleChildScrollView(
@@ -159,6 +168,14 @@ class InventoryScreen extends ConsumerWidget {
                     slowMoving: slowMovingAsync,
                   ),
                   const SizedBox(height: AppSpacing.lg),
+                  _InventoryAbcPanel(
+                    asyncValue: abcAsync,
+                    periodLabel: reportingCompactRangeLabel(
+                      DateTime.parse(abcPeriod.currentFrom),
+                      DateTime.parse(abcPeriod.currentTo),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
                   _CategoryDistribution(asyncValue: categoriesAsync),
                   const SizedBox(height: AppSpacing.xl),
                 ],
@@ -166,6 +183,383 @@ class InventoryScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+double _inventoryAbcNumber(dynamic value) =>
+    num.tryParse(value?.toString() ?? '0')?.toDouble() ?? 0;
+
+Color _inventoryAbcGradeColor(String grade, BuildContext context) {
+  switch (grade) {
+    case 'A':
+      return Theme.of(context).colorScheme.primary;
+    case 'B':
+      return AppColors.warning;
+    default:
+      return AppColors.info;
+  }
+}
+
+class _InventoryAbcPanel extends StatelessWidget {
+  final AsyncValue<Map<String, dynamic>> asyncValue;
+  final String periodLabel;
+
+  const _InventoryAbcPanel({
+    required this.asyncValue,
+    required this.periodLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Phân tích ABC theo doanh thu hàng hóa',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Tính trên doanh thu thuần chưa VAT sau chiết khấu và hàng trả; dùng để cân đối tồn và kế hoạch bán.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.cardAlt,
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    border: Border.all(color: colors.divider),
+                  ),
+                  child: Text(
+                    periodLabel,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: colors.divider),
+          asyncValue.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: AppShimmer(
+                child: ShimmerBox(
+                  width: double.infinity,
+                  height: 300,
+                  radius: AppRadius.control,
+                ),
+              ),
+            ),
+            error: (_, _) => const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: AppInlineError(
+                message: 'Không thể tải phân tích ABC tồn kho.',
+              ),
+            ),
+            data: (data) {
+              final grades = (data['grades'] as List?) ?? const [];
+              final items = ((data['items'] as List?) ?? const [])
+                  .whereType<Map>()
+                  .map((item) => Map<String, dynamic>.from(item))
+                  .toList();
+              final revenueItems = items
+                  .where((item) => _inventoryAbcNumber(item['revenue']) > 0)
+                  .take(8)
+                  .toList();
+
+              if (revenueItems.isEmpty) {
+                return const AppEmpty(
+                  visual: AppEmptyVisual.inventory,
+                  message: 'Chưa có doanh thu sản phẩm trong kỳ',
+                  subtitle:
+                      'Phân nhóm ABC sẽ xuất hiện khi có đơn bán không bị hủy.',
+                );
+              }
+
+              return Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth >= 760
+                            ? (constraints.maxWidth - AppSpacing.md * 2) / 3
+                            : constraints.maxWidth;
+                        return Wrap(
+                          spacing: AppSpacing.md,
+                          runSpacing: AppSpacing.sm,
+                          children: grades.whereType<Map>().map((raw) {
+                            final grade = raw['grade']?.toString() ?? 'C';
+                            return SizedBox(
+                              width: width,
+                              child: _InventoryAbcGradeCard(
+                                grade: grade,
+                                skuCount:
+                                    _inventoryAbcNumber(raw['skuCount']).toInt(),
+                                revenueShare: _inventoryAbcNumber(
+                                  raw['revenueShare'],
+                                ),
+                                stockValue: _inventoryAbcNumber(
+                                  raw['stockValue'],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Sản phẩm dẫn đầu',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        Text(
+                          'Thuần chưa VAT · tồn hiện tại',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: colors.textMuted),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (var index = 0; index < revenueItems.length; index++) ...[
+                      if (index > 0) const SizedBox(height: AppSpacing.sm),
+                      _InventoryAbcProductRow(
+                        item: revenueItems[index],
+                        maximumRevenue: _inventoryAbcNumber(
+                          revenueItems.first['revenue'],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InventoryAbcGradeCard extends StatelessWidget {
+  final String grade;
+  final int skuCount;
+  final double revenueShare;
+  final double stockValue;
+
+  const _InventoryAbcGradeCard({
+    required this.grade,
+    required this.skuCount,
+    required this.revenueShare,
+    required this.stockValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final color = _inventoryAbcGradeColor(grade, context);
+    final money = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    ).format(stockValue);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.055),
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Text(
+              grade,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$skuCount SKU · ${(revenueShare * 100).toStringAsFixed(1)}% doanh thu',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Giá trị tồn: $money',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InventoryAbcProductRow extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final double maximumRevenue;
+
+  const _InventoryAbcProductRow({
+    required this.item,
+    required this.maximumRevenue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final grade = item['grade']?.toString() ?? 'C';
+    final color = _inventoryAbcGradeColor(grade, context);
+    final revenue = _inventoryAbcNumber(item['revenue']);
+    final currentStock = _inventoryAbcNumber(item['currentStock']);
+    final quantitySold = _inventoryAbcNumber(item['quantitySold']);
+    final unit = item['unit']?.toString() ?? 'sản phẩm';
+    final progress = maximumRevenue <= 0 ? 0.0 : revenue / maximumRevenue;
+    final money = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    ).format(revenue);
+    final compact = MediaQuery.sizeOf(context).width < 680;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: colors.cardAlt.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppRadius.control),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              grade,
+              style: TextStyle(color: color, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item['name']?.toString() ?? 'Sản phẩm chưa có tên',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      money,
+                      style: AppTheme.tabularStyle(
+                        context,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0, 1),
+                    minHeight: 7,
+                    backgroundColor: colors.surface,
+                    valueColor: AlwaysStoppedAnimation(color),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  compact
+                      ? 'Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit'
+                      : '${item['sku'] ?? ''} · ${item['category'] ?? 'Chưa phân loại'} · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

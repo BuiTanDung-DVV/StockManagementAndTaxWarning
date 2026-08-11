@@ -37,6 +37,8 @@
 6. `V1.2-SYSTEM-CONFIG-MIGRATION`: tạo migration `system_configs`, thiết kế unique
    theo shop rồi loại DDL runtime.
 7. `V1.2-TAX-EXPORT`: XSD/version contract, fixture và biên bản import HTKK.
+8. `P0-SALES-DATE-BOUNDARY`: đã sửa local summary/top sản phẩm/thanh toán dùng khóa ngày nghiệp vụ thay vì `Date` UTC với cột không timezone; cần deploy và tái đối soát production ngày 28/07 trước khi đóng.
+9. `V1.2-TIMESTAMP-MIGRATION`: kiểm kê ý nghĩa lịch sử của `order_date`, `return_date`, `paid_at`; backup và chuẩn hóa sang kiểu có timezone trong migration riêng.
 
 ## 1. Nguyên tắc ưu tiên
 

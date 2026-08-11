@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/db.config';
 import {
     buildVietnamPeriodKeys,
     resolveCurrentMonthExpensePeriod,
+    vietnamDateKey,
 } from '../finance/finance-period.utils';
 import { SalesOrder, SalesOrderItem, SalesReturn, SalesReturnItem, SalesOrderPayment, SalesOrderLotDeduction } from '../sales/entities';
 import {
@@ -71,6 +72,8 @@ export class SalesService {
     
     async summary(shopId: number | number[], from?: string, to?: string) {
         const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
+        const fromKey = vietnamDateKey(fromDate);
+        const toKey = vietnamDateKey(toDate);
 
         const shopCondition = Array.isArray(shopId) ? 'o.shop_id IN (:...shopIds)' : 'o.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
@@ -78,7 +81,7 @@ export class SalesService {
             .select('COALESCE(SUM(o.total_amount), 0)', 'totalRevenue')
             .addSelect('COALESCE(SUM(o.total_cogs), 0)', 'totalCogs')
             .addSelect('COUNT(o.id)', 'orderCount')
-            .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition} AND o.order_date >= CAST(:fromKey AS date) AND o.order_date < CAST(:toKey AS date) + INTERVAL '1 day' AND o.status != 'CANCELLED'`, { ...shopParams, fromKey, toKey })
             .getRawOne();
 
         const returnShopCondition = Array.isArray(shopId)
@@ -87,10 +90,10 @@ export class SalesService {
         const returnResult = await this.returnRepo.createQueryBuilder('r')
             .innerJoin('r.order', 'returnedOrder')
             .select('COALESCE(SUM(returnedOrder.total_amount), 0)', 'returnValue')
-            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')`, {
+            .where(`${returnShopCondition} AND r.return_date >= CAST(:fromKey AS date) AND r.return_date < CAST(:toKey AS date) + INTERVAL '1 day' AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')`, {
                 ...shopParams,
-                fromDate,
-                toDate,
+                fromKey,
+                toKey,
             })
             .getRawOne();
         const returnCogsShopCondition = Array.isArray(shopId)
@@ -114,21 +117,21 @@ export class SalesService {
               ON sold.order_id = r.order_id
              AND sold.product_id = ri.product_id
             WHERE ${returnCogsShopCondition}
-              AND r.return_date >= $2
-              AND r.return_date <= $3
+              AND r.return_date >= $2::date
+              AND r.return_date < ($3::date + interval '1 day')
               AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
-        `, [shopId, fromDate, toDate]);
+        `, [shopId, fromKey, toKey]);
 
         const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
         const dateFormat = diffDays > 60 ? 'YYYY-MM' : 'YYYY-MM-DD';
 
-        const orderDateBucket = `TO_CHAR(o.order_date AT TIME ZONE 'Asia/Ho_Chi_Minh', '${dateFormat}')`;
-        const returnDateBucket = `TO_CHAR(r.return_date AT TIME ZONE 'Asia/Ho_Chi_Minh', '${dateFormat}')`;
+        const orderDateBucket = `TO_CHAR(o.order_date, '${dateFormat}')`;
+        const returnDateBucket = `TO_CHAR(r.return_date, '${dateFormat}')`;
         const daily = await this.orderRepo.createQueryBuilder('o')
             .select(orderDateBucket, 'date')
             .addSelect('COALESCE(SUM(o.total_amount), 0)', 'revenue')
             .addSelect('COUNT(o.id)', 'orderCount')
-            .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition} AND o.order_date >= CAST(:fromKey AS date) AND o.order_date < CAST(:toKey AS date) + INTERVAL '1 day' AND o.status != 'CANCELLED'`, { ...shopParams, fromKey, toKey })
             .groupBy(orderDateBucket)
             .orderBy(orderDateBucket, 'ASC')
             .getRawMany();
@@ -136,10 +139,10 @@ export class SalesService {
             .innerJoin('r.order', 'returnedOrder')
             .select(returnDateBucket, 'date')
             .addSelect('COALESCE(SUM(returnedOrder.total_amount), 0)', 'returnValue')
-            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')`, {
+            .where(`${returnShopCondition} AND r.return_date >= CAST(:fromKey AS date) AND r.return_date < CAST(:toKey AS date) + INTERVAL '1 day' AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')`, {
                 ...shopParams,
-                fromDate,
-                toDate,
+                fromKey,
+                toKey,
             })
             .groupBy(returnDateBucket)
             .getRawMany();
@@ -190,8 +193,12 @@ export class SalesService {
             grossProfit: totalRevenue - totalCogs,
             orderCount: Number(result?.orderCount || 0),
             daily: filledDaily,
-            period: { from: fromDate, to: toDate },
-            scope: 'SHOP',
+            period: {
+                from: fromKey,
+                to: toKey,
+            },
+            timezone: 'Asia/Ho_Chi_Minh',
+            scope: Array.isArray(shopId) ? 'ALL_SHOPS' : 'SHOP',
         };
     }
 
@@ -203,20 +210,26 @@ export class SalesService {
         previousTo?: string,
     ) {
         const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
+        const fromKey = vietnamDateKey(fromDate);
+        const toKey = vietnamDateKey(toDate);
 
         const isArray = Array.isArray(shopId);
         const shopCondition = isArray ? 'o.shop_id = ANY($1)' : 'o.shop_id = $1';
         const previousPeriod = previousFrom && previousTo
             ? resolveCurrentMonthExpensePeriod(previousFrom, previousTo)
             : null;
-        const previousFromDate = previousPeriod?.fromDate || null;
-        const previousToDate = previousPeriod?.toDate || null;
+        const previousFromKey = previousPeriod
+            ? vietnamDateKey(previousPeriod.fromDate)
+            : null;
+        const previousToKey = previousPeriod
+            ? vietnamDateKey(previousPeriod.toDate)
+            : null;
         const params: any[] = [
             shopId,
-            fromDate,
-            toDate,
-            previousFromDate,
-            previousToDate,
+            fromKey,
+            toKey,
+            previousFromKey,
+            previousToKey,
         ];
         const soldNetValueSql = buildAllocatedMerchandiseRevenueSql(
             'oi.subtotal',
@@ -264,8 +277,8 @@ export class SalesService {
                 JOIN sales_orders o ON oi.order_id = o.id
                 JOIN products p ON oi.product_id = p.id
                 WHERE ${shopCondition}
-                  AND o.order_date >= $2
-                  AND o.order_date <= $3
+                  AND o.order_date >= $2::date
+                  AND o.order_date < ($3::date + interval '1 day')
                   AND o.status != 'CANCELLED'
                 GROUP BY p.id, p.name, p.unit
             ), returned AS (
@@ -281,8 +294,8 @@ export class SalesService {
                   ON sold_cost.order_id = r.order_id
                   AND sold_cost.product_id = ri.product_id
                 WHERE ${isArray ? 'r.shop_id = ANY($1)' : 'r.shop_id = $1'}
-                  AND r.return_date >= $2
-                  AND r.return_date <= $3
+                  AND r.return_date >= $2::date
+                  AND r.return_date < ($3::date + interval '1 day')
                   AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
                 GROUP BY ri.product_id
             ), previous_sold AS (
@@ -293,10 +306,10 @@ export class SalesService {
                 JOIN sales_orders o ON oi.order_id = o.id
                 JOIN products p ON oi.product_id = p.id
                 WHERE ${shopCondition}
-                  AND $4::timestamp IS NOT NULL
-                  AND $5::timestamp IS NOT NULL
-                  AND o.order_date >= $4
-                  AND o.order_date <= $5
+                  AND $4::date IS NOT NULL
+                  AND $5::date IS NOT NULL
+                  AND o.order_date >= $4::date
+                  AND o.order_date < ($5::date + interval '1 day')
                   AND o.status != 'CANCELLED'
                 GROUP BY p.id
             ), previous_returned AS (
@@ -307,10 +320,10 @@ export class SalesService {
                 JOIN sales_returns r ON ri.return_id = r.id
                 JOIN sales_orders returned_order ON returned_order.id = r.order_id
                 WHERE ${isArray ? 'r.shop_id = ANY($1)' : 'r.shop_id = $1'}
-                  AND $4::timestamp IS NOT NULL
-                  AND $5::timestamp IS NOT NULL
-                  AND r.return_date >= $4
-                  AND r.return_date <= $5
+                  AND $4::date IS NOT NULL
+                  AND $5::date IS NOT NULL
+                  AND r.return_date >= $4::date
+                  AND r.return_date < ($5::date + interval '1 day')
                   AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
                 GROUP BY ri.product_id
             ), previous_net AS (
@@ -362,6 +375,8 @@ export class SalesService {
 
     async paymentMethodSummary(shopId: number | number[], from?: string, to?: string) {
         const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
+        const fromKey = vietnamDateKey(fromDate);
+        const toKey = vietnamDateKey(toDate);
 
         const shopCondition = Array.isArray(shopId) ? 'o.shop_id IN (:...shopIds)' : 'o.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
@@ -370,7 +385,7 @@ export class SalesService {
             .select('p.method', 'method')
             .addSelect('COUNT(p.id)', 'count')
             .addSelect('COALESCE(SUM(p.amount), 0)', 'total')
-            .where(`${shopCondition} AND p.paid_at >= :fromDate AND p.paid_at <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition} AND p.paid_at >= CAST(:fromKey AS date) AND p.paid_at < CAST(:toKey AS date) + INTERVAL '1 day' AND o.status != 'CANCELLED'`, { ...shopParams, fromKey, toKey })
             .groupBy('p.method')
             .getRawMany();
 
