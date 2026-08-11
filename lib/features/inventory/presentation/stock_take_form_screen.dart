@@ -154,9 +154,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final warehousesAsync = ref.watch(warehousesProvider);
-    final productsAsync = ref.watch(
-      productListProvider((page: 1, search: null, tag: null)),
-    );
+    final productsAsync = ref.watch(productOptionsProvider);
     final stockAsync = ref.watch(stockProvider(null));
 
     // Map stock for dynamic filling

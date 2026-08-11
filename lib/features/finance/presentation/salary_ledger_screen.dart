@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
@@ -7,13 +8,22 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../providers/finance_provider.dart';
 
 /// Salary Ledger — shows SALARY-category cash transactions.
 /// Employee management was removed; this screen now tracks salary payments
 /// through the cash transaction system.
-class SalaryLedgerScreen extends ConsumerWidget {
+class SalaryLedgerScreen extends ConsumerStatefulWidget {
   const SalaryLedgerScreen({super.key});
+
+  @override
+  ConsumerState<SalaryLedgerScreen> createState() => _SalaryLedgerScreenState();
+}
+
+class _SalaryLedgerScreenState extends ConsumerState<SalaryLedgerScreen> {
+  int _page = 1;
 
   String _fmt(num v) => NumberFormat.currency(
     locale: 'vi_VN',
@@ -22,23 +32,34 @@ class SalaryLedgerScreen extends ConsumerWidget {
   ).format(v);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final period = currentMonthReportingPeriod(DateTime.now());
     final txAsync = ref.watch(
       transactionsProvider((
-        page: 1,
-        limit: 100,
+        page: _page,
+        limit: 20,
         type: 'EXPENSE',
         category: 'SALARY',
         from: period.from,
         to: period.to,
       )),
     );
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sổ lương'),
-        actions: [featureGuideButton(context, 'salary_ledger')],
+        actions: [
+          featureGuideButton(context, 'salary_ledger'),
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Thêm khoản lương',
+              assetPath: AppAssets.add,
+              heroTag: 'salary-add-compact',
+              onPressed: () => _showAddDialog(context, ref),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: txAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -47,6 +68,8 @@ class SalaryLedgerScreen extends ConsumerWidget {
           final items = (data['items'] as List?) ?? [];
           final totalSalary = asNum(data['filteredAmountTotal']);
           final totalTransactions = (data['total'] as num?)?.toInt() ?? 0;
+          final currentPage = paginationValue(data, 'page', fallback: _page);
+          final totalPages = paginationValue(data, 'totalPages', fallback: 1);
 
           if (items.isEmpty) {
             return AppEmpty(
@@ -190,18 +213,27 @@ class SalaryLedgerScreen extends ConsumerWidget {
                     ),
                   );
                 }),
+                AppPaginationBar(
+                  currentPage: currentPage,
+                  totalPages: totalPages,
+                  totalItems: totalTransactions,
+                  itemLabel: 'giao dịch lương',
+                  onPageChanged: (page) => setState(() => _page = page),
+                ),
               ],
             ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context, ref),
-        icon: const Icon(Icons.payments),
-        label: const Text('Thêm'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showAddDialog(context, ref),
+              icon: const Icon(Icons.payments),
+              label: const Text('Thêm'),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
     );
   }
 

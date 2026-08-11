@@ -31,15 +31,15 @@ export const createCashTransaction = async (req: Request, res: Response) => {
         req.body.createdBy = (req as any).user?.sub;
         res.json({ success: true, data: await financeService.createCashTransaction((req as any).shopId, req.body) }); 
     }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(String(e.message).startsWith('Validation:') ? 400 : 500).json({ success: false, message: e.message }); }
 };
 export const updateCashTransaction = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.updateCashTransaction((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(e.message === 'Cash transaction not found' ? 404 : 500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e.message === 'Cash transaction not found' ? 404 : (String(e.message).startsWith('Validation:') ? 400 : 500)).json({ success: false, message: e.message }); }
 };
 export const deleteCashTransaction = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.deleteCashTransaction((req as any).shopId, +req.params.id) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(String(e.message).startsWith('Validation:') ? 400 : 500).json({ success: false, message: e.message }); }
 };
 const getShopId = (req: any) => req.isAllShops ? req.shopIds : req.shopId;
 
@@ -87,11 +87,23 @@ export const getForecasts = async (req: Request, res: Response) => {
 };
 export const createForecast = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.createForecast((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : 500).json({
+            success: false,
+            message: validation ? String(e.message).replace('Validation: ', '') : e.message,
+        });
+    }
 };
 export const updateForecast = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.updateForecast((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : e.message === 'Not found' ? 404 : 500).json({
+            success: false,
+            message: validation ? String(e.message).replace('Validation: ', '') : e.message,
+        });
+    }
 };
 export const deleteForecast = async (req: Request, res: Response) => {
     try { await financeService.deleteForecast((req as any).shopId, +req.params.id); res.json({ success: true, data: null }); }
@@ -104,11 +116,11 @@ export const getBudgetPlans = async (req: Request, res: Response) => {
 };
 export const createBudgetPlan = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.createBudgetPlan((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(String(e.message).startsWith('Validation:') ? 400 : 500).json({ success: false, message: e.message }); }
 };
 export const updateBudgetPlan = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.updateBudgetPlan((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e.message === 'Not found' ? 404 : (String(e.message).startsWith('Validation:') ? 400 : 500)).json({ success: false, message: e.message }); }
 };
 export const deleteBudgetPlan = async (req: Request, res: Response) => {
     try { await financeService.deleteBudgetPlan((req as any).shopId, +req.params.id); res.json({ success: true, data: null }); }
@@ -130,11 +142,23 @@ export const getInvoiceById = async (req: Request, res: Response) => {
 };
 export const createInvoice = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.createInvoice((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : 500).json({
+            success: false,
+            message: validation ? String(e.message).replace('Validation: ', '') : e.message,
+        });
+    }
 };
 export const updateInvoice = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.updateInvoice((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(e.message === 'Invoice not found' ? 404 : 500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : e.message === 'Invoice not found' ? 404 : 500).json({
+            success: false,
+            message: validation ? String(e.message).replace('Validation: ', '') : e.message,
+        });
+    }
 };
 export const deleteInvoice = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.deleteInvoice((req as any).shopId, +req.params.id) }); }

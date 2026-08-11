@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
+import '../../../core/widgets/chart_widgets.dart';
 import '../providers/finance_provider.dart';
 
 class CashflowForecastScreen extends ConsumerWidget {
@@ -23,6 +26,7 @@ class CashflowForecastScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final forecastAsync = ref.watch(forecastsProvider);
     final budgetAsync = ref.watch(budgetPlansProvider);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -41,7 +45,17 @@ class CashflowForecastScreen extends ConsumerWidget {
         ),
         elevation: 0,
         centerTitle: true,
-        actions: [featureGuideButton(context, 'cashflow_forecast')],
+        actions: [
+          featureGuideButton(context, 'cashflow_forecast'),
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Thêm mới',
+              assetPath: AppAssets.add,
+              heroTag: 'cashflow-add-compact',
+              onPressed: () => _showCreateMenu(context, ref),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: forecastAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -88,9 +102,10 @@ class CashflowForecastScreen extends ConsumerWidget {
                         ),
                       ),
 
-                      // Beautiful trend chart
                       Container(
-                        height: 180,
+                        height: MediaQuery.sizeOf(context).width < 600
+                            ? 300
+                            : 330,
                         margin: const EdgeInsets.only(bottom: 20),
                         padding: const EdgeInsets.only(
                           left: 10,
@@ -113,13 +128,41 @@ class CashflowForecastScreen extends ConsumerWidget {
                                 left: 6,
                                 bottom: 12,
                               ),
-                              child: Text(
-                                'Xu hướng biến động dòng tiền',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: c.textSecondary,
-                                ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Dòng tiền thuần dự kiến',
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: c.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Thu dự kiến − chi dự kiến theo ngày',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: c.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    'Đơn vị: đồng',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: c.textMuted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             Expanded(
@@ -144,31 +187,19 @@ class CashflowForecastScreen extends ConsumerWidget {
                                     leftTitles: AxisTitles(
                                       sideTitles: SideTitles(
                                         showTitles: true,
-                                        reservedSize: 42,
+                                        reservedSize: 86,
                                         getTitlesWidget: (value, meta) {
                                           if (value == meta.max ||
                                               value == meta.min) {
                                             return const SizedBox.shrink();
                                           }
-                                          final isNeg = value < 0;
-                                          final absVal = value.abs();
-                                          String label = '';
-                                          if (absVal >= 1000000) {
-                                            label =
-                                                '${isNeg ? '-' : ''}${(absVal / 1000000).toStringAsFixed(0)}Tr';
-                                          } else if (absVal >= 1000) {
-                                            label =
-                                                '${isNeg ? '-' : ''}${(absVal / 1000).toStringAsFixed(0)}K';
-                                          } else {
-                                            label =
-                                                '${isNeg ? '-' : ''}${absVal.toStringAsFixed(0)}';
-                                          }
                                           return Text(
-                                            label,
-                                            style: TextStyle(
+                                            compactVietnameseCurrency(value),
+                                            style: AppTheme.tabularStyle(
+                                              context,
                                               color: c.textMuted,
                                               fontSize: 9,
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                             textAlign: TextAlign.right,
                                           );
@@ -234,10 +265,6 @@ class CashflowForecastScreen extends ConsumerWidget {
                                         return touchedSpots.map((spot) {
                                           final f = forecasts[spot.x.toInt()];
                                           final balance = spot.y;
-                                          final formatted =
-                                              NumberFormat.compact(
-                                                locale: 'vi_VN',
-                                              ).format(balance);
                                           final dateStr =
                                               f['forecastDate']
                                                   ?.toString()
@@ -245,7 +272,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                                                   .first ??
                                               '';
                                           return LineTooltipItem(
-                                            '$dateStr\n$formatted',
+                                            '$dateStr\n${_fmt(balance)}',
                                             GoogleFonts.manrope(
                                               color: c.textPrimary,
                                               fontWeight: FontWeight.bold,
@@ -389,20 +416,35 @@ class CashflowForecastScreen extends ConsumerWidget {
                                           ),
                                         ],
                                       ),
-                                      Text(
-                                        _fmt(balance),
-                                        style: GoogleFonts.manrope(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 15,
-                                          color: isPositive
-                                              ? AppColors.success
-                                              : AppColors.danger,
-                                        ),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            'Thuần dự kiến',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: c.textMuted,
+                                            ),
+                                          ),
+                                          Text(
+                                            _fmt(balance),
+                                            style: GoogleFonts.manrope(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 15,
+                                              color: isPositive
+                                                  ? AppColors.success
+                                                  : AppColors.danger,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 10),
-                                  Row(
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 8,
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.symmetric(
@@ -426,7 +468,6 @@ class CashflowForecastScreen extends ConsumerWidget {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 10,
@@ -496,6 +537,15 @@ class CashflowForecastScreen extends ConsumerWidget {
                             ? (actualIncome / plannedIncome)
                             : 0.0;
                         final isFullyAchieved = actualIncome >= plannedIncome;
+                        final startDate = DateTime.tryParse(
+                          b['startDate']?.toString() ?? '',
+                        );
+                        final endDate = DateTime.tryParse(
+                          b['endDate']?.toString() ?? '',
+                        );
+                        final dateRange = startDate != null && endDate != null
+                            ? '${DateFormat('dd/MM/yyyy').format(startDate)} – ${DateFormat('dd/MM/yyyy').format(endDate)}'
+                            : 'Chưa xác định khoảng thời gian';
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -535,15 +585,29 @@ class CashflowForecastScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: Text(
-                                      b['name'] ?? '',
-                                      style: GoogleFonts.manrope(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: c.textPrimary,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          b['name'] ?? '',
+                                          style: GoogleFonts.manrope(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: c.textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          dateRange,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: c.textSecondary,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -575,7 +639,6 @@ class CashflowForecastScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 8),
 
-                              // Rounded visual budget progress track
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
                                 child: Container(
@@ -583,24 +646,23 @@ class CashflowForecastScreen extends ConsumerWidget {
                                   color: c.surface,
                                   child: Align(
                                     alignment: Alignment.centerLeft,
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      width:
-                                          MediaQuery.of(context).size.width *
-                                          0.8 *
-                                          pct.clamp(0, 1).toDouble(),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(6),
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            theme.colorScheme.primary,
-                                            isFullyAchieved
-                                                ? AppColors.success
-                                                : theme.colorScheme.primary
-                                                      .withValues(alpha: 0.7),
-                                          ],
+                                    child: FractionallySizedBox(
+                                      widthFactor: pct.clamp(0, 1).toDouble(),
+                                      heightFactor: 1,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              theme.colorScheme.primary,
+                                              isFullyAchieved
+                                                  ? AppColors.success
+                                                  : theme.colorScheme.primary
+                                                        .withValues(alpha: 0.7),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -645,15 +707,189 @@ class CashflowForecastScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddForecastDialog(context, ref),
-        icon: const Icon(Icons.trending_up_rounded),
-        label: Text(
-          'Thêm dự báo',
-          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showCreateMenu(context, ref),
+              icon: const Icon(Icons.add_rounded),
+              label: Text(
+                'Thêm mới',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
+    );
+  }
+
+  void _showCreateMenu(BuildContext context, WidgetRef ref) {
+    final c = AppThemeColors.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: c.card,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Dự báo dòng tiền'),
+                subtitle: const Text('Ghi khoản thu và chi dự kiến theo ngày'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showAddForecastDialog(context, ref);
+                },
+              ),
+              ListTile(
+                title: const Text('Kế hoạch ngân sách'),
+                subtitle: const Text(
+                  'Đặt mục tiêu thu, hạn mức chi và khoảng theo dõi',
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showAddBudgetDialog(context, ref);
+                },
+              ),
+            ],
+          ),
         ),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
+      ),
+    );
+  }
+
+  void _showAddBudgetDialog(BuildContext context, WidgetRef ref) {
+    final nameC = TextEditingController();
+    final incomeC = TextEditingController();
+    final expenseC = TextEditingController();
+    var startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
+    var endDate = DateTime(DateTime.now().year, DateTime.now().month + 1, 0);
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            'Thêm kế hoạch ngân sách',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameC,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên kế hoạch',
+                    hintText: 'Ví dụ: Ngân sách tháng 8',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _BudgetDateField(
+                        label: 'Từ ngày',
+                        value: startDate,
+                        onTap: () async {
+                          final value = await showDatePicker(
+                            context: dialogContext,
+                            initialDate: startDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (value != null) {
+                            setDialogState(() => startDate = value);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _BudgetDateField(
+                        label: 'Đến ngày',
+                        value: endDate,
+                        onTap: () async {
+                          final value = await showDatePicker(
+                            context: dialogContext,
+                            initialDate: endDate,
+                            firstDate: startDate,
+                            lastDate: DateTime(2100),
+                          );
+                          if (value != null) {
+                            setDialogState(() => endDate = value);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: incomeC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Mục tiêu thu (đồng)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: expenseC,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Hạn mức chi (đồng)',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Hủy'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameC.text.trim();
+                final plannedIncome = double.tryParse(incomeC.text);
+                final plannedExpense = double.tryParse(expenseC.text);
+                if (name.isEmpty ||
+                    plannedIncome == null ||
+                    plannedIncome < 0 ||
+                    plannedExpense == null ||
+                    plannedExpense < 0 ||
+                    startDate.isAfter(endDate)) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('Vui lòng kiểm tra tên, ngày và số tiền'),
+                    ),
+                  );
+                  return;
+                }
+                try {
+                  await ref.read(financeRepoProvider).createBudgetPlan({
+                    'name': name,
+                    'period': 'CUSTOM',
+                    'startDate': startDate.toIso8601String().split('T').first,
+                    'endDate': endDate.toIso8601String().split('T').first,
+                    'plannedIncome': plannedIncome,
+                    'plannedExpense': plannedExpense,
+                  });
+                  ref.invalidate(budgetPlansProvider);
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                } catch (error) {
+                  if (dialogContext.mounted) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(content: Text('Không thể lưu: $error')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Lưu kế hoạch'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -824,6 +1060,30 @@ class CashflowForecastScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BudgetDateField extends StatelessWidget {
+  const _BudgetDateField({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final DateTime value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: label),
+        child: Text(DateFormat('dd/MM/yyyy').format(value)),
       ),
     );
   }

@@ -80,9 +80,7 @@ class _PurchaseOrderFormScreenState
 
   void _nextStep() {
     if (_currentStep == 0) {
-      final suppliersAsync = ref.read(
-        supplierListProvider((page: 1, search: null)),
-      );
+      final suppliersAsync = ref.read(supplierOptionsProvider);
       final hasSuppliers =
           ((suppliersAsync.value?['items'] as List?)?.isNotEmpty ?? false);
       if (_supplierId == null && hasSuppliers) {
@@ -168,12 +166,8 @@ class _PurchaseOrderFormScreenState
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final suppliersAsync = ref.watch(
-      supplierListProvider((page: 1, search: null)),
-    );
-    final productsAsync = ref.watch(
-      productListProvider((page: 1, search: null, tag: null)),
-    );
+    final suppliersAsync = ref.watch(supplierOptionsProvider);
+    final productsAsync = ref.watch(productOptionsProvider);
     final warehousesAsync = ref.watch(warehousesProvider);
 
     return Scaffold(

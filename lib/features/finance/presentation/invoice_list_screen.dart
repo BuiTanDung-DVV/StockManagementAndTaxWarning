@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../providers/finance_provider.dart';
 
 class InvoiceListScreen extends ConsumerStatefulWidget {
@@ -17,6 +21,9 @@ class InvoiceListScreen extends ConsumerStatefulWidget {
 }
 
 class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
+  int _page = 1;
+  String? _type;
+
   String _fmt(num v) => NumberFormat.currency(
     locale: 'vi_VN',
     symbol: '₫',
@@ -26,7 +33,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   @override
   Widget build(BuildContext context) {
     final ref = this.ref;
-    final invAsync = ref.watch(invoiceListProvider((page: 1, type: null)));
+    final invAsync = ref.watch(invoiceListProvider((page: _page, type: _type)));
     final now = DateTime.now();
     final from = DateTime(
       now.year,
@@ -39,18 +46,45 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
     );
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
       backgroundColor: c.bg,
+      floatingActionButton: compactLayout
+          ? null
+          : AppPrimaryFloatingAction(
+              label: 'Thêm hóa đơn',
+              assetPath: AppAssets.add,
+              heroTag: 'invoice-add-action',
+              onPressed: () => _showAddDialog(context, ref),
+            ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       appBar: AppBar(
         title: const Text('Hóa đơn'),
-        actions: [featureGuideButton(context, 'invoices')],
+        actions: [
+          featureGuideButton(context, 'invoices'),
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Thêm hóa đơn',
+              assetPath: AppAssets.add,
+              heroTag: 'invoice-add-action-compact',
+              onPressed: () => _showAddDialog(context, ref),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: invAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
         data: (data) {
           final items = (data['items'] as List?) ?? [];
+          final currentPage = paginationValue(data, 'page', fallback: _page);
+          final totalPages = paginationValue(data, 'totalPages', fallback: 1);
+          final totalItems = paginationValue(
+            data,
+            'total',
+            fallback: items.length,
+          );
 
           return SingleChildScrollView(
             padding: const EdgeInsets.only(top: 16, bottom: 100),
@@ -117,38 +151,31 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
+                      child: AppFillGrid(
+                        minItemWidth: 180,
+                        maxColumns: 3,
+                        itemHeight: 92,
                         children: [
-                          Expanded(
-                            child: _buildMetricItem(
-                              'VAT đầu vào',
-                              _fmt(vatIn),
-                              AppColors.success,
-                              c,
-                              theme,
-                            ),
+                          _buildMetricItem(
+                            'VAT đầu vào',
+                            _fmt(vatIn),
+                            AppColors.success,
+                            c,
+                            theme,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildMetricItem(
-                              'VAT đầu ra',
-                              _fmt(vatOut),
-                              AppColors.danger,
-                              c,
-                              theme,
-                            ),
+                          _buildMetricItem(
+                            'VAT đầu ra',
+                            _fmt(vatOut),
+                            AppColors.danger,
+                            c,
+                            theme,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildMetricItem(
-                              'Phải nộp',
-                              _fmt(vatOwed),
-                              vatOwed > 0
-                                  ? AppColors.danger
-                                  : AppColors.success,
-                              c,
-                              theme,
-                            ),
+                          _buildMetricItem(
+                            'Phải nộp',
+                            _fmt(vatOwed),
+                            vatOwed > 0 ? AppColors.danger : AppColors.success,
+                            c,
+                            theme,
                           ),
                         ],
                       ),
@@ -173,11 +200,34 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                         ),
                       ),
                       Text(
-                        '${items.length} bản ghi',
+                        '$totalItems bản ghi',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: c.textMuted,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final option in const <(String?, String)>[
+                        (null, 'Tất cả'),
+                        ('IN', 'Đầu vào'),
+                        ('OUT', 'Đầu ra'),
+                      ])
+                        ChoiceChip(
+                          label: Text(option.$2),
+                          selected: _type == option.$1,
+                          onSelected: (_) => setState(() {
+                            _type = option.$1;
+                            _page = 1;
+                          }),
+                        ),
                     ],
                   ),
                 ),
@@ -215,136 +265,26 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                       separatorBuilder: (_, _) =>
                           Divider(height: 1, color: c.divider),
                       itemBuilder: (_, i) {
-                        final inv = items[i];
-                        final isOut = inv['invoiceType'] == 'OUT';
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color:
-                                      (isOut
-                                              ? AppColors.danger
-                                              : AppColors.success)
-                                          .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  isOut
-                                      ? Icons.arrow_upward
-                                      : Icons.arrow_downward,
-                                  color: isOut
-                                      ? AppColors.danger
-                                      : AppColors.success,
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      inv['invoiceNumber'] ?? 'Chưa cấp số',
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: c.textPrimary,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      inv['partnerName'] ?? '',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(color: c.textSecondary),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    _fmt(asNum(inv['totalAmount'])),
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: c.textPrimary,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'VAT: ${_fmt(asNum(inv['taxAmount']))}',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: c.textMuted,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    inv['invoiceDate']
-                                            ?.toString()
-                                            .split('T')
-                                            .first ??
-                                        '',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: c.textMuted,
-                                    ),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.edit_outlined,
-                                          color: theme.colorScheme.primary,
-                                          size: 20,
-                                        ),
-                                        onPressed: () =>
-                                            _showEditDialog(context, ref, inv),
-                                        tooltip: 'Sửa hóa đơn',
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.delete_outline,
-                                          color: Colors.redAccent,
-                                          size: 20,
-                                        ),
-                                        onPressed: () => _confirmDelete(
-                                          context,
-                                          ref,
-                                          inv['id'],
-                                        ),
-                                        tooltip: 'Xóa hóa đơn',
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                        final inv = Map<String, dynamic>.from(items[i] as Map);
+                        return _InvoiceTile(
+                          invoice: inv,
+                          formatter: _fmt,
+                          onEdit: () => _showEditDialog(context, ref, inv),
+                          onDelete: () =>
+                              _confirmDelete(context, ref, inv['id']),
                         );
                       },
+                    ),
+                  ),
+                if (items.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: AppPaginationBar(
+                      currentPage: currentPage,
+                      totalPages: totalPages,
+                      totalItems: totalItems,
+                      itemLabel: 'hóa đơn',
+                      onPageChanged: (page) => setState(() => _page = page),
                     ),
                   ),
               ],
@@ -596,5 +536,206 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
         }
       }
     });
+  }
+}
+
+class _InvoiceTile extends StatelessWidget {
+  final Map<String, dynamic> invoice;
+  final String Function(num value) formatter;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _InvoiceTile({
+    required this.invoice,
+    required this.formatter,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    final isOut = invoice['invoiceType'] == 'OUT';
+    final accent = isOut ? AppColors.danger : AppColors.success;
+    final number = invoice['invoiceNumber']?.toString().trim();
+    final partner = invoice['partnerName']?.toString().trim();
+    final date = invoice['invoiceDate']?.toString().split('T').first ?? '';
+    final total = asNum(invoice['totalAmount']);
+    final tax = asNum(invoice['taxAmount']);
+
+    Widget menu() => PopupMenuButton<String>(
+      tooltip: 'Thao tác hóa đơn',
+      onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa')),
+        PopupMenuItem(value: 'delete', child: Text('Xóa hóa đơn')),
+      ],
+    );
+
+    Widget typeBadge() => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        isOut ? 'Đầu ra' : 'Đầu vào',
+        style: TextStyle(
+          color: accent,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 620;
+        if (compact) {
+          return Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 14),
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: accent, width: 4)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    typeBadge(),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        number?.isNotEmpty == true ? number! : 'Chưa cấp số',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    menu(),
+                  ],
+                ),
+                Text(
+                  partner?.isNotEmpty == true ? partner! : 'Chưa có đối tác',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        date,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.textMuted,
+                        ),
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          formatter(total),
+                          style: AppTheme.tabularStyle(
+                            context,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'VAT ${formatter(tax)}',
+                          style: AppTheme.tabularStyle(
+                            context,
+                            fontSize: 10,
+                            color: colors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              typeBadge(),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      number?.isNotEmpty == true ? number! : 'Chưa cấp số',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      partner?.isNotEmpty == true
+                          ? partner!
+                          : 'Chưa có đối tác',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      formatter(total),
+                      style: AppTheme.tabularStyle(
+                        context,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'VAT ${formatter(tax)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+              SizedBox(
+                width: 92,
+                child: Text(
+                  date,
+                  textAlign: TextAlign.right,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.textMuted,
+                  ),
+                ),
+              ),
+              menu(),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

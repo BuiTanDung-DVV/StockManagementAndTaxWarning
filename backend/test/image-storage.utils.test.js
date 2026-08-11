@@ -8,6 +8,8 @@ const {
   MAX_PRODUCT_IMAGE_BYTES,
   isOwnedProductImageKey,
   isOwnedShopPaymentQrKey,
+  isOwnedDebtEvidenceImageKey,
+  debtEvidenceImageKeyFromPublicUrl,
   productImageKeyFromPublicUrl,
   shopPaymentQrKeyFromPublicUrl,
   validateProductImageUpload,
@@ -99,6 +101,20 @@ test('payment QR keys are isolated by shop', () => {
   assert.equal(isOwnedShopPaymentQrKey(13, key), false);
   assert.equal(
     shopPaymentQrKeyFromPublicUrl(
+      12,
+      `https://res.cloudinary.com/demo/image/upload/v123/${key}.webp`,
+      'demo',
+    ),
+    key,
+  );
+});
+
+test('debt evidence image keys are isolated by shop', () => {
+  const key = 'smartstock/shops/12/debt-evidence/receipt';
+  assert.equal(isOwnedDebtEvidenceImageKey(12, key), true);
+  assert.equal(isOwnedDebtEvidenceImageKey(13, key), false);
+  assert.equal(
+    debtEvidenceImageKeyFromPublicUrl(
       12,
       `https://res.cloudinary.com/demo/image/upload/v123/${key}.webp`,
       'demo',

@@ -211,3 +211,13 @@ test('auth migration requires explicit OTP reset confirmation and is idempotent'
   assert.match(source, /if \(before\.ready\)/);
   assert.match(source, /không chạy lại migration/);
 });
+
+test('login shop context includes display identity for immediate selection', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'services', 'auth.service.ts'),
+    'utf8',
+  );
+
+  assert.match(source, /shopName:\s*shop\?\.shopName/);
+  assert.match(source, /shopCode:\s*shop\?\.shopCode/);
+});

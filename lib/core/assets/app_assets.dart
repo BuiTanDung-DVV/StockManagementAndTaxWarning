@@ -20,6 +20,7 @@ abstract final class AppAssets {
   static const String qrPayment = 'assets/icon/qr_payment_icon.svg';
   static const String help = 'assets/icon/help_icon.svg';
   static const String add = 'assets/icon/add_icon.svg';
+  static const String edit = 'assets/icon/edit_icon.svg';
   static const String search = 'assets/icon/search_icon.svg';
   static const String emptyGeneric = 'assets/icon/empty_generic.svg';
   static const String emptyInventory = 'assets/icon/empty_inventory.svg';

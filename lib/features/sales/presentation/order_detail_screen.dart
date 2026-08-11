@@ -1030,7 +1030,6 @@ void _showReturnDialog(
   final c = AppThemeColors.of(context);
   final theme = Theme.of(context);
   final amountCtrl = TextEditingController(text: maxRefund.toStringAsFixed(0));
-  String selectedMethod = 'CASH';
   final reasonCtrl = TextEditingController();
   String? errorMessage;
 
@@ -1085,7 +1084,7 @@ void _showReturnDialog(
 
             // Amount field
             Text(
-              'Số tiền hoàn trả cho khách lẻ (VNĐ)',
+              'Số tiền hoàn theo các khoản đã thanh toán (VNĐ)',
               style: GoogleFonts.manrope(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -1095,6 +1094,7 @@ void _showReturnDialog(
             const SizedBox(height: 6),
             TextField(
               controller: amountCtrl,
+              readOnly: true,
               keyboardType: TextInputType.number,
               style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
               decoration: InputDecoration(
@@ -1129,34 +1129,13 @@ void _showReturnDialog(
                 ),
               ),
 
-            // Payment method
             Text(
-              'Phương thức trả tiền',
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
+              'Hệ thống hoàn đúng từng kênh tiền mặt, chuyển khoản, QR hoặc thẻ đã ghi nhận trên đơn.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                height: 1.4,
+                color: c.textSecondary,
               ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                _MethodChip(
-                  'CASH',
-                  'Tiền mặt',
-                  Icons.money_rounded,
-                  selectedMethod,
-                  (v) => setState(() => selectedMethod = v),
-                ),
-                _MethodChip(
-                  'TRANSFER',
-                  'Chuyển khoản',
-                  Icons.account_balance_rounded,
-                  selectedMethod,
-                  (v) => setState(() => selectedMethod = v),
-                ),
-              ],
             ),
             const SizedBox(height: 16),
 
@@ -1256,7 +1235,6 @@ void _showReturnDialog(
                             .read(salesRepoProvider)
                             .createReturn(orderId, {
                               'refundAmount': amount,
-                              'refundMethod': selectedMethod,
                               'reason': reasonCtrl.text.trim(),
                               'items': returnItems,
                             });

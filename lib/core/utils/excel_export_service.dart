@@ -60,6 +60,62 @@ class ExcelExportService {
     );
   }
 
+  static Future<bool> exportDebtAgingToExcel(
+    Map<String, dynamic> report, {
+    DateTime? exportedAt,
+  }) {
+    final exportTime = exportedAt ?? DateTime.now();
+    return _downloadFile(
+      buildDebtAgingCsv(report, exportedAt: exportTime),
+      'Bao_Cao_Tuoi_No_${DateFormat('yyyyMMdd').format(exportTime)}.csv',
+    );
+  }
+
+  static String buildDebtAgingCsv(
+    Map<String, dynamic> report, {
+    DateTime? exportedAt,
+  }) {
+    final exportTime = exportedAt ?? DateTime.now();
+    final buckets = Map<String, dynamic>.from(
+      report['buckets'] as Map? ?? const {},
+    );
+    final customers = (report['customers'] as List?) ?? const [];
+    num amount(String key) => num.tryParse(buckets[key]?.toString() ?? '') ?? 0;
+
+    final buffer = StringBuffer('\uFEFF');
+    buffer.writeln('BÁO CÁO PHÂN TÍCH TUỔI NỢ KHÁCH HÀNG - SMARTSTOCK');
+    buffer.writeln(
+      'Ngày xuất: ${DateFormat('dd/MM/yyyy HH:mm').format(exportTime)}',
+    );
+    buffer.writeln(
+      'Ngày đối chiếu: ${_csvCell(report['asOf']?.toString() ?? '')}',
+    );
+    buffer.writeln();
+    buffer.writeln('NHÓM NỢ,SỐ TIỀN (VNĐ)');
+    buffer.writeln('${_csvCell('Chưa đến hạn')},${amount('current')}');
+    buffer.writeln('${_csvCell('Quá hạn 1-30 ngày')},${amount('past30')}');
+    buffer.writeln('${_csvCell('Quá hạn 31-60 ngày')},${amount('past60')}');
+    buffer.writeln('${_csvCell('Quá hạn trên 60 ngày')},${amount('past90')}');
+    buffer.writeln('${_csvCell('Tổng dư nợ')},${report['totalDebt'] ?? 0}');
+    buffer.writeln();
+    buffer.writeln(
+      'KHÁCH HÀNG,TỔNG DƯ NỢ (VNĐ),CHƯA ĐẾN HẠN,QUÁ HẠN 1-30,QUÁ HẠN 31-60,QUÁ HẠN TRÊN 60,SỐ NGÀY QUÁ HẠN TỐI ĐA,LẦN TRẢ GẦN NHẤT',
+    );
+    for (final raw in customers) {
+      final item = Map<String, dynamic>.from(raw as Map);
+      final name = _safeSpreadsheetText(
+        item['customerName']?.toString() ?? 'Khách hàng',
+      );
+      buffer.writeln(
+        '${_csvCell(name)},${item['total'] ?? 0},${item['current'] ?? 0},'
+        '${item['past30'] ?? 0},${item['past60'] ?? 0},${item['past90'] ?? 0},'
+        '${item['overdueDays'] ?? 0},${_csvCell(item['lastPaymentDate']?.toString() ?? '')}',
+      );
+    }
+
+    return buffer.toString();
+  }
+
   /// Builds a deterministic, Excel-compatible CSV for the receivables ledger.
   ///
   /// Kept separate from the browser download so field escaping and control

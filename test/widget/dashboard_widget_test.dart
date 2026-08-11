@@ -15,10 +15,15 @@ void main() {
   testWidgets('DashboardScreen renders empty shop state without crashing', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     // Wrap with ProviderScope to allow riverpod tests
     await tester.pumpWidget(const ProviderScope(child: _DashboardTestApp()));
+    await tester.pumpAndSettle();
 
     expect(find.byType(DashboardScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
     expect(find.text('Chưa có cửa hàng'), findsOneWidget);
   });
 }

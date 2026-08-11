@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../providers/tax_config_provider.dart';
 
 import '../../../core/utils/toast_service.dart';
@@ -33,29 +35,44 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final config = ref.watch(taxConfigProvider);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cấu hình Thuế')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isSaving ? null : _save,
-        icon: _isSaving
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
-                ),
-              )
-            : const Icon(Icons.save),
-        label: const Text(
-          'Lưu cấu hình',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      appBar: AppBar(
+        title: const Text('Cấu hình Thuế'),
+        actions: [
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Lưu cấu hình',
+              assetPath: AppAssets.settings,
+              heroTag: 'tax-config-save-compact',
+              onPressed: _isSaving ? null : _save,
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _isSaving ? null : _save,
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.save),
+              label: const Text(
+                'Lưu cấu hình',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -82,6 +82,35 @@ async function main(): Promise<void> {
       `,
     );
     await add(
+      'Số tiền đã trả khớp các lần thanh toán',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM sales_orders o
+        LEFT JOIN (
+          SELECT order_id, SUM(amount) AS payment_total
+          FROM sales_order_payments
+          WHERE shop_id = $1
+          GROUP BY order_id
+        ) p ON p.order_id = o.id
+        WHERE o.shop_id = $1
+          AND UPPER(COALESCE(o.status, '')) != 'CANCELLED'
+          AND ABS(COALESCE(o.paid_amount, 0) - COALESCE(p.payment_total, 0)) > 1
+      `,
+      'paid_amount phải bằng tổng các lần thanh toán đã ghi nhận của đơn.',
+    );
+    await add(
+      'Thanh toán không tham chiếu chéo cửa hàng',
+      'ERROR',
+      `
+        SELECT COUNT(*) AS violations
+        FROM sales_order_payments p
+        JOIN sales_orders o ON o.id = p.order_id
+        WHERE p.shop_id = $1
+          AND (o.shop_id != $1 OR p.amount <= 0)
+      `,
+    );
+    await add(
       'Khoản phải thu không âm hoặc thu vượt',
       'ERROR',
       `
@@ -178,6 +207,212 @@ async function main(): Promise<void> {
             OR COUNT(l.id) < 2
         ) invalid_journals
       `,
+    );
+    await add(
+      'Thanh toán bán hàng khớp tài khoản 111/112',
+      'ERROR',
+      `
+        WITH expected AS (
+          SELECT
+            o.id AS order_id,
+            COALESCE(SUM(CASE WHEN UPPER(p.method) = 'CASH' THEN p.amount ELSE 0 END), 0) AS cash_amount,
+            COALESCE(SUM(CASE WHEN UPPER(p.method) != 'CASH' THEN p.amount ELSE 0 END), 0) AS bank_amount
+          FROM sales_orders o
+          LEFT JOIN sales_order_payments p
+            ON p.order_id = o.id AND p.shop_id = $1
+          WHERE o.shop_id = $1
+            AND UPPER(COALESCE(o.status, '')) != 'CANCELLED'
+          GROUP BY o.id
+        ), ledger AS (
+          SELECT
+            e.reference_id AS order_id,
+            COALESCE(SUM(CASE WHEN l.account_code = '111' AND l.entry_type = 'DEBIT' THEN l.amount ELSE 0 END), 0) AS cash_amount,
+            COALESCE(SUM(CASE WHEN l.account_code = '112' AND l.entry_type = 'DEBIT' THEN l.amount ELSE 0 END), 0) AS bank_amount
+          FROM journal_entries e
+          JOIN journal_lines l ON l.journal_entry_id = e.id
+          WHERE e.shop_id = $1
+            AND e.is_voided = false
+            AND e.reference_type IN ('SALES_ORDER', 'DEBT_COLLECTION')
+          GROUP BY e.reference_id
+        )
+        SELECT COUNT(*) AS violations
+        FROM expected x
+        LEFT JOIN ledger l ON l.order_id = x.order_id
+        WHERE ABS(x.cash_amount - COALESCE(l.cash_amount, 0)) > 1
+           OR ABS(x.bank_amount - COALESCE(l.bank_amount, 0)) > 1
+      `,
+      'Tiền mặt phải ghi Nợ 111; chuyển khoản, QR và thẻ phải ghi Nợ 112.',
+    );
+    await add(
+      'Hoàn tiền trả hàng khớp tài khoản 111/112',
+      'ERROR',
+      `
+        WITH expected AS (
+          SELECT
+            r.id AS return_id,
+            CASE WHEN UPPER(r.refund_method) = 'CASH' THEN r.refund_amount ELSE 0 END AS cash_amount,
+            CASE WHEN UPPER(r.refund_method) != 'CASH' THEN r.refund_amount ELSE 0 END AS bank_amount
+          FROM sales_returns r
+          WHERE r.shop_id = $1
+            AND r.refund_amount > 0
+            AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+        ), ledger AS (
+          SELECT
+            e.reference_id AS return_id,
+            COALESCE(SUM(CASE WHEN l.account_code = '111' AND l.entry_type = 'CREDIT' THEN l.amount ELSE 0 END), 0) AS cash_amount,
+            COALESCE(SUM(CASE WHEN l.account_code = '112' AND l.entry_type = 'CREDIT' THEN l.amount ELSE 0 END), 0) AS bank_amount
+          FROM journal_entries e
+          JOIN journal_lines l ON l.journal_entry_id = e.id
+          WHERE e.shop_id = $1
+            AND e.is_voided = false
+            AND e.reference_type = 'SALES_RETURN'
+          GROUP BY e.reference_id
+        )
+        SELECT COUNT(*) AS violations
+        FROM expected x
+        LEFT JOIN ledger l ON l.return_id = x.return_id
+        WHERE ABS(x.cash_amount - COALESCE(l.cash_amount, 0)) > 1
+           OR ABS(x.bank_amount - COALESCE(l.bank_amount, 0)) > 1
+      `,
+      'Hoàn tiền mặt phải ghi Có 111; hoàn chuyển khoản/QR/thẻ phải ghi Có 112.',
+    );
+    await add(
+      'Giao dịch tiền độc lập khớp journal 111/112',
+      'ERROR',
+      `
+        WITH expected AS (
+          SELECT
+            t.id AS transaction_id,
+            t.type,
+            t.amount,
+            CASE WHEN UPPER(COALESCE(t.payment_method, 'CASH')) = 'CASH' THEN '111' ELSE '112' END AS cash_account
+          FROM cash_transactions t
+          WHERE t.shop_id = $1
+            AND (t.reference_type IS NULL OR t.reference_type = 'CASH_TRANSACTION')
+        ), ledger AS (
+          SELECT
+            e.reference_id AS transaction_id,
+            COALESCE(SUM(CASE WHEN l.account_code = '111' AND l.entry_type = 'DEBIT' THEN l.amount ELSE 0 END), 0) AS debit_111,
+            COALESCE(SUM(CASE WHEN l.account_code = '112' AND l.entry_type = 'DEBIT' THEN l.amount ELSE 0 END), 0) AS debit_112,
+            COALESCE(SUM(CASE WHEN l.account_code = '111' AND l.entry_type = 'CREDIT' THEN l.amount ELSE 0 END), 0) AS credit_111,
+            COALESCE(SUM(CASE WHEN l.account_code = '112' AND l.entry_type = 'CREDIT' THEN l.amount ELSE 0 END), 0) AS credit_112
+          FROM journal_entries e
+          JOIN journal_lines l ON l.journal_entry_id = e.id
+          WHERE e.shop_id = $1
+            AND e.is_voided = false
+            AND e.reference_type = 'CASH_TRANSACTION'
+          GROUP BY e.reference_id
+        )
+        SELECT COUNT(*) AS violations
+        FROM expected x
+        LEFT JOIN ledger l ON l.transaction_id = x.transaction_id
+        WHERE CASE
+          WHEN x.type = 'INCOME' AND x.cash_account = '111' THEN ABS(x.amount - COALESCE(l.debit_111, 0)) > 1 OR COALESCE(l.debit_112, 0) > 1
+          WHEN x.type = 'INCOME' AND x.cash_account = '112' THEN ABS(x.amount - COALESCE(l.debit_112, 0)) > 1 OR COALESCE(l.debit_111, 0) > 1
+          WHEN x.type = 'EXPENSE' AND x.cash_account = '111' THEN ABS(x.amount - COALESCE(l.credit_111, 0)) > 1 OR COALESCE(l.credit_112, 0) > 1
+          WHEN x.type = 'EXPENSE' AND x.cash_account = '112' THEN ABS(x.amount - COALESCE(l.credit_112, 0)) > 1 OR COALESCE(l.credit_111, 0) > 1
+          ELSE true
+        END
+      `,
+      'Giao dịch thu/chi độc lập phải có đúng một bút toán tiền theo phương thức thanh toán.',
+    );
+    await add(
+      'Doanh thu thuần khớp tài khoản 511',
+      'ERROR',
+      `
+        WITH business_metric AS (
+          SELECT
+            COALESCE((
+              SELECT SUM(o.total_amount)
+              FROM sales_orders o
+              WHERE o.shop_id = $1
+                AND UPPER(COALESCE(o.status, '')) != 'CANCELLED'
+            ), 0) -
+            COALESCE((
+              SELECT SUM(r.refund_amount)
+              FROM sales_returns r
+              WHERE r.shop_id = $1
+                AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+            ), 0) AS net_revenue
+        ), ledger_metric AS (
+          SELECT COALESCE(SUM(
+            CASE
+              WHEN l.entry_type = 'CREDIT' THEN l.amount
+              WHEN l.entry_type = 'DEBIT' THEN -l.amount
+              ELSE 0
+            END
+          ), 0) AS ledger_revenue
+          FROM journal_entries e
+          JOIN journal_lines l ON l.journal_entry_id = e.id
+          WHERE e.shop_id = $1
+            AND e.is_voided = false
+            AND l.account_code = '511'
+        )
+        SELECT CASE
+          WHEN ABS(b.net_revenue - l.ledger_revenue) > 1 THEN 1
+          ELSE 0
+        END AS violations
+        FROM business_metric b CROSS JOIN ledger_metric l
+      `,
+      'Doanh thu đơn sau hàng trả phải khớp số phát sinh Có trừ Nợ của tài khoản 511.',
+    );
+    await add(
+      'Giá vốn thuần khớp tài khoản 632',
+      'ERROR',
+      `
+        WITH sold_cost AS (
+          SELECT
+            oi.order_id,
+            oi.product_id,
+            SUM(oi.quantity) AS sold_quantity,
+            CASE
+              WHEN SUM(oi.quantity) = 0 THEN 0
+              ELSE SUM(oi.quantity * oi.cost_price) / SUM(oi.quantity)
+            END AS unit_cost
+          FROM sales_order_items oi
+          JOIN sales_orders o ON o.id = oi.order_id
+          WHERE o.shop_id = $1
+            AND UPPER(COALESCE(o.status, '')) != 'CANCELLED'
+          GROUP BY oi.order_id, oi.product_id
+        ), business_metric AS (
+          SELECT
+            COALESCE((
+              SELECT SUM(o.total_cogs)
+              FROM sales_orders o
+              WHERE o.shop_id = $1
+                AND UPPER(COALESCE(o.status, '')) != 'CANCELLED'
+            ), 0) -
+            COALESCE((
+              SELECT SUM(ri.quantity * sold_cost.unit_cost)
+              FROM sales_returns r
+              JOIN sales_return_items ri ON ri.return_id = r.id
+              JOIN sold_cost
+                ON sold_cost.order_id = r.order_id
+                AND sold_cost.product_id = ri.product_id
+              WHERE r.shop_id = $1
+                AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+            ), 0) AS net_cogs
+        ), ledger_metric AS (
+          SELECT COALESCE(SUM(
+            CASE
+              WHEN l.entry_type = 'DEBIT' THEN l.amount
+              WHEN l.entry_type = 'CREDIT' THEN -l.amount
+              ELSE 0
+            END
+          ), 0) AS ledger_cogs
+          FROM journal_entries e
+          JOIN journal_lines l ON l.journal_entry_id = e.id
+          WHERE e.shop_id = $1
+            AND e.is_voided = false
+            AND l.account_code = '632'
+        )
+        SELECT CASE
+          WHEN ABS(b.net_cogs - l.ledger_cogs) > 1 THEN 1
+          ELSE 0
+        END AS violations
+        FROM business_metric b CROSS JOIN ledger_metric l
+      `,
+      'Giá vốn đơn sau hàng trả phải khớp số phát sinh Nợ trừ Có của tài khoản 632.',
     );
     await add(
       'Dòng đơn bán không tham chiếu chéo cửa hàng',

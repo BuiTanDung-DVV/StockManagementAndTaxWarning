@@ -154,20 +154,17 @@ Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây g
     setState(() {
       _messages.add(_AssistantMessage(fromUser: true, text: query));
       _queryController.clear();
-      _messages.add(const _AssistantMessage(
-        fromUser: false,
-        text: 'Đang kết nối với Trợ lý AI...',
-      ));
+      _messages.add(
+        const _AssistantMessage(
+          fromUser: false,
+          text: 'Đang kết nối với Trợ lý AI...',
+        ),
+      );
     });
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.post(
-        '/ai/chat',
-        data: {
-          'question': query,
-        },
-      );
+      final response = await api.post('/ai/chat', data: {'question': query});
 
       if (!mounted) return;
 
@@ -176,35 +173,39 @@ Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây g
         data = response;
       }
 
-      final answer = data['answer']?.toString() ??
+      final answer =
+          data['answer']?.toString() ??
           data['data']?['answer']?.toString() ??
           'Trợ lý AI đã ghi nhận thông tin.';
-      final provider = data['provider']?.toString() ??
+      final provider =
+          data['provider']?.toString() ??
           data['data']?['provider']?.toString() ??
           'AI Assistant';
 
       setState(() {
-        if (_messages.isNotEmpty && _messages.last.text == 'Đang kết nối với Trợ lý AI...') {
+        if (_messages.isNotEmpty &&
+            _messages.last.text == 'Đang kết nối với Trợ lý AI...') {
           _messages.removeLast();
         }
-        _messages.add(_AssistantMessage(
-          fromUser: false,
-          text: answer,
-          source: provider,
-        ));
+        _messages.add(
+          _AssistantMessage(fromUser: false, text: answer, source: provider),
+        );
       });
     } catch (error) {
       if (!mounted) return;
 
       setState(() {
-        if (_messages.isNotEmpty && _messages.last.text == 'Đang kết nối với Trợ lý AI...') {
+        if (_messages.isNotEmpty &&
+            _messages.last.text == 'Đang kết nối với Trợ lý AI...') {
           _messages.removeLast();
         }
-        _messages.add(_AssistantMessage(
-          fromUser: false,
-          text: 'Lỗi kết nối với Trợ lý AI: ${error.toString()}',
-          source: 'Lỗi hệ thống',
-        ));
+        _messages.add(
+          _AssistantMessage(
+            fromUser: false,
+            text: 'Lỗi kết nối với Trợ lý AI: ${error.toString()}',
+            source: 'Lỗi hệ thống',
+          ),
+        );
       });
     }
   }
@@ -218,7 +219,7 @@ Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây g
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final launcherSize = Size(isMobile ? 68 : 144, isMobile ? 80 : 84);
+        const launcherSize = Size(72, 80);
         const margin = 12.0;
         final minimumTop = math.min(
           widget.topSafeInset + margin,
@@ -304,6 +305,7 @@ Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây g
                   width: launcherSize.width,
                   height: launcherSize.height,
                   child: GestureDetector(
+                    key: const ValueKey('ai-assistant-launcher'),
                     behavior: HitTestBehavior.opaque,
                     onTap: () =>
                         ref.read(aiAssistantOpenProvider.notifier).open(),
@@ -316,7 +318,7 @@ Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây g
                       _saveLauncherPosition();
                     },
                     child: _AssistantLauncher(
-                      compact: isMobile,
+                      compact: true,
                       dragging: _isDraggingLauncher,
                       onHide: () => ref
                           .read(aiAssistantLauncherVisibleProvider.notifier)
@@ -525,36 +527,46 @@ class _MessageBlock extends ConsumerWidget {
                     if (href != null && href.isNotEmpty) {
                       final uri = Uri.parse(href);
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                     }
                   },
-                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                    p: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colors.textPrimary,
-                      height: 1.5,
-                    ),
-                    a: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: primary,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
-                    ),
-                    h3: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: primary,
-                    ),
-                    blockquoteDecoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border(
-                        left: BorderSide(color: primary, width: 3),
+                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                      .copyWith(
+                        p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colors.textPrimary,
+                          height: 1.5,
+                        ),
+                        a: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: primary,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                        ),
+                        h3: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: primary,
+                        ),
+                        blockquoteDecoration: BoxDecoration(
+                          color: primary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border(
+                            left: BorderSide(color: primary, width: 3),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                 ),
               if (!message.fromUser) ...[
                 const SizedBox(height: 8),
-                _buildLegalDocumentCitations(context, ref, message.text, primary, colors),
+                _buildLegalDocumentCitations(
+                  context,
+                  ref,
+                  message.text,
+                  primary,
+                  colors,
+                ),
               ],
               const SizedBox(height: 8),
               Row(
@@ -572,17 +584,23 @@ class _MessageBlock extends ConsumerWidget {
                     },
                     borderRadius: BorderRadius.circular(4),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          AppAssetIcon(assetPath: AppAssets.copy, size: 14, color: colors.textSecondary),
+                          AppAssetIcon(
+                            assetPath: AppAssets.copy,
+                            size: 14,
+                            color: colors.textSecondary,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Sao chép',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colors.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: colors.textSecondary),
                           ),
                         ],
                       ),
@@ -597,7 +615,13 @@ class _MessageBlock extends ConsumerWidget {
     );
   }
 
-  Widget _buildLegalDocumentCitations(BuildContext context, WidgetRef ref, String text, Color primary, AppThemeColors colors) {
+  Widget _buildLegalDocumentCitations(
+    BuildContext context,
+    WidgetRef ref,
+    String text,
+    Color primary,
+    AppThemeColors colors,
+  ) {
     final regExp = RegExp(r'\[([^\]]+)\]\((https?:\/\/[^\)]+)\)');
     final matches = regExp.allMatches(text);
     if (matches.isEmpty) return const SizedBox.shrink();
@@ -607,7 +631,9 @@ class _MessageBlock extends ConsumerWidget {
       final rawTitle = m.group(1) ?? '';
       final url = m.group(2) ?? '';
       final title = rawTitle.replaceAll('📄', '').trim();
-      if (title.isNotEmpty && url.isNotEmpty && !citations.any((c) => c['url'] == url)) {
+      if (title.isNotEmpty &&
+          url.isNotEmpty &&
+          !citations.any((c) => c['url'] == url)) {
         citations.add({'title': title, 'url': url});
       }
     }
@@ -626,100 +652,123 @@ class _MessageBlock extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 4),
-        ...citations.map((doc) => Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: primary.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: primary.withValues(alpha: 0.15)),
-          ),
-          child: Row(
-            children: [
-              AppAssetIcon(assetPath: AppAssets.emptyDocument, size: 16, color: primary),
-              const SizedBox(width: 6),
-              Expanded(
-                child: InkWell(
+        ...citations.map(
+          (doc) => Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: primary.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                AppAssetIcon(
+                  assetPath: AppAssets.emptyDocument,
+                  size: 16,
+                  color: primary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final url = doc['url'];
+                      if (url != null && url.isNotEmpty) {
+                        final uri = Uri.parse(url);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      }
+                    },
+                    child: Text(
+                      doc['title'] ?? '',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
                   onTap: () async {
-                    final url = doc['url'];
-                    if (url != null && url.isNotEmpty) {
-                      final uri = Uri.parse(url);
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    try {
+                      final title = doc['title'] ?? 'Văn bản tra cứu';
+                      final url = doc['url'] ?? '';
+                      await ref
+                          .read(aiKnowledgeProvider.notifier)
+                          .addDocument(
+                            title: title,
+                            category: 'TAX',
+                            content: 'Văn bản tra cứu Thư Viện Pháp Luật: $url',
+                          );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '✅ Đã thêm "$title" vào Thư viện Cửa hàng!',
+                            ),
+                            backgroundColor: AppColors.success,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } catch (err) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Văn bản này đã có sẵn trong Thư viện Cửa hàng.',
+                            ),
+                            backgroundColor: AppColors.warning,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
                       }
                     }
                   },
-                  child: Text(
-                    doc['title'] ?? '',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: primary,
-                      decoration: TextDecoration.underline,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              InkWell(
-                onTap: () async {
-                  try {
-                    final title = doc['title'] ?? 'Văn bản tra cứu';
-                    final url = doc['url'] ?? '';
-                    await ref.read(aiKnowledgeProvider.notifier).addDocument(
-                      title: title,
-                      category: 'TAX',
-                      content: 'Văn bản tra cứu Thư Viện Pháp Luật: $url',
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('✅ Đã thêm "$title" vào Thư viện Cửa hàng!'),
-                          backgroundColor: AppColors.success,
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  } catch (err) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Văn bản này đã có sẵn trong Thư viện Cửa hàng.'),
-                          backgroundColor: AppColors.warning,
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  }
-                },
-                borderRadius: BorderRadius.circular(4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: primary,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppAssetIcon(assetPath: AppAssets.add, size: 12, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Thêm vào Thư viện',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    decoration: BoxDecoration(
+                      color: primary,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppAssetIcon(
+                          assetPath: AppAssets.add,
+                          size: 12,
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Text(
+                          'Thêm vào Thư viện',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        )),
+        ),
       ],
     );
   }

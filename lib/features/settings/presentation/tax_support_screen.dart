@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -9,57 +11,25 @@ class TaxSupportScreen extends StatelessWidget {
     final c = AppThemeColors.of(context);
     final links = [
       {
-        'title': 'eTax Mobile',
-        'desc': 'Ứng dụng nộp thuế điện tử trên di động',
-        'url': 'https://etax.gdt.gov.vn',
-        'icon': Icons.phone_android,
+        'title': 'Cổng thông tin Cục Thuế',
+        'desc': 'Tin chính sách, thủ tục và phần mềm chính thức',
+        'url': 'https://www.gdt.gov.vn',
+        'icon': Icons.account_balance_outlined,
         'color': AppColors.primary,
       },
       {
-        'title': 'Hỗ trợ NNT trực tuyến',
-        'desc': 'Hệ thống hỗ trợ người nộp thuế của Tổng cục Thuế',
-        'url': 'https://hotronnt.gdt.gov.vn',
+        'title': 'Thuế điện tử',
+        'desc': 'Khai và nộp thuế điện tử trên cổng chính thức',
+        'url': 'https://thuedientu.gdt.gov.vn',
         'icon': Icons.support_agent,
         'color': AppColors.success,
       },
       {
-        'title': 'Dịch vụ công trực tuyến',
-        'desc': 'Cổng dịch vụ công Tổng cục Thuế',
-        'url': 'https://dichvucong.gdt.gov.vn',
-        'icon': Icons.language,
-        'color': AppColors.info,
-      },
-      {
         'title': 'Tra cứu hóa đơn',
-        'desc': 'Hệ thống tra cứu hóa đơn điện tử',
-        'url': 'https://hoadondientu.gdt.gov.vn',
+        'desc': 'Tra cứu hóa đơn điện tử của Cục Thuế',
+        'url': 'https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don',
         'icon': Icons.receipt_long,
         'color': AppColors.warning,
-      },
-      {
-        'title': 'Thuedientu.gdt.gov.vn',
-        'desc': 'Khai thuế và nộp thuế điện tử',
-        'url': 'https://thuedientu.gdt.gov.vn',
-        'icon': Icons.computer,
-        'color': AppColors.primary,
-      },
-    ];
-
-    final hotlines = [
-      {
-        'region': 'Tổng đài thuế',
-        'phone': '1900.6181',
-        'desc': 'Miễn phí, 24/7',
-      },
-      {
-        'region': 'Hỗ trợ eTax',
-        'phone': '024.7303.7979',
-        'desc': 'Giờ hành chính',
-      },
-      {
-        'region': 'HĐĐT',
-        'phone': '024.7300.0068',
-        'desc': 'Hỗ trợ hóa đơn điện tử',
       },
     ];
 
@@ -171,79 +141,33 @@ class TaxSupportScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Hotlines
-            Text(
-              'Đường dây nóng',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 12),
-            ...hotlines.map(
-              (h) => GestureDetector(
-                onTap: () => _showPhoneDialog(
-                  context,
-                  h['region'] as String,
-                  h['phone'] as String,
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.info.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.info.withValues(alpha: 0.24),
                 ),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 20, color: AppColors.info),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Số điện thoại hỗ trợ có thể thay đổi theo địa phương. Hãy tra cứu cơ quan thuế quản lý trực tiếp trên cổng chính thức trước khi liên hệ.',
+                      style: TextStyle(fontSize: 12, height: 1.45),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.phone,
-                          size: 20,
-                          color: AppColors.success,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              h['region'] as String,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              h['desc'] as String,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: c.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        h['phone'] as String,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.success,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                ],
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Rights & Responsibilities reminder
+            // Safe-use reminder
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -261,7 +185,7 @@ class TaxSupportScreen extends StatelessWidget {
                       Icon(Icons.gavel, size: 18, color: AppColors.warning),
                       SizedBox(width: 8),
                       Text(
-                        'Quyền & Trách nhiệm HKD',
+                        'Lưu ý khi tra cứu',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
@@ -271,13 +195,11 @@ class TaxSupportScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  _RightItem('Yêu cầu CQT hướng dẫn miễn phí'),
-                  _RightItem('Bảo mật thông tin kinh doanh'),
-                  _RightItem('Giải quyết kiến nghị, khiếu nại'),
-                  Divider(color: c.surface, height: 16),
-                  _DutyItem('Kê khai thuế trung thực, đầy đủ'),
-                  _DutyItem('Thông báo tài khoản thanh toán'),
-                  _DutyItem('Sử dụng sổ kế toán, hóa đơn đúng quy định'),
+                  _RightItem('Chỉ mở liên kết thuộc tên miền chính thức'),
+                  _RightItem('Không cung cấp mật khẩu, OTP cho người khác'),
+                  _RightItem(
+                    'Kiểm tra biểu mẫu và thời hạn trên cổng Cục Thuế',
+                  ),
                 ],
               ),
             ),
@@ -314,7 +236,9 @@ class TaxSupportScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: url));
+                      if (!ctx.mounted) return;
                       Navigator.pop(ctx);
                       ToastService.showSuccess('Đã sao chép liên kết');
                     },
@@ -325,69 +249,19 @@ class TaxSupportScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => Navigator.pop(ctx),
+                    onPressed: () async {
+                      final opened = await launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      );
+                      if (!opened) {
+                        ToastService.showError('Không thể mở liên kết');
+                        return;
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
                     icon: const Icon(Icons.open_in_browser, size: 16),
                     label: Text('Mở trình duyệt'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPhoneDialog(BuildContext context, String region, String phone) {
-    final c = AppThemeColors.of(context);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: c.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.phone_in_talk, size: 48, color: AppColors.success),
-            const SizedBox(height: 16),
-            Text(
-              'Gọi cho $region',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              phone,
-              style: const TextStyle(
-                color: AppColors.success,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      'Hủy',
-                      style: TextStyle(color: c.textSecondary),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                    ),
-                    icon: const Icon(Icons.call, size: 16),
-                    label: Text('Gọi ngay'),
                   ),
                 ),
               ],
@@ -408,22 +282,6 @@ class _RightItem extends StatelessWidget {
     child: Row(
       children: [
         const Icon(Icons.check, size: 14, color: AppColors.success),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
-      ],
-    ),
-  );
-}
-
-class _DutyItem extends StatelessWidget {
-  final String text;
-  const _DutyItem(this.text);
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
-      children: [
-        const Icon(Icons.arrow_right, size: 14, color: AppColors.info),
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
       ],

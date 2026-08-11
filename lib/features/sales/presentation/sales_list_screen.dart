@@ -28,6 +28,23 @@ final _currencyFormat = NumberFormat.currency(
 bool salesListUsesCompactLayout(double width) =>
     width < AppBreakpoints.compactNavigation;
 
+int salesListCurrentPage(Map<String, dynamic> data) {
+  final value = int.tryParse(data['page']?.toString() ?? '');
+  return value != null && value > 0 ? value : 1;
+}
+
+int salesListTotalPages(Map<String, dynamic> data) {
+  final value = int.tryParse(data['totalPages']?.toString() ?? '');
+  return value != null && value > 0 ? value : 1;
+}
+
+int salesListTotalItems(Map<String, dynamic> data) {
+  final value = int.tryParse(data['total']?.toString() ?? '');
+  return value != null && value >= 0
+      ? value
+      : ((data['items'] as List?)?.length ?? 0);
+}
+
 class SalesListScreen extends ConsumerStatefulWidget {
   const SalesListScreen({super.key});
 
@@ -113,6 +130,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
           onRefresh: () async {
             ref.invalidate(salesListProvider);
             ref.invalidate(salesSummaryProvider);
+            ref.invalidate(paymentSummaryProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -158,28 +176,67 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                       return LayoutBuilder(
                         builder: (context, constraints) {
                           final desktop = constraints.maxWidth >= 780;
-                          return ListView.separated(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.only(bottom: 112),
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: items.length + (desktop ? 1 : 0),
-                            separatorBuilder: (_, index) =>
-                                index == 0 && desktop
-                                ? const SizedBox.shrink()
-                                : Divider(height: 1, color: colors.divider),
-                            itemBuilder: (context, index) {
-                              if (desktop && index == 0) {
-                                return const _SalesTableHeader();
-                              }
-                              final itemIndex = desktop ? index - 1 : index;
-                              return _OrderRow(
-                                order: items[itemIndex],
-                                desktop: desktop,
-                                onTap: () => context.push(
-                                  '/sales/${items[itemIndex]['id']}',
+                          final currentPage = salesListCurrentPage(data);
+                          final totalPages = salesListTotalPages(data);
+                          final totalItems = salesListTotalItems(data);
+                          return Container(
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.card,
+                              ),
+                              border: Border.all(color: colors.divider),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                ListView.separated(
+                                  shrinkWrap: true,
+                                  padding: EdgeInsets.zero,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: items.length + (desktop ? 1 : 0),
+                                  separatorBuilder: (_, index) =>
+                                      index == 0 && desktop
+                                      ? const SizedBox.shrink()
+                                      : Divider(
+                                          height: 1,
+                                          color: colors.divider,
+                                        ),
+                                  itemBuilder: (context, index) {
+                                    if (desktop && index == 0) {
+                                      return const _SalesTableHeader();
+                                    }
+                                    final itemIndex = desktop
+                                        ? index - 1
+                                        : index;
+                                    return _OrderRow(
+                                      order: items[itemIndex],
+                                      desktop: desktop,
+                                      onTap: () => context.push(
+                                        '/sales/${items[itemIndex]['id']}',
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
+                                Divider(height: 1, color: colors.divider),
+                                _SalesPagination(
+                                  currentPage: currentPage,
+                                  totalPages: totalPages,
+                                  totalItems: totalItems,
+                                  onPrevious: currentPage > 1
+                                      ? () => setState(
+                                          () => _page = currentPage - 1,
+                                        )
+                                      : null,
+                                  onNext: currentPage < totalPages
+                                      ? () => setState(
+                                          () => _page = currentPage + 1,
+                                        )
+                                      : null,
+                                ),
+                              ],
+                            ),
                           );
                         },
                       );
@@ -190,11 +247,62 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                       onRetry: () => ref.invalidate(salesListProvider),
                     ),
                   ),
+                  const SizedBox(height: 112),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SalesPagination extends StatelessWidget {
+  final int currentPage;
+  final int totalPages;
+  final int totalItems;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  const _SalesPagination({
+    required this.currentPage,
+    required this.totalPages,
+    required this.totalItems,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.md,
+        runSpacing: AppSpacing.xs,
+        children: [
+          Text(
+            '$totalItems đơn hàng · Trang $currentPage/$totalPages',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(onPressed: onPrevious, child: const Text('Trước')),
+              const SizedBox(width: AppSpacing.xs),
+              FilledButton.tonal(onPressed: onNext, child: const Text('Sau')),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -327,6 +435,13 @@ class _SalesSummarySection extends ConsumerWidget {
     final summaryAsync = ref.watch(
       salesSummaryProvider((from: period.from, to: period.to)),
     );
+    final paymentAsync = ref.watch(
+      paymentSummaryProvider((from: period.from, to: period.to)),
+    );
+    final periodLabel = reportingCompactRangeLabel(
+      DateTime.parse(period.from),
+      DateTime.parse(period.to),
+    );
 
     return summaryAsync.when(
       loading: () => const AppShimmer(
@@ -405,24 +520,62 @@ class _SalesSummarySection extends ConsumerWidget {
             if (barValues.length >= 3 && barValues.any((value) => value > 0))
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: ChartCard(
-                  title: 'Doanh thu 7 ngày gần nhất',
-                  height: 230,
-                  trailing: Text(
-                    'Đơn vị: đồng',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.textMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  child: MiniBarChart(
-                    values: barValues,
-                    labels: barLabels,
-                    tooltipLabels: barLabels,
-                    barColor: Theme.of(context).colorScheme.primary,
-                    showLeftTitles: true,
-                    valueSuffix: ' đồng',
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final revenueChart = ChartCard(
+                      title: 'Doanh thu 7 ngày gần nhất',
+                      height: 230,
+                      trailing: Text(
+                        'Đơn vị: đồng',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      child: MiniBarChart(
+                        values: barValues,
+                        labels: barLabels,
+                        tooltipLabels: barLabels,
+                        barColor: Theme.of(context).colorScheme.primary,
+                        showLeftTitles: true,
+                        valueSuffix: ' đồng',
+                      ),
+                    );
+                    final paymentPanel = paymentAsync.when(
+                      data: (items) => _PaymentMethodBreakdown(
+                        items: items,
+                        periodLabel: periodLabel,
+                      ),
+                      loading: () => const AppShimmer(
+                        child: ShimmerBox(
+                          width: double.infinity,
+                          height: 230,
+                          radius: AppRadius.card,
+                        ),
+                      ),
+                      error: (_, _) => const AppInlineError(
+                        message: 'Không thể tải cơ cấu thanh toán.',
+                      ),
+                    );
+
+                    if (constraints.maxWidth < 860) {
+                      return Column(
+                        children: [
+                          revenueChart,
+                          const SizedBox(height: AppSpacing.md),
+                          paymentPanel,
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 2, child: revenueChart),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: paymentPanel),
+                      ],
+                    );
+                  },
                 ),
               ),
             Container(
@@ -467,6 +620,153 @@ class _SalesSummarySection extends ConsumerWidget {
       },
     );
   }
+}
+
+class _PaymentMethodBreakdown extends StatelessWidget {
+  final List<dynamic> items;
+  final String periodLabel;
+
+  const _PaymentMethodBreakdown({
+    required this.items,
+    required this.periodLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final rows =
+        items
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .where((item) => _paymentAmount(item) > 0)
+            .toList()
+          ..sort((a, b) => _paymentAmount(b).compareTo(_paymentAmount(a)));
+    final visibleRows = rows.take(4).toList();
+    final total = rows.fold<double>(
+      0,
+      (sum, item) => sum + _paymentAmount(item),
+    );
+
+    return ChartCard(
+      title: 'Tiền đã thu theo phương thức',
+      height: 230,
+      trailing: Text(
+        periodLabel,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: colors.textMuted,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      child: visibleRows.isEmpty
+          ? const EmptyChartPlaceholder(
+              message: 'Chưa có thanh toán trong tháng.',
+            )
+          : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var index = 0; index < visibleRows.length; index++) ...[
+                  _PaymentMethodRow(
+                    item: visibleRows[index],
+                    total: total,
+                    color: _paymentColor(context, index),
+                  ),
+                  if (index < visibleRows.length - 1)
+                    const SizedBox(height: AppSpacing.sm),
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+class _PaymentMethodRow extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final double total;
+  final Color color;
+
+  const _PaymentMethodRow({
+    required this.item,
+    required this.total,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final amount = _paymentAmount(item);
+    final share = total <= 0 ? 0.0 : amount / total;
+    final count = int.tryParse(item['count']?.toString() ?? '') ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _paymentMethodLabel(item['method']?.toString()),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              '${compactVietnameseAmount(amount)} ₫ · $count lượt',
+              style: AppTheme.tabularStyle(
+                context,
+                color: colors.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: share.clamp(0, 1),
+            minHeight: 8,
+            backgroundColor: colors.cardAlt,
+            valueColor: AlwaysStoppedAnimation(color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+double _paymentAmount(Map<String, dynamic> item) =>
+    double.tryParse(item['total']?.toString() ?? '') ?? 0;
+
+String _paymentMethodLabel(String? method) {
+  switch (method?.toUpperCase()) {
+    case 'CASH':
+      return 'Tiền mặt';
+    case 'BANK_TRANSFER':
+    case 'TRANSFER':
+      return 'Chuyển khoản';
+    case 'CREDIT_CARD':
+    case 'CARD':
+      return 'Thẻ';
+    case 'DEBT':
+      return 'Ghi nợ';
+    default:
+      return 'Khác';
+  }
+}
+
+Color _paymentColor(BuildContext context, int index) {
+  final palette = <Color>[
+    Theme.of(context).colorScheme.primary,
+    AppColors.success,
+    AppColors.warning,
+    AppColors.info,
+  ];
+  return palette[index % palette.length];
 }
 
 class _SalesMetricCell extends StatelessWidget {

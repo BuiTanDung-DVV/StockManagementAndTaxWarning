@@ -28,4 +28,41 @@ void main() {
     expect(aggregate.hasPermission('sales'), isTrue);
     expect(dashboardCanSell(aggregate), isFalse);
   });
+
+  test('sales and dashboard roles can view sales insights without finance', () {
+    const salesUser = ShopState(
+      currentShopId: 1,
+      memberType: 'EMPLOYEE',
+      status: 'ACTIVE',
+      permissions: {'sales': 'view', 'finance': 'none'},
+      userShops: [
+        {'shopId': 1, 'memberType': 'EMPLOYEE', 'status': 'ACTIVE'},
+      ],
+      isLoading: false,
+    );
+    const dashboardUser = ShopState(
+      currentShopId: 1,
+      memberType: 'EMPLOYEE',
+      status: 'ACTIVE',
+      permissions: {'dashboard': 'view', 'finance': 'none'},
+      userShops: [
+        {'shopId': 1, 'memberType': 'EMPLOYEE', 'status': 'ACTIVE'},
+      ],
+      isLoading: false,
+    );
+    const inventoryOnlyUser = ShopState(
+      currentShopId: 1,
+      memberType: 'EMPLOYEE',
+      status: 'ACTIVE',
+      permissions: {'inventory': 'view'},
+      userShops: [
+        {'shopId': 1, 'memberType': 'EMPLOYEE', 'status': 'ACTIVE'},
+      ],
+      isLoading: false,
+    );
+
+    expect(dashboardCanViewSalesInsights(salesUser), isTrue);
+    expect(dashboardCanViewSalesInsights(dashboardUser), isTrue);
+    expect(dashboardCanViewSalesInsights(inventoryOnlyUser), isFalse);
+  });
 }

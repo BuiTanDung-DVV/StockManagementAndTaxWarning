@@ -1,10 +1,12 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../products/providers/product_provider.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/finance_provider.dart';
@@ -33,6 +35,18 @@ class _PurchaseNoInvoiceScreenState
     final pnAsync = ref.watch(purchasesNoInvoiceProvider(_page));
     final shop = ref.watch(shopProvider);
     final isOwner = shop.isOwner;
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
+    List<Widget> appBarActions() => [
+      featureGuideButton(context, 'purchase_no_invoice'),
+      if (compactLayout)
+        AppPrimaryHeaderAction(
+          label: 'Thêm bảng kê',
+          assetPath: AppAssets.add,
+          heroTag: 'purchase-no-invoice-add-compact',
+          onPressed: _openAddDialog,
+        ),
+      const SizedBox(width: 8),
+    ];
 
     Widget listBody({
       required bool pendingTabOnly,
@@ -313,7 +327,7 @@ class _PurchaseNoInvoiceScreenState
         child: Scaffold(
           appBar: AppBar(
             title: const Text('Mua hàng không hóa đơn'),
-            actions: [featureGuideButton(context, 'purchase_no_invoice')],
+            actions: appBarActions(),
             bottom: const TabBar(
               tabs: [
                 Tab(text: 'Tất cả'),
@@ -327,13 +341,15 @@ class _PurchaseNoInvoiceScreenState
               listBody(pendingTabOnly: true, showQuickFilter: false),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _openAddDialog,
-            icon: const Icon(Icons.receipt_long),
-            label: const Text('Thêm'),
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-          ),
+          floatingActionButton: compactLayout
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: _openAddDialog,
+                  icon: const Icon(Icons.receipt_long),
+                  label: const Text('Thêm'),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
         ),
       );
     }
@@ -341,16 +357,18 @@ class _PurchaseNoInvoiceScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mua hàng không hóa đơn'),
-        actions: [featureGuideButton(context, 'purchase_no_invoice')],
+        actions: appBarActions(),
       ),
       body: listBody(pendingTabOnly: false, showQuickFilter: true),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openAddDialog,
-        icon: const Icon(Icons.receipt_long),
-        label: const Text('Thêm'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _openAddDialog,
+              icon: const Icon(Icons.receipt_long),
+              label: const Text('Thêm'),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
     );
   }
 
@@ -824,9 +842,7 @@ class _AddPurchaseNoInvoiceDialogState
       context: context,
       showDragHandle: true,
       builder: (ctx) {
-        final productAsync = ref.watch(
-          productListProvider((page: 1, search: null, tag: null)),
-        );
+        final productAsync = ref.watch(productOptionsProvider);
         return productAsync.when(
           loading: () => const SizedBox(
             height: 220,

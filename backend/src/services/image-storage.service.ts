@@ -57,6 +57,14 @@ export function isOwnedShopPaymentQrKey(shopId: number, key: string): boolean {
         !key.includes('..');
 }
 
+export function isOwnedDebtEvidenceImageKey(
+    shopId: number,
+    key: string,
+): boolean {
+    return key.startsWith(`smartstock/shops/${shopId}/debt-evidence/`) &&
+        !key.includes('..');
+}
+
 export function cloudinaryPublicIdFromUrl(
     imageUrl: string,
     cloudName: string,
@@ -112,6 +120,15 @@ export function shopPaymentQrKeyFromPublicUrl(
     return key && isOwnedShopPaymentQrKey(shopId, key) ? key : null;
 }
 
+export function debtEvidenceImageKeyFromPublicUrl(
+    shopId: number,
+    imageUrl: string,
+    cloudName: string,
+): string | null {
+    const key = cloudinaryPublicIdFromUrl(imageUrl, cloudName);
+    return key && isOwnedDebtEvidenceImageKey(shopId, key) ? key : null;
+}
+
 export class ImageStorageService {
     private configured = false;
 
@@ -141,6 +158,40 @@ export class ImageStorageService {
             throw new ImageStorageError('Đường dẫn QR không hợp lệ', 400);
         }
         return this.confirmImage(objectKey, 'Ảnh QR');
+    }
+
+    async createDebtEvidenceImageUpload(
+        shopId: number,
+        request: ProductImageUploadRequest,
+    ) {
+        return this.createSignedUpload(shopId, request, 'debt-evidence');
+    }
+
+    async confirmDebtEvidenceImage(shopId: number, objectKey: string) {
+        if (!isOwnedDebtEvidenceImageKey(shopId, String(objectKey || ''))) {
+            throw new ImageStorageError('Đường dẫn chứng từ không hợp lệ', 400);
+        }
+        return this.confirmImage(objectKey, 'Ảnh chứng từ');
+    }
+
+    async deleteDebtEvidenceImage(shopId: number, objectKey: string) {
+        if (!isOwnedDebtEvidenceImageKey(shopId, String(objectKey || ''))) {
+            throw new ImageStorageError('Đường dẫn chứng từ không hợp lệ', 400);
+        }
+        return this.destroy(objectKey);
+    }
+
+    async deleteDebtEvidenceImageByUrl(
+        shopId: number,
+        imageUrl?: string | null,
+    ) {
+        const objectKey = debtEvidenceImageKeyFromPublicUrl(
+            shopId,
+            String(imageUrl || ''),
+            config.cloudinaryCloudName,
+        );
+        if (!objectKey) return { deleted: false };
+        return this.destroy(objectKey);
     }
 
     async deleteProductImage(shopId: number, objectKey: string) {
@@ -180,7 +231,7 @@ export class ImageStorageService {
     private createSignedUpload(
         shopId: number,
         request: ProductImageUploadRequest,
-        scope: 'products' | 'payment-qr',
+        scope: 'products' | 'payment-qr' | 'debt-evidence',
     ) {
         validateProductImageUpload(request);
         this.configure();

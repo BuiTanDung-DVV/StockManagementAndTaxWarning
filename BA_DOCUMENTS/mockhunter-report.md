@@ -1,6 +1,6 @@
 # MockHunter production report
 
-Ngày kiểm tra: **29/07/2026**  
+Ngày cập nhật: **09/08/2026**
 Ứng dụng: `https://smartstock-tax.vercel.app/`
 
 ## Tóm tắt verdict
@@ -10,8 +10,8 @@ Ngày kiểm tra: **29/07/2026**
 | REAL | 17 | Màn hình/API chính lấy số liệu từ PostgreSQL theo `shop_id` |
 | HARDCODED | 1 | Cấu hình giao diện và policy thuế trong mã; không phải giao dịch |
 | MOCK | 0 | Không phát hiện marker mock trong sản phẩm, khách hàng, đơn hoặc giao dịch production |
-| BROKEN | 0 | Luồng xuất XML cũ đã được nối vào API thật |
-| UNKNOWN | 2 | Ảnh quét hóa đơn và chứng từ công nợ chưa có tệp người dùng tải lên |
+| BROKEN | 2 | Quét hóa đơn chưa hoàn thiện; dữ liệu hóa đơn còn thiếu dòng/chiết khấu |
+| UNKNOWN | 2 | Chưa kiểm tra trực quan các màn cần đăng nhập ở bản local mới; HTKK chưa được import thử |
 
 ## Phát hiện chính
 
@@ -23,11 +23,12 @@ Ngày kiểm tra: **29/07/2026**
 | Bán hàng, thanh toán, trả hàng | REAL | API bán hàng → đơn, dòng hàng, payment, return | Đã đối soát |
 | Công nợ | REAL | API khách hàng/nhà cung cấp → receivable/payable | Đã đối soát |
 | Dòng tiền, ngân sách, dự báo | REAL | API tài chính → cash, ledger, budget, forecast | Đã bổ sung dữ liệu |
-| Hóa đơn, bảng kê chưa hóa đơn | REAL | API tài chính → invoice và purchase-without-invoice | Đã sửa tương thích schema legacy |
+| Hóa đơn, bảng kê chưa hóa đơn | REAL + BROKEN | API tài chính → invoice và purchase-without-invoice | 30 hóa đơn/cửa hàng thiếu dòng; chưa mô hình hóa chiết khấu |
 | Thuế | REAL + HARDCODED | Giao dịch DB + policy/cấu hình thuế | Phải đối chiếu pháp lý riêng |
 | Kiến thức AI | REAL | `/ai-knowledge` → `ai_knowledge_documents` | Đã chuyển khỏi local defaults |
-| Quét hóa đơn | UNKNOWN | API dùng `invoice_scans`; Flutter chưa hoàn thiện camera/OCR | Không tạo ảnh giả |
-| Chứng từ công nợ | UNKNOWN | API dùng `debt_evidences` | Chỉ ghi khi có tệp thật |
+| Quét hóa đơn | BROKEN | Có bảng `invoice_scans` nhưng màn hình chưa hoàn thiện camera/OCR | Không giả lập kết quả OCR; đưa vào backlog |
+| Chứng từ công nợ | REAL, chưa production | Cloudinary + `debt_evidences` + hồ sơ khách hàng | Đã nối tải/xem/xóa ảnh; DB hiện chưa có bản ghi người dùng |
+| Nhắc nợ | REAL, chưa production | Nội dung dựng từ tên khách và số nợ API | Đã bỏ thông báo giả mở ứng dụng; chỉ xác nhận sao chép nội dung để người dùng tự gửi |
 | Xuất XML ở màn khai thuế cũ | REAL | `TaxService.exportHTKK` → `/tax/export-htkk` → giao dịch DB | Đã sửa; chỉ mẫu 01/CNKD được bật |
 
 ## Bằng chứng database
@@ -35,7 +36,9 @@ Ngày kiểm tra: **29/07/2026**
 - Shop 34: 250 sản phẩm, 7.595 đơn bán, 8.394 giao dịch tiền, 1.096 ngày chốt quỹ.
 - Shop 35: 250 sản phẩm, 7.783 đơn bán, 8.561 giao dịch tiền, 1.096 ngày chốt quỹ.
 - Cả hai cửa hàng: 0 marker sản phẩm giả, 0 khách hàng giả, 0 đơn/giao dịch ghi chú mock.
-- Mỗi cửa hàng đạt 12/12 phép đối soát dữ liệu.
+- Mỗi cửa hàng đạt 28/32 nhóm đối soát; ba nhóm lỗi gồm dòng hóa đơn,
+  chiết khấu hóa đơn và phân loại 111/112 lịch sử; một cảnh báo là dữ liệu chưa
+  nối dài đến ngày kiểm tra.
 - Schema `purchase_without_invoice_items` đã tương thích API mới.
 - Không còn `Future.delayed` giả lập kết quả xuất/nộp tờ khai; nộp trực tuyến chưa
   tích hợp được thông báo rõ thay vì báo thành công giả.
@@ -45,7 +48,6 @@ Chi tiết màn hình, API, bảng nguồn và số lượng xem tại
 
 ## Giới hạn kiểm tra giao diện
 
-Trang public tải được và không ghi nhận lỗi console lúc mở. Flutter Web dựng nội dung
-trong `flutter-view`, còn phiên trình duyệt kiểm tra không có đăng nhập nên không thể
-đối chiếu trực quan từng số sau xác thực trong lần này. Bằng chứng REAL được xác nhận
-bằng chuỗi mã nguồn → API → truy vấn DB production và bộ đối soát sau commit dữ liệu.
+Trang public tải được. Các thay đổi ngày 09/08 mới được xác minh bằng chuỗi mã nguồn →
+API → truy vấn DB chỉ đọc → kiểm thử local; chưa được xem là đã xác minh trên production.
+Không tạo giao dịch, xóa dữ liệu hoặc tải tệp vào production trong đợt kiểm tra này.

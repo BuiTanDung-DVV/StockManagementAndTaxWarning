@@ -60,8 +60,9 @@ export class InventoryService {
 
         const query = `
             SELECT 
-                COALESCE(c.name, 'Chưa phân loại') as name, 
-                COALESCE(SUM(s.quantity * p.cost_price), 0) as value 
+                COALESCE(c.name, 'Chưa phân loại') as name,
+                COUNT(DISTINCT p.id) as sku_count,
+                COALESCE(SUM(s.quantity * p.cost_price), 0) as value
             FROM inventory_stocks s
             JOIN products p ON s.product_id = p.id
             LEFT JOIN categories c ON p.category_id = c.id
@@ -72,6 +73,7 @@ export class InventoryService {
         const result = await AppDataSource.query(query, [isArray ? shopId : shopId]);
         return result.map((r: any) => ({
             name: r.name,
+            skuCount: Number(r.sku_count),
             value: Number(r.value)
         }));
     }
@@ -83,7 +85,7 @@ export class InventoryService {
         toDate.setHours(23, 59, 59, 999);
 
         const qb = AppDataSource.getRepository(Product).createQueryBuilder('p')
-            .select(['p.id as id', 'p.sku as sku', 'p.name as name'])
+            .select(['p.id as id', 'p.sku as sku', 'p.name as name', 'p.unit as unit'])
             .where('p.shop_id = :shopId', { shopId })
             .leftJoin('inventory_movements', 'm', 'p.id = m.product_id AND m.shop_id = :shopId' + (warehouseId ? ' AND m.warehouse_id = :warehouseId' : ''))
             .addSelect(`COALESCE(SUM(CASE WHEN m.created_at < :from AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity WHEN m.created_at < :from AND m.movement_type = 'OUT' THEN -m.quantity ELSE 0 END), 0)`, 'startQty')
@@ -93,6 +95,7 @@ export class InventoryService {
             .groupBy('p.id')
             .addGroupBy('p.sku')
             .addGroupBy('p.name')
+            .addGroupBy('p.unit')
             .setParameters({ from: fromDate, to: toDate, warehouseId, shopId });
 
         const rows = await qb.getRawMany();
@@ -101,6 +104,7 @@ export class InventoryService {
             sku: row.sku,
             name: row.name,
             productName: row.name,
+            unit: row.unit || 'Đơn vị',
             openingStock: Number(row.startQty || 0),
             totalImport: Number(row.importQty || 0),
             imported: Number(row.importQty || 0),
@@ -113,7 +117,23 @@ export class InventoryService {
             totalImport: acc.totalImport + item.totalImport,
             totalExport: acc.totalExport + item.totalExport,
             closingStock: acc.closingStock + item.closingStock,
-        }), { openingStock: 0, totalImport: 0, totalExport: 0, closingStock: 0 });
+            openingSkuCount: acc.openingSkuCount + (item.openingStock > 0 ? 1 : 0),
+            importedSkuCount: acc.importedSkuCount + (item.totalImport > 0 ? 1 : 0),
+            exportedSkuCount: acc.exportedSkuCount + (item.totalExport > 0 ? 1 : 0),
+            closingSkuCount: acc.closingSkuCount + (item.closingStock > 0 ? 1 : 0),
+        }), {
+            // Legacy quantity totals are retained for API compatibility only.
+            // They must not be presented as one comparable quantity when product
+            // units differ (for example bao, mét, bộ and cái).
+            openingStock: 0,
+            totalImport: 0,
+            totalExport: 0,
+            closingStock: 0,
+            openingSkuCount: 0,
+            importedSkuCount: 0,
+            exportedSkuCount: 0,
+            closingSkuCount: 0,
+        });
 
         return { items, summary, from: fromDate, to: toDate };
     }
@@ -139,26 +159,67 @@ export class InventoryService {
 
         const result = await AppDataSource.getRepository('products')
             .createQueryBuilder('p')
-            .innerJoin('inventory_stocks', 's', 's.product_id = p.id')
+            .innerJoin(
+                'inventory_stocks',
+                's',
+                's.product_id = p.id AND s.shop_id = p.shop_id',
+            )
             .where('p.shop_id = :shopId', { shopId })
             .andWhere('s.quantity > 0')
             .andWhere((qb) => {
                 const subQuery = qb.subQuery()
-                    .select('m.product_id')
-                    .from('inventory_movements', 'm')
-                    .where("m.movement_type = 'OUT'")
-                    .andWhere('m.created_at >= :cutoff', { cutoff: cutoffDate })
+                    .select('sold_item.product_id')
+                    .from('sales_order_items', 'sold_item')
+                    .innerJoin(
+                        'sales_orders',
+                        'sold_order',
+                        'sold_order.id = sold_item.order_id',
+                    )
+                    .where('sold_order.shop_id = :shopId')
+                    .andWhere("sold_order.status != 'CANCELLED'")
+                    .andWhere('sold_order.order_date >= :cutoff', { cutoff: cutoffDate })
                     .getQuery();
                 return 'p.id NOT IN ' + subQuery;
             })
-            .select(['p.id as id', 'p.sku as sku', 'p.name as name'])
+            .select([
+                'p.id as id',
+                'p.sku as sku',
+                'p.name as name',
+                'p.unit as unit',
+            ])
             .addSelect('SUM(s.quantity)', 'currentStock')
+            .addSelect(`(
+                SELECT MAX(last_order.order_date)
+                FROM sales_order_items last_item
+                JOIN sales_orders last_order ON last_order.id = last_item.order_id
+                WHERE last_item.product_id = p.id
+                  AND last_order.shop_id = :shopId
+                  AND last_order.status != 'CANCELLED'
+            )`, 'lastSoldAt')
             .groupBy('p.id')
             .addGroupBy('p.sku')
             .addGroupBy('p.name')
+            .addGroupBy('p.unit')
             .getRawMany();
 
-        return result;
+        const now = Date.now();
+        return result.map((row: any) => {
+            const lastSoldAt = row.lastSoldAt ? new Date(row.lastSoldAt) : null;
+            const daysSinceLastSale = lastSoldAt && !Number.isNaN(lastSoldAt.getTime())
+                ? Math.max(0, Math.floor((now - lastSoldAt.getTime()) / 86_400_000))
+                : null;
+            return {
+                id: Number(row.id),
+                sku: row.sku,
+                name: row.name,
+                productName: row.name,
+                unit: row.unit || 'Đơn vị',
+                currentStock: Number(row.currentStock || 0),
+                currentQuantity: Number(row.currentStock || 0),
+                lastSoldAt: lastSoldAt?.toISOString() || null,
+                daysSinceLastSale,
+            };
+        });
     }
 
 
@@ -219,13 +280,31 @@ export class InventoryService {
             });
             if (!po) throw new Error('PurchaseOrder not found');
 
+            const currentStatus = String(po.status || 'PENDING').toUpperCase();
+            const nextStatus = dto.status
+                ? String(dto.status).toUpperCase()
+                : currentStatus;
+            if (!['PENDING', 'COMPLETED', 'CANCELLED'].includes(nextStatus)) {
+                throw new Error('Validation: Invalid purchase order status');
+            }
+            if (currentStatus !== 'PENDING') {
+                const isIdempotentStatusUpdate =
+                    Object.keys(dto).every((key) => key === 'status') &&
+                    nextStatus === currentStatus;
+                if (isIdempotentStatusUpdate) {
+                    await queryRunner.commitTransaction();
+                    return po;
+                }
+                throw new Error('Validation: Completed or cancelled purchase order is immutable');
+            }
+
             if (dto.warehouseId) {
                 await this.assertWarehouseBelongsToShop(shopId, Number(dto.warehouseId), manager);
                 po.warehouseId = Number(dto.warehouseId);
             }
 
             // If changing status from PENDING to COMPLETED, increase stock and post journal
-            if (dto.status === 'COMPLETED' && po.status !== 'COMPLETED') {
+            if (nextStatus === 'COMPLETED') {
                 for (const item of (po.items || [])) {
                     if (item.productId && item.quantity > 0 && item.unitPrice > 0) {
                         await this.cogsService.addInventoryLot({
@@ -262,7 +341,7 @@ export class InventoryService {
                 }
             }
 
-            po.status = dto.status || po.status;
+            po.status = nextStatus;
             const saved = await manager.save(PurchaseOrder, po);
 
             await queryRunner.commitTransaction();

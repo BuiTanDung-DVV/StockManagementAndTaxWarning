@@ -60,6 +60,16 @@ void main() {
     expect(tester.getSize(panelMaterial).height, lessThanOrEqualTo(680));
   });
 
+  testWidgets('desktop AI launcher stays compact to avoid covering reports', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildHost(size: const Size(1280, 720)));
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const ValueKey('ai-assistant-launcher'));
+    expect(tester.getSize(launcher).width, lessThanOrEqualTo(72));
+  });
+
   testWidgets('dragging the AI launcher persists its normalized position', (
     tester,
   ) async {

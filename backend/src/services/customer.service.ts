@@ -1,13 +1,21 @@
 import { AppDataSource } from '../config/db.config';
 import { Customer, Receivable, DebtEvidence } from '../customer/entities';
+import { config } from '../config/env.config';
+import {
+    debtEvidenceImageKeyFromPublicUrl,
+    ImageStorageService,
+    MAX_PRODUCT_IMAGE_BYTES,
+} from './image-storage.service';
 import { Not, In } from 'typeorm';
 import { SalesOrder } from '../sales/entities';
 import { calculateRemainingDebt } from '../customer/debt.utils';
+import { resolveVietnamBusinessDayEnd } from '../finance/finance-period.utils';
 
 export class CustomerService {
     private customerRepo = AppDataSource.getRepository(Customer);
     private receivableRepo = AppDataSource.getRepository(Receivable);
     private evidenceRepo = AppDataSource.getRepository(DebtEvidence);
+    private imageStorageService = new ImageStorageService();
     private orderRepo = AppDataSource.getRepository(SalesOrder);
 
     async findAll(shopId: number, page = 1, limit = 20, search?: string) {
@@ -169,11 +177,33 @@ export class CustomerService {
     ) {
         const type = String(dto.type || '').toUpperCase();
         const fileUrl = String(dto.fileUrl || '').trim();
-        if (!['PHOTO', 'SIGNATURE', 'AUDIO', 'DOCUMENT', 'CONTRACT'].includes(type)) {
+        if (!['PHOTO', 'SIGNATURE', 'DOCUMENT', 'CONTRACT'].includes(type)) {
             throw new Error('Validation: Evidence type is invalid');
         }
         if (!fileUrl || fileUrl.length > 1000) {
             throw new Error('Validation: Evidence URL is required');
+        }
+        if (!debtEvidenceImageKeyFromPublicUrl(
+            shopId,
+            fileUrl,
+            config.cloudinaryCloudName,
+        )) {
+            throw new Error('Validation: Evidence image is not owned by this shop');
+        }
+        const fileName = String(dto.fileName || '').trim();
+        if (fileName.length > 200) {
+            throw new Error('Validation: Evidence file name is too long');
+        }
+        const description = String(dto.description || '').trim();
+        if (description.length > 500) {
+            throw new Error('Validation: Evidence description is too long');
+        }
+        const fileSize = dto.fileSize == null ? undefined : Number(dto.fileSize);
+        if (
+            fileSize !== undefined &&
+            (!Number.isInteger(fileSize) || fileSize <= 0 || fileSize > MAX_PRODUCT_IMAGE_BYTES)
+        ) {
+            throw new Error('Validation: Evidence file size is invalid');
         }
         const receivable = await this.receivableRepo.findOne({
             where: { id: receivableId, shopId },
@@ -184,24 +214,42 @@ export class CustomerService {
             receivable,
             type,
             fileUrl,
-            fileName: dto.fileName,
-            fileSize: dto.fileSize,
-            description: dto.description,
+            fileName: fileName || undefined,
+            fileSize,
+            description: description || undefined,
             uploadedBy,
         }));
     }
 
+    async removeDebtEvidence(shopId: number, evidenceId: number) {
+        const evidence = await this.evidenceRepo.findOne({
+            where: { id: evidenceId, shopId },
+        });
+        if (!evidence) throw new Error('Debt evidence not found');
+
+        await this.evidenceRepo.remove(evidence);
+        try {
+            await this.imageStorageService.deleteDebtEvidenceImageByUrl(
+                shopId,
+                evidence.fileUrl,
+            );
+        } catch {
+            // Database state is authoritative; storage cleanup is best effort.
+        }
+        return { deleted: true };
+    }
+
     async getDebtAging(shopId: number, asOf?: string) {
         const receivables = await this.receivableRepo.find({
-            where: { shopId, status: Not(In(['PAID'])) },
+            where: { shopId, status: Not(In(['PAID', 'CANCELLED'])) },
             relations: ['customer', 'paymentHistory'],
         });
 
-        const now = asOf ? new Date(asOf) : new Date();
-        now.setHours(23, 59, 59, 999);
+        const now = resolveVietnamBusinessDayEnd(asOf);
 
         const buckets = { current: 0, past30: 0, past60: 0, past90: 0 };
         let totalDebt = 0;
+        let receivableCount = 0;
         const byCustomer = new Map<number, {
             customerId: number;
             customerName: string;
@@ -217,6 +265,7 @@ export class CustomerService {
         for (const r of receivables) {
             const remaining = Number(r.amount) - Number(r.paidAmount);
             if (remaining <= 0) continue;
+            receivableCount += 1;
             totalDebt += remaining;
 
             const customerId = Number(r.customer?.id || 0);
@@ -284,7 +333,7 @@ export class CustomerService {
                 over90: buckets.past90,
             },
             totalDebt,
-            receivableCount: receivables.length,
+            receivableCount,
             customers,
             summary: {
                 totalDebt,
@@ -296,7 +345,7 @@ export class CustomerService {
 
     async getOverdueDebts(shopId: number) {
         const receivables = await this.receivableRepo.find({
-            where: { shopId, status: Not(In(['PAID'])) },
+            where: { shopId, status: Not(In(['PAID', 'CANCELLED'])) },
             relations: ['customer'],
             order: { dueDate: 'ASC' },
         });

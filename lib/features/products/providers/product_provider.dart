@@ -95,6 +95,13 @@ final productListProvider =
           .findAll(page: args.page, search: args.search, tag: args.tag);
     });
 
+/// Complete option set for transactional forms.
+/// List screens remain paginated; forms must not silently hide products after
+/// the first API page.
+final productOptionsProvider = FutureProvider<Map<String, dynamic>>((ref) {
+  return ref.watch(productRepoProvider).findAll(page: 1, limit: 500);
+});
+
 final productDetailProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   id,

@@ -38,14 +38,29 @@ export class AiService {
     // 1. Tồn kho sản phẩm
     try {
       const lowStockResult = await AppDataSource.query(`
-        SELECT name, sku, min_stock 
-        FROM products 
-        WHERE shop_id = $1 AND is_active = true AND min_stock > 0
-        ORDER BY min_stock DESC LIMIT 5
+        SELECT
+          p.name,
+          p.sku,
+          p.unit,
+          p.min_stock,
+          COALESCE(SUM(s.quantity), 0) AS current_stock
+        FROM products p
+        LEFT JOIN inventory_stocks s
+          ON s.product_id = p.id
+          AND s.shop_id = p.shop_id
+        WHERE p.shop_id = $1
+          AND p.is_active = true
+          AND p.min_stock > 0
+        GROUP BY p.id, p.name, p.sku, p.unit, p.min_stock
+        HAVING COALESCE(SUM(s.quantity), 0) <= p.min_stock
+        ORDER BY (p.min_stock - COALESCE(SUM(s.quantity), 0)) DESC, p.name ASC
+        LIMIT 5
       `, [shopId]);
 
       if (lowStockResult && lowStockResult.length > 0) {
-        lowStockText = lowStockResult.map((p: any) => `- ${p.name} (SKU: ${p.sku || 'N/A'}): Mức báo động tồn kho là ${p.min_stock}`).join('\n');
+        lowStockText = lowStockResult.map((p: any) =>
+          `- ${p.name} (SKU: ${p.sku || 'N/A'}): còn ${Number(p.current_stock || 0).toLocaleString('vi-VN')} ${p.unit || 'sản phẩm'}, định mức ${Number(p.min_stock || 0).toLocaleString('vi-VN')}`,
+        ).join('\n');
       }
     } catch (e) {
       console.warn('AI StoreContext - Lỗi truy vấn sản phẩm:', e);
@@ -54,13 +69,32 @@ export class AiService {
     // 2. Doanh thu 30 ngày qua
     try {
       const salesResult = await AppDataSource.query(`
-        SELECT COALESCE(SUM(total_amount), 0) AS total_revenue, COUNT(id) AS total_orders
-        FROM sales_orders
-        WHERE shop_id = $1 AND status != 'CANCELLED' AND created_at >= NOW() - INTERVAL '30 days'
+        WITH sales AS (
+          SELECT
+            COALESCE(SUM(total_amount), 0) AS gross_revenue,
+            COUNT(id) AS total_orders
+          FROM sales_orders
+          WHERE shop_id = $1
+            AND UPPER(COALESCE(status, '')) != 'CANCELLED'
+            AND order_date >= NOW() - INTERVAL '30 days'
+        ), returns AS (
+          SELECT COALESCE(SUM(o.total_amount), 0) AS return_value
+          FROM sales_returns r
+          JOIN sales_orders o
+            ON o.id = r.order_id
+            AND o.shop_id = r.shop_id
+          WHERE r.shop_id = $1
+            AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+            AND r.return_date >= NOW() - INTERVAL '30 days'
+        )
+        SELECT
+          sales.gross_revenue - returns.return_value AS net_revenue,
+          sales.total_orders
+        FROM sales CROSS JOIN returns
       `, [shopId]);
 
       if (salesResult && salesResult.length > 0) {
-        revenue = Number(salesResult[0]?.total_revenue || 0).toLocaleString('vi-VN');
+        revenue = Number(salesResult[0]?.net_revenue || 0).toLocaleString('vi-VN');
         orders = Number(salesResult[0]?.total_orders || 0);
       }
     } catch (e) {
@@ -70,9 +104,10 @@ export class AiService {
     // 3. Công nợ khách hàng
     try {
       const debtResult = await AppDataSource.query(`
-        SELECT COALESCE(SUM(balance), 0) AS total_debt
-        FROM customers
-        WHERE shop_id = $1 AND is_active = true
+        SELECT COALESCE(SUM(GREATEST(amount - paid_amount, 0)), 0) AS total_debt
+        FROM receivables
+        WHERE shop_id = $1
+          AND UPPER(COALESCE(status, '')) NOT IN ('PAID', 'CANCELLED')
       `, [shopId]);
 
       if (debtResult && debtResult.length > 0) {
@@ -254,13 +289,25 @@ Người dùng hỏi: ${dto.question}`;
     // 1. Kiểm tra tồn kho
     try {
       const lowStock = await AppDataSource.query(`
-        SELECT COUNT(*)::int AS count FROM products WHERE shop_id = $1 AND is_active = true AND min_stock > 0
+        SELECT COUNT(*)::int AS count
+        FROM (
+          SELECT p.id
+          FROM products p
+          LEFT JOIN inventory_stocks s
+            ON s.product_id = p.id
+            AND s.shop_id = p.shop_id
+          WHERE p.shop_id = $1
+            AND p.is_active = true
+            AND p.min_stock > 0
+          GROUP BY p.id, p.min_stock
+          HAVING COALESCE(SUM(s.quantity), 0) <= p.min_stock
+        ) low_stock_products
       `, [shopId]);
       if (lowStock && lowStock[0]?.count > 0) {
         insights.push({
           title: 'Cảnh báo hàng sắp hết kho',
           category: 'INVENTORY',
-          description: `Có ${lowStock[0].count} mặt hàng đang áp dụng định mức tồn kho tối thiểu. Nên kiểm tra và tạo đơn nhập hàng mới.`,
+          description: `Có ${lowStock[0].count} mặt hàng đang chạm hoặc thấp hơn định mức tồn kho tối thiểu. Nên kiểm tra và tạo đơn nhập hàng mới.`,
           priority: 'HIGH',
         });
       }
@@ -289,7 +336,10 @@ Người dùng hỏi: ${dto.question}`;
     // 3. Công nợ khách hàng
     try {
       const debtSum = await AppDataSource.query(`
-        SELECT COALESCE(SUM(balance), 0) AS total FROM customers WHERE shop_id = $1 AND is_active = true AND balance > 0
+        SELECT COALESCE(SUM(GREATEST(amount - paid_amount, 0)), 0) AS total
+        FROM receivables
+        WHERE shop_id = $1
+          AND UPPER(COALESCE(status, '')) NOT IN ('PAID', 'CANCELLED')
       `, [shopId]);
       if (debtSum && Number(debtSum[0]?.total) > 0) {
         insights.push({

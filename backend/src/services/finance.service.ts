@@ -1,12 +1,13 @@
 import { AppDataSource } from '../config/db.config';
 import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
 import { Invoice } from '../system/entities';
-import { JournalLine } from '../finance/ledger.entity';
+import { JournalEntry, JournalLine } from '../finance/ledger.entity';
 import { ActivityLog } from '../system/entities';
 import { Between, EntityManager } from 'typeorm';
 import { SystemService } from './system.service';
 import { COGSService } from './cogs.service';
-import { InventoryMovement, InventoryStock } from '../inventory/entities';
+import { InventoryMovement, InventoryStock, Warehouse } from '../inventory/entities';
+import { Product } from '../product/entities';
 import { PostingService } from './posting.service';
 import { calculateNetAmount } from '../sales/sales-metric.utils';
 import {
@@ -14,9 +15,18 @@ import {
     normalizeNonNegative,
 } from '../tax/tax-policy';
 import {
+    buildVietnamPeriodKeys,
     normalizeCashTransactionQuery,
     resolveCurrentMonthExpensePeriod,
+    resolveVietnamBusinessDayPeriod,
 } from '../finance/finance-period.utils';
+import { normalizeCashflowForecastInput } from '../finance/cashflow-forecast.utils';
+import { normalizeInvoiceInput } from '../finance/invoice-input.utils';
+import {
+    cashLedgerAccountCode,
+    normalizeCashTransactionInput,
+} from '../finance/cash-transaction-input.utils';
+import { normalizeBudgetPlanInput } from '../finance/budget-plan-input.utils';
 
 export class FinanceService {
     private cashTxRepo = AppDataSource.getRepository(CashTransaction);
@@ -108,26 +118,31 @@ export class FinanceService {
     }
     async createCashTransaction(shopId: number, dto: Partial<CashTransaction>, manager?: EntityManager) {
         const repo = manager ? manager.getRepository(CashTransaction) : this.cashTxRepo;
-        if (!dto.transactionCode) dto.transactionCode = 'PT' + Date.now().toString().slice(-6);
-        if (!dto.transactionDate) dto.transactionDate = new Date();
-        const saved = await repo.save(repo.create({ ...dto, shopId }));
+        const normalized = normalizeCashTransactionInput(dto as any);
+        const safeDto: any = { ...dto, ...normalized, shopId };
+        delete safeDto.id;
+        delete safeDto.createdAt;
+        delete safeDto.description;
+        if (!safeDto.transactionCode) safeDto.transactionCode = 'PT' + Date.now().toString().slice(-6);
+        const saved = await repo.save(repo.create(safeDto as Partial<CashTransaction>));
 
         // === Journal Ledger: Chỉ ghi bút toán cho các giao dịch độc lập (không liên kết với Sales/Purchase) ===
-        const linkedRefTypes = ['SALES_ORDER', 'SALES_ORDER_CANCEL', 'SALES_RETURN', 'PURCHASE_ORDER'];
+        const linkedRefTypes = ['SALES_ORDER', 'SALES_ORDER_CANCEL', 'SALES_RETURN', 'PURCHASE_ORDER', 'PURCHASE_WITHOUT_INVOICE'];
         const refType = (dto as any).referenceType;
         if (!refType || !linkedRefTypes.includes(refType)) {
-            const txType = dto.type || (dto as any).type;
-            const amount = Number(dto.amount || 0);
+            const txType = normalized.type;
+            const amount = normalized.amount;
             if (amount > 0) {
                 const lines: { accountCode: string; amount: number; entryType: 'DEBIT' | 'CREDIT' }[] = [];
+                const cashAccount = cashLedgerAccountCode(normalized.paymentMethod);
                 if (txType === 'INCOME') {
                     // Thu nhập: Nợ TK 111 (Tiền mặt) / Có TK 511 (Doanh thu)
-                    lines.push({ accountCode: '111', amount, entryType: 'DEBIT' });
+                    lines.push({ accountCode: cashAccount, amount, entryType: 'DEBIT' });
                     lines.push({ accountCode: '511', amount, entryType: 'CREDIT' });
                 } else if (txType === 'EXPENSE') {
                     // Chi phí: Nợ TK 642 (Chi phí) / Có TK 111 (Tiền mặt)
                     lines.push({ accountCode: '642', amount, entryType: 'DEBIT' });
-                    lines.push({ accountCode: '111', amount, entryType: 'CREDIT' });
+                    lines.push({ accountCode: cashAccount, amount, entryType: 'CREDIT' });
                 }
                 if (lines.length > 0) {
                     await this.postingService.postJournal(
@@ -148,16 +163,60 @@ export class FinanceService {
     }
 
     async updateCashTransaction(shopId: number, id: number, dto: Partial<CashTransaction>) {
-        const tx = await this.cashTxRepo.findOne({ where: { id, shopId } });
-        if (!tx) throw new Error('Cash transaction not found');
-        Object.assign(tx, dto);
-        return this.cashTxRepo.save(tx);
+        return AppDataSource.transaction(async manager => {
+            const repo = manager.getRepository(CashTransaction);
+            const tx = await repo.findOne({ where: { id, shopId } });
+            if (!tx) throw new Error('Cash transaction not found');
+            if (tx.referenceType && tx.referenceType !== 'CASH_TRANSACTION') {
+                throw new Error('Validation: Linked transaction must be updated from its source document');
+            }
+
+            const normalized = normalizeCashTransactionInput(dto as any, tx);
+            Object.assign(tx, normalized);
+            const saved = await repo.save(tx);
+
+            const journalRepo = manager.getRepository(JournalEntry);
+            await journalRepo.update(
+                { shopId, referenceType: 'CASH_TRANSACTION', referenceId: id },
+                { isVoided: true },
+            );
+            const cashAccount = cashLedgerAccountCode(normalized.paymentMethod);
+            const lines = normalized.type === 'INCOME'
+                ? [
+                    { accountCode: cashAccount, amount: normalized.amount, entryType: 'DEBIT' as const },
+                    { accountCode: '511', amount: normalized.amount, entryType: 'CREDIT' as const },
+                ]
+                : [
+                    { accountCode: '642', amount: normalized.amount, entryType: 'DEBIT' as const },
+                    { accountCode: cashAccount, amount: normalized.amount, entryType: 'CREDIT' as const },
+                ];
+            await this.postingService.postJournal(
+                shopId,
+                'CASH_TRANSACTION',
+                id,
+                normalized.notes || `Cập nhật giao dịch ${normalized.type === 'INCOME' ? 'thu' : 'chi'}`,
+                lines,
+                manager,
+            );
+            return saved;
+        });
     }
 
     async deleteCashTransaction(shopId: number, id: number) {
-        const tx = await this.cashTxRepo.findOne({ where: { id, shopId } });
-        if (tx) await this.cashTxRepo.remove(tx);
-        return { success: true };
+        return AppDataSource.transaction(async manager => {
+            const repo = manager.getRepository(CashTransaction);
+            const tx = await repo.findOne({ where: { id, shopId } });
+            if (!tx) return { success: true };
+            if (tx.referenceType && tx.referenceType !== 'CASH_TRANSACTION') {
+                throw new Error('Validation: Linked transaction must be deleted from its source document');
+            }
+            await manager.getRepository(JournalEntry).update(
+                { shopId, referenceType: 'CASH_TRANSACTION', referenceId: id },
+                { isVoided: true },
+            );
+            await repo.remove(tx);
+            return { success: true };
+        });
     }
 
     async updateInvoice(shopId: number, id: number, dto: Partial<Invoice>) {
@@ -166,7 +225,12 @@ export class FinanceService {
             relations: ['items', 'items.product'],
         });
         if (!invoice) throw new Error('Invoice not found');
-        Object.assign(invoice, dto);
+        const normalized = normalizeInvoiceInput(dto, invoice);
+        const safeDto: any = { ...dto, ...normalized };
+        delete safeDto.id;
+        delete safeDto.shopId;
+        delete safeDto.createdAt;
+        Object.assign(invoice, safeDto);
         return this.invoiceRepo.save(invoice);
     }
 
@@ -181,9 +245,7 @@ export class FinanceService {
         let fromDate: Date;
         let toDate: Date = new Date();
         if (from && to) {
-            fromDate = new Date(from);
-            toDate = new Date(to);
-            toDate.setHours(23, 59, 59, 999);
+            ({ fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to));
         } else {
             switch (period) {
                 case 'today': fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
@@ -207,13 +269,14 @@ export class FinanceService {
         const isMonthFormat = diffDays > 60;
         const dateFormat = isMonthFormat ? 'YYYY-MM' : 'YYYY-MM-DD';
 
+        const transactionDateBucket = `TO_CHAR(t.transaction_date AT TIME ZONE 'Asia/Ho_Chi_Minh', '${dateFormat}')`;
         const dailyFlowRaw = await this.cashTxRepo.createQueryBuilder('t')
-            .select(`TO_CHAR(t.transaction_date, '${dateFormat}')`, 'date')
+            .select(transactionDateBucket, 'date')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
             .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
-            .groupBy(`TO_CHAR(t.transaction_date, '${dateFormat}')`)
-            .orderBy(`TO_CHAR(t.transaction_date, '${dateFormat}')`, 'ASC')
+            .groupBy(transactionDateBucket)
+            .orderBy(transactionDateBucket, 'ASC')
             .getRawMany();
 
         const dailyMap = new Map();
@@ -224,39 +287,15 @@ export class FinanceService {
             });
         });
 
-        const dailyFlow = [];
-
-        if (!isMonthFormat) {
-            for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                const dateStr = `${yyyy}-${mm}-${dd}`;
-                dailyFlow.push({
-                    date: dateStr,
-                    income: dailyMap.get(dateStr)?.income || 0,
-                    expense: dailyMap.get(dateStr)?.expense || 0
-                });
-            }
-        } else {
-            let startYear = fromDate.getFullYear();
-            let startMonth = fromDate.getMonth();
-            const endYear = toDate.getFullYear();
-            const endMonth = toDate.getMonth();
-            while (startYear < endYear || (startYear === endYear && startMonth <= endMonth)) {
-                const monthStr = `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
-                dailyFlow.push({
-                    date: monthStr,
-                    income: dailyMap.get(monthStr)?.income || 0,
-                    expense: dailyMap.get(monthStr)?.expense || 0
-                });
-                startMonth++;
-                if (startMonth > 11) {
-                    startMonth = 0;
-                    startYear++;
-                }
-            }
-        }
+        const dailyFlow = buildVietnamPeriodKeys(
+            fromDate,
+            toDate,
+            isMonthFormat ? 'month' : 'day',
+        ).map((date) => ({
+            date,
+            income: dailyMap.get(date)?.income || 0,
+            expense: dailyMap.get(date)?.expense || 0,
+        }));
 
         const income = Number(result?.income || 0);
         const expense = Number(result?.expense || 0);
@@ -278,9 +317,7 @@ export class FinanceService {
     }
 
     async getProfitLoss(shopId: number, from?: string, to?: string) {
-        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const toDate = to ? new Date(to) : new Date();
-        toDate.setHours(23, 59, 59, 999);
+        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
 
         const journalLineRepo = AppDataSource.getRepository(JournalLine);
 
@@ -327,9 +364,7 @@ export class FinanceService {
     }
 
     async getInvoiceReconciliation(shopId: number, from?: string, to?: string) {
-        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const toDate = to ? new Date(to) : new Date();
-        toDate.setHours(23, 59, 59, 999);
+        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
 
         const rows = await this.invoiceRepo.createQueryBuilder('i')
             .select('i.invoice_type', 'invoiceType')
@@ -409,18 +444,41 @@ export class FinanceService {
         return { items, total, page, limit };
     }
     async getDailyClosingByDate(shopId: number, date: string) {
-        const closing = await this.closingRepo.findOne({ where: { shopId, closingDate: new Date(date) as any } });
+        const { businessDate, fromDate, toDate } = resolveVietnamBusinessDayPeriod(date);
+        const closing = await this.closingRepo.findOne({
+            where: { shopId, closingDate: businessDate as any },
+        });
         if (!closing) {
-            // Return today's summary from transactions
-            const d = new Date(date);
             const summary = await this.cashTxRepo.createQueryBuilder('t')
                 .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)", 'cashIncome')
                 .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND (t.payment_method = 'CASH' OR t.payment_method IS NULL) THEN t.amount ELSE 0 END), 0)", 'cashExpense')
                 .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)", 'bankIncome')
                 .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)", 'bankExpense')
-                .addSelect("COUNT(*)", 'orderCount')
-                .where('t.shop_id = :shopId AND CAST(t.transaction_date AS DATE) = :d', { shopId, d: date })
+                .addSelect("COUNT(*)", 'transactionCount')
+                .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate', { shopId, fromDate, toDate })
                 .getRawOne();
+
+            const salesRows = await AppDataSource.query(`
+                SELECT
+                    COUNT(*)::int AS "orderCount",
+                    COALESCE(SUM(total_amount), 0) AS "totalSales"
+                FROM sales_orders
+                WHERE shop_id = $1
+                  AND order_date >= $2
+                  AND order_date <= $3
+                  AND UPPER(COALESCE(status, '')) != 'CANCELLED'
+            `, [shopId, fromDate, toDate]);
+            const returnRows = await AppDataSource.query(`
+                SELECT COALESCE(SUM(o.total_amount), 0) AS "totalReturns"
+                FROM sales_returns r
+                JOIN sales_orders o
+                  ON o.id = r.order_id
+                  AND o.shop_id = r.shop_id
+                WHERE r.shop_id = $1
+                  AND r.return_date >= $2
+                  AND r.return_date <= $3
+                  AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+            `, [shopId, fromDate, toDate]);
 
             const cashIncome = Number(summary?.cashIncome || 0);
             const cashExpense = Number(summary?.cashExpense || 0);
@@ -431,7 +489,7 @@ export class FinanceService {
 
             // Find the most recent daily closing before this date to get openingCash
             const lastClosing = await this.closingRepo.createQueryBuilder('c')
-                .where('c.shop_id = :shopId AND c.closing_date < :d', { shopId, d: date })
+                .where('c.shop_id = :shopId AND c.closing_date < :d', { shopId, d: businessDate })
                 .orderBy('c.closing_date', 'DESC')
                 .getOne();
             
@@ -440,15 +498,21 @@ export class FinanceService {
 
             // Get recent transactions for the day
             const transactions = await this.cashTxRepo.find({
-                where: { shopId, transactionDate: d as any },
+                where: { shopId, transactionDate: Between(fromDate, toDate) },
                 order: { createdAt: 'DESC' },
                 take: 20,
             });
 
+            const orderCount = Number(salesRows[0]?.orderCount || 0);
+            const totalSales = Number(salesRows[0]?.totalSales || 0);
+            const totalReturns = Number(returnRows[0]?.totalReturns || 0);
+
             return { 
-                closingDate: date, 
+                closingDate: businessDate,
                 totalIncome, 
                 totalExpense, 
+                totalSales,
+                totalReturns,
                 cashIncome,
                 cashExpense,
                 bankIncome,
@@ -456,7 +520,8 @@ export class FinanceService {
                 openingCash,
                 expectedCash,
                 netProfit: totalIncome - totalExpense, 
-                orderCount: Number(summary?.orderCount || 0), 
+                orderCount,
+                transactionCount: Number(summary?.transactionCount || 0),
                 transactions, 
                 closed: false 
             };
@@ -464,12 +529,38 @@ export class FinanceService {
         return { ...closing, closed: true };
     }
     async createDailyClosing(shopId: number, dto: Partial<DailyClosing>) {
-        const cashDifference = Number(dto.cashDifference || 0);
+        const { businessDate } = resolveVietnamBusinessDayPeriod(
+            dto.closingDate?.toString(),
+        );
+        const current = await this.getDailyClosingByDate(shopId, businessDate);
+        if (current.closed) {
+            throw new Error('Validation: Daily closing already exists');
+        }
+        const closingCash = Number(dto.closingCash);
+        if (!Number.isFinite(closingCash) || closingCash < 0) {
+            throw new Error('Validation: Closing cash must be a non-negative number');
+        }
+        const cashDifference = closingCash - Number(current.expectedCash || 0);
         if (Math.abs(cashDifference) > 50000 && (!dto.notes || dto.notes.trim().length === 0)) {
             throw new Error('Chênh lệch két vượt quá 50,000đ. Vui lòng nhập lý do giải trình vào phần ghi chú.');
         }
-        
-        const closing = await this.closingRepo.save(this.closingRepo.create({ ...dto, shopId }));
+
+        const closing = await this.closingRepo.save(this.closingRepo.create({
+            closingDate: businessDate as any,
+            openingCash: Number(current.openingCash || 0),
+            closingCash,
+            expectedCash: Number(current.expectedCash || 0),
+            cashDifference,
+            totalSales: Number(current.totalSales || 0),
+            totalReturns: Number(current.totalReturns || 0),
+            totalIncome: Number(current.totalIncome || 0),
+            totalExpense: Number(current.totalExpense || 0),
+            orderCount: Number(current.orderCount || 0),
+            notes: dto.notes?.trim(),
+            closedBy: dto.closedBy,
+            closedAt: new Date(),
+            shopId,
+        }));
 
         if (cashDifference !== 0) {
             const cashAccounts = await this.accountRepo.find({ where: { shopId } });
@@ -489,7 +580,7 @@ export class FinanceService {
                     account: targetAccount,
                     counterparty: 'Hệ thống (Kiểm quỹ)',
                     transactionDate: new Date(),
-                    notes: `Điều chỉnh chênh lệch chốt ca ngày ${dto.closingDate || new Date().toISOString().split('T')[0]}. Lý do: ${dto.notes || 'Không ghi chú'}`
+                    notes: `Điều chỉnh chênh lệch chốt ca ngày ${businessDate}. Lý do: ${dto.notes || 'Không ghi chú'}`
                 };
 
                 await this.createCashTransaction(shopId, txDto);
@@ -512,11 +603,14 @@ export class FinanceService {
         const items = await this.forecastRepo.find({ where: { shopId }, order: { forecastDate: 'ASC' } });
         return Array.isArray(items) ? items : (items ? [items] : []);
     }
-    async createForecast(shopId: number, dto: Partial<CashflowForecast>) { return this.forecastRepo.save(this.forecastRepo.create({ ...dto, shopId })); }
+    async createForecast(shopId: number, dto: Partial<CashflowForecast>) {
+        const normalized = normalizeCashflowForecastInput(dto);
+        return this.forecastRepo.save(this.forecastRepo.create({ ...normalized, shopId }));
+    }
     async updateForecast(shopId: number, id: number, dto: Partial<CashflowForecast>) {
         const record = await this.forecastRepo.findOne({ where: { id, shopId } });
         if (!record) throw new Error('Not found');
-        Object.assign(record, dto);
+        Object.assign(record, normalizeCashflowForecastInput(dto, record));
         return this.forecastRepo.save(record);
     }
     async deleteForecast(shopId: number, id: number) {
@@ -525,12 +619,36 @@ export class FinanceService {
     }
 
     // Budget Plans
-    async getBudgetPlans(shopId: number) { return this.budgetRepo.find({ where: { shopId }, order: { startDate: 'DESC' } }); }
-    async createBudgetPlan(shopId: number, dto: Partial<BudgetPlan>) { return this.budgetRepo.save(this.budgetRepo.create({ ...dto, shopId })); }
+    async getBudgetPlans(shopId: number) {
+        const plans = await this.budgetRepo.find({
+            where: { shopId },
+            order: { startDate: 'DESC' },
+        });
+        return Promise.all(plans.map(async plan => {
+            const actual = await this.cashTxRepo.createQueryBuilder('t')
+                .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'actualIncome')
+                .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'actualExpense')
+                .where('t.shop_id = :shopId', { shopId })
+                .andWhere('t.transaction_date BETWEEN :startDate AND :endDate', {
+                    startDate: plan.startDate,
+                    endDate: plan.endDate,
+                })
+                .getRawOne();
+            return {
+                ...plan,
+                actualIncome: Number(actual?.actualIncome || 0),
+                actualExpense: Number(actual?.actualExpense || 0),
+            };
+        }));
+    }
+    async createBudgetPlan(shopId: number, dto: Partial<BudgetPlan>) {
+        const normalized = normalizeBudgetPlanInput(dto);
+        return this.budgetRepo.save(this.budgetRepo.create({ ...normalized, shopId }));
+    }
     async updateBudgetPlan(shopId: number, id: number, dto: Partial<BudgetPlan>) {
         const record = await this.budgetRepo.findOne({ where: { id, shopId } });
         if (!record) throw new Error('Not found');
-        Object.assign(record, dto);
+        Object.assign(record, normalizeBudgetPlanInput(dto, record));
         return this.budgetRepo.save(record);
     }
     async deleteBudgetPlan(shopId: number, id: number) {
@@ -548,9 +666,7 @@ export class FinanceService {
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
     async getInvoiceSummary(shopId: number, from?: string, to?: string) {
-        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const toDate = to ? new Date(to) : new Date();
-        toDate.setHours(23, 59, 59, 999);
+        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
 
         const result = await this.invoiceRepo.createQueryBuilder('i')
             .select("COALESCE(SUM(CASE WHEN i.invoice_type = 'IN' THEN i.tax_amount ELSE 0 END), 0)", 'vatIn')
@@ -577,9 +693,15 @@ export class FinanceService {
         return invoice;
     }
     async createInvoice(shopId: number, dto: Partial<Invoice> & { type?: string }) {
-        if (!dto.invoiceNumber) dto.invoiceNumber = 'HD' + Date.now().toString().slice(-8);
-        if (!dto.invoiceType && dto.type) dto.invoiceType = dto.type;
-        return this.invoiceRepo.save(this.invoiceRepo.create({ ...dto, shopId }));
+        const normalized = normalizeInvoiceInput(dto);
+        const safeDto: any = { ...dto, ...normalized };
+        safeDto.invoiceNumber = String(dto.invoiceNumber || '').trim()
+            || 'HD' + Date.now().toString().slice(-8);
+        delete safeDto.id;
+        delete safeDto.shopId;
+        delete safeDto.createdAt;
+        delete safeDto.type;
+        return this.invoiceRepo.save(this.invoiceRepo.create({ ...safeDto, shopId }));
     }
 
 
@@ -658,16 +780,60 @@ export class FinanceService {
             .map((i: any) => {
                 const productName = String(i.productName || i.itemName || i.name || '').trim();
                 const productId = i.productId ? Number(i.productId) : undefined;
+                const warehouseId = i.warehouseId ? Number(i.warehouseId) : undefined;
                 const quantity = Number(i.quantity || 0);
                 const unitPrice = Number(i.unitPrice || 0);
                 const subtotal = Number(i.subtotal || (quantity * unitPrice));
-                if (!productName || quantity <= 0 || unitPrice < 0 || subtotal < 0) return null;
-                return { productName, productId, quantity, unitPrice, subtotal, shopId } as PurchaseWithoutInvoiceItem;
+                if (
+                    !productName ||
+                    !Number.isFinite(quantity) ||
+                    !Number.isFinite(unitPrice) ||
+                    !Number.isFinite(subtotal) ||
+                    quantity <= 0 ||
+                    unitPrice < 0 ||
+                    subtotal < 0 ||
+                    (productId !== undefined && (!Number.isInteger(productId) || productId <= 0)) ||
+                    (warehouseId !== undefined && (!Number.isInteger(warehouseId) || warehouseId <= 0))
+                ) return null;
+                return {
+                    productName,
+                    productId,
+                    warehouseId,
+                    quantity,
+                    unitPrice,
+                    subtotal,
+                    shopId,
+                } as PurchaseWithoutInvoiceItem;
             })
             .filter((i): i is PurchaseWithoutInvoiceItem => !!i);
 
-        if (items.length === 0) {
+        if (items.length === 0 || items.length !== rawItems.length) {
             throw new Error('Validation: Bảng kê phải có ít nhất 1 mặt hàng hợp lệ (cần productName/itemName, quantity > 0, unitPrice >= 0)');
+        }
+
+        let defaultWarehouse: Warehouse | null = null;
+        for (const item of items) {
+            if (!item.productId) continue;
+            if (!item.warehouseId) {
+                defaultWarehouse ??= await AppDataSource.getRepository(Warehouse).findOne({
+                    where: { shopId, isActive: true },
+                    order: { id: 'ASC' },
+                });
+                if (!defaultWarehouse) {
+                    throw new Error('Validation: Cửa hàng chưa có kho hoạt động để nhận hàng');
+                }
+                item.warehouseId = defaultWarehouse.id;
+            }
+            const [product, warehouse] = await Promise.all([
+                AppDataSource.getRepository(Product).findOne({
+                    where: { id: item.productId, shopId, isActive: true },
+                }),
+                AppDataSource.getRepository(Warehouse).findOne({
+                    where: { id: item.warehouseId, shopId },
+                }),
+            ]);
+            if (!product) throw new Error('Validation: Sản phẩm không thuộc cửa hàng');
+            if (!warehouse) throw new Error('Validation: Kho nhận hàng không thuộc cửa hàng');
         }
 
         const computedTotal = items.reduce((sum, i) => sum + Number(i.subtotal), 0);
@@ -689,19 +855,31 @@ export class FinanceService {
         const approvedBy = isOwner ? dto.creatorUserId : null;
         const approvedAt = isOwner ? new Date() : null;
 
-        const entity = this.purchaseNoInvRepo.create({
-            ...dto,
-            shopId,
-            sellerName,
-            sellerIdentityNumber,
-            totalAmount,
-            items,
-            createdBy: dto.creatorUserId,
-            approvalStatus,
-            approvedBy: approvedBy as any,
-            approvedAt: approvedAt as any,
+        const saved = await AppDataSource.transaction(async (manager) => {
+            const repo = manager.getRepository(PurchaseWithoutInvoice);
+            const entity = repo.create({
+                ...dto,
+                shopId,
+                sellerName,
+                sellerIdentityNumber,
+                totalAmount,
+                items,
+                createdBy: dto.creatorUserId,
+                approvalStatus,
+                approvedBy: approvedBy as any,
+                approvedAt: approvedAt as any,
+            });
+            const created = await repo.save(entity);
+            if (isOwner) {
+                await this.applyApprovedPurchaseWithoutInvoice(
+                    shopId,
+                    created,
+                    manager,
+                    dto.creatorUserId,
+                );
+            }
+            return created;
         });
-        const saved = await this.purchaseNoInvRepo.save(entity);
 
         await this.logActivity({
             userId: dto.creatorUserId,
@@ -730,77 +908,48 @@ export class FinanceService {
             requestIp?: string;
         },
     ) {
-        const record = await this.purchaseNoInvRepo.findOne({ where: { id, shopId } });
-        if (!record) throw new Error('Validation: Không tìm thấy bảng kê');
-
         if (input.approverAccountType !== 'SHOP') {
             throw new Error('Validation: Chỉ chủ shop mới có quyền duyệt bảng kê');
         }
+        const result = await AppDataSource.transaction(async (manager) => {
+            const repo = manager.getRepository(PurchaseWithoutInvoice);
+            const record = await repo.findOne({
+                where: { id, shopId },
+                relations: ['items'],
+            });
+            if (!record) throw new Error('Validation: Không tìm thấy bảng kê');
 
-        const oldValue = JSON.stringify({ approvalStatus: record.approvalStatus, approvalNotes: record.approvalNotes });
-        record.approvalStatus = input.decision;
-        record.approvalNotes = input.approvalNotes || null as any;
-        record.approvedBy = input.approverUserId as any;
-        record.approvedAt = new Date();
-
-        const updated = await this.purchaseNoInvRepo.save(record);
-
-        if (input.decision === 'APPROVED') {
-            const cogsService = new COGSService();
-
-            // Lấy chi tiết items
-            const fullRecord = await this.purchaseNoInvRepo.findOne({ where: { id: updated.id }, relations: ['items'] });
-            if (fullRecord && fullRecord.items) {
-                for (const item of fullRecord.items) {
-                    if (item.productId && item.warehouseId) {
-                        // 1. Tạo chuyển động kho IN (bằng cách cập nhật stock và ghi movement)
-                        const movementRepo = AppDataSource.getRepository(InventoryMovement);
-                        await movementRepo.save(movementRepo.create({
-                            shopId,
-                            productId: item.productId,
-                            warehouseId: item.warehouseId,
-                            movementType: 'IN',
-                            quantity: item.quantity,
-                            referenceType: 'PURCHASE_WITHOUT_INVOICE',
-                            referenceId: updated.id,
-                            notes: `Bảng kê 01: ${updated.recordCode}`
-                        }));
-
-                        // Tăng quantity trong inventory_stocks (dùng TypeORM)
-                        const stockRepo = AppDataSource.getRepository(InventoryStock);
-                        let stock = await stockRepo.findOne({ where: { shopId, productId: item.productId, warehouseId: item.warehouseId } as any });
-                        if (!stock) {
-                            stock = stockRepo.create({ shopId, productId: item.productId, warehouseId: item.warehouseId, quantity: 0, updatedAt: new Date() });
-                        }
-                        stock.quantity = Number(stock.quantity) + Number(item.quantity);
-                        stock.updatedAt = new Date();
-                        await stockRepo.save(stock);
-
-                        // 2. Tạo lô hàng mới tính FIFO
-                        await cogsService.addInventoryLot({
-                            productId: item.productId,
-                            quantity: item.quantity,
-                            costPrice: item.unitPrice,
-                            purchaseId: updated.id,
-                            notes: `Bảng kê 01: ${updated.recordCode}`,
-                            shopId
-                        });
-                    }
+            const currentStatus = String(record.approvalStatus || 'PENDING').toUpperCase();
+            if (currentStatus !== 'PENDING') {
+                if (currentStatus === input.decision) {
+                    return { updated: record, changed: false, oldValue: '' };
                 }
+                throw new Error('Validation: Bảng kê đã được xử lý và không thể đổi quyết định');
             }
 
-            // 3. Ghi nhận chi tiền vào Sổ cái
-            await this.postingService.postJournal(
-                shopId,
-                'PURCHASE_WITHOUT_INVOICE',
-                updated.id,
-                `Chi mua hàng không hóa đơn: ${updated.recordCode}`,
-                [
-                    { accountCode: '156', amount: Number(updated.totalAmount), entryType: 'DEBIT' },
-                    { accountCode: '111', amount: Number(updated.totalAmount), entryType: 'CREDIT' },
-                ]
-            );
-        }
+            const oldValue = JSON.stringify({
+                approvalStatus: record.approvalStatus,
+                approvalNotes: record.approvalNotes,
+            });
+            record.approvalStatus = input.decision;
+            record.approvalNotes = input.approvalNotes?.trim() || null as any;
+            record.approvedBy = input.approverUserId as any;
+            record.approvedAt = new Date();
+            const updated = await repo.save(record);
+
+            if (input.decision === 'APPROVED') {
+                await this.applyApprovedPurchaseWithoutInvoice(
+                    shopId,
+                    updated,
+                    manager,
+                    input.approverUserId,
+                );
+            }
+            return { updated, changed: true, oldValue };
+        });
+
+        const { updated, changed, oldValue } = result;
+        if (!changed) return updated;
 
         await this.logActivity({
             userId: input.approverUserId,
@@ -814,6 +963,95 @@ export class FinanceService {
             ipAddress: input.requestIp,
         });
         return updated;
+    }
+
+    private async applyApprovedPurchaseWithoutInvoice(
+        shopId: number,
+        record: PurchaseWithoutInvoice,
+        manager: EntityManager,
+        createdBy?: number,
+    ) {
+        const movementRepo = manager.getRepository(InventoryMovement);
+        const stockRepo = manager.getRepository(InventoryStock);
+        const cogsService = new COGSService();
+
+        for (const item of record.items || []) {
+            if (!item.productId || !item.warehouseId) continue;
+            await movementRepo.save(movementRepo.create({
+                shopId,
+                productId: Number(item.productId),
+                warehouseId: Number(item.warehouseId),
+                movementType: 'IN',
+                quantity: Number(item.quantity),
+                referenceType: 'PURCHASE_WITHOUT_INVOICE',
+                referenceId: record.id,
+                notes: `Bảng kê 01: ${record.recordCode}`,
+            }));
+
+            let stock = await stockRepo.findOne({
+                where: {
+                    shopId,
+                    productId: Number(item.productId),
+                    warehouseId: Number(item.warehouseId),
+                } as any,
+            });
+            if (!stock) {
+                stock = stockRepo.create({
+                    shopId,
+                    productId: Number(item.productId),
+                    warehouseId: Number(item.warehouseId),
+                    quantity: 0,
+                    updatedAt: new Date(),
+                });
+            }
+            stock.quantity = Number(stock.quantity || 0) + Number(item.quantity);
+            stock.updatedAt = new Date();
+            await stockRepo.save(stock);
+
+            await cogsService.addInventoryLot({
+                productId: Number(item.productId),
+                quantity: Number(item.quantity),
+                costPrice: Number(item.unitPrice),
+                purchaseId: record.id,
+                notes: `Bảng kê 01: ${record.recordCode}`,
+                shopId,
+            }, manager);
+        }
+
+        const paymentMethod = record.paymentMethod || 'CASH';
+        await this.createCashTransaction(shopId, {
+            amount: Number(record.totalAmount),
+            type: 'EXPENSE',
+            category: 'PURCHASE',
+            paymentMethod,
+            referenceType: 'PURCHASE_WITHOUT_INVOICE',
+            referenceId: record.id,
+            referenceCode: record.recordCode,
+            transactionDate: record.purchaseDate || new Date(),
+            status: 'COMPLETED',
+            createdBy,
+            notes: `Chi mua hàng không hóa đơn: ${record.recordCode}`,
+        } as any, manager);
+
+        await this.postingService.postJournal(
+            shopId,
+            'PURCHASE_WITHOUT_INVOICE',
+            record.id,
+            `Chi mua hàng không hóa đơn: ${record.recordCode}`,
+            [
+                {
+                    accountCode: '156',
+                    amount: Number(record.totalAmount),
+                    entryType: 'DEBIT',
+                },
+                {
+                    accountCode: cashLedgerAccountCode(paymentMethod),
+                    amount: Number(record.totalAmount),
+                    entryType: 'CREDIT',
+                },
+            ],
+            manager,
+        );
     }
 
     private normalizeTaxObligationDto(dto: any) {

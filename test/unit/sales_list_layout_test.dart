@@ -8,4 +8,19 @@ void main() {
     expect(salesListUsesCompactLayout(799), isTrue);
     expect(salesListUsesCompactLayout(800), isFalse);
   });
+
+  test('sales pagination uses server totals and safe fallbacks', () {
+    expect(salesListCurrentPage({'page': 3, 'totalPages': 8, 'total': 156}), 3);
+    expect(salesListTotalPages({'page': 3, 'totalPages': 8, 'total': 156}), 8);
+    expect(
+      salesListTotalItems({'page': 3, 'totalPages': 8, 'total': 156}),
+      156,
+    );
+    expect(
+      salesListTotalItems({
+        'items': List.generate(7, (index) => {'id': index}),
+      }),
+      7,
+    );
+  });
 }

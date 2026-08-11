@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
@@ -28,19 +29,66 @@ class InventoryScreen extends ConsumerWidget {
     final slowMovingAsync = ref.watch(slowMovingProvider);
     final categoriesAsync = ref.watch(inventoryCategoriesSummaryProvider);
     final shopState = ref.watch(shopProvider);
+    final warehousesAsync = shopState.isAllShops
+        ? null
+        : ref.watch(warehousesProvider);
     final canManageProducts =
         shopState.isOwner || shopState.hasPermission('products');
+    final canCreateProduct =
+        !shopState.isAllShops &&
+        (shopState.isOwner || shopState.hasPermission('products', 'edit'));
+    final canCreatePurchaseOrder =
+        !shopState.isAllShops &&
+        (shopState.isOwner || shopState.hasPermission('inventory', 'edit'));
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
+    final String? actionLabel = canCreateProduct
+        ? 'Thêm sản phẩm'
+        : canCreatePurchaseOrder
+        ? 'Nhập hàng'
+        : null;
+    final String? actionAsset = canCreateProduct
+        ? AppAssets.add
+        : canCreatePurchaseOrder
+        ? AppAssets.inventory
+        : null;
+    final String? actionRoute = canCreateProduct
+        ? '/products/form'
+        : canCreatePurchaseOrder
+        ? '/purchase-orders'
+        : null;
+    Widget headerActions({required bool compact}) => Wrap(
+      spacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        featureGuideButton(context, 'inventory'),
+        if (compact && actionLabel != null)
+          Tooltip(
+            message: actionLabel,
+            child: FloatingActionButton.small(
+              heroTag: 'inventory-primary-action-compact',
+              elevation: 0,
+              onPressed: () => context.push(actionRoute!),
+              child: AppAssetIcon(
+                assetPath: actionAsset!,
+                size: 18,
+                color: Colors.white,
+                semanticLabel: actionLabel,
+              ),
+            ),
+          ),
+      ],
+    );
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: AppPrimaryFloatingAction(
-        label: canManageProducts ? 'Thêm sản phẩm' : 'Nhập hàng',
-        assetPath: canManageProducts ? AppAssets.add : AppAssets.inventory,
-        heroTag: 'inventory-primary-action',
-        onPressed: () => context.push(
-          canManageProducts ? '/products/form' : '/purchase-orders',
-        ),
-      ),
+      floatingActionButton: compactLayout || actionLabel == null
+          ? null
+          : AppPrimaryFloatingAction(
+              label: actionLabel,
+              assetPath: actionAsset!,
+              heroTag: 'inventory-primary-action',
+              onPressed: () => context.push(actionRoute!),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
@@ -52,6 +100,7 @@ class InventoryScreen extends ConsumerWidget {
             ref.invalidate(expiringProductsProvider);
             ref.invalidate(slowMovingProvider);
             ref.invalidate(inventoryCategoriesSummaryProvider);
+            if (!shopState.isAllShops) ref.invalidate(warehousesProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -66,8 +115,8 @@ class InventoryScreen extends ConsumerWidget {
                     subtitle:
                         'Ưu tiên sản phẩm cần nhập, sắp hết hạn và tồn chậm luân chuyển.',
                     dense: true,
-                    action: featureGuideButton(context, 'inventory'),
-                    compactAction: featureGuideButton(context, 'inventory'),
+                    action: headerActions(compact: compactLayout),
+                    compactAction: headerActions(compact: true),
                   ),
                   _InventoryMetricStrip(
                     stock: stockAsync,
@@ -78,6 +127,15 @@ class InventoryScreen extends ConsumerWidget {
                     ),
                     lowStock: lowStockAsync,
                     expiring: expiringAsync,
+                    warehouses: warehousesAsync,
+                    isAllShops: shopState.isAllShops,
+                    activeShopCount: shopState.userShops
+                        .where(
+                          (shop) =>
+                              shop['status'] == 'ACTIVE' &&
+                              shop['isActive'] != false,
+                        )
+                        .length,
                   ),
                   if (stockAsync.hasError ||
                       lowStockAsync.hasError ||
@@ -233,12 +291,18 @@ class _InventoryMetricStrip extends StatelessWidget {
   final int? totalProducts;
   final AsyncValue<List<dynamic>> lowStock;
   final AsyncValue<List<dynamic>> expiring;
+  final AsyncValue<List<dynamic>>? warehouses;
+  final bool isAllShops;
+  final int activeShopCount;
 
   const _InventoryMetricStrip({
     required this.stock,
     required this.totalProducts,
     required this.lowStock,
     required this.expiring,
+    required this.warehouses,
+    required this.isAllShops,
+    required this.activeShopCount,
   });
 
   @override
@@ -274,10 +338,16 @@ class _InventoryMetricStrip extends StatelessWidget {
         ),
         context: 'Cần xử lý trước hạn',
       ),
-      const _InventoryMetric(
-        label: 'Kho hoạt động',
-        value: '1',
-        context: 'Trong phạm vi cửa hàng',
+      _InventoryMetric(
+        label: isAllShops ? 'Cửa hàng hoạt động' : 'Kho hoạt động',
+        value: isAllShops
+            ? '$activeShopCount'
+            : warehouses!.when(
+                data: (items) => '${items.length}',
+                loading: () => 'Đang tải',
+                error: (_, _) => 'Chưa tải',
+              ),
+        context: isAllShops ? 'Trong phạm vi tổng hợp' : 'Cửa hàng hiện tại',
       ),
     ];
 
@@ -289,6 +359,34 @@ int inventoryProductTotal(Map<String, dynamic> page) {
   final total = int.tryParse(page['total']?.toString() ?? '');
   if (total != null && total >= 0) return total;
   return (page['items'] as List?)?.length ?? 0;
+}
+
+String inventoryIssueProductName(dynamic item) {
+  if (item is! Map) return 'Sản phẩm chưa có tên';
+  return item['product']?['name']?.toString() ??
+      item['productName']?.toString() ??
+      item['name']?.toString() ??
+      'Sản phẩm chưa có tên';
+}
+
+num inventoryIssueQuantity(dynamic item) {
+  if (item is! Map) return 0;
+  final value =
+      item['currentQuantity'] ?? item['quantity'] ?? item['currentStock'] ?? 0;
+  return value is num ? value : num.tryParse(value.toString()) ?? 0;
+}
+
+({double totalValue, int totalSkuCount}) inventoryCategoryTotals(
+  Iterable<dynamic> items,
+) {
+  var totalValue = 0.0;
+  var totalSkuCount = 0;
+  for (final item in items) {
+    if (item is! Map) continue;
+    totalValue += (item['value'] as num?)?.toDouble() ?? 0;
+    totalSkuCount += (item['skuCount'] as num?)?.toInt() ?? 0;
+  }
+  return (totalValue: totalValue, totalSkuCount: totalSkuCount);
 }
 
 class _SimpleMetricStrip extends StatelessWidget {
@@ -499,12 +597,16 @@ class _InventoryActionWorkspace extends StatelessWidget {
           emptyMessage: 'Không có sản phẩm chậm luân chuyển.',
           asyncValue: slowMoving,
           statusBuilder: (item) {
-            final quantity = item['currentQuantity'] ?? item['quantity'] ?? 0;
+            final quantity = inventoryIssueQuantity(item);
             final unit =
                 item['product']?['unit']?.toString() ??
                 item['unit']?.toString() ??
                 '';
-            return 'Tồn $quantity${unit.isEmpty ? '' : ' $unit'}';
+            final days = int.tryParse(
+              item['daysSinceLastSale']?.toString() ?? '',
+            );
+            final age = days == null ? 'Chưa từng bán' : '$days ngày chưa bán';
+            return '$age • Tồn $quantity${unit.isEmpty ? '' : ' $unit'}';
           },
         );
 
@@ -635,10 +737,7 @@ class _InventoryIssueRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final name =
-        item['product']?['name'] ??
-        item['productName'] ??
-        'Sản phẩm chưa có tên';
+    final name = inventoryIssueProductName(item);
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -701,11 +800,23 @@ class _CategoryDistribution extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
-            child: Text(
-              'Phân bổ tồn kho theo danh mục',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Giá trị tồn kho theo danh mục',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Tính theo giá vốn; không cộng trực tiếp các đơn vị Bao, Kg và Bộ.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                ),
+              ],
             ),
           ),
           Divider(height: 1, color: colors.divider),
@@ -743,6 +854,7 @@ class _CategoryDistribution extends StatelessWidget {
                             .toDouble(),
                   )
                   .toList();
+              final totals = inventoryCategoryTotals(items);
               final maximum = values.fold<double>(
                 0,
                 (current, value) => value > current ? value : current,
@@ -751,7 +863,14 @@ class _CategoryDistribution extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    _InventoryValueSummary(
+                      totalValue: totals.totalValue,
+                      totalSkuCount: totals.totalSkuCount,
+                      categoryCount: items.length,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
                     for (
                       var index = 0;
                       index < visibleItems.length;
@@ -762,6 +881,10 @@ class _CategoryDistribution extends StatelessWidget {
                         label:
                             visibleItems[index]['name']?.toString() ?? 'Khác',
                         value: values[index],
+                        skuCount:
+                            (visibleItems[index]['skuCount'] as num?)
+                                ?.toInt() ??
+                            0,
                         maximum: maximum,
                       ),
                     ],
@@ -776,14 +899,85 @@ class _CategoryDistribution extends StatelessWidget {
   }
 }
 
+class _InventoryValueSummary extends StatelessWidget {
+  final double totalValue;
+  final int totalSkuCount;
+  final int categoryCount;
+
+  const _InventoryValueSummary({
+    required this.totalValue,
+    required this.totalSkuCount,
+    required this.categoryCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final valueText = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    ).format(totalValue);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: colors.cardAlt,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+      ),
+      child: Wrap(
+        spacing: AppSpacing.lg,
+        runSpacing: AppSpacing.xs,
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Giá trị vốn đang tồn',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                valueText,
+                style: AppTheme.tabularStyle(
+                  context,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            '$totalSkuCount SKU · $categoryCount danh mục',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DistributionRow extends StatelessWidget {
   final String label;
   final double value;
+  final int skuCount;
   final double maximum;
 
   const _DistributionRow({
     required this.label,
     required this.value,
+    required this.skuCount,
     required this.maximum,
   });
 
@@ -791,6 +985,11 @@ class _DistributionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final progress = maximum <= 0 ? 0.0 : value / maximum;
+    final valueText = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    ).format(value);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -798,10 +997,28 @@ class _DistributionRow extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (skuCount > 0)
+                    Text(
+                      '$skuCount SKU',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
+                    ),
+                ],
+              ),
             ),
+            const SizedBox(width: AppSpacing.sm),
             Text(
-              value.toStringAsFixed(0),
+              valueText,
               style: AppTheme.tabularStyle(
                 context,
                 fontSize: 13,
