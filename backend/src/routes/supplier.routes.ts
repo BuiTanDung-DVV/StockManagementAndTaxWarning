@@ -5,6 +5,7 @@ import { requirePermission } from '../middleware/permission.middleware';
 const router = Router();
 
 router.get('/suppliers', requirePermission('suppliers', 'view'), supplierCtrl.findAll);
+router.get('/suppliers/payables-aging', requirePermission('finance', 'view'), supplierCtrl.payablesAging);
 router.get('/suppliers/:id', requirePermission('suppliers', 'view'), supplierCtrl.findOne);
 router.post('/suppliers', requirePermission('suppliers', 'edit'), supplierCtrl.create);
 router.put('/suppliers/:id', requirePermission('suppliers', 'edit'), supplierCtrl.update);

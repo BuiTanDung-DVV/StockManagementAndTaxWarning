@@ -123,6 +123,7 @@ class MainShell extends ConsumerWidget {
             '/transactions',
             '/purchases-no-invoice',
             '/tax-estimate',
+            '/supplier-payables-aging',
           ],
         ),
       _NavDef(

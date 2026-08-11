@@ -25,6 +25,8 @@ class SupplierRepository {
   Future<void> delete(int id) async => await _api.delete('/suppliers/$id');
   Future<List<dynamic>> findPayables(int id) async =>
       await _api.get('/suppliers/$id/payables');
+  Future<Map<String, dynamic>> getPayablesAging(String asOf) async =>
+      await _api.get('/suppliers/payables-aging', params: {'asOf': asOf});
 }
 
 final supplierRepoProvider = Provider<SupplierRepository>((ref) {
@@ -53,3 +55,8 @@ final supplierDetailProvider = FutureProvider.family<Map<String, dynamic>, int>(
     return ref.watch(supplierRepoProvider).findById(id);
   },
 );
+
+final supplierPayablesAgingProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, asOf) {
+      return ref.watch(supplierRepoProvider).getPayablesAging(asOf);
+    });
