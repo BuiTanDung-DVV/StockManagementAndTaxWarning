@@ -1,5 +1,12 @@
 import { AppDataSource } from '../config/db.config';
 import { Supplier, Payable } from '../supplier/entities';
+import { In, Not } from 'typeorm';
+import { resolveVietnamBusinessDayEnd } from '../finance/finance-period.utils';
+import {
+    calculateRemainingPayable,
+    classifyPayableAging,
+    payableDaysOverdue,
+} from '../supplier/payable-aging.utils';
 
 export class SupplierService {
     private supplierRepo = AppDataSource.getRepository(Supplier);
@@ -39,6 +46,98 @@ export class SupplierService {
 
     async getPayables(shopId: number, supplierId: number) {
         return this.payableRepo.find({ where: { shopId, supplierId } });
+    }
+
+    async getPayablesAging(shopId: number, asOf?: string) {
+        const payables = await this.payableRepo.find({
+            where: { shopId, status: Not(In(['PAID', 'CANCELLED'])) },
+            order: { dueDate: 'ASC', id: 'ASC' },
+        });
+        const supplierIds = [...new Set(payables.map((item) => Number(item.supplierId)).filter(Number.isInteger))];
+        const suppliers = supplierIds.length > 0
+            ? await this.supplierRepo.find({ where: { shopId, id: In(supplierIds) } })
+            : [];
+        const supplierById = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
+        const now = resolveVietnamBusinessDayEnd(asOf);
+        const buckets = { current: 0, past30: 0, past60: 0, past90: 0 };
+        const bySupplier = new Map<number, {
+            supplierId: number;
+            supplierName: string;
+            payableCount: number;
+            totalOutstanding: number;
+            overdueOutstanding: number;
+            maxDaysOverdue: number;
+            oldestDueDate: string | null;
+        }>();
+        const items: Array<Record<string, unknown>> = [];
+
+        for (const payable of payables) {
+            const remaining = calculateRemainingPayable(payable.amount, payable.paidAmount);
+            if (remaining <= 0) continue;
+
+            const bucket = classifyPayableAging(payable.dueDate, now);
+            const daysOverdue = payableDaysOverdue(payable.dueDate, now);
+            buckets[bucket] += remaining;
+
+            const supplier = supplierById.get(Number(payable.supplierId));
+            const supplierId = Number(payable.supplierId);
+            const supplierSummary = bySupplier.get(supplierId) ?? {
+                supplierId,
+                supplierName: supplier?.name || 'Nhà cung cấp chưa xác định',
+                payableCount: 0,
+                totalOutstanding: 0,
+                overdueOutstanding: 0,
+                maxDaysOverdue: 0,
+                oldestDueDate: null,
+            };
+            supplierSummary.payableCount += 1;
+            supplierSummary.totalOutstanding += remaining;
+            if (bucket !== 'current') supplierSummary.overdueOutstanding += remaining;
+            supplierSummary.maxDaysOverdue = Math.max(supplierSummary.maxDaysOverdue, daysOverdue);
+            const dueDate = new Date(payable.dueDate).toISOString().slice(0, 10);
+            if (!supplierSummary.oldestDueDate || dueDate < supplierSummary.oldestDueDate) {
+                supplierSummary.oldestDueDate = dueDate;
+            }
+            bySupplier.set(supplierId, supplierSummary);
+
+            items.push({
+                id: payable.id,
+                supplierId,
+                supplierName: supplierSummary.supplierName,
+                purchaseOrderId: payable.purchaseOrderId,
+                amount: Number(payable.amount),
+                paidAmount: Number(payable.paidAmount),
+                remaining,
+                dueDate,
+                daysOverdue,
+                bucket,
+            });
+        }
+
+        const totalOutstanding = buckets.current + buckets.past30 + buckets.past60 + buckets.past90;
+        const overdueOutstanding = buckets.past30 + buckets.past60 + buckets.past90;
+        const supplierSummaries = [...bySupplier.values()].sort(
+            (a, b) => b.overdueOutstanding - a.overdueOutstanding || b.totalOutstanding - a.totalOutstanding,
+        );
+        items.sort((a, b) =>
+            Number(b.daysOverdue) - Number(a.daysOverdue)
+            || Number(b.remaining) - Number(a.remaining));
+
+        return {
+            asOf: now.toISOString(),
+            buckets,
+            summary: {
+                totalOutstanding,
+                overdueOutstanding,
+                overdueRatio: totalOutstanding > 0
+                    ? Number((overdueOutstanding / totalOutstanding).toFixed(4))
+                    : 0,
+                payableCount: items.length,
+                supplierCount: supplierSummaries.length,
+            },
+            suppliers: supplierSummaries.slice(0, 10),
+            items: items.slice(0, 20),
+        };
     }
 
     private normalizeSupplierDto(dto: any) {

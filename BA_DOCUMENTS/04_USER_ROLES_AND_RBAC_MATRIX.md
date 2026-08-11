@@ -155,7 +155,7 @@ multi-shop và chưa xác minh production.
 | Tag sản phẩm | Không có key riêng | `products` | Có | Dùng chung quyền product |
 | Kho/PO/kiểm kho | `inventory` | `inventory` | Có | Đã đồng bộ |
 | Khách hàng/công nợ phải thu | `customers` | `customers` | Có | Đã bổ sung middleware |
-| Nhà cung cấp/công nợ phải trả | `suppliers` | `suppliers` hoặc `finance` khi xem payable | Có | Đã bổ sung middleware |
+| Nhà cung cấp/công nợ phải trả | `suppliers` | Chi tiết từng nhà cung cấp: `suppliers` hoặc `finance`; báo cáo tổng hợp tuổi nợ: `finance` | Có | Đã bổ sung middleware và test 403 |
 | Tài chính/hóa đơn/thuế | `finance` | `finance` | Có | Đã đồng bộ |
 | Cấu hình thuế API | `finance` trong backend | `finance` | Có | API nhất quán |
 | Cài đặt/shop profile/config | `settings` | `settings` | Có | Đã đồng bộ |
@@ -189,7 +189,8 @@ chung. Các route profile/notification là user-scoped nên không dùng shop pe
 | `/inventory/*`, `/purchase-orders`, `/stock-takes` | `inventory:view` | `inventory:edit` | `edit` | Chỉ low-stock và categories-summary |
 | `/customers*`, `/customer-receivables` | `customers:view` | `customers:edit` | `customers:full` | Không |
 | `/suppliers*` | `suppliers:view` | `suppliers:edit` | `suppliers:full` | Không |
-| Supplier payable | `suppliers:view` hoặc `finance:view` | N/A | N/A | Không |
+| Supplier payable từng nhà cung cấp | `suppliers:view` hoặc `finance:view` | N/A | N/A | Không |
+| Báo cáo tuổi nợ phải trả tổng hợp | `finance:view` | N/A | N/A | Không |
 | `/cash-*`, `/daily-closings`, finance `/invoices`, obligations | `finance:view` | `finance:edit` | đa số `edit` | Chỉ cash summary |
 | `/tax/config`, `/tax/estimate`, `/tax/export-htkk` | `finance:view` | config: `finance:edit` | N/A | Không |
 | `/shop-profile`, `/configs`, `/activity-logs` | `settings:view` | `settings:edit` | N/A | Không |

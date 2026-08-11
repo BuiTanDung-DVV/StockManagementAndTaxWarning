@@ -51,9 +51,14 @@ const _financeTools = <({String title, String description, String route})>[
     route: '/profit-loss',
   ),
   (
-    title: 'Phân tích tuổi nợ',
-    description: 'Phân nhóm công nợ theo thời gian và mức độ ưu tiên.',
+    title: 'Tuổi nợ phải thu',
+    description: 'Phân nhóm khoản khách hàng còn nợ theo mức độ ưu tiên.',
     route: '/debt-aging',
+  ),
+  (
+    title: 'Tuổi nợ phải trả',
+    description: 'Ưu tiên các khoản cần thanh toán cho nhà cung cấp.',
+    route: '/supplier-payables-aging',
   ),
   (
     title: 'Dự báo dòng tiền',

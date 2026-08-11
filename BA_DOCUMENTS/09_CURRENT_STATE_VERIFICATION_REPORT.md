@@ -247,7 +247,7 @@ khi tuyên bố production-ready.
 | VER-73 | Kỳ trên KPI và biểu đồ tài chính | Đã sửa code, xác minh local build | Thẻ tổng thu/tổng chi/dòng tiền và panel ghi mốc `01–09/08`; khi cả thu và chi bằng 0, biểu đồ không vẽ đường 0 gây hiểu nhầm mà hiển thị trạng thái chưa có giao dịch | Cao |
 | VER-74 | Ý nghĩa cơ cấu thanh toán | Đã sửa code, chưa production | Đổi nhãn thành “Tiền đã thu theo phương thức”, vì nguồn là các lần thanh toán ghi nhận chứ không phải doanh thu thuần sau hoàn; hiển thị mốc ngày thay cho “Tháng này” chung chung | Trung bình |
 | VER-75 | Ranh giới ngày giữa bán hàng và tài chính | Đã sửa code, có kiểm thử | Summary bán hàng, top sản phẩm, phương thức thanh toán, dòng tiền, lãi/lỗ và hóa đơn dùng chung ranh giới ngày Việt Nam; tránh lệch số ở giao dịch gần 0 giờ | Rất cao |
-| VER-76 | Đối soát dữ liệu production ngày 09/08 | Không chính xác một phần | Mỗi shop vẫn đạt 28/32 nhóm; shop 34 còn 870 lỗi 111/112, 30 hóa đơn thiếu dòng và 268 hóa đơn thiếu mô hình chiết khấu; shop 35 lần lượt 834, 30 và 290. Dữ liệu bán dừng 28/07/2026 | Rất cao |
+| VER-76 | Đối soát dữ liệu production, tái chạy 11/08 | Không chính xác một phần | Mỗi shop vẫn đạt 28/32 nhóm; shop 34 còn 870 lỗi 111/112, 30 hóa đơn thiếu dòng và 268 hóa đơn thiếu mô hình chiết khấu; shop 35 lần lượt 834, 30 và 290. Dữ liệu bán dừng 28/07/2026 | Rất cao |
 | VER-77 | Insight AI về tồn kho và công nợ | Đã sửa code, có kiểm thử | Cảnh báo tồn chỉ đếm sản phẩm có tồn thực tế chạm định mức; tổng nợ lấy từ khoản phải thu còn mở, không dùng `customers.balance` có thể lệch cache | Rất cao |
 | VER-78 | Báo cáo tuổi nợ | Đã sửa code, có kiểm thử | Loại cả khoản `PAID` và `CANCELLED`, đếm đúng khoản còn dư và chốt `asOf` ở cuối ngày nghiệp vụ Việt Nam | Rất cao |
 | VER-79 | Chốt ca theo ngày | Đã sửa code, chưa production | Giao dịch được lấy theo toàn bộ ngày Việt Nam thay vì so timestamp tuyệt đối; số đơn/doanh số/trả hàng lấy từ bảng bán hàng; server tự tính các tổng và chênh lệch, không tin số client gửi lên | Rất cao |
@@ -256,18 +256,24 @@ khi tuyên bố production-ready.
 | VER-82 | Doanh thu, thuế đầu ra và hoàn toàn bộ đơn | Đã sửa code, có kiểm thử | Bán hàng tách doanh thu thuần 511 và thuế đầu ra 3331; trả toàn bộ dùng giá/dòng hàng phía server, hoàn theo từng kênh đã thu, đảo cả phải thu 131 và giá vốn; báo cáo trừ toàn giá trị đơn trả thay vì chỉ tiền đã hoàn | Rất cao |
 | VER-83 | Doanh thu và tăng trưởng theo sản phẩm khi đơn có giảm giá | Đã sửa code, có kiểm thử và truy vấn dữ liệu thật | Truy vấn cũ cộng nguyên `sales_order_items.subtotal`, làm doanh thu/lợi nhuận theo sản phẩm cao hơn doanh thu thuần. Kỳ hiện tại, kỳ so sánh và hàng trả nay cùng phân bổ chiết khấu đơn theo tỷ trọng thành tiền; có chặn subtotal bằng 0 và dữ liệu giảm giá lịch sử bất thường | Rất cao |
 | VER-84 | Bố cục tài khoản chưa có cửa hàng và launcher AI | Đã sửa code, có widget test | Cột “Quy trình kích hoạt” từng tràn 17 px ở desktop 1280×720; khoảng đệm đã được thu gọn và kiểm thử không còn exception. Launcher AI giữ vị trí giữa bên trái, kéo/ẩn được nhưng chuyển về dạng linh vật 72 px để hạn chế che bảng và chú thích biểu đồ | Trung bình |
+| VER-85 | Báo cáo tuổi nợ phải trả nhà cung cấp | Đã sửa code, xác minh local và dữ liệu thật chỉ đọc | Công thức `max(amount - paid_amount, 0)`; loại `PAID/CANCELLED`; chốt cuối ngày Việt Nam; có 4 nhóm chưa hạn, 1–30, 31–60 và trên 60 ngày. Shop 34 có 202.995.000đ/3 khoản/2 nhà cung cấp; shop 35 có 257.324.000đ/2 khoản/2 nhà cung cấp. API yêu cầu quyền `finance`: owner nhận dữ liệu, tài khoản kho nhận 403. Desktop dùng bảng, mobile dùng card; không phát hiện lỗi console | Cao |
 
 ### Bằng chứng tái lập
 
 - Script chỉ đọc: [`validate-store-data.ts`](../backend/src/scripts/validate-store-data.ts).
 - Dữ liệu đã kiểm tra: cửa hàng `34` có 7.595 đơn; cửa hàng `35` có 7.783 đơn.
-- Backend: build/lint thành công; `106/106` kiểm thử P0 đạt; audit dependency production không còn lỗ hổng đã biết.
-- Flutter: toàn bộ `79/79` unit/widget test đạt; `flutter analyze` toàn dự án không phát hiện lỗi; web release build thành công.
+- Backend: build/lint thành công; `109/109` kiểm thử P0 đạt; audit dependency production không còn lỗ hổng đã biết.
+- Flutter: toàn bộ `80/80` unit/widget test đạt; `flutter analyze` toàn dự án không phát hiện lỗi; web release build thành công.
 - Flutter local release: nút Google hiển thị đúng ở desktop/mobile; `16/16` kiểm thử
   dashboard, kỳ báo cáo, biểu đồ và kho đạt; nhóm phân trang/kho/biểu đồ đạt `7/7`.
 - Nhóm kiểm thử responsive xác nhận breakpoint compact/medium/expanded, lưới co giãn và
   hành động chính không nằm trong vùng nội dung mobile. Chưa tái kiểm tra trực quan mobile
   trong phiên 09/08 vì trình duyệt audit không hỗ trợ thay đổi viewport.
+- Báo cáo tuổi nợ phải trả đã được kiểm tra trực quan tại 1440×900 và 390×844:
+  [desktop](assets/local-audit-2026-08-11/supplier-payables-desktop.png),
+  [bảng desktop](assets/local-audit-2026-08-11/supplier-payables-desktop-table.png),
+  [mobile](assets/local-audit-2026-08-11/supplier-payables-mobile.png) và
+  [chi tiết mobile](assets/local-audit-2026-08-11/supplier-payables-mobile-detail.png).
 - Truy vấn thật cho top sản phẩm tháng 07/2026 trả đủ `id`, đơn vị, doanh thu thuần,
   số lượng, giá vốn, lợi nhuận gộp và tỷ lệ biên lợi nhuận.
 - Kiểm thử quyền xác nhận vai trò bán hàng/dashboard xem được số liệu bán hàng mà không

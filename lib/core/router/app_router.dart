@@ -31,6 +31,7 @@ import '../../features/finance/presentation/daily_closing_screen.dart';
 import '../../features/finance/presentation/profit_loss_screen.dart';
 import '../../features/finance/presentation/cashflow_forecast_screen.dart';
 import '../../features/finance/presentation/debt_aging_screen.dart';
+import '../../features/finance/presentation/supplier_payables_aging_screen.dart';
 import '../../features/finance/presentation/invoice_list_screen.dart';
 import '../../features/finance/presentation/purchase_no_invoice_screen.dart';
 import '../../features/inventory/presentation/xnt_report_screen.dart';
@@ -154,6 +155,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path.startsWith('/profit-loss') ||
             path.startsWith('/cashflow-forecast') ||
             path.startsWith('/debt-aging') ||
+            path.startsWith('/supplier-payables-aging') ||
             path.startsWith('/invoices') ||
             path.startsWith('/purchases-no-invoice') ||
             path.startsWith('/tax-calculator') ||
@@ -364,6 +366,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/debt-aging',
             builder: (_, _) => const DebtAgingScreen(),
+          ),
+          GoRoute(
+            path: '/supplier-payables-aging',
+            builder: (_, _) => const SupplierPayablesAgingScreen(),
           ),
           GoRoute(
             path: '/invoices',

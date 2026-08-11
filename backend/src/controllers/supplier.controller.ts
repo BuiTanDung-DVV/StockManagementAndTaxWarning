@@ -32,3 +32,32 @@ export const payables = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await supplierService.getPayables((req as any).shopId, +req.params.id) }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
+
+export const payablesAging = async (req: Request, res: Response) => {
+    try {
+        const shopId = (req as any).shopId;
+        if ((req as any).isAllShops || !Number.isSafeInteger(shopId)) {
+            res.status(400).json({
+                success: false,
+                message: 'Vui lòng chọn một cửa hàng để xem công nợ phải trả',
+            });
+            return;
+        }
+        res.json({
+            success: true,
+            data: await supplierService.getPayablesAging(
+                shopId,
+                req.query.asOf as string,
+            ),
+        });
+    } catch (e: any) {
+        if (e?.message === 'Invalid asOf date') {
+            res.status(400).json({ success: false, message: 'Ngày chốt không hợp lệ' });
+            return;
+        }
+        res.status(500).json({
+            success: false,
+            message: 'Không thể tải báo cáo công nợ nhà cung cấp',
+        });
+    }
+};

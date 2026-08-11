@@ -158,3 +158,12 @@ cụ và thiết bị hỗ trợ phù hợp.
 - Smoke test production không làm thay đổi dữ liệu ngoài kịch bản được duyệt.
 - Verification report và traceability matrix được cập nhật bằng bằng chứng mới.
 - Người phụ trách nghiệp vụ và chuyên gia thuế duyệt các công thức liên quan.
+
+## 12. Kiểm thử công nợ phải trả nhà cung cấp
+
+| ID | Kịch bản | Kết quả mong đợi |
+|---|---|---|
+| TC-FIN-08 | Khoản phải trả chưa thanh toán, trả một phần, đã trả và đã hủy | Chỉ tính phần còn lại dương; loại `PAID/CANCELLED`; tổng KPI bằng tổng 4 nhóm tuổi nợ và tổng dòng mở |
+| TC-FIN-09 | Hạn đúng ngày chốt, quá hạn 30, 60 và 61 ngày | Lần lượt thuộc `chưa hạn`, `1–30`, `31–60`, `>60`; chốt theo cuối ngày nghiệp vụ Việt Nam |
+| TC-FIN-10 | Người dùng chuyển cửa hàng hoặc chọn “Tất cả cửa hàng” | API và mọi KPI/bảng chỉ trả dữ liệu thuộc shop đơn đang chọn; không rò dữ liệu giữa các shop; chế độ tổng hợp bị từ chối thay vì chạy với `shopId` rỗng |
+| TC-UX-06 | Báo cáo phải trả ở 1440×900 và 390×844 | Desktop có bảng đầy đủ; mobile dùng card; đơn vị đồng và ngày quá hạn đọc rõ; không overflow hoặc lỗi console |
