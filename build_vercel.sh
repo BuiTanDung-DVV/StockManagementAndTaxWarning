@@ -1,9 +1,8 @@
 #!/bin/bash
+set -euo pipefail
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
-echo "🚀 Bắt đầu cài đặt Backend & Flutter trên Vercel..."
-echo "📦 Build backend TypeScript..."
-(cd backend && npm install && npm run build)
+echo "🚀 Bắt đầu cài đặt Flutter Web trên Vercel..."
 # Tải Flutter bản stable mới nhất (chỉ lấy commit cuối cùng để tiết kiệm dung lượng và thời gian)
 if [ ! -d "flutter" ]; then
   git clone https://github.com/flutter/flutter.git -b stable --depth 1
@@ -24,7 +23,7 @@ flutter pub get
 echo "🔨 Đang tiến hành Build Web..."
 # Truyền các cấu hình public vào Flutter bằng dart-define mà không in giá trị ra build log.
 BUILD_ARGS=(--release)
-if [ -n "$API_URL" ]; then
+if [ -n "${API_URL:-}" ]; then
   BUILD_ARGS+=(--dart-define="API_URL=$API_URL")
 else
   echo "⚠️ Không tìm thấy biến môi trường API_URL. Build với cấu hình mặc định."
