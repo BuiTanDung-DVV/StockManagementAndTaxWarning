@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/cloudinary_image.dart';
 import '../providers/product_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../../core/utils/type_parser.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import 'product_form_screen.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -15,17 +20,37 @@ final _currFmt = NumberFormat.currency(
   decimalDigits: 0,
 );
 
-class ProductDetailScreen extends ConsumerWidget {
+class ProductDetailScreen extends ConsumerStatefulWidget {
   final int id;
   const ProductDetailScreen({super.key, required this.id});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProductDetailScreen> createState() =>
+      _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
+  int _movementPage = 1;
+  int get id => widget.id;
+
+  @override
+  Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final detailAsync = ref.watch(productDetailProvider(id));
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
+    Future<void> openEdit() async {
+      final product = detailAsync.value;
+      if (product == null) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
+      );
+      ref.invalidate(productDetailProvider(id));
+    }
+
     final movementsAsync = ref.watch(
-      inventoryMovementsProvider((productId: id, page: 1)),
+      inventoryMovementsProvider((productId: id, page: _movementPage)),
     );
 
     return Scaffold(
@@ -46,6 +71,13 @@ class ProductDetailScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           featureGuideButton(context, 'product_detail'),
+          if (compactLayout && detailAsync.hasValue)
+            AppPrimaryHeaderAction(
+              label: 'Chỉnh sửa',
+              assetPath: AppAssets.edit,
+              heroTag: 'product-edit-compact',
+              onPressed: openEdit,
+            ),
           const SizedBox(width: 8),
         ],
       ),
@@ -85,6 +117,7 @@ class ProductDetailScreen extends ConsumerWidget {
         ),
         data: (p) {
           final name = p['name'] ?? 'Sản phẩm không tên';
+          final imageUrl = p['imageUrl']?.toString().trim() ?? '';
           final sku = p['sku'] ?? '';
           final category = p['category']?['name'] ?? p['categoryName'] ?? '';
           final unit = p['unit'] ?? '';
@@ -119,22 +152,33 @@ class ProductDetailScreen extends ConsumerWidget {
                 // Premium visual card for product icon & details
                 Center(
                   child: Container(
-                    width: 100,
-                    height: 100,
+                    width: 132,
+                    height: 132,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withValues(
-                          alpha: 0.15,
-                        ),
-                        width: 1.5,
-                      ),
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: c.divider),
                     ),
-                    child: Icon(
-                      Icons.inventory_2_rounded,
-                      size: 40,
-                      color: theme.colorScheme.primary,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(21),
+                      child: imageUrl.isEmpty
+                          ? _ProductImageFallback(
+                              color: theme.colorScheme.primary,
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: optimizedCloudinaryImageUrl(
+                                imageUrl,
+                                width: 480,
+                                height: 480,
+                                crop: 'fill',
+                              ),
+                              fit: BoxFit.cover,
+                              placeholder: (_, _) =>
+                                  Container(color: c.surface),
+                              errorWidget: (_, _, _) => _ProductImageFallback(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -279,6 +323,21 @@ class ProductDetailScreen extends ConsumerWidget {
                   ),
                   data: (data) {
                     final items = (data['items'] as List?) ?? [];
+                    final currentPage = paginationValue(
+                      data,
+                      'page',
+                      fallback: _movementPage,
+                    );
+                    final totalPages = paginationValue(
+                      data,
+                      'totalPages',
+                      fallback: 1,
+                    );
+                    final totalItems = paginationValue(
+                      data,
+                      'total',
+                      fallback: items.length,
+                    );
                     if (items.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(16),
@@ -291,10 +350,20 @@ class ProductDetailScreen extends ConsumerWidget {
                     return ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: items.length,
+                      itemCount: items.length + 1,
                       separatorBuilder: (_, _) =>
                           Divider(color: c.divider.withValues(alpha: 0.3)),
                       itemBuilder: (_, i) {
+                        if (i == items.length) {
+                          return AppPaginationBar(
+                            currentPage: currentPage,
+                            totalPages: totalPages,
+                            totalItems: totalItems,
+                            itemLabel: 'phát sinh kho',
+                            onPageChanged: (page) =>
+                                setState(() => _movementPage = page),
+                          );
+                        }
                         final m = items[i];
                         final isOut = m['movementType'] == 'OUT';
                         final qty = NumberFormat('#,###').format(
@@ -342,19 +411,15 @@ class ProductDetailScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: detailAsync.hasValue
+      floatingActionButton: detailAsync.hasValue && !compactLayout
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        ProductFormScreen(product: detailAsync.value!),
-                  ),
-                );
-                ref.invalidate(productDetailProvider(id));
-              },
-              icon: const Icon(Icons.edit_rounded),
+              onPressed: openEdit,
+              icon: const AppAssetIcon(
+                assetPath: AppAssets.edit,
+                size: 19,
+                color: Colors.white,
+                semanticLabel: 'Chỉnh sửa',
+              ),
               label: const Text(
                 'Chỉnh sửa',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -398,6 +463,24 @@ class ProductDetailScreen extends ConsumerWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+class _ProductImageFallback extends StatelessWidget {
+  final Color color;
+
+  const _ProductImageFallback({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: AppAssetIcon(
+        assetPath: AppAssets.inventory,
+        size: 42,
+        color: color,
+        semanticLabel: 'Ảnh sản phẩm mặc định',
+      ),
     );
   }
 }

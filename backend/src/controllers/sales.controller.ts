@@ -51,7 +51,18 @@ export const summary = async (req: Request, res: Response) => {
 };
 
 export const topProducts = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await salesService.getTopProducts(getShopId(req), req.query.from as string, req.query.to as string) }); }
+    try {
+        res.json({
+            success: true,
+            data: await salesService.getTopProducts(
+                getShopId(req),
+                req.query.from as string,
+                req.query.to as string,
+                req.query.previousFrom as string,
+                req.query.previousTo as string,
+            ),
+        });
+    }
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 

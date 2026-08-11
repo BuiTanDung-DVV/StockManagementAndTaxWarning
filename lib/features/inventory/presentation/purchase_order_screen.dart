@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../providers/inventory_provider.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import 'purchase_order_form_screen.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -16,14 +19,27 @@ final _currFmt = NumberFormat.currency(
   decimalDigits: 0,
 );
 
-class PurchaseOrderScreen extends ConsumerWidget {
+class PurchaseOrderScreen extends ConsumerStatefulWidget {
   const PurchaseOrderScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PurchaseOrderScreen> createState() =>
+      _PurchaseOrderScreenState();
+}
+
+class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
+  int _page = 1;
+
+  @override
+  Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final poAsync = ref.watch(purchaseOrdersProvider(1));
+    final poAsync = ref.watch(purchaseOrdersProvider(_page));
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
+    void openForm() => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()),
+    );
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -43,33 +59,39 @@ class PurchaseOrderScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           featureGuideButton(context, 'purchase_order'),
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Tạo đơn nhập',
+              assetPath: AppAssets.add,
+              heroTag: 'purchase-order-add-compact',
+              onPressed: openForm,
+            ),
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()),
-          );
-        },
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 3,
-        icon: const Icon(
-          Icons.shopping_cart_checkout_rounded,
-          color: Colors.white,
-          size: 20,
-        ),
-        label: Text(
-          'Tạo Đơn Nhập',
-          style: GoogleFonts.manrope(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontSize: 14,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: openForm,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 3,
+              icon: const Icon(
+                Icons.shopping_cart_checkout_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              label: Text(
+                'Tạo Đơn Nhập',
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+              backgroundColor: AppColors.primary,
+            ),
       body: poAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -106,6 +128,13 @@ class PurchaseOrderScreen extends ConsumerWidget {
         ),
         data: (data) {
           final items = (data['items'] as List?) ?? [];
+          final currentPage = paginationValue(data, 'page', fallback: _page);
+          final totalPages = paginationValue(data, 'totalPages', fallback: 1);
+          final totalItems = paginationValue(
+            data,
+            'total',
+            fallback: items.length,
+          );
           if (items.isEmpty) {
             return const AppEmpty(
               visual: AppEmptyVisual.document,
@@ -117,10 +146,19 @@ class PurchaseOrderScreen extends ConsumerWidget {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               physics: const BouncingScrollPhysics(),
-              itemCount: items.length,
+              itemCount: items.length + 1,
               separatorBuilder: (_, _) =>
                   Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
+                if (i == items.length) {
+                  return AppPaginationBar(
+                    currentPage: currentPage,
+                    totalPages: totalPages,
+                    totalItems: totalItems,
+                    itemLabel: 'đơn nhập hàng',
+                    onPageChanged: (page) => setState(() => _page = page),
+                  );
+                }
                 final po = items[i] as Map;
                 final code =
                     po['orderCode'] ?? po['code'] ?? 'PO-${po['id'] ?? i}';

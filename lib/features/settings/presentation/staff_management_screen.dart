@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../settings/providers/shop_provider.dart';
 
@@ -479,6 +481,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return DefaultTabController(
       length: 2,
@@ -504,6 +507,14 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
               tooltip: 'Quản lý vai trò',
               onPressed: () => context.push('/roles'),
             ),
+            if (compactLayout)
+              AppPrimaryHeaderAction(
+                label: 'Thêm nhân viên',
+                assetPath: AppAssets.add,
+                heroTag: 'staff-add-compact',
+                onPressed: _inviteMember,
+              ),
+            const SizedBox(width: 8),
           ],
           bottom: TabBar(
             indicatorColor: theme.colorScheme.primary,
@@ -541,17 +552,19 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
             ],
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _inviteMember,
-          icon: const Icon(Icons.person_add_rounded),
-          label: Text(
-            'Thêm nhân viên',
-            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
+        floatingActionButton: compactLayout
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: _inviteMember,
+                icon: const Icon(Icons.person_add_rounded),
+                label: Text(
+                  'Thêm nhân viên',
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+                ),
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : TabBarView(
@@ -1122,6 +1135,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
@@ -1138,18 +1152,30 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Tạo vai trò mới',
+              assetPath: AppAssets.add,
+              heroTag: 'role-add-compact',
+              onPressed: () => _showRoleEditor(),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showRoleEditor(),
-        icon: const Icon(Icons.shield_outlined),
-        label: Text(
-          'Tạo vai trò mới',
-          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showRoleEditor(),
+              icon: const Icon(Icons.shield_outlined),
+              label: Text(
+                'Tạo vai trò mới',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _roles.isEmpty

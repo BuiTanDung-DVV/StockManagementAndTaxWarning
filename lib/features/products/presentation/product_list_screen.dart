@@ -10,6 +10,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_badge.dart';
@@ -93,6 +94,7 @@ class ProductListScreen extends ConsumerStatefulWidget {
 
 class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   Timer? _debounce;
+  int _page = 1;
 
   @override
   void dispose() {
@@ -103,7 +105,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       ref.read(_productSearchQueryProvider.notifier).set(query);
+      setState(() => _page = 1);
     });
   }
 
@@ -120,7 +124,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     final veryCompactLayout = MediaQuery.sizeOf(context).width < 520;
     final listAsync = ref.watch(
       productListProvider((
-        page: 1,
+        page: _page,
         search: searchQuery.isEmpty ? null : searchQuery,
         tag: tagQuery.isEmpty ? null : tagQuery,
       )),
@@ -133,6 +137,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       topProductsProvider((
         from: firstDayOfMonth.toIso8601String(),
         to: now.toIso8601String(),
+        previousFrom: null,
+        previousTo: null,
       )),
     );
     final topProductNames =
@@ -251,6 +257,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                             _productTagFilterProvider.notifier,
                                           )
                                           .set(selected ? t.name : '');
+                                      setState(() => _page = 1);
                                     },
                                     selectedColor: t.uiColor,
                                     backgroundColor: t.uiColor.withValues(
@@ -280,6 +287,21 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                 child: listAsync.when(
                   data: (data) {
                     final items = (data['items'] as List?) ?? [];
+                    final currentPage = paginationValue(
+                      data,
+                      'page',
+                      fallback: _page,
+                    );
+                    final totalPages = paginationValue(
+                      data,
+                      'totalPages',
+                      fallback: 1,
+                    );
+                    final totalItems = paginationValue(
+                      data,
+                      'total',
+                      fallback: items.length,
+                    );
                     if (items.isEmpty) {
                       return const AppEmpty(
                         visual: AppEmptyVisual.inventory,
@@ -300,10 +322,20 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           0,
                           compactLayout ? AppSpacing.xl : 112,
                         ),
-                        itemCount: items.length,
+                        itemCount: items.length + 1,
                         separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (_, i) {
+                          if (i == items.length) {
+                            return AppPaginationBar(
+                              currentPage: currentPage,
+                              totalPages: totalPages,
+                              totalItems: totalItems,
+                              itemLabel: 'sản phẩm',
+                              onPageChanged: (page) =>
+                                  setState(() => _page = page),
+                            );
+                          }
                           final p = items[i];
                           final price = TypeParser.asDouble(
                             p['sellingPrice'] ??

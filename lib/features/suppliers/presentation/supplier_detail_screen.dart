@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../providers/supplier_provider.dart';
 import 'supplier_form_screen.dart';
 import 'package:bot_toast/bot_toast.dart';
@@ -30,6 +32,19 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
     final ref = this.ref;
     final c = AppThemeColors.of(context);
     final detailAsync = ref.watch(supplierDetailProvider(widget.id));
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
+    Future<void> openEdit() async {
+      final supplier = detailAsync.value;
+      if (supplier == null) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SupplierFormScreen(supplier: supplier),
+        ),
+      );
+      ref.invalidate(supplierDetailProvider(widget.id));
+      ref.invalidate(supplierListProvider);
+    }
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -54,6 +69,13 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
             onPressed: () => _confirmDelete(context, ref),
           ),
           featureGuideButton(context, 'supplier_detail'),
+          if (compactLayout && detailAsync.hasValue)
+            AppPrimaryHeaderAction(
+              label: 'Chỉnh sửa',
+              assetPath: AppAssets.edit,
+              heroTag: 'supplier-edit-compact',
+              onPressed: openEdit,
+            ),
           const SizedBox(width: 8),
         ],
       ),
@@ -209,20 +231,15 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
           );
         },
       ),
-      floatingActionButton: detailAsync.hasValue
+      floatingActionButton: detailAsync.hasValue && !compactLayout
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        SupplierFormScreen(supplier: detailAsync.value!),
-                  ),
-                );
-                ref.invalidate(supplierDetailProvider(widget.id));
-                ref.invalidate(supplierListProvider);
-              },
-              icon: const Icon(Icons.edit_rounded),
+              onPressed: openEdit,
+              icon: const AppAssetIcon(
+                assetPath: AppAssets.edit,
+                size: 19,
+                color: Colors.white,
+                semanticLabel: 'Chỉnh sửa',
+              ),
               label: const Text(
                 'Chỉnh sửa',
                 style: TextStyle(fontWeight: FontWeight.bold),

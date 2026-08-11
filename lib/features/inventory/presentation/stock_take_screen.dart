@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../providers/inventory_provider.dart';
 import 'stock_take_form_screen.dart';
 import 'stock_take_history_screen.dart';
@@ -15,6 +17,11 @@ class StockTakeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final stockAsync = ref.watch(stockProvider(null));
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
+    void openForm() => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const StockTakeFormScreen()),
+    );
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -46,33 +53,39 @@ class StockTakeScreen extends ConsumerWidget {
             },
           ),
           featureGuideButton(context, 'stock_take'),
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Tạo phiếu kiểm',
+              assetPath: AppAssets.add,
+              heroTag: 'stock-take-add-compact',
+              onPressed: openForm,
+            ),
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const StockTakeFormScreen()),
-          );
-        },
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 3,
-        icon: const Icon(
-          Icons.fact_check_rounded,
-          color: Colors.white,
-          size: 20,
-        ),
-        label: Text(
-          'Tạo Phiếu Kiểm',
-          style: GoogleFonts.manrope(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontSize: 14,
-          ),
-        ),
-        backgroundColor: AppColors.primary,
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: openForm,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 3,
+              icon: const Icon(
+                Icons.fact_check_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              label: Text(
+                'Tạo Phiếu Kiểm',
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+              backgroundColor: AppColors.primary,
+            ),
       body: stockAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(

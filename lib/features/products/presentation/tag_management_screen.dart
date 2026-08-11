@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/tag_provider.dart';
 
@@ -33,7 +35,6 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
   Future<void> _showTagDialog({TagModel? tag}) async {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-
     final nameCtrl = TextEditingController(text: tag?.name);
     String selectedColor = tag?.color ?? _predefinedColors[4];
 
@@ -241,6 +242,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
     final theme = Theme.of(context);
     final tagsAsync = ref.watch(tagListProvider(widget.type));
     final isOwner = ref.watch(authProvider).isShopOwner;
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     if (!isOwner) {
       return Scaffold(
@@ -271,23 +273,35 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
         ),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Tạo nhãn',
+              assetPath: AppAssets.add,
+              heroTag: 'tag-add-compact',
+              onPressed: () => _showTagDialog(),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showTagDialog(),
-        icon: const HugeIcon(
-          icon: HugeIcons.strokeRoundedTag01,
-          color: Colors.white,
-          size: 24,
-        ),
-        label: Text(
-          'Tạo nhãn',
-          style: GoogleFonts.manrope(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: theme.colorScheme.primary,
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showTagDialog(),
+              icon: const HugeIcon(
+                icon: HugeIcons.strokeRoundedTag01,
+                color: Colors.white,
+                size: 24,
+              ),
+              label: Text(
+                'Tạo nhãn',
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: theme.colorScheme.primary,
+            ),
       body: tagsAsync.when(
         data: (tags) {
           if (tags.isEmpty) {

@@ -7,6 +7,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
@@ -23,25 +24,29 @@ class SupplierListScreen extends ConsumerStatefulWidget {
 
 class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
   String _searchQuery = '';
+  int _page = 1;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
     final listAsync = ref.watch(
       supplierListProvider((
-        page: 1,
+        page: _page,
         search: _searchQuery.trim().isEmpty ? null : _searchQuery.trim(),
       )),
     );
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: AppPrimaryFloatingAction(
-        label: 'Thêm nhà cung cấp',
-        assetPath: AppAssets.add,
-        heroTag: 'suppliers-add-action',
-        onPressed: () => context.push('/suppliers/form'),
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : AppPrimaryFloatingAction(
+              label: 'Thêm nhà cung cấp',
+              assetPath: AppAssets.add,
+              heroTag: 'suppliers-add-action',
+              onPressed: () => context.push('/suppliers/form'),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: AppResponsiveContent(
         maxWidth: 1320,
@@ -55,13 +60,28 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
                   'Quản lý đối tác, thông tin thuế và điều khoản thanh toán.',
               dense: true,
               action: featureGuideButton(context, 'supplier_list'),
-              compactAction: featureGuideButton(context, 'supplier_list'),
+              compactAction: Wrap(
+                spacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  featureGuideButton(context, 'supplier_list'),
+                  AppPrimaryHeaderAction(
+                    label: 'Thêm nhà cung cấp',
+                    assetPath: AppAssets.add,
+                    heroTag: 'suppliers-add-action-compact',
+                    onPressed: () => context.push('/suppliers/form'),
+                  ),
+                ],
+              ),
             ),
             FilterBar(
               searchHint: 'Tìm theo tên, mã số thuế hoặc số điện thoại',
               onSearchChanged: (value) {
                 if (value != _searchQuery) {
-                  setState(() => _searchQuery = value);
+                  setState(() {
+                    _searchQuery = value;
+                    _page = 1;
+                  });
                 }
               },
             ),
@@ -73,6 +93,21 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
                       .whereType<Map>()
                       .map((item) => Map<String, dynamic>.from(item))
                       .toList();
+                  final currentPage = paginationValue(
+                    data,
+                    'page',
+                    fallback: _page,
+                  );
+                  final totalPages = paginationValue(
+                    data,
+                    'totalPages',
+                    fallback: 1,
+                  );
+                  final totalItems = paginationValue(
+                    data,
+                    'total',
+                    fallback: suppliers.length,
+                  );
 
                   return RefreshIndicator(
                     onRefresh: () async => ref.invalidate(supplierListProvider),
@@ -109,16 +144,27 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
                         if (constraints.maxWidth < 760) {
                           return ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount: suppliers.length,
+                            itemCount: suppliers.length + 1,
                             separatorBuilder: (_, _) =>
                                 const SizedBox(height: AppSpacing.sm),
-                            itemBuilder: (context, index) =>
-                                _MobileSupplierCard(
-                                  supplier: suppliers[index],
-                                  onTap: () => context.push(
-                                    '/suppliers/${suppliers[index]['id']}',
-                                  ),
+                            itemBuilder: (context, index) {
+                              if (index == suppliers.length) {
+                                return AppPaginationBar(
+                                  currentPage: currentPage,
+                                  totalPages: totalPages,
+                                  totalItems: totalItems,
+                                  itemLabel: 'nhà cung cấp',
+                                  onPageChanged: (page) =>
+                                      setState(() => _page = page),
+                                );
+                              }
+                              return _MobileSupplierCard(
+                                supplier: suppliers[index],
+                                onTap: () => context.push(
+                                  '/suppliers/${suppliers[index]['id']}',
                                 ),
+                              );
+                            },
                           );
                         }
 
@@ -126,10 +172,20 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
                           padding: EdgeInsets.zero,
                           child: ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount: suppliers.length + 1,
+                            itemCount: suppliers.length + 2,
                             itemBuilder: (context, index) {
                               if (index == 0) {
                                 return const _SupplierTableHeader();
+                              }
+                              if (index == suppliers.length + 1) {
+                                return AppPaginationBar(
+                                  currentPage: currentPage,
+                                  totalPages: totalPages,
+                                  totalItems: totalItems,
+                                  itemLabel: 'nhà cung cấp',
+                                  onPageChanged: (page) =>
+                                      setState(() => _page = page),
+                                );
                               }
                               final supplier = suppliers[index - 1];
                               return _DesktopSupplierRow(

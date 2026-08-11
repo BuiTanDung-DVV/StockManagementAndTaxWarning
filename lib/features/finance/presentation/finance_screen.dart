@@ -96,6 +96,10 @@ class FinanceScreen extends ConsumerWidget {
     final period = currentMonthReportingPeriod(DateTime.now());
     final from = period.from;
     final to = period.to;
+    final periodLabel = reportingCompactRangeLabel(
+      DateTime.parse(from),
+      DateTime.parse(to),
+    );
     final summaryAsync = ref.watch(cashSummaryProvider((from: from, to: to)));
     final transactionsAsync = ref.watch(
       transactionsProvider((
@@ -110,6 +114,7 @@ class FinanceScreen extends ConsumerWidget {
     final categoriesAsync = ref.watch(
       expensesByCategoryForPeriodProvider((from: from, to: to)),
     );
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     Future<void> refresh() async {
       ref.invalidate(cashSummaryProvider);
@@ -119,12 +124,14 @@ class FinanceScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: AppPrimaryFloatingAction(
-        label: 'Lịch sử giao dịch',
-        assetPath: AppAssets.cash,
-        heroTag: 'finance-transaction-action',
-        onPressed: () => context.push('/transactions'),
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : AppPrimaryFloatingAction(
+              label: 'Lịch sử giao dịch',
+              assetPath: AppAssets.cash,
+              heroTag: 'finance-transaction-action',
+              onPressed: () => context.push('/transactions'),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: RefreshIndicator(
         onRefresh: refresh,
@@ -142,10 +149,23 @@ class FinanceScreen extends ConsumerWidget {
                       'Theo dõi dòng tiền, đối soát giao dịch và xử lý công việc tài chính trong tháng.',
                   dense: true,
                   action: featureGuideButton(context, 'finance'),
-                  compactAction: featureGuideButton(context, 'finance'),
+                  compactAction: Wrap(
+                    spacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      featureGuideButton(context, 'finance'),
+                      AppPrimaryHeaderAction(
+                        label: 'Lịch sử giao dịch',
+                        assetPath: AppAssets.cash,
+                        heroTag: 'finance-transaction-action-compact',
+                        onPressed: () => context.push('/transactions'),
+                      ),
+                    ],
+                  ),
                 ),
                 summaryAsync.when(
-                  data: (data) => _FinanceMetricStrip(data: data),
+                  data: (data) =>
+                      _FinanceMetricStrip(data: data, periodLabel: periodLabel),
                   loading: () => const _FinanceMetricLoading(),
                   error: (_, _) => AppInlineError(
                     message: 'Không thể tải số liệu tài chính tháng này.',
@@ -156,7 +176,8 @@ class FinanceScreen extends ConsumerWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final chart = summaryAsync.when(
-                      data: (data) => _CashFlowPanel(data: data),
+                      data: (data) =>
+                          _CashFlowPanel(data: data, periodLabel: periodLabel),
                       loading: () => const _PanelLoading(height: 406),
                       error: (_, _) => AppInlineError(
                         message: 'Không thể tải biểu đồ dòng tiền.',
@@ -164,7 +185,10 @@ class FinanceScreen extends ConsumerWidget {
                       ),
                     );
                     final categories = categoriesAsync.when(
-                      data: (data) => _ExpenseCategoryPanel(data: data),
+                      data: (data) => _ExpenseCategoryPanel(
+                        data: data,
+                        periodLabel: periodLabel,
+                      ),
                       loading: () => const _PanelLoading(height: 406),
                       error: (_, _) => AppInlineError(
                         message: 'Không thể tải phân loại chi phí.',
@@ -245,8 +269,9 @@ class FinanceScreen extends ConsumerWidget {
 
 class _FinanceMetricStrip extends StatelessWidget {
   final Map<String, dynamic> data;
+  final String periodLabel;
 
-  const _FinanceMetricStrip({required this.data});
+  const _FinanceMetricStrip({required this.data, required this.periodLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -263,30 +288,32 @@ class _FinanceMetricStrip extends StatelessWidget {
       itemHeight: 88,
       children: [
         AppKpiCard(
-          title: 'Số dư quỹ tiền mặt',
+          title: 'Quỹ tiền mặt',
           value: _currencyFormat.format(balance),
           color: AppColors.primary,
           assetPath: AppAssets.cash,
           badgeText: 'Hiện tại',
         ),
         AppKpiCard(
-          title: 'Tổng thu trong tháng',
+          title: 'Tổng thu',
           value: _currencyFormat.format(income),
           color: AppColors.success,
           assetPath: AppAssets.revenue,
+          badgeText: periodLabel,
         ),
         AppKpiCard(
-          title: 'Tổng chi trong tháng',
+          title: 'Tổng chi',
           value: _currencyFormat.format(expense),
           color: AppColors.danger,
           assetPath: AppAssets.orders,
+          badgeText: periodLabel,
         ),
         AppKpiCard(
           title: 'Dòng tiền thuần',
           value: _currencyFormat.format(net),
           color: net >= 0 ? AppColors.success : AppColors.danger,
           assetPath: AppAssets.profit,
-          badgeText: net >= 0 ? 'Dương' : 'Âm',
+          badgeText: periodLabel,
         ),
       ],
     );
@@ -319,12 +346,12 @@ class _FinanceMetricLoading extends StatelessWidget {
 
 class _CashFlowPanel extends StatelessWidget {
   final Map<String, dynamic> data;
+  final String periodLabel;
 
-  const _CashFlowPanel({required this.data});
+  const _CashFlowPanel({required this.data, required this.periodLabel});
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
     final chartHeight = MediaQuery.sizeOf(context).width < 600 ? 250.0 : 300.0;
     final dailyFlow = ((data['dailyFlow'] as List?) ?? const [])
         .whereType<Map>()
@@ -342,25 +369,27 @@ class _CashFlowPanel extends StatelessWidget {
       }
       return rawDate;
     }).toList();
+    final hasMovement =
+        incomeData.any((value) => value != 0) ||
+        expenseData.any((value) => value != 0);
 
     return AppCardContainer(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionLead(
-            title: 'Dòng tiền tháng này',
+          _SectionLead(
+            title: 'Dòng tiền · $periodLabel',
             subtitle: 'Đơn vị: đồng · So sánh tiền thu và tiền chi theo ngày.',
           ),
           const SizedBox(height: AppSpacing.lg),
-          if (dailyFlow.isEmpty)
+          if (dailyFlow.isEmpty || !hasMovement)
             SizedBox(
               height: chartHeight,
-              child: Center(
-                child: Text(
-                  'Chưa có dữ liệu dòng tiền trong kỳ.',
-                  style: TextStyle(color: colors.textSecondary),
-                ),
+              child: const AppEmpty(
+                visual: AppEmptyVisual.finance,
+                message: 'Chưa có giao dịch thu–chi trong kỳ',
+                subtitle: 'Biểu đồ sẽ xuất hiện khi có giao dịch thực tế.',
               ),
             )
           else
@@ -384,8 +413,9 @@ class _CashFlowPanel extends StatelessWidget {
 
 class _ExpenseCategoryPanel extends StatelessWidget {
   final Map<String, dynamic> data;
+  final String periodLabel;
 
-  const _ExpenseCategoryPanel({required this.data});
+  const _ExpenseCategoryPanel({required this.data, required this.periodLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -406,9 +436,9 @@ class _ExpenseCategoryPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionLead(
+          _SectionLead(
             title: 'Nhóm chi phí lớn',
-            subtitle: 'Năm nhóm có tổng chi cao nhất trong tháng.',
+            subtitle: '$periodLabel · Năm nhóm có tổng chi cao nhất.',
           ),
           const SizedBox(height: AppSpacing.lg),
           if (categories.isEmpty)

@@ -44,6 +44,11 @@ bool dashboardCanSell(ShopState shopState) =>
     !shopState.isAllShops &&
     (shopState.isOwner || shopState.hasPermission('sales'));
 
+bool dashboardCanViewSalesInsights(ShopState shopState) =>
+    shopState.isOwner ||
+    shopState.hasPermission('sales') ||
+    shopState.hasPermission('dashboard');
+
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -63,10 +68,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final colors = AppThemeColors.of(context);
     final shopState = ref.watch(shopProvider);
     final hasFinance = shopState.isOwner || shopState.hasPermission('finance');
-    final hasSalesInsights =
-        shopState.isOwner ||
-        shopState.hasPermission('sales') ||
-        shopState.hasPermission('dashboard');
+    final hasSalesInsights = dashboardCanViewSalesInsights(shopState);
     final hasInventory =
         shopState.isOwner || shopState.hasPermission('inventory');
     final canSell = dashboardCanSell(shopState);
@@ -77,7 +79,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final today = DateTime.now();
     final periods = _resolvePeriods(filter, today);
 
-    final salesAsync = hasFinance && shopState.userShops.isNotEmpty
+    final salesAsync = hasSalesInsights && shopState.userShops.isNotEmpty
         ? ref.watch(
             salesSummaryProvider((
               from: periods.currentFrom,
@@ -85,7 +87,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             )),
           )
         : null;
-    final comparisonAsync = hasFinance && shopState.userShops.isNotEmpty
+    final comparisonAsync = hasSalesInsights && shopState.userShops.isNotEmpty
         ? ref.watch(
             salesSummaryProvider((
               from: periods.previousFrom,
@@ -102,9 +104,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           )
         : null;
     final recentTransactionsAsync =
-        hasFinance &&
-            shopState.userShops.isNotEmpty &&
-            !shopState.isAllShops
+        hasFinance && shopState.userShops.isNotEmpty && !shopState.isAllShops
         ? ref.watch(recentTransactionsProvider)
         : null;
     final topProductsAsync = hasSalesInsights && shopState.userShops.isNotEmpty
@@ -112,15 +112,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             topProductsProvider((
               from: periods.currentFrom,
               to: periods.currentTo,
-            )),
-          )
-        : null;
-    final previousTopProductsAsync =
-        hasSalesInsights && shopState.userShops.isNotEmpty
-        ? ref.watch(
-            topProductsProvider((
-              from: periods.previousFrom,
-              to: periods.previousTo,
+              previousFrom: periods.previousFrom,
+              previousTo: periods.previousTo,
             )),
           )
         : null;
@@ -229,10 +222,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
-                  if (salesAsync != null && cashAsync != null)
+                  if (salesAsync != null)
                     salesAsync.when(
-                      data: (salesData) => cashAsync.when(
-                        data: (cashData) => _DashboardMetricStrip(
+                      data: (salesData) {
+                        Widget metricStrip(
+                          Map<String, dynamic> cashData, {
+                          required bool cashAvailable,
+                        }) => _DashboardMetricStrip(
                           metrics: _buildMetrics(
                             salesData: salesData,
                             comparisonSalesData: comparisonAsync?.value,
@@ -240,31 +236,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             periodLabel: periods.currentLabel,
                             previousPeriodLabel: periods.previousLabel,
                             asOf: today,
+                            cashAvailable: cashAvailable,
                           ),
                           showAllMobile: _showAllMobileMetrics,
                           onToggleMobile: () => setState(
                             () =>
                                 _showAllMobileMetrics = !_showAllMobileMetrics,
                           ),
-                        ),
-                        loading: () => const _MetricStripSkeleton(),
-                        error: (_, _) => _DashboardMetricStrip(
-                          metrics: _buildMetrics(
-                            salesData: salesData,
-                            comparisonSalesData: comparisonAsync?.value,
-                            cashData: const {},
-                            periodLabel: periods.currentLabel,
-                            previousPeriodLabel: periods.previousLabel,
-                            asOf: today,
-                            cashAvailable: false,
-                          ),
-                          showAllMobile: _showAllMobileMetrics,
-                          onToggleMobile: () => setState(
-                            () =>
-                                _showAllMobileMetrics = !_showAllMobileMetrics,
-                          ),
-                        ),
-                      ),
+                        );
+
+                        if (cashAsync == null) {
+                          return metricStrip(const {}, cashAvailable: false);
+                        }
+                        return cashAsync.when(
+                          data: (cashData) =>
+                              metricStrip(cashData, cashAvailable: true),
+                          loading: () => const _MetricStripSkeleton(),
+                          error: (_, _) =>
+                              metricStrip(const {}, cashAvailable: false),
+                        );
+                      },
                       loading: () => const _MetricStripSkeleton(),
                       error: (_, _) => AppInlineError(
                         message: 'Không thể tải số liệu tổng quan.',
@@ -282,7 +273,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     comparisonSales: comparisonAsync,
                     recentTransactions: recentTransactionsAsync,
                     topProducts: topProductsAsync,
-                    previousTopProducts: previousTopProductsAsync,
                     currentLabel: periods.currentLabel,
                     previousLabel: periods.previousLabel,
                     filter: filter,
@@ -314,15 +304,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final profit =
         num.tryParse(salesData['grossProfit']?.toString() ?? '0') ?? 0;
     final orderCount = salesData['totalOrders'] ?? salesData['orderCount'] ?? 0;
-    final previousRevenue = num.tryParse(
-          comparisonSalesData?['totalRevenue']?.toString() ?? '0',
-        ) ??
+    final previousRevenue =
+        num.tryParse(comparisonSalesData?['totalRevenue']?.toString() ?? '0') ??
         0;
-    final previousProfit = num.tryParse(
-          comparisonSalesData?['grossProfit']?.toString() ?? '0',
-        ) ??
+    final previousProfit =
+        num.tryParse(comparisonSalesData?['grossProfit']?.toString() ?? '0') ??
         0;
-    final previousOrderCount = num.tryParse(
+    final previousOrderCount =
+        num.tryParse(
           (comparisonSalesData?['totalOrders'] ??
                   comparisonSalesData?['orderCount'] ??
                   0)
@@ -482,9 +471,11 @@ class _NoShopWorkspace extends StatelessWidget {
 
               final checklist = Container(
                 color: colors.cardAlt,
-                padding: EdgeInsets.all(compact ? 24 : 36),
+                padding: compact
+                    ? const EdgeInsets.all(24)
+                    : const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -615,10 +606,7 @@ class _AllShopsNotice extends StatelessWidget {
   final int shopCount;
   final VoidCallback onChooseShop;
 
-  const _AllShopsNotice({
-    required this.shopCount,
-    required this.onChooseShop,
-  });
+  const _AllShopsNotice({required this.shopCount, required this.onChooseShop});
 
   @override
   Widget build(BuildContext context) {
@@ -689,7 +677,6 @@ class _DashboardWorkspace extends StatelessWidget {
   final AsyncValue<Map<String, dynamic>>? comparisonSales;
   final AsyncValue<List<dynamic>>? recentTransactions;
   final AsyncValue<List<dynamic>>? topProducts;
-  final AsyncValue<List<dynamic>>? previousTopProducts;
   final String currentLabel;
   final String previousLabel;
   final String filter;
@@ -700,7 +687,6 @@ class _DashboardWorkspace extends StatelessWidget {
     required this.comparisonSales,
     required this.recentTransactions,
     required this.topProducts,
-    required this.previousTopProducts,
     required this.currentLabel,
     required this.previousLabel,
     required this.filter,
@@ -720,11 +706,8 @@ class _DashboardWorkspace extends StatelessWidget {
     final priorities = const DashboardPriorityList();
     final products =
         topProducts?.when(
-          data: (items) => _TopProductsRevenueChart(
-            items: items,
-            previousItems: previousTopProducts?.value ?? const [],
-            period: currentLabel,
-          ),
+          data: (items) =>
+              _TopProductsRevenueChart(items: items, period: currentLabel),
           loading: () => const Padding(
             padding: EdgeInsets.only(top: AppSpacing.lg),
             child: AppShimmer(
@@ -765,9 +748,9 @@ class _DashboardWorkspace extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              priorities,
-              const SizedBox(height: AppSpacing.lg),
               chart,
+              const SizedBox(height: AppSpacing.lg),
+              priorities,
               products,
               orders,
             ],
@@ -796,14 +779,9 @@ class _DashboardWorkspace extends StatelessWidget {
 
 class _TopProductsRevenueChart extends StatelessWidget {
   final List<dynamic> items;
-  final List<dynamic> previousItems;
   final String period;
 
-  const _TopProductsRevenueChart({
-    required this.items,
-    required this.previousItems,
-    required this.period,
-  });
+  const _TopProductsRevenueChart({required this.items, required this.period});
 
   @override
   Widget build(BuildContext context) {
@@ -837,7 +815,7 @@ class _TopProductsRevenueChart extends StatelessWidget {
             ? const EmptyChartPlaceholder(
                 message: 'Chưa có doanh thu sản phẩm trong kỳ này.',
               )
-            : _TopProductsHorizontalBars(products, previousItems),
+            : _TopProductsHorizontalBars(products),
       ),
     );
   }
@@ -845,9 +823,8 @@ class _TopProductsRevenueChart extends StatelessWidget {
 
 class _TopProductsHorizontalBars extends StatelessWidget {
   final List<dynamic> products;
-  final List<dynamic> previousProducts;
 
-  const _TopProductsHorizontalBars(this.products, this.previousProducts);
+  const _TopProductsHorizontalBars(this.products);
 
   double _number(dynamic value) =>
       num.tryParse(value?.toString() ?? '0')?.toDouble() ?? 0;
@@ -862,10 +839,7 @@ class _TopProductsHorizontalBars extends StatelessWidget {
           _number(item['value']) > current ? _number(item['value']) : current,
     );
     final showGrowth = MediaQuery.sizeOf(context).width >= 700;
-    final previousRevenueByName = <String, double>{
-      for (final item in previousProducts)
-        item['name']?.toString() ?? '': _number(item['value']),
-    };
+    final showMargin = MediaQuery.sizeOf(context).width >= 900;
 
     return Column(
       children: [
@@ -876,7 +850,7 @@ class _TopProductsHorizontalBars extends StatelessWidget {
               const SizedBox(width: 34),
               Expanded(
                 child: Text(
-                  'Xếp theo doanh thu',
+                  'Xếp theo doanh thu thuần',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: colors.textMuted,
                     fontWeight: FontWeight.w600,
@@ -906,6 +880,20 @@ class _TopProductsHorizontalBars extends StatelessWidget {
                   ),
                 ),
               ),
+              if (showMargin) ...[
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 72,
+                  child: Text(
+                    'Biên lãi',
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
               if (showGrowth) ...[
                 const SizedBox(width: 12),
                 SizedBox(
@@ -932,9 +920,11 @@ class _TopProductsHorizontalBars extends StatelessWidget {
               final product = products[index];
               final revenue = _number(product['value']);
               final quantity = _number(product['quantity']);
+              final marginPct = _number(product['marginPct']);
               final progress = maxRevenue <= 0 ? 0.0 : revenue / maxRevenue;
-              final previousRevenue =
-                  previousRevenueByName[product['name']?.toString() ?? ''];
+              final previousRevenue = product['previousValue'] == null
+                  ? null
+                  : _number(product['previousValue']);
               final growth = previousRevenue == null || previousRevenue <= 0
                   ? null
                   : ((revenue - previousRevenue) / previousRevenue) * 100;
@@ -944,10 +934,12 @@ class _TopProductsHorizontalBars extends StatelessWidget {
                 name: product['name']?.toString() ?? 'Chưa rõ',
                 revenue: revenue,
                 quantity: quantity,
+                marginPct: marginPct,
                 unit: product['unit']?.toString() ?? 'sản phẩm',
                 progress: progress,
                 growth: growth,
                 showGrowth: showGrowth,
+                showMargin: showMargin,
                 color: primary.withValues(alpha: 1 - index * 0.045),
               );
             },
@@ -963,10 +955,12 @@ class _TopProductRankRow extends StatelessWidget {
   final String name;
   final double revenue;
   final double quantity;
+  final double marginPct;
   final String unit;
   final double progress;
   final double? growth;
   final bool showGrowth;
+  final bool showMargin;
   final Color color;
 
   const _TopProductRankRow({
@@ -974,10 +968,12 @@ class _TopProductRankRow extends StatelessWidget {
     required this.name,
     required this.revenue,
     required this.quantity,
+    required this.marginPct,
     required this.unit,
     required this.progress,
     required this.growth,
     required this.showGrowth,
+    required this.showMargin,
     required this.color,
   });
 
@@ -1066,6 +1062,27 @@ class _TopProductRankRow extends StatelessWidget {
               ),
             ),
           ),
+          if (showMargin) ...[
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 72,
+              child: Text(
+                '${NumberFormat('0.0', 'vi_VN').format(marginPct)}%',
+                maxLines: 1,
+                textAlign: TextAlign.right,
+                style: AppTheme.tabularStyle(
+                  context,
+                  color: marginPct >= 20
+                      ? AppColors.success
+                      : marginPct > 0
+                      ? colors.textSecondary
+                      : AppColors.danger,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
           if (showGrowth) ...[
             const SizedBox(width: 12),
             SizedBox(
@@ -1487,55 +1504,50 @@ class _DashboardPeriods {
 }
 
 _DashboardPeriods _resolvePeriods(String filter, DateTime today) {
+  final dates = comparisonReportingDates(filter, today);
+  final currentFrom = DateTime.parse(dates.currentFrom);
+  final currentTo = DateTime.parse(dates.currentTo);
+  final previousFrom = DateTime.parse(dates.previousFrom);
+  final previousTo = DateTime.parse(dates.previousTo);
   if (filter == 'week') {
-    final weekStart = today.subtract(Duration(days: today.weekday - 1));
-    final previousStart = weekStart.subtract(const Duration(days: 7));
     return _DashboardPeriods(
-      currentFrom: _dateOnly(weekStart),
-      currentTo: _dateOnly(today),
-      previousFrom: _dateOnly(previousStart),
-      previousTo: _dateOnly(weekStart.subtract(const Duration(days: 1))),
-      currentLabel:
-          '${DateFormat('dd/MM').format(weekStart)}–${DateFormat('dd/MM/yyyy').format(today)}',
-      previousLabel:
-          '${DateFormat('dd/MM').format(previousStart)}–${DateFormat('dd/MM/yyyy').format(weekStart.subtract(const Duration(days: 1)))}',
+      currentFrom: dates.currentFrom,
+      currentTo: dates.currentTo,
+      previousFrom: dates.previousFrom,
+      previousTo: dates.previousTo,
+      currentLabel: reportingRangeLabel(currentFrom, currentTo),
+      previousLabel: reportingRangeLabel(previousFrom, previousTo),
     );
   }
 
   if (filter == '6_months') {
     return _DashboardPeriods(
-      currentFrom: _dateOnly(DateTime(today.year, today.month - 5, 1)),
-      currentTo: _dateOnly(today),
-      previousFrom: _dateOnly(DateTime(today.year, today.month - 11, 1)),
-      previousTo: _dateOnly(DateTime(today.year, today.month - 5, 0)),
-      currentLabel:
-          '${DateFormat('MM/yyyy').format(DateTime(today.year, today.month - 5, 1))}–${DateFormat('MM/yyyy').format(today)}',
-      previousLabel:
-          '${DateFormat('MM/yyyy').format(DateTime(today.year, today.month - 11, 1))}–${DateFormat('MM/yyyy').format(DateTime(today.year, today.month - 6, 1))}',
+      currentFrom: dates.currentFrom,
+      currentTo: dates.currentTo,
+      previousFrom: dates.previousFrom,
+      previousTo: dates.previousTo,
+      currentLabel: reportingRangeLabel(currentFrom, currentTo),
+      previousLabel: reportingRangeLabel(previousFrom, previousTo),
     );
   }
 
   if (filter == 'year') {
     return _DashboardPeriods(
-      currentFrom: _dateOnly(DateTime(today.year, 1, 1)),
-      currentTo: _dateOnly(today),
-      previousFrom: _dateOnly(DateTime(today.year - 1, 1, 1)),
-      previousTo: _dateOnly(DateTime(today.year - 1, 12, 31)),
-      currentLabel: 'Năm ${today.year}',
-      previousLabel: 'Năm ${today.year - 1}',
+      currentFrom: dates.currentFrom,
+      currentTo: dates.currentTo,
+      previousFrom: dates.previousFrom,
+      previousTo: dates.previousTo,
+      currentLabel: reportingRangeLabel(currentFrom, currentTo),
+      previousLabel: reportingRangeLabel(previousFrom, previousTo),
     );
   }
 
-  final current = currentMonthReportingPeriod(today);
   return _DashboardPeriods(
-    currentFrom: current.from,
-    currentTo: current.to,
-    previousFrom: _dateOnly(DateTime(today.year, today.month - 1, 1)),
-    previousTo: _dateOnly(DateTime(today.year, today.month, 0)),
-    currentLabel: 'Tháng ${DateFormat('MM/yyyy').format(today)}',
-    previousLabel:
-        'Tháng ${DateFormat('MM/yyyy').format(DateTime(today.year, today.month - 1, 1))}',
+    currentFrom: dates.currentFrom,
+    currentTo: dates.currentTo,
+    previousFrom: dates.previousFrom,
+    previousTo: dates.previousTo,
+    currentLabel: reportingRangeLabel(currentFrom, currentTo),
+    previousLabel: reportingRangeLabel(previousFrom, previousTo),
   );
 }
-
-String _dateOnly(DateTime value) => value.toIso8601String().split('T').first;

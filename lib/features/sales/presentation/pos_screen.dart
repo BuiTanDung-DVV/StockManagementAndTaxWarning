@@ -12,6 +12,7 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
 import '../../customers/providers/customer_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../settings/providers/system_provider.dart';
@@ -330,6 +331,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   final _searchCtrl = TextEditingController();
   String _search = '';
   String _tag = '';
+  int _productPage = 1;
   bool _creating = false;
 
   @override
@@ -344,7 +346,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final cart = ref.watch(_cartProvider);
     final productsAsync = ref.watch(
       productListProvider((
-        page: 1,
+        page: _productPage,
         search: _search.isEmpty ? null : _search,
         tag: _tag.isEmpty ? null : _tag,
       )),
@@ -513,13 +515,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   ? TextButton(
                       onPressed: () {
                         _searchCtrl.clear();
-                        setState(() => _search = '');
+                        setState(() {
+                          _search = '';
+                          _productPage = 1;
+                        });
                       },
                       child: const Text('Xóa'),
                     )
                   : null,
             ),
-            onChanged: (v) => setState(() => _search = v),
+            onChanged: (v) => setState(() {
+              _search = v;
+              _productPage = 1;
+            }),
           ),
         ),
 
@@ -560,7 +568,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                             ),
                             selected: isSelected,
                             onSelected: (selected) {
-                              setState(() => _tag = selected ? t.name : '');
+                              setState(() {
+                                _tag = selected ? t.name : '';
+                                _productPage = 1;
+                              });
                             },
                             selectedColor: t.uiColor,
                             backgroundColor: t.uiColor.withValues(alpha: 0.1),
@@ -586,6 +597,21 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           child: productsAsync.when(
             data: (data) {
               final products = (data['items'] as List?) ?? [];
+              final currentPage = paginationValue(
+                data,
+                'page',
+                fallback: _productPage,
+              );
+              final totalPages = paginationValue(
+                data,
+                'totalPages',
+                fallback: 1,
+              );
+              final totalItems = paginationValue(
+                data,
+                'total',
+                fallback: products.length,
+              );
 
               // Barcode auto-add logic
               if (products.length == 1 && _search.isNotEmpty) {
@@ -605,7 +631,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         .read(_cartProvider.notifier)
                         .add(id, name, price, availableStock: availableStock);
                     _searchCtrl.clear();
-                    setState(() => _search = '');
+                    setState(() {
+                      _search = '';
+                      _productPage = 1;
+                    });
                     if (added) {
                       HapticFeedback.vibrate();
                       _tts.speak('Đã thêm $name');
@@ -642,10 +671,20 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 padding: EdgeInsets.only(
                   bottom: (cart.items.isNotEmpty && !isLargeScreen) ? 140 : 88,
                 ),
-                itemCount: products.length,
+                itemCount: products.length + 1,
                 separatorBuilder: (_, _) =>
                     Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
                 itemBuilder: (_, i) {
+                  if (i == products.length) {
+                    return AppPaginationBar(
+                      currentPage: currentPage,
+                      totalPages: totalPages,
+                      totalItems: totalItems,
+                      itemLabel: 'sản phẩm',
+                      onPageChanged: (page) =>
+                          setState(() => _productPage = page),
+                    );
+                  }
                   final p = products[i];
                   final id = p['id'] as int;
                   final name = p['name']?.toString() ?? 'SP';
@@ -1447,9 +1486,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       isScrollControlled: true,
       builder: (ctx) => Consumer(
         builder: (ctx, ref, _) {
-          final customersAsync = ref.watch(
-            customerListProvider((page: 1, search: null)),
-          );
+          final customersAsync = ref.watch(customerOptionsProvider);
           return customersAsync.when(
             loading: () => const SizedBox(
               height: 220,

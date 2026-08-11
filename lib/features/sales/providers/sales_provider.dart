@@ -40,11 +40,18 @@ class SalesRepository {
   Future<Map<String, dynamic>> getSummary(String from, String to) async =>
       await _api.get('/sales-orders/summary', params: {'from': from, 'to': to});
 
-  Future<List<dynamic>> getTopProducts(String from, String to) async {
-    final res = await _api.get(
-      '/sales-orders/top-products',
-      params: {'from': from, 'to': to},
-    );
+  Future<List<dynamic>> getTopProducts(
+    String from,
+    String to, {
+    String? previousFrom,
+    String? previousTo,
+  }) async {
+    final params = <String, dynamic>{'from': from, 'to': to};
+    if (previousFrom != null && previousTo != null) {
+      params['previousFrom'] = previousFrom;
+      params['previousTo'] = previousTo;
+    }
+    final res = await _api.get('/sales-orders/top-products', params: params);
     return res as List<dynamic>? ?? [];
   }
 
@@ -93,11 +100,18 @@ final salesSummaryProvider =
     });
 
 final topProductsProvider =
-    FutureProvider.family<List<dynamic>, ({String from, String to})>((
-      ref,
-      args,
-    ) {
-      return ref.watch(salesRepoProvider).getTopProducts(args.from, args.to);
+    FutureProvider.family<
+      List<dynamic>,
+      ({String from, String to, String? previousFrom, String? previousTo})
+    >((ref, args) {
+      return ref
+          .watch(salesRepoProvider)
+          .getTopProducts(
+            args.from,
+            args.to,
+            previousFrom: args.previousFrom,
+            previousTo: args.previousTo,
+          );
     });
 
 final recentTransactionsProvider = FutureProvider<List<dynamic>>((ref) async {

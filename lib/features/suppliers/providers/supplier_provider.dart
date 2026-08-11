@@ -42,6 +42,12 @@ final supplierListProvider =
           .findAll(page: args.page, search: args.search);
     });
 
+/// Complete option set for purchase forms so suppliers beyond page one are not
+/// omitted from the selector.
+final supplierOptionsProvider = FutureProvider<Map<String, dynamic>>((ref) {
+  return ref.watch(supplierRepoProvider).findAll(page: 1, limit: 500);
+});
+
 final supplierDetailProvider = FutureProvider.family<Map<String, dynamic>, int>(
   (ref, id) {
     return ref.watch(supplierRepoProvider).findById(id);

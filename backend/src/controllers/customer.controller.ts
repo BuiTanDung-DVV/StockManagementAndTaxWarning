@@ -1,7 +1,71 @@
 import { Request, Response } from 'express';
 import { CustomerService } from '../services/customer.service';
+import {
+    ImageStorageError,
+    ImageStorageService,
+} from '../services/image-storage.service';
 
 const customerService = new CustomerService();
+const imageStorageService = new ImageStorageService();
+
+const evidenceStorageError = (res: Response, error: unknown) => {
+    if (error instanceof ImageStorageError) {
+        return res.status(error.statusCode).json({
+            success: false,
+            message: error.message,
+        });
+    }
+    console.error('Debt evidence image storage error:', error);
+    return res.status(500).json({
+        success: false,
+        message: 'Không thể xử lý ảnh chứng từ công nợ',
+    });
+};
+
+export const createDebtEvidenceImageUpload = async (
+    req: Request,
+    res: Response,
+) => {
+    try {
+        const data = await imageStorageService.createDebtEvidenceImageUpload(
+            (req as any).shopId,
+            req.body,
+        );
+        return res.json({ success: true, data });
+    } catch (error) {
+        return evidenceStorageError(res, error);
+    }
+};
+
+export const confirmDebtEvidenceImageUpload = async (
+    req: Request,
+    res: Response,
+) => {
+    try {
+        const data = await imageStorageService.confirmDebtEvidenceImage(
+            (req as any).shopId,
+            String(req.body.objectKey || ''),
+        );
+        return res.json({ success: true, data });
+    } catch (error) {
+        return evidenceStorageError(res, error);
+    }
+};
+
+export const deleteDebtEvidenceImageUpload = async (
+    req: Request,
+    res: Response,
+) => {
+    try {
+        const data = await imageStorageService.deleteDebtEvidenceImage(
+            (req as any).shopId,
+            String(req.body.objectKey || ''),
+        );
+        return res.json({ success: true, data });
+    } catch (error) {
+        return evidenceStorageError(res, error);
+    }
+};
 
 export const findAll = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await customerService.findAll((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.search as string) }); }
@@ -94,6 +158,21 @@ export const addEvidence = async (req: Request, res: Response) => {
     catch (e: any) {
         const validation = String(e.message || '').startsWith('Validation:');
         res.status(e.message === 'Receivable not found' ? 404 : validation ? 400 : 500)
+            .json({ success: false, message: e.message });
+    }
+};
+
+export const removeEvidence = async (req: Request, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await customerService.removeDebtEvidence(
+                (req as any).shopId,
+                +req.params.evidenceId,
+            ),
+        });
+    } catch (e: any) {
+        res.status(e.message === 'Debt evidence not found' ? 404 : 500)
             .json({ success: false, message: e.message });
     }
 };

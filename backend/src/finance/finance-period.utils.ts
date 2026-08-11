@@ -21,7 +21,7 @@ const VIETNAM_OFFSET = '+07:00';
 
 const parseDate = (
     value: string,
-    field: 'from' | 'to',
+    field: 'from' | 'to' | 'asOf',
     endOfDay = false,
 ) => {
     const normalized = value.trim();
@@ -82,4 +82,64 @@ export const resolveCurrentMonthExpensePeriod = (
     }
 
     return { fromDate, toDate };
+};
+
+export const resolveVietnamBusinessDayEnd = (
+    asOf?: string,
+    now = new Date(),
+) => {
+    return asOf
+        ? parseDate(asOf, 'asOf', true)
+        : parseDate(vietnamDate(now), 'asOf', true);
+};
+
+export const resolveVietnamBusinessDayPeriod = (
+    date?: string,
+    now = new Date(),
+) => {
+    const businessDate = date?.trim() || vietnamDate(now);
+    return {
+        businessDate,
+        fromDate: parseDate(businessDate, 'from'),
+        toDate: parseDate(businessDate, 'to', true),
+    };
+};
+
+export const buildVietnamPeriodKeys = (
+    fromDate: Date,
+    toDate: Date,
+    granularity: 'day' | 'month',
+) => {
+    if (fromDate > toDate) return [];
+    const [startYear, startMonth, startDay] = vietnamDate(fromDate)
+        .split('-')
+        .map(Number);
+    const [endYear, endMonth, endDay] = vietnamDate(toDate)
+        .split('-')
+        .map(Number);
+    const cursor = new Date(Date.UTC(
+        startYear,
+        startMonth - 1,
+        granularity === 'day' ? startDay : 1,
+    ));
+    const end = new Date(Date.UTC(
+        endYear,
+        endMonth - 1,
+        granularity === 'day' ? endDay : 1,
+    ));
+    const keys: string[] = [];
+
+    while (cursor <= end) {
+        const year = cursor.getUTCFullYear();
+        const month = String(cursor.getUTCMonth() + 1).padStart(2, '0');
+        if (granularity === 'month') {
+            keys.push(`${year}-${month}`);
+            cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+        } else {
+            const day = String(cursor.getUTCDate()).padStart(2, '0');
+            keys.push(`${year}-${month}-${day}`);
+            cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+    }
+    return keys;
 };

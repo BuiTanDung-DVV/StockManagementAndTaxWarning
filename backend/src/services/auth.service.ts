@@ -115,7 +115,16 @@ export class AuthService {
         where: { userId },
         relations: ['role'],
       });
+      const shopIds = Array.from(new Set(memberships.map((item) => item.shopId)));
+      const shops = shopIds.length
+        ? await this.shopRepo
+          .createQueryBuilder('shop')
+          .where('shop.id IN (:...shopIds)', { shopIds })
+          .getMany()
+        : [];
+      const shopById = new Map(shops.map((shop) => [shop.id, shop]));
       return memberships.map((membership) => {
+        const shop = shopById.get(membership.shopId);
         let permissions: Record<string, string> = {};
         if (
           membership.memberType === 'OWNER' &&
@@ -137,6 +146,8 @@ export class AuthService {
         }
         return {
           shopId: membership.shopId,
+          shopName: shop?.shopName,
+          shopCode: shop?.shopCode,
           memberType: membership.memberType,
           status: membership.status,
           isActive: membership.isActive,

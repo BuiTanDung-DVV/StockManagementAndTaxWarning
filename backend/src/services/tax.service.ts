@@ -1,30 +1,37 @@
 import { AppDataSource } from '../config/db.config';
 import { SalesOrder, SalesReturn } from '../sales/entities';
 import { TaxRule } from '../finance/entities';
-import { Between, Not } from 'typeorm';
+import { Between, In, Not } from 'typeorm';
 import { ShopProfile } from '../system/entities';
 import {
     CURRENT_TAX_POLICY,
     normalizeNonNegative,
     normalizeTaxCode,
 } from '../tax/tax-policy';
+import { resolveCurrentMonthExpensePeriod } from '../finance/finance-period.utils';
 
 export class TaxService {
     async getTaxReportData(shopId: number, period: string, year: string) {
         // period: "01", "02", ... or "Q1", "Q2"
-        let startDate: Date;
-        let endDate: Date;
+        let from: string;
+        let to: string;
 
         const y = parseInt(year);
         if (period.startsWith('Q')) {
             const q = parseInt(period.replace('Q', ''));
-            startDate = new Date(y, (q - 1) * 3, 1);
-            endDate = new Date(y, q * 3, 0, 23, 59, 59);
+            const startMonth = (q - 1) * 3 + 1;
+            const endMonth = q * 3;
+            const endDay = new Date(Date.UTC(y, endMonth, 0)).getUTCDate();
+            from = `${y}-${String(startMonth).padStart(2, '0')}-01`;
+            to = `${y}-${String(endMonth).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
         } else {
             const m = parseInt(period);
-            startDate = new Date(y, m - 1, 1);
-            endDate = new Date(y, m, 0, 23, 59, 59);
+            const endDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+            from = `${y}-${String(m).padStart(2, '0')}-01`;
+            to = `${y}-${String(m).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
         }
+        const { fromDate: startDate, toDate: endDate } =
+            resolveCurrentMonthExpensePeriod(from, to);
 
         const shopRepo = AppDataSource.getRepository(ShopProfile);
         const shop = await shopRepo.findOne({ where: { shopId: shopId } });
@@ -35,7 +42,7 @@ export class TaxService {
         const orders = await orderRepo.find({
             where: {
                 shopId,
-                status: Not('CANCELLED'),
+                status: Not(In(['CANCELLED', 'REJECTED'])),
                 orderDate: Between(startDate, endDate)
             }
         });
@@ -43,9 +50,10 @@ export class TaxService {
         const returns = await returnRepo.find({
             where: {
                 shopId,
-                status: Not('CANCELLED'),
+                status: Not(In(['CANCELLED', 'REJECTED'])),
                 returnDate: Between(startDate, endDate),
             },
+            relations: ['order'],
         });
 
         const totalRevenue = normalizeNonNegative(
@@ -55,7 +63,9 @@ export class TaxService {
                 0,
             ) - returns.reduce(
                 (sum, salesReturn) =>
-                    sum + normalizeNonNegative(Number(salesReturn.refundAmount)),
+                    sum + normalizeNonNegative(Number(
+                        salesReturn.order?.totalAmount ?? salesReturn.refundAmount,
+                    )),
                 0,
             ),
         );
@@ -85,21 +95,22 @@ export class TaxService {
         vatRate = Math.min(100, normalizeNonNegative(vatRate));
         pitRate = Math.min(100, normalizeNonNegative(pitRate));
 
-        const yearStartDate = new Date(y, 0, 1);
-        const yearEndDate = new Date(y, 11, 31, 23, 59, 59);
+        const { fromDate: yearStartDate, toDate: yearEndDate } =
+            resolveCurrentMonthExpensePeriod(`${y}-01-01`, `${y}-12-31`);
         const yearlyOrders = await orderRepo.find({
             where: {
                 shopId,
-                status: Not('CANCELLED'),
+                status: Not(In(['CANCELLED', 'REJECTED'])),
                 orderDate: Between(yearStartDate, yearEndDate)
             }
         });
         const yearlyReturns = await returnRepo.find({
             where: {
                 shopId,
-                status: Not('CANCELLED'),
+                status: Not(In(['CANCELLED', 'REJECTED'])),
                 returnDate: Between(yearStartDate, yearEndDate),
             },
+            relations: ['order'],
         });
         const yearlyRevenue = normalizeNonNegative(
             yearlyOrders.reduce(
@@ -108,7 +119,9 @@ export class TaxService {
                 0,
             ) - yearlyReturns.reduce(
                 (sum, salesReturn) =>
-                    sum + normalizeNonNegative(Number(salesReturn.refundAmount)),
+                    sum + normalizeNonNegative(Number(
+                        salesReturn.order?.totalAmount ?? salesReturn.refundAmount,
+                    )),
                 0,
             ),
         );

@@ -7,6 +7,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/utils/finance_display.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../domain/closing_cash_assessment.dart';
 import '../providers/finance_provider.dart';
 
@@ -43,6 +44,8 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
     double cashExpense,
     double totalIncome,
     double totalExpense,
+    double totalSales,
+    double totalReturns,
     int orderCount,
     String today,
   ) async {
@@ -84,8 +87,8 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
         'cashDifference': cashDifference,
         'totalIncome': totalIncome,
         'totalExpense': totalExpense,
-        'totalSales':
-            totalIncome, // Assuming sales match total income here or from POS
+        'totalSales': totalSales,
+        'totalReturns': totalReturns,
         'orderCount': orderCount,
         'notes': _notesController.text.trim(),
         'closedAt': DateTime.now().toIso8601String(),
@@ -158,6 +161,8 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
           final cashExpense = asNum(data['cashExpense']);
           final bankIncome = asNum(data['bankIncome']);
           final bankExpense = asNum(data['bankExpense']);
+          final totalSales = asNum(data['totalSales']);
+          final totalReturns = asNum(data['totalReturns']);
           final netProfit = totalIncome - totalExpense;
           final orderCount = (data['orderCount'] as num?)?.toInt() ?? 0;
           final closed = data['closed'] == true;
@@ -521,33 +526,65 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                 const SizedBox(height: 20),
 
                 // Cash breakdown metrics
-                Row(
+                AppFillGrid(
+                  minItemWidth: 140,
+                  maxColumns: 3,
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
-                    Expanded(
-                      child: _SummaryTile(
-                        'Đầu ca',
-                        _fmt(openingCash),
-                        c.textPrimary,
-                        Icons.account_balance_wallet,
-                      ),
+                    _SummaryTile(
+                      'Đầu ca',
+                      _fmt(openingCash),
+                      c.textPrimary,
+                      Icons.account_balance_wallet,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _SummaryTile(
-                        'Thu mặt',
-                        _fmt(cashIncome),
-                        AppColors.success,
-                        Icons.add_circle_outline,
-                      ),
+                    _SummaryTile(
+                      'Thu mặt',
+                      _fmt(cashIncome),
+                      AppColors.success,
+                      Icons.add_circle_outline,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _SummaryTile(
-                        'Chi mặt',
-                        _fmt(cashExpense),
-                        AppColors.danger,
-                        Icons.remove_circle_outline,
-                      ),
+                    _SummaryTile(
+                      'Chi mặt',
+                      _fmt(cashExpense),
+                      AppColors.danger,
+                      Icons.remove_circle_outline,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Hoạt động bán hàng trong ngày',
+                  style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: c.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AppFillGrid(
+                  minItemWidth: 140,
+                  maxColumns: 3,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _SummaryTile(
+                      'Doanh số',
+                      _fmt(totalSales),
+                      theme.colorScheme.primary,
+                      Icons.receipt_long_outlined,
+                    ),
+                    _SummaryTile(
+                      'Trả hàng',
+                      _fmt(totalReturns),
+                      AppColors.warning,
+                      Icons.assignment_return_outlined,
+                    ),
+                    _SummaryTile(
+                      'Đơn hợp lệ',
+                      NumberFormat.decimalPattern('vi_VN').format(orderCount),
+                      c.textPrimary,
+                      Icons.shopping_bag_outlined,
                     ),
                   ],
                 ),
@@ -781,6 +818,8 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                             cashExpense.toDouble(),
                             totalIncome.toDouble(),
                             totalExpense.toDouble(),
+                            totalSales.toDouble(),
+                            totalReturns.toDouble(),
                             orderCount,
                             today,
                           ),

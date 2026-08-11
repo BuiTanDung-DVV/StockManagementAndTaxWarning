@@ -4,16 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
 import '../providers/system_provider.dart';
 
-class ActivityLogScreen extends ConsumerWidget {
+class ActivityLogScreen extends ConsumerStatefulWidget {
   const ActivityLogScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ActivityLogScreen> createState() => _ActivityLogScreenState();
+}
+
+class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
+  int _page = 1;
+
+  @override
+  Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final logsAsync = ref.watch(activityLogsProvider(1));
+    final logsAsync = ref.watch(activityLogsProvider(_page));
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -31,18 +38,17 @@ class ActivityLogScreen extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list_rounded),
-            onPressed: () {
-              ToastService.showSuccess('Tính năng bộ lọc đang được phát triển');
-            },
-          ),
-        ],
       ),
       body: logsAsync.when(
         data: (data) {
           final items = (data['items'] as List?) ?? [];
+          final currentPage = paginationValue(data, 'page', fallback: _page);
+          final totalPages = paginationValue(data, 'totalPages', fallback: 1);
+          final totalItems = paginationValue(
+            data,
+            'total',
+            fallback: items.length,
+          );
           if (items.isEmpty) {
             return Center(
               child: Column(
@@ -71,9 +77,18 @@ class ActivityLogScreen extends ConsumerWidget {
             child: ListView.separated(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              itemCount: items.length,
+              itemCount: items.length + 1,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (_, i) {
+                if (i == items.length) {
+                  return AppPaginationBar(
+                    currentPage: currentPage,
+                    totalPages: totalPages,
+                    totalItems: totalItems,
+                    itemLabel: 'hoạt động',
+                    onPageChanged: (page) => setState(() => _page = page),
+                  );
+                }
                 final log = items[i] as Map;
 
                 // 1. Better Actor parsing

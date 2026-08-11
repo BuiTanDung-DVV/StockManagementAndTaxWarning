@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/excel_export_service.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../../customers/providers/customer_provider.dart';
@@ -45,11 +47,21 @@ class DebtAgingScreen extends ConsumerWidget {
         actions: [
           featureGuideButton(context, 'debt_aging'),
           IconButton(
+            tooltip: 'Xuất Excel',
             icon: const Icon(Icons.file_download_rounded),
-            onPressed: () {
-              ToastService.showSuccess(
-                'Xuất báo cáo PDF/Excel sẽ sớm khả dụng trong bản cập nhật kế tiếp!',
-              );
+            onPressed: () async {
+              try {
+                final report = await ref.read(debtAgingProvider(asOf).future);
+                final launched =
+                    await ExcelExportService.exportDebtAgingToExcel(report);
+                if (launched) {
+                  ToastService.showSuccess('Đã tạo file Excel tuổi nợ');
+                } else {
+                  ToastService.showError('Trình duyệt đã chặn tải file');
+                }
+              } catch (_) {
+                ToastService.showError('Không thể xuất báo cáo tuổi nợ');
+              }
             },
           ),
         ],
@@ -174,7 +186,11 @@ class DebtAgingScreen extends ConsumerWidget {
                 // ── Debt Aging Bar Chart ──
                 ChartCard(
                   title: 'Phân nhóm tuổi nợ',
-                  height: 200,
+                  height: 270,
+                  trailing: Text(
+                    'Đơn vị: đồng',
+                    style: TextStyle(fontSize: 10, color: c.textMuted),
+                  ),
                   child: MiniBarChart(
                     values: [
                       current.toDouble(),
@@ -182,7 +198,15 @@ class DebtAgingScreen extends ConsumerWidget {
                       days60.toDouble(),
                       over90.toDouble(),
                     ],
-                    labels: const ['0-30', '31-60', '61-90', '>90'],
+                    labels: const ['Chưa hạn', '1-30', '31-60', '>60'],
+                    tooltipLabels: const [
+                      'Chưa đến hạn',
+                      'Quá hạn 1-30 ngày',
+                      'Quá hạn 31-60 ngày',
+                      'Quá hạn trên 60 ngày',
+                    ],
+                    showLeftTitles: true,
+                    valueSuffix: ' ₫',
                     barColors: const [
                       AppColors.success,
                       AppColors.info,
@@ -418,7 +442,7 @@ class DebtAgingScreen extends ConsumerWidget {
                                 ),
                                 icon: const Icon(Icons.send_rounded, size: 12),
                                 label: Text(
-                                  'Nhắc nợ',
+                                  'Soạn nhắc nợ',
                                   style: GoogleFonts.manrope(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -446,13 +470,15 @@ class DebtAgingScreen extends ConsumerWidget {
     String debtAmount,
   ) {
     final c = AppThemeColors.of(context);
+    final reminderText =
+        'Kính gửi $customerName, cửa hàng xin thông báo khoản công nợ hiện tại của quý khách là $debtAmount. Vui lòng liên hệ cửa hàng để đối chiếu và thanh toán. Xin cảm ơn.';
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: c.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
-          'Gửi tin nhắn nhắc nợ',
+          'Soạn nội dung nhắc nợ',
           style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
         ),
         content: Column(
@@ -474,7 +500,7 @@ class DebtAgingScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Chọn phương thức gửi:',
+              'Sao chép nội dung để gửi qua:',
               style: TextStyle(
                 fontSize: 12,
                 color: c.textSecondary,
@@ -482,21 +508,31 @@ class DebtAgingScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
               children: [
-                _buildMethodBtn(context, Icons.sms_rounded, 'SMS', Colors.blue),
                 _buildMethodBtn(
                   context,
-                  Icons.chat_bubble_rounded,
-                  'Zalo',
-                  Colors.lightBlue,
+                  Icons.content_copy_rounded,
+                  'Sao chép',
+                  Colors.blue,
+                  reminderText,
+                ),
+                _buildMethodBtn(
+                  context,
+                  Icons.sms_rounded,
+                  'SMS',
+                  Colors.teal,
+                  reminderText,
                 ),
                 _buildMethodBtn(
                   context,
                   Icons.alternate_email_rounded,
                   'Email',
                   Colors.redAccent,
+                  reminderText,
                 ),
               ],
             ),
@@ -523,12 +559,15 @@ class DebtAgingScreen extends ConsumerWidget {
     IconData icon,
     String label,
     Color color,
+    String reminderText,
   ) {
     return InkWell(
-      onTap: () {
+      onTap: () async {
+        await Clipboard.setData(ClipboardData(text: reminderText));
+        if (!context.mounted) return;
         Navigator.pop(context);
         ToastService.showSuccess(
-          'Đã mở ứng dụng $label để gửi tin nhắn nhắc nợ!',
+          'Đã sao chép nội dung nhắc nợ. Bạn có thể dán vào $label.',
         );
       },
       borderRadius: BorderRadius.circular(12),

@@ -1,4 +1,8 @@
 import { AppDataSource } from '../config/db.config';
+import {
+    buildVietnamPeriodKeys,
+    resolveCurrentMonthExpensePeriod,
+} from '../finance/finance-period.utils';
 import { SalesOrder, SalesOrderItem, SalesReturn, SalesReturnItem, SalesOrderPayment, SalesOrderLotDeduction } from '../sales/entities';
 import {
     Customer,
@@ -16,6 +20,15 @@ import { InventoryLot } from '../inventory/lot.entity';
 import { EntityManager } from 'typeorm';
 import { normalizeSalesStatusFilter } from '../sales/sales-metric.utils';
 import { assertAllowedUnitPrice } from '../sales/sales-pricing.utils';
+import {
+    buildAllocatedMerchandiseRevenueSql,
+    calculateSalesAccountingSplit,
+} from '../sales/sales-accounting.utils';
+import {
+    groupSettledPaymentsByMethod,
+    normalizeSettledPaymentMethod,
+    paymentLedgerAccountCode,
+} from '../sales/payment-ledger.utils';
 
 export class SalesService {
     private orderRepo = AppDataSource.getRepository(SalesOrder);
@@ -57,9 +70,7 @@ export class SalesService {
     }
     
     async summary(shopId: number | number[], from?: string, to?: string) {
-        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const toDate = to ? new Date(to) : new Date();
-        toDate.setHours(23, 59, 59, 999);
+        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
 
         const shopCondition = Array.isArray(shopId) ? 'o.shop_id IN (:...shopIds)' : 'o.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
@@ -74,8 +85,9 @@ export class SalesService {
             ? 'r.shop_id IN (:...shopIds)'
             : 'r.shop_id = :shopId';
         const returnResult = await this.returnRepo.createQueryBuilder('r')
-            .select('COALESCE(SUM(r.refund_amount), 0)', 'refundAmount')
-            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND r.status != 'CANCELLED'`, {
+            .innerJoin('r.order', 'returnedOrder')
+            .select('COALESCE(SUM(returnedOrder.total_amount), 0)', 'returnValue')
+            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')`, {
                 ...shopParams,
                 fromDate,
                 toDate,
@@ -104,32 +116,35 @@ export class SalesService {
             WHERE ${returnCogsShopCondition}
               AND r.return_date >= $2
               AND r.return_date <= $3
-              AND r.status != 'CANCELLED'
+              AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
         `, [shopId, fromDate, toDate]);
 
         const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
         const dateFormat = diffDays > 60 ? 'YYYY-MM' : 'YYYY-MM-DD';
 
+        const orderDateBucket = `TO_CHAR(o.order_date AT TIME ZONE 'Asia/Ho_Chi_Minh', '${dateFormat}')`;
+        const returnDateBucket = `TO_CHAR(r.return_date AT TIME ZONE 'Asia/Ho_Chi_Minh', '${dateFormat}')`;
         const daily = await this.orderRepo.createQueryBuilder('o')
-            .select(`TO_CHAR(o.order_date, '${dateFormat}')`, 'date')
+            .select(orderDateBucket, 'date')
             .addSelect('COALESCE(SUM(o.total_amount), 0)', 'revenue')
             .addSelect('COUNT(o.id)', 'orderCount')
             .where(`${shopCondition} AND o.order_date >= :fromDate AND o.order_date <= :toDate AND o.status != 'CANCELLED'`, { ...shopParams, fromDate, toDate })
-            .groupBy(`TO_CHAR(o.order_date, '${dateFormat}')`)
-            .orderBy(`TO_CHAR(o.order_date, '${dateFormat}')`, 'ASC')
+            .groupBy(orderDateBucket)
+            .orderBy(orderDateBucket, 'ASC')
             .getRawMany();
         const dailyReturns = await this.returnRepo.createQueryBuilder('r')
-            .select(`TO_CHAR(r.return_date, '${dateFormat}')`, 'date')
-            .addSelect('COALESCE(SUM(r.refund_amount), 0)', 'refundAmount')
-            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND r.status != 'CANCELLED'`, {
+            .innerJoin('r.order', 'returnedOrder')
+            .select(returnDateBucket, 'date')
+            .addSelect('COALESCE(SUM(returnedOrder.total_amount), 0)', 'returnValue')
+            .where(`${returnShopCondition} AND r.return_date >= :fromDate AND r.return_date <= :toDate AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')`, {
                 ...shopParams,
                 fromDate,
                 toDate,
             })
-            .groupBy(`TO_CHAR(r.return_date, '${dateFormat}')`)
+            .groupBy(returnDateBucket)
             .getRawMany();
         const dailyReturnMap = new Map(
-            dailyReturns.map((row) => [row.date, Number(row.refundAmount || 0)]),
+            dailyReturns.map((row) => [row.date, Number(row.returnValue || 0)]),
         );
 
         const dailyMap = new Map();
@@ -142,54 +157,32 @@ export class SalesService {
         dailyReturns.forEach((row) => {
             if (!dailyMap.has(row.date)) {
                 dailyMap.set(row.date, {
-                    revenue: -Number(row.refundAmount || 0),
+                    revenue: -Number(row.returnValue || 0),
                     orderCount: 0,
                 });
             }
         });
 
-        const filledDaily = [];
-        if (dateFormat === 'YYYY-MM-DD') {
-            for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                const dateStr = `${yyyy}-${mm}-${dd}`;
-                filledDaily.push({
-                    date: dateStr,
-                    revenue: dailyMap.get(dateStr)?.revenue || 0,
-                    orderCount: dailyMap.get(dateStr)?.orderCount || 0
-                });
-            }
-        } else {
-            let startYear = fromDate.getFullYear();
-            let startMonth = fromDate.getMonth();
-            const endYear = toDate.getFullYear();
-            const endMonth = toDate.getMonth();
-            while (startYear < endYear || (startYear === endYear && startMonth <= endMonth)) {
-                const monthStr = `${startYear}-${String(startMonth + 1).padStart(2, '0')}`;
-                filledDaily.push({
-                    date: monthStr,
-                    revenue: dailyMap.get(monthStr)?.revenue || 0,
-                    orderCount: dailyMap.get(monthStr)?.orderCount || 0
-                });
-                startMonth++;
-                if (startMonth > 11) {
-                    startMonth = 0;
-                    startYear++;
-                }
-            }
-        }
+        const filledDaily = buildVietnamPeriodKeys(
+            fromDate,
+            toDate,
+            dateFormat === 'YYYY-MM-DD' ? 'day' : 'month',
+        ).map((date) => ({
+            date,
+            revenue: dailyMap.get(date)?.revenue || 0,
+            orderCount: dailyMap.get(date)?.orderCount || 0,
+        }));
 
         const grossRevenue = Number(result?.totalRevenue || 0);
-        const refundAmount = Number(returnResult?.refundAmount || 0);
+        const returnValue = Number(returnResult?.returnValue || 0);
         const grossCogs = Number(result?.totalCogs || 0);
         const returnedCogs = Number(returnedCogsResult?.returnedCogs || 0);
-        const totalRevenue = grossRevenue - refundAmount;
+        const totalRevenue = grossRevenue - returnValue;
         const totalCogs = Math.max(grossCogs - returnedCogs, 0);
         return {
             grossRevenue,
-            refundAmount,
+            refundAmount: returnValue,
+            returnValue,
             totalRevenue,
             grossCogs,
             returnedCogs,
@@ -202,47 +195,173 @@ export class SalesService {
         };
     }
 
-    async getTopProducts(shopId: number | number[], from?: string, to?: string) {
-        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const toDate = to ? new Date(to) : new Date();
-        toDate.setHours(23, 59, 59, 999);
+    async getTopProducts(
+        shopId: number | number[],
+        from?: string,
+        to?: string,
+        previousFrom?: string,
+        previousTo?: string,
+    ) {
+        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
 
         const isArray = Array.isArray(shopId);
         const shopCondition = isArray ? 'o.shop_id = ANY($1)' : 'o.shop_id = $1';
-        const params: any[] = [shopId, fromDate, toDate];
+        const previousPeriod = previousFrom && previousTo
+            ? resolveCurrentMonthExpensePeriod(previousFrom, previousTo)
+            : null;
+        const previousFromDate = previousPeriod?.fromDate || null;
+        const previousToDate = previousPeriod?.toDate || null;
+        const params: any[] = [
+            shopId,
+            fromDate,
+            toDate,
+            previousFromDate,
+            previousToDate,
+        ];
+        const soldNetValueSql = buildAllocatedMerchandiseRevenueSql(
+            'oi.subtotal',
+            'o',
+        );
+        const returnedNetValueSql = buildAllocatedMerchandiseRevenueSql(
+            'ri.subtotal',
+            'returned_order',
+        );
 
-        // Rank the ten strongest products by gross revenue while exposing
-        // quantity as a secondary retail metric for the dashboard.
+        // Rank products by net merchandise revenue and quantity in the period.
+        // Order-level discounts are allocated proportionally to every item.
+        // Returns use their own business date and the same allocation factor.
         const topProducts = await AppDataSource.query(`
-            SELECT 
-                p.name,
-                p.unit,
-                SUM(oi.subtotal) as value,
-                SUM(oi.quantity) as quantity
-            FROM sales_order_items oi
-            JOIN sales_orders o ON oi.order_id = o.id
-            JOIN products p ON oi.product_id = p.id
-            WHERE ${shopCondition} 
-              AND o.order_date >= $2 
-              AND o.order_date <= $3 
-              AND o.status != 'CANCELLED'
-            GROUP BY p.id, p.name, p.unit
-            ORDER BY value DESC
+            WITH sold_cost AS (
+                SELECT
+                    oi.order_id,
+                    oi.product_id,
+                    CASE
+                      WHEN SUM(oi.quantity) = 0 THEN 0
+                      ELSE SUM(oi.quantity * oi.cost_price) / SUM(oi.quantity)
+                    END AS unit_cost
+                FROM sales_order_items oi
+                JOIN sales_orders o ON oi.order_id = o.id
+                WHERE ${shopCondition}
+                  AND o.status != 'CANCELLED'
+                  AND EXISTS (
+                    SELECT 1
+                    FROM sales_returns r
+                    WHERE r.order_id = o.id
+                      AND r.return_date >= $2
+                      AND r.return_date <= $3
+                      AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+                  )
+                GROUP BY oi.order_id, oi.product_id
+            ), sold AS (
+                SELECT
+                    p.id,
+                    p.name,
+                    p.unit,
+                    SUM(${soldNetValueSql}) AS gross_value,
+                    SUM(oi.quantity) AS gross_quantity,
+                    SUM(oi.quantity * oi.cost_price) AS gross_cogs
+                FROM sales_order_items oi
+                JOIN sales_orders o ON oi.order_id = o.id
+                JOIN products p ON oi.product_id = p.id
+                WHERE ${shopCondition}
+                  AND o.order_date >= $2
+                  AND o.order_date <= $3
+                  AND o.status != 'CANCELLED'
+                GROUP BY p.id, p.name, p.unit
+            ), returned AS (
+                SELECT
+                    ri.product_id,
+                    SUM(${returnedNetValueSql}) AS return_value,
+                    SUM(ri.quantity) AS return_quantity,
+                    SUM(ri.quantity * sold_cost.unit_cost) AS return_cogs
+                FROM sales_return_items ri
+                JOIN sales_returns r ON ri.return_id = r.id
+                JOIN sales_orders returned_order ON returned_order.id = r.order_id
+                JOIN sold_cost
+                  ON sold_cost.order_id = r.order_id
+                  AND sold_cost.product_id = ri.product_id
+                WHERE ${isArray ? 'r.shop_id = ANY($1)' : 'r.shop_id = $1'}
+                  AND r.return_date >= $2
+                  AND r.return_date <= $3
+                  AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+                GROUP BY ri.product_id
+            ), previous_sold AS (
+                SELECT
+                    p.id,
+                    SUM(${soldNetValueSql}) AS gross_value
+                FROM sales_order_items oi
+                JOIN sales_orders o ON oi.order_id = o.id
+                JOIN products p ON oi.product_id = p.id
+                WHERE ${shopCondition}
+                  AND $4::timestamp IS NOT NULL
+                  AND $5::timestamp IS NOT NULL
+                  AND o.order_date >= $4
+                  AND o.order_date <= $5
+                  AND o.status != 'CANCELLED'
+                GROUP BY p.id
+            ), previous_returned AS (
+                SELECT
+                    ri.product_id,
+                    SUM(${returnedNetValueSql}) AS return_value
+                FROM sales_return_items ri
+                JOIN sales_returns r ON ri.return_id = r.id
+                JOIN sales_orders returned_order ON returned_order.id = r.order_id
+                WHERE ${isArray ? 'r.shop_id = ANY($1)' : 'r.shop_id = $1'}
+                  AND $4::timestamp IS NOT NULL
+                  AND $5::timestamp IS NOT NULL
+                  AND r.return_date >= $4
+                  AND r.return_date <= $5
+                  AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+                GROUP BY ri.product_id
+            ), previous_net AS (
+                SELECT
+                    previous_sold.id,
+                    GREATEST(
+                      previous_sold.gross_value - COALESCE(previous_returned.return_value, 0),
+                      0
+                    ) AS value
+                FROM previous_sold
+                LEFT JOIN previous_returned
+                  ON previous_returned.product_id = previous_sold.id
+            )
+            SELECT
+                sold.id,
+                sold.name,
+                sold.unit,
+                GREATEST(sold.gross_value - COALESCE(returned.return_value, 0), 0) AS value,
+                GREATEST(sold.gross_quantity - COALESCE(returned.return_quantity, 0), 0) AS quantity,
+                GREATEST(sold.gross_cogs - COALESCE(returned.return_cogs, 0), 0) AS cogs,
+                GREATEST(
+                  (sold.gross_value - COALESCE(returned.return_value, 0)) -
+                  (sold.gross_cogs - COALESCE(returned.return_cogs, 0)),
+                  0
+                ) AS gross_profit,
+                previous_net.value AS previous_value
+            FROM sold
+            LEFT JOIN returned ON returned.product_id = sold.id
+            LEFT JOIN previous_net ON previous_net.id = sold.id
+            WHERE sold.gross_value - COALESCE(returned.return_value, 0) > 0
+            ORDER BY value DESC, quantity DESC, sold.id ASC
             LIMIT 10
         `, params);
 
         return topProducts.map((p: any) => ({
+            id: Number(p.id),
             name: p.name,
             unit: p.unit || 'Sản phẩm',
             value: Number(p.value),
-            quantity: Number(p.quantity)
+            quantity: Number(p.quantity),
+            cogs: Number(p.cogs),
+            grossProfit: Number(p.gross_profit),
+            previousValue: p.previous_value == null ? null : Number(p.previous_value),
+            marginPct: Number(p.value) > 0
+                ? Number(((Number(p.gross_profit) / Number(p.value)) * 100).toFixed(2))
+                : 0
         }));
     }
 
     async paymentMethodSummary(shopId: number | number[], from?: string, to?: string) {
-        const fromDate = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const toDate = to ? new Date(to) : new Date();
-        toDate.setHours(23, 59, 59, 999);
+        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
 
         const shopCondition = Array.isArray(shopId) ? 'o.shop_id IN (:...shopIds)' : 'o.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
@@ -381,16 +500,25 @@ export class SalesService {
             ) {
                 throw new Error('Validation: Paid amount must be between 0 and order total');
             }
-            const unpaidAmount = Math.max(totalAmount - paidAmount, 0);
+            const accountingSplit = calculateSalesAccountingSplit(
+                subtotal,
+                discountAmount,
+                taxAmount,
+                paidAmount,
+            );
+            const unpaidAmount = accountingSplit.receivableAmount;
             if (unpaidAmount > 0 && !customer) {
                 throw new Error('Validation: Customer is required for an unpaid order');
             }
+            const settledPaymentMethod = paidAmount > 0
+                ? normalizeSettledPaymentMethod(dto.paymentMethod || 'CASH')
+                : String(dto.paymentMethod || 'CASH').toUpperCase();
 
             if (customer && Number(customer.creditLimit || 0) > 0) {
                 const existingDebtRaw = await manager.createQueryBuilder(Receivable, 'r')
                     .select('COALESCE(SUM(r.amount - r.paid_amount), 0)', 'remainingDebt')
                     .where('r.customer_id = :customerId AND r.shop_id = :shopId', { customerId: customer.id, shopId })
-                    .andWhere("r.status != 'PAID'")
+                    .andWhere("UPPER(COALESCE(r.status, '')) NOT IN ('PAID', 'CANCELLED')")
                     .getRawOne();
 
                 const existingDebt = Number(existingDebtRaw?.remainingDebt || 0);
@@ -415,7 +543,7 @@ export class SalesService {
                 totalAmount,
                 totalCogs,
                 paidAmount,
-                paymentMethod: dto.paymentMethod || 'CASH',
+                paymentMethod: settledPaymentMethod,
                 notes: dto.notes,
                 invoiceNumber: dto.invoiceNumber,
                 ...(customer ? { customer } : {}),
@@ -440,7 +568,7 @@ export class SalesService {
                     shopId,
                     order: savedOrder,
                     amount: paidAmount,
-                    method: dto.paymentMethod || 'CASH',
+                    method: settledPaymentMethod,
                     referenceCode: dto.qrPaymentRef,
                     notes: 'Thanh toán khi tạo đơn hàng'
                 }));
@@ -449,7 +577,7 @@ export class SalesService {
                     amount: paidAmount,
                     type: 'INCOME',
                     category: 'SALES',
-                    paymentMethod: dto.paymentMethod || 'CASH',
+                    paymentMethod: settledPaymentMethod,
                     referenceType: 'SALES_ORDER',
                     referenceId: savedOrder.id,
                     referenceCode: savedOrder.orderCode,
@@ -488,12 +616,27 @@ export class SalesService {
             // === Journal Ledger: Ghi bút toán kép cho đơn hàng ===
             const journalLines: { accountCode: string; amount: number; entryType: 'DEBIT' | 'CREDIT' }[] = [];
 
-            // Doanh thu: Có TK 511
-            journalLines.push({ accountCode: '511', amount: totalAmount, entryType: 'CREDIT' });
+            const netSalesAmount = accountingSplit.netSales;
+            journalLines.push({
+                accountCode: '511',
+                amount: netSalesAmount,
+                entryType: 'CREDIT',
+            });
+            if (taxAmount > 0) {
+                journalLines.push({
+                    accountCode: '3331',
+                    amount: taxAmount,
+                    entryType: 'CREDIT',
+                });
+            }
 
-            // Tiền mặt thu được: Nợ TK 111
+            // Tiền đã thu: tiền mặt vào 111, chuyển khoản/QR/thẻ vào 112.
             if (paidAmount > 0) {
-                journalLines.push({ accountCode: '111', amount: paidAmount, entryType: 'DEBIT' });
+                journalLines.push({
+                    accountCode: paymentLedgerAccountCode(settledPaymentMethod),
+                    amount: paidAmount,
+                    entryType: 'DEBIT',
+                });
             }
 
             // Phải thu khách hàng: Nợ TK 131
@@ -554,7 +697,10 @@ export class SalesService {
                 if (unpaidAmount > 0 && receivable.customer) {
                     const customer = await manager.findOne(Customer, { where: { id: receivable.customer.id, shopId } });
                     if (customer) {
-                        customer.balance = Number(customer.balance || 0) - unpaidAmount;
+                        customer.balance = Math.max(
+                            Number(customer.balance || 0) - unpaidAmount,
+                            0,
+                        );
                         await manager.save(Customer, customer);
                     }
                 }
@@ -613,21 +759,39 @@ export class SalesService {
                 await journalEntryRepo.save(originalEntry);
             }
 
-            const refundAmount = Number(order.paidAmount || 0);
-            if (refundAmount > 0) {
+            const settledPayments = await manager.find(SalesOrderPayment, {
+                where: { shopId, order: { id } },
+            });
+            const refunds = groupSettledPaymentsByMethod(settledPayments);
+            for (const refund of refunds) {
                 await this.financeService.createCashTransaction(shopId, {
-                    amount: refundAmount,
+                    amount: refund.amount,
                     type: 'EXPENSE',
                     category: 'REFUND',
-                    paymentMethod: order.paymentMethod || 'CASH',
+                    paymentMethod: refund.method,
                     referenceType: 'SALES_ORDER_CANCEL',
                     referenceId: order.id,
                     referenceCode: order.orderCode,
-                    description: `Hoàn tiền do hủy đơn ${order.orderCode}`,
+                    description: `Hoàn tiền ${refund.method} do hủy đơn ${order.orderCode}`,
                     transactionDate: new Date(),
                     status: 'COMPLETED',
                     createdBy,
                 } as any, manager);
+            }
+
+            const collectionEntries = await journalEntryRepo.find({
+                where: {
+                    shopId,
+                    referenceType: 'DEBT_COLLECTION',
+                    referenceId: id,
+                    isVoided: false,
+                },
+            });
+            for (const entry of collectionEntries) {
+                entry.isVoided = true;
+            }
+            if (collectionEntries.length > 0) {
+                await journalEntryRepo.save(collectionEntries);
             }
 
             await queryRunner.commitTransaction();
@@ -678,7 +842,15 @@ export class SalesService {
             if (currentPaid + amount > totalAmount) {
                 throw new Error('Validation: Payment amount exceeds remaining order balance');
             }
-            const payment = await manager.save(SalesOrderPayment, manager.create(SalesOrderPayment, { ...dto, shopId, order }));
+            const settledMethod = normalizeSettledPaymentMethod(
+                (dto as any).method || 'CASH',
+            );
+            const payment = await manager.save(SalesOrderPayment, manager.create(SalesOrderPayment, {
+                ...dto,
+                method: settledMethod,
+                shopId,
+                order,
+            }));
             order.paidAmount = currentPaid + amount;
             order.status = (Number(order.paidAmount) >= totalAmount) ? 'DELIVERED' : 'PENDING';
             await manager.save(SalesOrder, order);
@@ -687,7 +859,7 @@ export class SalesService {
                 amount,
                 type: 'INCOME',
                 category: 'SALES',
-                paymentMethod: (dto as any).method || 'CASH',
+                paymentMethod: settledMethod,
                 referenceType: 'SALES_ORDER',
                 referenceId: order.id,
                 referenceCode: order.orderCode,
@@ -704,7 +876,11 @@ export class SalesService {
                 order.id,
                 `Thu nợ khách hàng - Đơn ${order.orderCode}`,
                 [
-                    { accountCode: '111', amount, entryType: 'DEBIT' },
+                    {
+                        accountCode: paymentLedgerAccountCode(settledMethod),
+                        amount,
+                        entryType: 'DEBIT',
+                    },
                     { accountCode: '131', amount, entryType: 'CREDIT' },
                 ],
                 manager
@@ -730,7 +906,7 @@ export class SalesService {
                         shopId,
                         receivable,
                         amount,
-                        paymentMethod: (dto as any).method || 'CASH',
+                        paymentMethod: settledMethod,
                         paymentDate: new Date(),
                         notes: (dto as any).notes,
                         recordedBy: (dto as any).createdBy,
@@ -786,15 +962,35 @@ export class SalesService {
             );
             let returnedCogs = 0;
             let returnedQuantity = 0;
+            const normalizedReturnItems: Array<{
+                productId: number;
+                quantity: number;
+                unitPrice: number;
+                subtotal: number;
+                reason?: string;
+            }> = [];
+            const seenProductIds = new Set<number>();
             for (const rawItem of rawItems) {
                 const productId = Number(rawItem.productId);
                 const quantity = Number(rawItem.quantity || 0);
                 const soldItem = soldItems.get(productId);
-                if (!soldItem || quantity <= 0 || quantity > Number(soldItem.quantity)) {
+                if (
+                    !soldItem ||
+                    seenProductIds.has(productId) ||
+                    quantity !== Number(soldItem.quantity)
+                ) {
                     throw new Error('Validation: Return quantity exceeds sold quantity');
                 }
+                seenProductIds.add(productId);
                 returnedQuantity += quantity;
                 returnedCogs += quantity * Number(soldItem.costPrice || 0);
+                normalizedReturnItems.push({
+                    productId,
+                    quantity,
+                    unitPrice: Number(soldItem.unitPrice || 0),
+                    subtotal: Number(soldItem.subtotal || 0),
+                    reason: rawItem.reason,
+                });
             }
             const soldQuantity = order.items.reduce(
                 (sum, item) => sum + Number(item.quantity || 0),
@@ -806,13 +1002,33 @@ export class SalesService {
             ) {
                 throw new Error('Validation: Partial returns are not supported yet');
             }
-            let refundAmount = Number(dto.refundAmount || 0);
-
-            if (dto.refundAmount == null && rawItems.length) {
-                refundAmount = rawItems.reduce((sum: number, i: any) => sum + Number(i.subtotal || (Number(i.quantity || 0) * Number(i.unitPrice || 0))), 0);
+            const settledPayments = await manager.find(SalesOrderPayment, {
+                where: { shopId, order: { id: orderId } },
+            });
+            const refunds = groupSettledPaymentsByMethod(settledPayments);
+            const recordedPaymentTotal = refunds.reduce(
+                (sum, refund) => sum + refund.amount,
+                0,
+            );
+            const paidAmount = Number(order.paidAmount || 0);
+            if (recordedPaymentTotal + 0.01 < paidAmount) {
+                const fallbackMethod = normalizeSettledPaymentMethod(
+                    order.paymentMethod || dto.refundMethod || 'CASH',
+                );
+                const missingAmount = paidAmount - recordedPaymentTotal;
+                const existing = refunds.find((entry) => entry.method === fallbackMethod);
+                if (existing) existing.amount += missingAmount;
+                else refunds.push({ method: fallbackMethod, amount: missingAmount });
             }
-            if (refundAmount < 0 || refundAmount > Number(order.paidAmount || 0)) {
-                throw new Error('Validation: Refund amount exceeds the amount paid');
+            const refundAmount = refunds.reduce(
+                (sum, refund) => sum + refund.amount,
+                0,
+            );
+            if (
+                dto.refundAmount != null &&
+                Math.abs(Number(dto.refundAmount) - refundAmount) > 0.01
+            ) {
+                throw new Error('Validation: Full return must refund the full amount paid');
             }
 
             const entity = manager.create(SalesReturn, {
@@ -822,25 +1038,25 @@ export class SalesService {
                 returnDate,
                 reason: dto.reason || '',
                 refundAmount,
-                refundMethod: dto.refundMethod || 'CASH',
+                refundMethod: refunds.length === 1 ? refunds[0].method : 'MULTIPLE',
                 status: 'COMPLETED',
                 notes: dto.notes,
             } as any);
 
-            if (rawItems.length) {
+            if (normalizedReturnItems.length) {
                 (entity as any).items = [];
-                for (const i of rawItems) {
-                    const product = i.productId
-                        ? await manager.findOne(Product, { where: { id: Number(i.productId), shopId } })
+                for (const item of normalizedReturnItems) {
+                    const product = item.productId
+                        ? await manager.findOne(Product, { where: { id: item.productId, shopId } })
                         : null;
 
                     const returnItem = manager.create(SalesReturnItem, {
                         shopId,
                         ...(product ? { product } : {}),
-                        quantity: Number(i.quantity || 0),
-                        unitPrice: Number(i.unitPrice || 0),
-                        subtotal: Number(i.subtotal || (Number(i.quantity || 0) * Number(i.unitPrice || 0))),
-                        reason: i.reason,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        subtotal: item.subtotal,
+                        reason: item.reason,
                     });
                     (entity as any).items.push(returnItem);
                 }
@@ -934,12 +1150,12 @@ export class SalesService {
                 }
             }
 
-            if (refundAmount > 0) {
+            for (const refund of refunds) {
                 await this.financeService.createCashTransaction(shopId, {
-                    amount: refundAmount,
+                    amount: refund.amount,
                     type: 'EXPENSE',
                     category: 'REFUND',
-                    paymentMethod: dto.refundMethod || 'CASH',
+                    paymentMethod: refund.method,
                     referenceType: 'SALES_RETURN',
                     referenceId: savedReturn.id,
                     referenceCode: savedReturn.returnCode,
@@ -948,43 +1164,64 @@ export class SalesService {
                     status: 'COMPLETED',
                     createdBy: (dto as any).createdBy
                 } as any, manager);
+            }
 
-                // === Journal Ledger: Hoàn tiền trả hàng (Nợ TK 511 / Có TK 111) ===
-                const returnJournalLines: {
-                    accountCode: string;
-                    amount: number;
-                    entryType: 'DEBIT' | 'CREDIT';
-                }[] = [
-                    { accountCode: '511', amount: refundAmount, entryType: 'DEBIT' },
-                    { accountCode: '111', amount: refundAmount, entryType: 'CREDIT' },
-                ];
-                if (returnedCogs > 0) {
-                    returnJournalLines.push(
-                        { accountCode: '156', amount: returnedCogs, entryType: 'DEBIT' },
-                        { accountCode: '632', amount: returnedCogs, entryType: 'CREDIT' },
-                    );
-                }
-                await this.postingService.postJournal(
-                    shopId,
-                    'SALES_RETURN',
-                    savedReturn.id,
-                    `Trả hàng - ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
-                    returnJournalLines,
-                    manager
-                );
-            } else if (returnedCogs > 0) {
-                await this.postingService.postJournal(
-                    shopId,
-                    'SALES_RETURN',
-                    savedReturn.id,
-                    `Trả hàng - ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
-                    [
-                        { accountCode: '156', amount: returnedCogs, entryType: 'DEBIT' },
-                        { accountCode: '632', amount: returnedCogs, entryType: 'CREDIT' },
-                    ],
-                    manager
+            const accountingSplit = calculateSalesAccountingSplit(
+                Number(order.subtotal || 0),
+                Number(order.discountAmount || 0),
+                Number(order.taxAmount || 0),
+                paidAmount,
+            );
+            const netSalesAmount = accountingSplit.netSales;
+            const taxAmount = accountingSplit.taxAmount;
+            const unpaidAmount = accountingSplit.receivableAmount;
+            const returnJournalLines: {
+                accountCode: string;
+                amount: number;
+                entryType: 'DEBIT' | 'CREDIT';
+            }[] = [];
+            if (netSalesAmount > 0) {
+                returnJournalLines.push({
+                    accountCode: '511',
+                    amount: netSalesAmount,
+                    entryType: 'DEBIT',
+                });
+            }
+            if (taxAmount > 0) {
+                returnJournalLines.push({
+                    accountCode: '3331',
+                    amount: taxAmount,
+                    entryType: 'DEBIT',
+                });
+            }
+            for (const refund of refunds) {
+                returnJournalLines.push({
+                    accountCode: paymentLedgerAccountCode(refund.method),
+                    amount: refund.amount,
+                    entryType: 'CREDIT',
+                });
+            }
+            if (unpaidAmount > 0) {
+                returnJournalLines.push({
+                    accountCode: '131',
+                    amount: unpaidAmount,
+                    entryType: 'CREDIT',
+                });
+            }
+            if (returnedCogs > 0) {
+                returnJournalLines.push(
+                    { accountCode: '156', amount: returnedCogs, entryType: 'DEBIT' },
+                    { accountCode: '632', amount: returnedCogs, entryType: 'CREDIT' },
                 );
             }
+            await this.postingService.postJournal(
+                shopId,
+                'SALES_RETURN',
+                savedReturn.id,
+                `Trả hàng - ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
+                returnJournalLines,
+                manager,
+            );
 
             await queryRunner.commitTransaction();
             return savedReturn;

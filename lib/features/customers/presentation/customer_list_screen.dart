@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
@@ -31,25 +32,29 @@ class CustomerListScreen extends ConsumerStatefulWidget {
 
 class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   String _searchQuery = '';
+  int _page = 1;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
     final listAsync = ref.watch(
       customerListProvider((
-        page: 1,
+        page: _page,
         search: _searchQuery.trim().isEmpty ? null : _searchQuery.trim(),
       )),
     );
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: AppPrimaryFloatingAction(
-        label: 'Thêm khách hàng',
-        assetPath: AppAssets.add,
-        heroTag: 'customers-add-action',
-        onPressed: () => context.push('/customers/form'),
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : AppPrimaryFloatingAction(
+              label: 'Thêm khách hàng',
+              assetPath: AppAssets.add,
+              heroTag: 'customers-add-action',
+              onPressed: () => context.push('/customers/form'),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: AppResponsiveContent(
         maxWidth: 1320,
@@ -63,13 +68,28 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                   'Tra cứu thông tin liên hệ, nhóm khách và công nợ phát sinh.',
               dense: true,
               action: featureGuideButton(context, 'customer_list'),
-              compactAction: featureGuideButton(context, 'customer_list'),
+              compactAction: Wrap(
+                spacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  featureGuideButton(context, 'customer_list'),
+                  AppPrimaryHeaderAction(
+                    label: 'Thêm khách hàng',
+                    assetPath: AppAssets.add,
+                    heroTag: 'customers-add-action-compact',
+                    onPressed: () => context.push('/customers/form'),
+                  ),
+                ],
+              ),
             ),
             FilterBar(
               searchHint: 'Tìm theo tên hoặc số điện thoại',
               onSearchChanged: (value) {
                 if (value != _searchQuery) {
-                  setState(() => _searchQuery = value);
+                  setState(() {
+                    _searchQuery = value;
+                    _page = 1;
+                  });
                 }
               },
             ),
@@ -81,6 +101,21 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                       .whereType<Map>()
                       .map((item) => Map<String, dynamic>.from(item))
                       .toList();
+                  final currentPage = paginationValue(
+                    data,
+                    'page',
+                    fallback: _page,
+                  );
+                  final totalPages = paginationValue(
+                    data,
+                    'totalPages',
+                    fallback: 1,
+                  );
+                  final totalItems = paginationValue(
+                    data,
+                    'total',
+                    fallback: customers.length,
+                  );
                   return RefreshIndicator(
                     onRefresh: () async => ref.invalidate(customerListProvider),
                     child: LayoutBuilder(
@@ -116,16 +151,27 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                         if (constraints.maxWidth < 760) {
                           return ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount: customers.length,
+                            itemCount: customers.length + 1,
                             separatorBuilder: (_, _) =>
                                 const SizedBox(height: AppSpacing.sm),
-                            itemBuilder: (context, index) =>
-                                _MobileCustomerCard(
-                                  customer: customers[index],
-                                  onTap: () => context.push(
-                                    '/customers/${customers[index]['id']}',
-                                  ),
+                            itemBuilder: (context, index) {
+                              if (index == customers.length) {
+                                return AppPaginationBar(
+                                  currentPage: currentPage,
+                                  totalPages: totalPages,
+                                  totalItems: totalItems,
+                                  itemLabel: 'khách hàng',
+                                  onPageChanged: (page) =>
+                                      setState(() => _page = page),
+                                );
+                              }
+                              return _MobileCustomerCard(
+                                customer: customers[index],
+                                onTap: () => context.push(
+                                  '/customers/${customers[index]['id']}',
                                 ),
+                              );
+                            },
                           );
                         }
 
@@ -133,10 +179,20 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                           padding: EdgeInsets.zero,
                           child: ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount: customers.length + 1,
+                            itemCount: customers.length + 2,
                             itemBuilder: (context, index) {
                               if (index == 0) {
                                 return const _CustomerTableHeader();
+                              }
+                              if (index == customers.length + 1) {
+                                return AppPaginationBar(
+                                  currentPage: currentPage,
+                                  totalPages: totalPages,
+                                  totalItems: totalItems,
+                                  itemLabel: 'khách hàng',
+                                  onPageChanged: (page) =>
+                                      setState(() => _page = page),
+                                );
                               }
                               final customer = customers[index - 1];
                               return _DesktopCustomerRow(

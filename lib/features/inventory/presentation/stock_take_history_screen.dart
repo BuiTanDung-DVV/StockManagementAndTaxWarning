@@ -5,16 +5,26 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/utils/toast_service.dart';
 import '../providers/inventory_provider.dart';
 
-class StockTakeHistoryScreen extends ConsumerWidget {
+class StockTakeHistoryScreen extends ConsumerStatefulWidget {
   const StockTakeHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StockTakeHistoryScreen> createState() =>
+      _StockTakeHistoryScreenState();
+}
+
+class _StockTakeHistoryScreenState
+    extends ConsumerState<StockTakeHistoryScreen> {
+  int _page = 1;
+
+  @override
+  Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final stAsync = ref.watch(stockTakesProvider(1));
+    final stAsync = ref.watch(stockTakesProvider(_page));
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -64,6 +74,13 @@ class StockTakeHistoryScreen extends ConsumerWidget {
         ),
         data: (data) {
           final items = (data['items'] as List?) ?? [];
+          final currentPage = paginationValue(data, 'page', fallback: _page);
+          final totalPages = paginationValue(data, 'totalPages', fallback: 1);
+          final totalItems = paginationValue(
+            data,
+            'total',
+            fallback: items.length,
+          );
           if (items.isEmpty) {
             return const AppEmpty(
               visual: AppEmptyVisual.document,
@@ -75,10 +92,19 @@ class StockTakeHistoryScreen extends ConsumerWidget {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               physics: const BouncingScrollPhysics(),
-              itemCount: items.length,
+              itemCount: items.length + 1,
               separatorBuilder: (_, _) =>
                   Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
               itemBuilder: (_, i) {
+                if (i == items.length) {
+                  return AppPaginationBar(
+                    currentPage: currentPage,
+                    totalPages: totalPages,
+                    totalItems: totalItems,
+                    itemLabel: 'phiếu kiểm kê',
+                    onPageChanged: (page) => setState(() => _page = page),
+                  );
+                }
                 final st = items[i] as Map;
                 final code = st['code'] ?? 'ST-${st['id']}';
                 final createdAt = st['createdAt']?.toString() ?? '';

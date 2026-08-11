@@ -26,6 +26,12 @@ String compactVietnameseAmount(num value) {
 String compactVietnameseCurrency(num value) =>
     '${compactVietnameseAmount(value)} ₫';
 
+double miniBarWidthForCount(int count) {
+  if (count <= 7) return 22;
+  if (count <= 12) return 16;
+  return 12;
+}
+
 // ─────────────────────────────────────────────
 // ChartCard — Unified container for all charts
 // ─────────────────────────────────────────────
@@ -663,8 +669,8 @@ class MiniBarChart extends StatelessWidget {
               BarChartRodData(
                 toY: e.value,
                 color: color,
-                width: values.length > 10 ? 8 : 14,
-                borderRadius: BorderRadius.circular(4),
+                width: miniBarWidthForCount(values.length),
+                borderRadius: BorderRadius.circular(5),
               ),
             ],
           );

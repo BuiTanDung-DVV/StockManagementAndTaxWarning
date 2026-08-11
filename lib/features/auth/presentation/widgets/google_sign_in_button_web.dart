@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
+import 'package:google_sign_in_web/google_sign_in_web.dart';
 import 'package:google_sign_in_web/web_only.dart' as google_web;
 import '../../../../core/theme/app_theme.dart';
 import '../../services/google_auth_service.dart';
@@ -28,7 +31,7 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
   @override
   void initState() {
     super.initState();
-    _initialization = GoogleAuthService.instance.initialize();
+    _initialization = _initializeWebAuth();
     _initialization
         .then((_) {
           if (!mounted) return;
@@ -49,6 +52,15 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
         .catchError((_) {});
   }
 
+  Future<void> _initializeWebAuth() async {
+    // Bảo đảm web implementation đã được đăng ký trước khi tạo singleton.
+    // Một số bản build release có thể chạy widget trước registrant tự động.
+    if (GoogleSignInPlatform.instance is! GoogleSignInPlugin) {
+      GoogleSignInPlugin.registerWith(webPluginRegistrar);
+    }
+    await GoogleAuthService.instance.initialize();
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();
@@ -60,6 +72,23 @@ class _GoogleAuthButtonState extends State<GoogleAuthButton> {
     return FutureBuilder<void>(
       future: _initialization,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Container(
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: AppColors.danger.withValues(alpha: 0.3),
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.control),
+            ),
+            child: const Text(
+              'Không thể tải đăng nhập Google',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.danger, fontSize: 13),
+            ),
+          );
+        }
         if (snapshot.connectionState != ConnectionState.done || _loading) {
           return SizedBox(
             width: double.infinity,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
 import '../providers/inventory_provider.dart';
 
@@ -15,6 +16,7 @@ class XntReportScreen extends ConsumerStatefulWidget {
 class _XntReportScreenState extends ConsumerState<XntReportScreen> {
   late String _from;
   late String _to;
+  int _page = 1;
 
   @override
   void initState() {
@@ -65,6 +67,7 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                 setState(() {
                   _from = picked.start.toIso8601String().split('T').first;
                   _to = picked.end.toIso8601String().split('T').first;
+                  _page = 1;
                 });
               }
             },
@@ -109,10 +112,19 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
         data: (data) {
           final summary = data['summary'] as Map<String, dynamic>? ?? {};
           final items = (data['items'] as List?) ?? [];
-          final openingTotal = summary['openingStock'] ?? 0;
-          final importTotal = summary['totalImport'] ?? 0;
-          final exportTotal = summary['totalExport'] ?? 0;
-          final closingTotal = summary['closingStock'] ?? 0;
+          const pageSize = 20;
+          final totalPages = items.isEmpty
+              ? 1
+              : (items.length / pageSize).ceil();
+          final currentPage = _page.clamp(1, totalPages);
+          final pageItems = items
+              .skip((currentPage - 1) * pageSize)
+              .take(pageSize)
+              .toList();
+          final openingSkuCount = summary['openingSkuCount'] ?? 0;
+          final importedSkuCount = summary['importedSkuCount'] ?? 0;
+          final exportedSkuCount = summary['exportedSkuCount'] ?? 0;
+          final closingSkuCount = summary['closingSkuCount'] ?? 0;
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -152,41 +164,38 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // Summary cards grid
-                Row(
-                  children: [
-                    Expanded(
-                      child: _MiniCard(
-                        'Tồn đầu',
-                        '$openingTotal',
+                // Các thẻ đếm SKU, không cộng lẫn số lượng khác đơn vị tính.
+                LayoutBuilder(
+                  builder: (context, constraints) => GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: constraints.maxWidth < 680 ? 2 : 4,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    childAspectRatio: constraints.maxWidth < 680 ? 2.35 : 1.9,
+                    children: [
+                      _MiniCard(
+                        'SKU có tồn đầu',
+                        '$openingSkuCount',
                         AppColors.info,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MiniCard(
-                        'Tổng nhập',
-                        '$importTotal',
+                      _MiniCard(
+                        'SKU có nhập',
+                        '$importedSkuCount',
                         AppColors.success,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MiniCard(
-                        'Tổng xuất',
-                        '$exportTotal',
+                      _MiniCard(
+                        'SKU có xuất',
+                        '$exportedSkuCount',
                         AppColors.warning,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MiniCard(
-                        'Tồn cuối',
-                        '$closingTotal',
+                      _MiniCard(
+                        'SKU còn tồn',
+                        '$closingSkuCount',
                         AppColors.primary,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -254,6 +263,16 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                           ),
                           DataColumn(
                             label: Text(
+                              'Đơn vị',
+                              style: GoogleFonts.manrope(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ),
+                          DataColumn(
+                            label: Text(
                               'Tồn đầu',
                               style: GoogleFonts.manrope(
                                 fontSize: 11,
@@ -293,10 +312,11 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                             ),
                           ),
                         ],
-                        rows: items.map<DataRow>((item) {
+                        rows: pageItems.map<DataRow>((item) {
                           final sku = item['sku'] ?? item['productCode'] ?? '';
                           final name =
                               item['productName'] ?? item['name'] ?? '';
+                          final unit = item['unit'] ?? 'Đơn vị';
                           final opening = item['openingStock'] ?? 0;
                           final imported =
                               item['imported'] ?? item['totalImport'] ?? 0;
@@ -328,6 +348,16 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              DataCell(
+                                Text(
+                                  '$unit',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: c.textSecondary,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
@@ -376,6 +406,16 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                       ),
                     ),
                   ),
+                if (items.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  AppPaginationBar(
+                    currentPage: currentPage,
+                    totalPages: totalPages,
+                    totalItems: items.length,
+                    itemLabel: 'sản phẩm',
+                    onPageChanged: (page) => setState(() => _page = page),
+                  ),
+                ],
                 const SizedBox(height: 24),
 
                 // Slow-moving warnings

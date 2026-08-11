@@ -136,6 +136,7 @@ class AuthNotifier extends Notifier<AuthState> {
       // Initialize shop provider with shops from login response
       final shops = data['shops'] as List? ?? [];
       ref.read(shopProvider.notifier).initFromLogin(shops);
+      await ref.read(shopProvider.notifier).loadUserShops();
 
       state = AuthState(
         isLoggedIn: true,
@@ -190,6 +191,7 @@ class AuthNotifier extends Notifier<AuthState> {
         : null;
     final shops = response['shops'] as List? ?? const [];
     ref.read(shopProvider.notifier).initFromLogin(shops);
+    await ref.read(shopProvider.notifier).loadUserShops();
     state = AuthState(
       isLoggedIn: true,
       token: token,

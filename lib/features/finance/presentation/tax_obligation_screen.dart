@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/utils/toast_service.dart';
 import '../providers/finance_provider.dart';
 
@@ -24,6 +26,7 @@ class TaxObligationScreen extends ConsumerWidget {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final taxAsync = ref.watch(taxObligationsProvider);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -41,7 +44,17 @@ class TaxObligationScreen extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
-        actions: [featureGuideButton(context, 'tax_obligations')],
+        actions: [
+          featureGuideButton(context, 'tax_obligations'),
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Khai thuế mới',
+              assetPath: AppAssets.add,
+              heroTag: 'tax-obligation-add-compact',
+              onPressed: () => _showAddDialog(context, ref),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: taxAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -305,16 +318,18 @@ class TaxObligationScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context, ref),
-        icon: const Icon(Icons.account_balance_rounded),
-        label: Text(
-          'Khai thuế mới',
-          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showAddDialog(context, ref),
+              icon: const Icon(Icons.account_balance_rounded),
+              label: Text(
+                'Khai thuế mới',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+            ),
     );
   }
 

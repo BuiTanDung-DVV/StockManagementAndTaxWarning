@@ -1,4 +1,5 @@
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/assets/app_assets.dart';
 import '../../../core/utils/finance_display.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/chart_widgets.dart';
+import '../../../core/widgets/app_primary_floating_action.dart';
 import '../providers/finance_provider.dart';
 
 class ExpenseLedgerScreen extends ConsumerWidget {
@@ -21,11 +23,22 @@ class ExpenseLedgerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final expAsync = ref.watch(expensesByCategoryProvider);
+    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sổ chi phí'),
-        actions: [featureGuideButton(context, 'expense_ledger')],
+        actions: [
+          featureGuideButton(context, 'expense_ledger'),
+          if (compactLayout)
+            AppPrimaryHeaderAction(
+              label: 'Thêm chi phí',
+              assetPath: AppAssets.add,
+              heroTag: 'expense-add-compact',
+              onPressed: () => _showAddExpenseDialog(context, ref),
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: expAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -246,13 +259,15 @@ class ExpenseLedgerScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddExpenseDialog(context, ref),
-        icon: const Icon(Icons.money_off),
-        label: const Text('Thêm'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: compactLayout
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showAddExpenseDialog(context, ref),
+              icon: const Icon(Icons.money_off),
+              label: const Text('Thêm'),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
     );
   }
 
