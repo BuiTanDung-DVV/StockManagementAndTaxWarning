@@ -37,6 +37,20 @@ export const getCategoriesSummary = async (req: Request, res: Response) => {
     catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
 };
 
+export const getAbcAnalysis = async (req: Request, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await inventoryService.getAbcAnalysis(
+                getShopId(req),
+                req.query.from as string,
+                req.query.to as string,
+            ),
+        });
+    }
+    catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
+};
+
 export const getXntReport = async (req: Request, res: Response) => {
     try { 
         const { from, to, warehouseId } = req.query;

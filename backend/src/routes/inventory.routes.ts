@@ -14,6 +14,7 @@ router.get('/inventory/movements', requirePermission('inventory', 'view'), inven
 router.get('/inventory/warehouses', requirePermission('inventory', 'view'), inventoryCtrl.getWarehouses);
 router.post('/inventory/warehouses', requirePermission('inventory', 'edit'), inventoryCtrl.createWarehouse);
 router.get('/inventory/categories-summary', requirePermission(['inventory', 'dashboard'], 'view', { allowAllShops: true }), inventoryCtrl.getCategoriesSummary);
+router.get('/inventory/abc-analysis', requirePermission(['inventory', 'dashboard'], 'view', { allowAllShops: true }), inventoryCtrl.getAbcAnalysis);
 router.get('/inventory/xnt-report', requirePermission('inventory', 'view'), inventoryCtrl.getXntReport);
 router.get('/inventory/expiring-products', requirePermission('inventory', 'view'), inventoryCtrl.getExpiringProducts);
 router.get('/inventory/slow-moving', requirePermission('inventory', 'view'), inventoryCtrl.getSlowMoving);

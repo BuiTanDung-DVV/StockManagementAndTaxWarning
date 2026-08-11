@@ -109,8 +109,11 @@ test('payment method chart is based on recorded payments in the selected period'
 
   assert.match(source, /innerJoin\('p\.order', 'o'\)/);
   assert.match(source, /SUM\(p\.amount\)/);
-  assert.match(source, /p\.paid_at >= :fromDate/);
-  assert.match(source, /p\.paid_at <= :toDate/);
+  assert.match(source, /p\.paid_at >= CAST\(:fromKey AS date\)/);
+  assert.match(
+    source,
+    /p\.paid_at < CAST\(:toKey AS date\) \+ INTERVAL '1 day'/,
+  );
   assert.match(source, /o\.status != 'CANCELLED'/);
   assert.match(source, /groupBy\('p\.method'\)/);
 });
