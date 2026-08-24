@@ -29,10 +29,9 @@ else
   echo "⚠️ Không tìm thấy biến môi trường API_URL. Build với cấu hình mặc định."
 fi
 
-if [ -z "${GOOGLE_WEB_CLIENT_ID:-}" ]; then
-  echo "Thiếu biến cấu hình public GOOGLE_WEB_CLIENT_ID. Dừng build để tránh đăng nhập Google sai môi trường."
-  exit 1
-fi
+# OAuth Client ID là định danh public và luôn xuất hiện trong mã web sau build.
+# Vercel có thể ghi đè bằng biến môi trường khi cần dùng một Google OAuth app khác.
+GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-124075638912-hk0076lmjvgqa0iqec75aerpoe4lcpfq.apps.googleusercontent.com}"
 BUILD_ARGS+=(--dart-define="GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID")
 
 flutter build web "${BUILD_ARGS[@]}"
