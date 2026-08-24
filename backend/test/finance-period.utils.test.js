@@ -99,7 +99,8 @@ test('sales and finance summaries share Vietnam business-day boundaries', () => 
   assert.doesNotMatch(salesSource, /from \? new Date\(from\)/);
   assert.match(financeSource, /resolveCurrentMonthExpensePeriod\(from, to\)/);
   assert.match(salesSource, /resolveCurrentMonthExpensePeriod\(from, to\)/);
-  assert.match(financeSource, /AT TIME ZONE 'Asia\/Ho_Chi_Minh'/);
+  assert.match(financeSource, /TO_CHAR\(t\.transaction_date, '\$\{dateFormat\}'\)/);
+  assert.doesNotMatch(financeSource, /TO_CHAR\(t\.transaction_date AT TIME ZONE/);
   assert.match(salesSource, /vietnamDateKey\(fromDate\)/);
   assert.match(salesSource, /CAST\(:fromKey AS date\)/);
   assert.doesNotMatch(salesSource, /TO_CHAR\(o\.order_date AT TIME ZONE/);

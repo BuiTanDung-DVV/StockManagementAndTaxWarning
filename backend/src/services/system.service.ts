@@ -2,6 +2,11 @@ import { AppDataSource } from '../config/db.config';
 import { ShopProfile, ActivityLog, AiKnowledgeDocument, InvoiceScan, Invoice } from '../system/entities';
 import { PurchaseWithoutInvoice } from '../finance/entities';
 import { ImageStorageService, ProductImageUploadRequest } from './image-storage.service';
+import { parsePaymentBankOptions } from '../system/payment-config.utils';
+import {
+    parseTaxDeclarationForms,
+    parseTaxSupportLinks,
+} from '../system/tax-reference-data.utils';
 
 export class SystemService {
     private profileRepo = AppDataSource.getRepository(ShopProfile);
@@ -22,8 +27,25 @@ export class SystemService {
 
     async updateShopProfile(shopId: number, dto: Partial<ShopProfile>) {
         const profile = await this.getShopProfile(shopId);
-        const { qrPaymentUrl: _managedByUploadFlow, ...safeDto } = dto;
-        Object.assign(profile, safeDto);
+        const allowedFields: (keyof ShopProfile)[] = [
+            'shopName', 'phone', 'address', 'taxCode', 'email', 'website',
+            'ownerName', 'ownerIdentityNumber', 'businessLicenseNumber',
+            'receiptFooter', 'costingMethod', 'businessSector',
+            'applyVatReduction', 'customVatRate', 'customPitRate',
+            'bankId', 'bankAccount', 'bankName', 'accountHolder',
+        ];
+        for (const key of allowedFields) {
+            if (dto[key] !== undefined) (profile as any)[key] = dto[key];
+        }
+
+        if (dto.bankId !== undefined) {
+            const bankId = String(dto.bankId || '').trim().toUpperCase();
+            const banks = await this.getPaymentBankOptions(shopId);
+            const bank = banks.find((option) => option.id === bankId);
+            if (!bank) throw new Error('Validation: Ngân hàng không có trong danh mục DB');
+            profile.bankId = bank.id;
+            profile.bankName = bank.name;
+        }
         return this.profileRepo.save(profile);
     }
 
@@ -32,11 +54,33 @@ export class SystemService {
         return { imageUrl: profile.qrPaymentUrl || null };
     }
 
-    async createShopPaymentQrUpload(
+    async getPaymentBankOptions(shopId: number) {
+        return parsePaymentBankOptions(
+            await this.getSystemConfig(shopId, 'VIETQR_BANKS'),
+        );
+    }
+
+    async getTaxReferenceData(shopId: number) {
+        const [forms, supportLinks] = await Promise.all([
+            this.getSystemConfig(shopId, 'TAX_DECLARATION_FORMS'),
+            this.getSystemConfig(shopId, 'TAX_SUPPORT_LINKS'),
+        ]);
+        return {
+            forms: parseTaxDeclarationForms(forms),
+            supportLinks: parseTaxSupportLinks(supportLinks),
+        };
+    }
+
+    async uploadShopPaymentQrImage(
         shopId: number,
         request: ProductImageUploadRequest,
+        bytes: Buffer,
     ) {
-        return this.imageStorageService.createShopPaymentQrUpload(shopId, request);
+        return this.imageStorageService.uploadShopPaymentQrImage(
+            shopId,
+            request,
+            bytes,
+        );
     }
 
     async confirmAndReplaceShopPaymentQr(shopId: number, objectKey: string) {
@@ -219,56 +263,28 @@ export class SystemService {
     }
 
     // Dynamic Configurations
-    async getSystemConfig(shopId: number, key: string, defaultValue: string): Promise<string> {
-        try {
-            await AppDataSource.query(`
-                CREATE TABLE IF NOT EXISTS system_configs (
-                    id SERIAL PRIMARY KEY,
-                    shop_id INT NULL,
-                    config_key VARCHAR(100) UNIQUE NOT NULL,
-                    config_value VARCHAR(500) NOT NULL,
-                    description VARCHAR(500) NULL
-                );
-            `);
-
-            const rows = await AppDataSource.query(
-                `SELECT config_value FROM system_configs WHERE (shop_id = $1 OR shop_id IS NULL) AND config_key = $2 ORDER BY shop_id DESC LIMIT 1`,
-                [shopId, key]
-            );
-
-            if (rows && rows.length > 0) {
-                return rows[0].config_value;
-            }
-
-            await AppDataSource.query(
-                `INSERT INTO system_configs (shop_id, config_key, config_value, description) 
-                 VALUES (NULL, $1, $2, 'Default system configuration') 
-                 ON CONFLICT (config_key) DO NOTHING`,
-                [key, defaultValue]
-            );
-
-            return defaultValue;
-        } catch (e) {
-            console.error('Error fetching system config, falling back to default:', e);
-            return defaultValue;
+    async getSystemConfig(shopId: number, key: string): Promise<string> {
+        const rows = await AppDataSource.query(
+            `SELECT config_value
+             FROM system_configs
+             WHERE (shop_id = $1 OR shop_id IS NULL)
+               AND config_key = $2
+             ORDER BY shop_id DESC NULLS LAST
+             LIMIT 1`,
+            [shopId, key],
+        );
+        if (!rows?.length) {
+            throw new Error(`Thiếu cấu hình ${key} trong DB`);
         }
+        return String(rows[0].config_value);
     }
 
     async setSystemConfig(shopId: number, key: string, value: string): Promise<void> {
-        await AppDataSource.query(`
-            CREATE TABLE IF NOT EXISTS system_configs (
-                id SERIAL PRIMARY KEY,
-                shop_id INT NULL,
-                config_key VARCHAR(100) UNIQUE NOT NULL,
-                config_value VARCHAR(500) NOT NULL,
-                description VARCHAR(500) NULL
-            );
-        `);
-
         await AppDataSource.query(
             `INSERT INTO system_configs (shop_id, config_key, config_value) 
              VALUES ($1, $2, $3) 
-             ON CONFLICT (config_key) DO UPDATE SET config_value = EXCLUDED.config_value`,
+             ON CONFLICT (shop_id, config_key) WHERE shop_id IS NOT NULL
+             DO UPDATE SET config_value = EXCLUDED.config_value`,
             [shopId, key, value]
         );
     }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/finance_display.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
@@ -27,23 +28,22 @@ class TransactionDetailScreen extends ConsumerWidget {
     final isIncome =
         transaction['type'] == 'INCOME' || transaction['type'] == 'income';
     final amount = asDouble(transaction['amount']);
-    final paymentMethod = transaction['paymentMethod'] ?? 'Tiền mặt';
-    final description =
-        transaction['description'] ??
-        transaction['note'] ??
-        (isIncome ? 'Thu' : 'Chi');
-    final createdAt =
-        transaction['createdAt']?.toString() ??
-        transaction['date']?.toString() ??
-        '';
+    final paymentMethod = financePaymentMethodLabel(
+      transaction['paymentMethod']?.toString(),
+    );
+    final description = financeTransactionDescription(transaction);
+    final transactionDate = financeTransactionDateValue(transaction) ?? '';
     final counterparty = transaction['counterparty'] ?? '';
+    final isLinked = financeTransactionIsLinked(transaction);
 
     // Lấy ngày tháng format đẹp
-    String dateLabel = createdAt;
-    if (createdAt.isNotEmpty && createdAt.contains('T')) {
+    String dateLabel = transactionDate;
+    if (transactionDate.isNotEmpty) {
       try {
-        final dt = DateTime.parse(createdAt).toLocal();
-        dateLabel = DateFormat('dd/MM/yyyy HH:mm').format(dt);
+        final dt = DateTime.parse(transactionDate).toLocal();
+        dateLabel = transactionDate.contains('T')
+            ? DateFormat('dd/MM/yyyy HH:mm').format(dt)
+            : DateFormat('dd/MM/yyyy').format(dt);
       } catch (_) {}
     }
 
@@ -63,18 +63,26 @@ class TransactionDetailScreen extends ConsumerWidget {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.edit_outlined, color: theme.colorScheme.primary),
-            tooltip: 'Sửa giao dịch',
-            onPressed: () => _showEditDialog(context, ref, transaction),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            tooltip: 'Xóa giao dịch',
-            onPressed: () => _confirmDelete(context, ref),
-          ),
-        ],
+        actions: isLinked
+            ? const []
+            : [
+                IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                  tooltip: 'Sửa giao dịch',
+                  onPressed: () => _showEditDialog(context, ref, transaction),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
+                  tooltip: 'Xóa giao dịch',
+                  onPressed: () => _confirmDelete(context, ref),
+                ),
+              ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -138,6 +146,12 @@ class TransactionDetailScreen extends ConsumerWidget {
                     _buildInfoRow('Thời gian', dateLabel, c),
                   if (counterparty.isNotEmpty)
                     _buildInfoRow('Đối tác', counterparty, c),
+                  if (isLinked)
+                    _buildInfoRow(
+                      'Nguồn dữ liệu',
+                      'Tự động từ chứng từ gốc',
+                      c,
+                    ),
                   const Divider(height: 24),
                   _buildInfoRow('Ghi chú', description, c, isMultiLine: true),
                 ],
@@ -209,7 +223,7 @@ class TransactionDetailScreen extends ConsumerWidget {
       text: trans['counterparty']?.toString(),
     );
     final descC = TextEditingController(
-      text: (trans['description'] ?? trans['note'])?.toString(),
+      text: financeTransactionDescription(trans),
     );
     String payMethod = trans['paymentMethod']?.toString() ?? 'CASH';
 

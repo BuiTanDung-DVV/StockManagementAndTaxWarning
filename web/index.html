@@ -139,7 +139,8 @@
       },
       onEntrypointLoaded: async function(engineInitializer) {
         const appRunner = await engineInitializer.initializeEngine();
-        appRunner.runApp();
+        await appRunner.runApp();
+        removeSplashFromWeb();
       }
     });
   </script>

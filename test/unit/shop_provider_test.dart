@@ -111,4 +111,34 @@ void main() {
     expect(selected.currentShopId, 2);
     expect(selected.currentShopName, 'Cửa hàng Hai');
   });
+
+  test('unknown shop id never falls back to another store', () {
+    SharedPreferences.setMockInitialValues({});
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final notifier = container.read(shopProvider.notifier);
+
+    notifier.initFromLogin([
+      {
+        'shopId': 1,
+        'shopName': 'Cửa hàng Một',
+        'memberType': 'OWNER',
+        'status': 'ACTIVE',
+        'isActive': true,
+      },
+      {
+        'shopId': 2,
+        'shopName': 'Cửa hàng Hai',
+        'memberType': 'OWNER',
+        'status': 'ACTIVE',
+        'isActive': true,
+      },
+    ]);
+    notifier.switchShop(2);
+    notifier.switchShop(999);
+
+    final selected = container.read(shopProvider);
+    expect(selected.currentShopId, 2);
+    expect(selected.currentShopName, 'Cửa hàng Hai');
+  });
 }

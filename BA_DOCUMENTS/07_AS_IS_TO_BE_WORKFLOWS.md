@@ -6,7 +6,7 @@
 
 ```mermaid
 flowchart LR
-    A["Nhân viên mở POS"] --> B["Chọn sản phẩm"]
+    A["Nhân viên mở Ghi nhận bán hàng"] --> B["Chọn sản phẩm"]
     B --> C["Thêm vào giỏ"]
     C --> D["Chọn khách hàng/phương thức thanh toán"]
     D --> E["Tạo sales order"]
@@ -16,8 +16,8 @@ flowchart LR
 
 Điểm hiện tại:
 
-- POS desktop có danh sách hàng và giỏ hàng.
-- POS mobile chỉ thấy danh sách sản phẩm; vùng giỏ và CTA thanh toán không hiện rõ
+- Desktop có danh sách hàng và phần giao dịch đang lập.
+- Mobile từng chỉ thấy danh sách sản phẩm; vùng hàng đã chọn và CTA xác nhận không hiện rõ
   trong viewport đã kiểm tra.
 - Lịch sử đơn có dữ liệu, nhưng ô tổng số đơn hiển thị `0` trong cùng trạng thái.
 - Hoàn/hủy và QR chưa được thực hiện trên production vì có thể làm thay đổi dữ liệu.
@@ -26,7 +26,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A["Kiểm tra quyền POS"] --> B["Chọn hàng còn tồn"]
+    A["Kiểm tra quyền bán hàng"] --> B["Chọn hàng còn tồn"]
     B --> C["Giỏ hàng responsive"]
     C --> D["Khách hàng + thanh toán + QR"]
     D --> E["Transaction: đơn + payment + movement + COGS"]

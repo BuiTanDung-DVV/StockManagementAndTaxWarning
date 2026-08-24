@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { SystemService } from '../services/system.service';
-import { CURRENT_TAX_POLICY } from '../tax/tax-policy';
 import { ImageStorageError } from '../services/image-storage.service';
+import { taxPolicyService } from '../services/tax-policy.service';
 
 const systemService = new SystemService();
 
@@ -34,11 +34,41 @@ export const getShopPaymentQr = async (req: Request, res: Response) => {
     }
 };
 
-export const createShopPaymentQrUpload = async (req: Request, res: Response) => {
+export const getPaymentBankOptions = async (req: Request, res: Response) => {
     try {
-        const data = await systemService.createShopPaymentQrUpload(
+        const data = await systemService.getPaymentBankOptions((req as any).shopId);
+        return res.json({ success: true, data });
+    } catch (error: any) {
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Không thể tải danh mục ngân hàng',
+        });
+    }
+};
+
+export const getTaxReferenceData = async (req: Request, res: Response) => {
+    try {
+        const data = await systemService.getTaxReferenceData((req as any).shopId);
+        return res.json({ success: true, data });
+    } catch (error: any) {
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Không thể tải dữ liệu tham chiếu thuế từ DB',
+        });
+    }
+};
+
+export const uploadShopPaymentQrImage = async (req: Request, res: Response) => {
+    try {
+        const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+        const data = await systemService.uploadShopPaymentQrImage(
             (req as any).shopId,
-            req.body,
+            {
+                fileName: String(req.headers['x-file-name'] || 'image'),
+                contentType: String(req.headers['content-type'] || '').split(';')[0],
+                size: bytes.length,
+            },
+            bytes,
         );
         return res.json({ success: true, data });
     } catch (error) {
@@ -65,7 +95,10 @@ export const getShopProfile = async (req: Request, res: Response) => {
 
 export const saveShopProfile = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await systemService.updateShopProfile((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : 500).json({ success: false, message: e.message });
+    }
 };
 
 export const getActivityLogs = async (req: Request, res: Response) => {
@@ -165,17 +198,18 @@ export const deleteAiKnowledgeDocument = async (req: Request, res: Response) => 
 export const getConfigs = async (req: Request, res: Response) => {
     try {
         const shopId = (req as any).shopId;
-        const cashPurchaseLimit = await systemService.getSystemConfig(shopId, 'CASH_PURCHASE_LIMIT', '20000000');
+        const [cashPurchaseLimit, policy] = await Promise.all([
+            systemService.getSystemConfig(shopId, 'CASH_PURCHASE_LIMIT'),
+            taxPolicyService.getCurrentPolicy(),
+        ]);
         
         res.json({
             success: true,
             data: {
-                taxExemptionThreshold:
-                    CURRENT_TAX_POLICY.taxExemptionThreshold,
+                taxExemptionThreshold: policy.taxExemptionThreshold,
                 cashPurchaseLimit: Number(cashPurchaseLimit),
-                warningRevenueThreshold:
-                    CURRENT_TAX_POLICY.warningRevenueThreshold,
-                taxPolicy: CURRENT_TAX_POLICY,
+                warningRevenueThreshold: policy.warningRevenueThreshold,
+                taxPolicy: policy,
             }
         });
     } catch (e: any) {

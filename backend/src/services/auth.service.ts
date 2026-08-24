@@ -110,56 +110,52 @@ export class AuthService {
   }
 
   private async getUserShops(userId: number): Promise<unknown[]> {
-    try {
-      const memberships = await this.memberRepo.find({
-        where: { userId },
-        relations: ['role'],
-      });
-      const shopIds = Array.from(new Set(memberships.map((item) => item.shopId)));
-      const shops = shopIds.length
-        ? await this.shopRepo
-          .createQueryBuilder('shop')
-          .where('shop.id IN (:...shopIds)', { shopIds })
-          .getMany()
-        : [];
-      const shopById = new Map(shops.map((shop) => [shop.id, shop]));
-      return memberships.map((membership) => {
-        const shop = shopById.get(membership.shopId);
-        let permissions: Record<string, string> = {};
-        if (
-          membership.memberType === 'OWNER' &&
-          membership.status === 'ACTIVE' &&
-          membership.isActive
-        ) {
-          permissions = { _owner: 'true' };
-        } else if (
-          membership.status === 'ACTIVE' &&
-          membership.isActive &&
-          membership.role?.shopId === membership.shopId &&
-          membership.role.permissions
-        ) {
-          try {
-            permissions = JSON.parse(membership.role.permissions) as Record<string, string>;
-          } catch {
-            permissions = {};
-          }
+    const memberships = await this.memberRepo.find({
+      where: { userId },
+      relations: ['role'],
+    });
+    const shopIds = Array.from(new Set(memberships.map((item) => item.shopId)));
+    const shops = shopIds.length
+      ? await this.shopRepo
+        .createQueryBuilder('shop')
+        .where('shop.id IN (:...shopIds)', { shopIds })
+        .getMany()
+      : [];
+    const shopById = new Map(shops.map((shop) => [shop.id, shop]));
+    return memberships.map((membership) => {
+      const shop = shopById.get(membership.shopId);
+      let permissions: Record<string, string> = {};
+      if (
+        membership.memberType === 'OWNER' &&
+        membership.status === 'ACTIVE' &&
+        membership.isActive
+      ) {
+        permissions = { _owner: 'true' };
+      } else if (
+        membership.status === 'ACTIVE' &&
+        membership.isActive &&
+        membership.role?.shopId === membership.shopId &&
+        membership.role.permissions
+      ) {
+        try {
+          permissions = JSON.parse(membership.role.permissions) as Record<string, string>;
+        } catch {
+          permissions = {};
         }
-        return {
-          shopId: membership.shopId,
-          shopName: shop?.shopName,
-          shopCode: shop?.shopCode,
-          memberType: membership.memberType,
-          status: membership.status,
-          isActive: membership.isActive,
-          role: membership.role
-            ? { id: membership.role.id, name: membership.role.name }
-            : null,
-          permissions,
-        };
-      });
-    } catch {
-      return [];
-    }
+      }
+      return {
+        shopId: membership.shopId,
+        shopName: shop?.shopName,
+        shopCode: shop?.shopCode,
+        memberType: membership.memberType,
+        status: membership.status,
+        isActive: membership.isActive,
+        role: membership.role
+          ? { id: membership.role.id, name: membership.role.name }
+          : null,
+        permissions,
+      };
+    });
   }
 
   private async createSessionTokens(
@@ -203,12 +199,13 @@ export class AuthService {
   }
 
   private async issueAuthResult(user: User): Promise<AuthResult> {
+    const shops = await this.getUserShops(user.id);
     const tokens = await this.createSessionTokens(user);
     return {
       access_token: tokens.accessToken,
       refresh_token: tokens.refreshToken,
       user: this.safeUser(user),
-      shops: await this.getUserShops(user.id),
+      shops,
     };
   }
 

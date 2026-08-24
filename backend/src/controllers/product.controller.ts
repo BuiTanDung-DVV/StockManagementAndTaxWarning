@@ -4,6 +4,7 @@ import {
     ImageStorageError,
     ImageStorageService,
 } from '../services/image-storage.service';
+import { ProductInputError } from '../product/product-input.utils';
 
 const productService = new ProductService();
 const imageStorageService = new ImageStorageService();
@@ -22,11 +23,17 @@ const imageStorageError = (res: Response, error: unknown) => {
     });
 };
 
-export const createProductImageUpload = async (req: Request, res: Response) => {
+export const uploadProductImage = async (req: Request, res: Response) => {
     try {
-        const data = await imageStorageService.createProductImageUpload(
+        const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+        const data = await imageStorageService.uploadProductImage(
             (req as any).shopId,
-            req.body,
+            {
+                fileName: String(req.headers['x-file-name'] || 'image'),
+                contentType: String(req.headers['content-type'] || '').split(';')[0],
+                size: bytes.length,
+            },
+            bytes,
         );
         return res.json({ success: true, data });
     } catch (error) {
@@ -68,11 +75,11 @@ export const findProductById = async (req: Request, res: Response) => {
 };
 export const createProduct = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.createProduct((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(e.message?.includes('tồn tại') ? 409 : 500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof ProductInputError ? 400 : e.message?.includes('tồn tại') ? 409 : 500).json({ success: false, message: e.message }); }
 };
 export const updateProduct = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.updateProduct((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(e.message?.includes('tồn tại') ? 409 : 500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof ProductInputError ? 400 : e.message?.includes('tồn tại') ? 409 : 500).json({ success: false, message: e.message }); }
 };
 export const deleteProduct = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.deleteProduct((req as any).shopId, +req.params.id) }); }
@@ -86,7 +93,7 @@ export const calculatePrice = async (req: Request, res: Response) => {
 
 export const addCostItem = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.addCostItem((req as any).shopId, +req.params.id, req.body.costTypeId, req.body.amount, req.body.calculationType, req.body.notes) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof ProductInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 export const removeCostItem = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.removeCostItem((req as any).shopId, +req.params.itemId) }); }
@@ -103,7 +110,7 @@ export const getBatches = async (req: Request, res: Response) => {
 };
 export const createBatch = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.createBatch((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof ProductInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 export const getConversions = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.findConversions((req as any).shopId, +req.params.id) }); }
@@ -111,7 +118,7 @@ export const getConversions = async (req: Request, res: Response) => {
 };
 export const createConversion = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.createConversion((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof ProductInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 
 export const findAllCategories = async (req: Request, res: Response) => {
@@ -120,7 +127,7 @@ export const findAllCategories = async (req: Request, res: Response) => {
 };
 export const createCategory = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.createCategory((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof ProductInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 
 export const findAllCostTypes = async (req: Request, res: Response) => {
@@ -129,5 +136,5 @@ export const findAllCostTypes = async (req: Request, res: Response) => {
 };
 export const createCostType = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.createCostType((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(e.message === 'Cost type name exists' ? 409 : 500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof ProductInputError ? 400 : e.message === 'Cost type name exists' ? 409 : 500).json({ success: false, message: e.message }); }
 };

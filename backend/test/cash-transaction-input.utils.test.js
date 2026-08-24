@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   cashLedgerAccountCode,
+  cashTransactionCounterAccountCode,
   normalizeCashPaymentMethod,
   normalizeCashTransactionInput,
 } = require('../dist/finance/cash-transaction-input.utils.js');
@@ -11,6 +12,13 @@ test('cash uses account 111 and digital payments use account 112', () => {
   assert.equal(cashLedgerAccountCode('CASH'), '111');
   assert.equal(cashLedgerAccountCode('TRANSFER'), '112');
   assert.equal(cashLedgerAccountCode('QR'), '112');
+});
+test('cash income category does not turn capital or loans into sales revenue', () => {
+  assert.equal(cashTransactionCounterAccountCode('INCOME', 'SALES'), '511');
+  assert.equal(cashTransactionCounterAccountCode('INCOME', 'OTHER'), '711');
+  assert.equal(cashTransactionCounterAccountCode('INCOME', 'CAPITAL'), '411');
+  assert.equal(cashTransactionCounterAccountCode('INCOME', 'LOAN'), '341');
+  assert.equal(cashTransactionCounterAccountCode('EXPENSE', 'SALARY'), '642');
 });
 test('cash transaction input is normalized and server controlled', () => {
   const result = normalizeCashTransactionInput({

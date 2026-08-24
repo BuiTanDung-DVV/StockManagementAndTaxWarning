@@ -31,7 +31,7 @@ smartstock/shops/{shopId}/payment-qr/{uuid}
 ## 3. Giới hạn ảnh
 
 - Định dạng: JPG, PNG, WEBP.
-- Dung lượng tối đa: 5 MB.
+- Dung lượng tối đa: 4 MB để nằm dưới [giới hạn request 4,5 MB của Vercel Functions](https://vercel.com/docs/functions/limitations#request-body-size).
 - Độ phân giải tối đa sau upload: 20 megapixel.
 - Ảnh sản phẩm được chọn ở tối đa 1.400 px, chất lượng 82 để giảm dung lượng
   ảnh gốc.
@@ -92,15 +92,24 @@ Sau khi thêm biến, redeploy backend. Không thêm giá trị thật vào
 
 Ảnh sản phẩm:
 
-- `POST /api/products/image-upload/presign`
+- `POST /api/products/image-upload` (gửi bytes ảnh qua backend)
 - `POST /api/products/image-upload/confirm`
 - `POST /api/products/image-upload/delete`
 
 QR cửa hàng:
 
 - `GET /api/shop-payment-qr`
-- `POST /api/shop-payment-qr/presign`
+- `POST /api/shop-payment-qr/upload` (gửi bytes ảnh qua backend)
 - `POST /api/shop-payment-qr/confirm`
+
+Chứng từ công nợ:
+
+- `POST /api/customers/evidence-upload` (gửi bytes ảnh qua backend)
+- `POST /api/customers/evidence-upload/confirm`
+- `POST /api/customers/evidence-upload/delete`
+
+Frontend không nhận `CLOUDINARY_API_KEY`, chữ ký hoặc secret. Backend xác thực
+người dùng/cửa hàng, tải ảnh lên Cloudinary và chỉ trả về định danh cùng URL ảnh.
 
 ## 8. Phân quyền
 

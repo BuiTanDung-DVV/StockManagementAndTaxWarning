@@ -162,6 +162,7 @@ multi-shop và chưa xác minh production.
 | Dashboard aggregate | Không có | `dashboard` là alias cùng các key module | Có | Không cấu hình được role dashboard-only trên UI |
 | Nhân viên/vai trò | Owner, không dùng key | `requireOwner` | Có | Chỉ shop cụ thể |
 | Activity log | `settings` | `settings` | Có | Chỉ mới kiểm soát xem |
+| Kho tài liệu AI | `settings` | `settings` | Có | Endpoint chuẩn và route tương thích cùng yêu cầu view/edit; chưa negative test production |
 
 Mâu thuẫn còn lại:
 

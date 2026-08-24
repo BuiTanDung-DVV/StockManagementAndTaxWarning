@@ -42,7 +42,7 @@ void main() {
     expect(launcher, findsNothing);
   });
 
-  testWidgets('desktop assistant panel is capped at 680 logical pixels', (
+  testWidgets('desktop assistant panel is capped at 560 logical pixels', (
     tester,
   ) async {
     await tester.pumpWidget(_buildHost(size: const Size(1200, 1200)));
@@ -57,7 +57,7 @@ void main() {
     final panelMaterial = find
         .ancestor(of: panel, matching: find.byType(Material))
         .first;
-    expect(tester.getSize(panelMaterial).height, lessThanOrEqualTo(680));
+    expect(tester.getSize(panelMaterial).height, lessThanOrEqualTo(560));
   });
 
   testWidgets('desktop AI launcher stays compact to avoid covering reports', (

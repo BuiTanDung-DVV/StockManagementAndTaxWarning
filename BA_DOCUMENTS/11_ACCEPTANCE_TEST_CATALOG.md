@@ -22,9 +22,12 @@
 | TC-SALE-07 | Dữ liệu có cả `COMPLETED` và `DELIVERED` | Filter completed và summary bao gồm đúng cả hai | Unit/source test đạt; production chưa đối soát |
 | TC-ERR-01 | Dashboard API timeout/403/500 | Hiện error/retry, không hiển thị số 0 như dữ liệu thật | Code review; production chưa xác minh |
 | TC-DATA-04 | Metadata/route invoice | Một table owner, một route set, CRUD không regression | Metadata test đạt; CRUD production chưa xác minh |
+| TC-DATA-06 | Chất lượng dữ liệu hóa đơn | API đếm đúng header thiếu item, lệch header–items và dòng sai công thức theo cửa hàng/kỳ; UI cảnh báo và ghi rõ khoảng kiểm tra | Test chuẩn hóa đạt; audit DB shop 34/35 xác nhận 60 + 558 sai lệch; chưa backfill |
+| TC-DATA-07 | Độ mới dữ liệu KPI | API trả ngày phát sinh mới nhất từ DB theo shop/kho; kỳ thiếu dữ liệu hiện cảnh báo, kỳ đủ dữ liệu không chiếm chỗ; 390px không overflow | Unit/widget test local và audit DB shop 34/35 đạt; production chưa deploy |
+| TC-DATA-08 | Kỳ danh sách hóa đơn | Mặc định list dùng cùng from/to với KPI VAT; chuyển Toàn bộ bỏ cả hai ngày; loại lọc trước phân trang; cặp ngày thiếu/sai trả 400 | Unit test và audit kỳ 07/08 shop 34/35 đạt; production chưa deploy |
 | TC-TAX-06 | Declared < paid, số âm/NaN cũ | Owed = 0; overpaid tách riêng; UI không hiện nghĩa vụ âm | Unit test đạt; production chưa xác minh |
 | TC-TAX-07 | MST `0123456789` và biến thể đơn vị phụ thuộc | 422, không tạo XML | Unit test đạt; production chưa xác minh |
-| TC-DEBT-04 | API receivable → UI → CSV | Cùng số dòng và tổng còn nợ; không âm | Flutter test đạt; production chưa đối soát |
+| TC-DEBT-04 | API receivable → UI → CSV | KPI lấy toàn bộ DB; danh sách lọc trước phân trang; export đủ toàn bộ tập lọc; tổng còn nợ không âm | Backend/Flutter test và DB read-only đạt; production chưa deploy |
 | TC-CSV-01 | Tên có dấu phẩy/nháy và ô bắt đầu `=+-@` | CSV UTF-8 đúng và không thực thi formula | Flutter test đạt; browser production chưa xác minh |
 | TC-MOB-01 | POS 390×844 với cart và AI | Checkout không bị nav/AI che | Flutter test đạt; viewport production chưa xác minh |
 | TC-PERIOD-01 | Ngày đầu/cuối tháng, tháng 1 | Dashboard/sales/finance dùng cùng from/to | Flutter test đạt; API production chưa đối soát |
@@ -83,19 +86,23 @@
 | TC-SALE-02 | Thanh toán hỗn hợp tiền mặt + chuyển khoản + nợ | Tổng payment = tổng đơn; từng nguồn vào đúng account; receivable bằng phần thiếu |
 | TC-SALE-03 | Hoàn một phần rồi retry callback | Tồn/tiền/công nợ đảo đúng một lần; retry không nhân đôi |
 | TC-SALE-04 | Hủy đơn trước/sau thanh toán | Rule trạng thái rõ; không để movement/payment mồ côi |
-| TC-SALE-05 | So sánh summary và list theo 4 trạng thái/kỳ | Số đơn, doanh thu, lợi nhuận khớp dữ liệu chi tiết |
-| TC-SALE-06 | POS 390×844 | Tìm hàng, thêm giỏ, chọn khách, thanh toán và thấy kết quả không bị che |
+| TC-SALE-05 | So sánh summary và list theo 4 trạng thái/cùng `from–to` | API list yêu cầu đủ hai đầu kỳ; số đơn không hủy bằng `PENDING + CONFIRMED + COMPLETED/DELIVERED`; cộng `CANCELLED` bằng tổng bảng; doanh thu, giá vốn, lợi nhuận và biểu đồ ngày khớp sổ cái |
+| TC-SALE-06 | Ghi nhận giao dịch bán ở 390×844 | Tìm hàng, thêm giỏ, chọn khách, thanh toán và thấy kết quả không bị che |
+| TC-SALE-11 | Chọn “Tất cả cửa hàng”, tải/lọc/phân trang danh sách và mở một đơn | Tổng dòng bằng tổng các shop được cấp quyền; không có dòng ngoài phạm vi; hiện đúng tên cửa hàng từ DB; không cho tạo mới trong chế độ tổng hợp; trước khi mở chi tiết phải chuyển về shop của đơn |
+| TC-SALE-12 | Top 10 sản phẩm kỳ hiện tại so với kỳ trước | Thứ hạng, doanh thu thuần sau hoàn, số lượng, giá vốn, biên lãi và tăng trưởng khớp truy vấn DB độc lập; API phân biệt `COMPARABLE/NEW/NO_BASE`; UI ghi rõ kỳ so sánh và không tự tính lại phần trăm |
+| TC-SALE-13 | Import dữ liệu lịch sử không theo thứ tự rồi mở Dashboard/Danh sách bán hàng | API sắp `orderDate DESC, id DESC`; UI hiện ngày giao dịch; 20 dòng đầu khớp SQL độc lập; thẻ tóm tắt không cung cấp hành động xuất dữ liệu thiếu |
 
 ## 5. Kho và giá vốn
 
 | ID | Kịch bản | Kết quả mong đợi |
 |---|---|---|
-| TC-INV-01 | Sản phẩm dưới min stock | Dashboard và kho cùng số lượng/danh sách |
+| TC-INV-01 | Sản phẩm dưới min stock ở một hoặc nhiều kho | API trả một dòng/cửa hàng+sản phẩm, cộng tổng tồn các kho rồi so với `min_stock`; Dashboard và Kho cùng số lượng/danh sách; UI ghi rõ tổng tồn và số kho |
 | TC-INV-02 | Nhận PO có phí mua hàng | Tồn/lô tăng; landed cost phân bổ đúng; journal/movement liên kết PO |
 | TC-INV-03 | Kiểm kê thừa/thiếu | Chênh lệch cần duyệt; movement có actor/reason; tồn cuối đúng |
 | TC-INV-04 | Báo cáo XNT | `tồn đầu + nhập - xuất ± điều chỉnh = tồn cuối` cho từng SKU/lô |
 | TC-INV-05 | Bán/hoàn theo FIFO hoặc bình quân | COGS đúng cấu hình và đảo đúng khi hoàn |
 | TC-INV-06 | Hai request bán đồng thời gần hết tồn | Không âm tồn hoặc oversell ngoài rule |
+| TC-INV-13 | Đối chiếu tồn–lô–COGS và chạy hai giao dịch cùng tiêu thụ một lô | Từng SKU có tổng tồn bằng tổng lô; header COGS bằng tổng dòng; không có giá vốn 0; giao dịch không trừ được lô phải rollback; kiểm kê chênh lệch cập nhật cả tồn, lô và bút toán theo policy đã duyệt |
 
 ## 6. Tài chính và công nợ
 
@@ -107,6 +114,7 @@
 | TC-DEBT-01 | Tạo đơn mua thiếu | Receivable thật xuất hiện; không có bản ghi mẫu |
 | TC-DEBT-02 | Thu nợ một phần/toàn bộ | Còn nợ, payment history và sổ quỹ cập nhật trong một transaction |
 | TC-DEBT-03 | Xuất Excel nợ | Số dòng, tổng nợ/đã trả/còn nợ khớp API và có kỳ xuất |
+| TC-DEBT-05 | Đối soát tuổi nợ theo ngày | Tổng phải thu bằng tổng bốn nhóm; số khoản/khách và từng bucket khớp SQL độc lập theo cùng `asOf` |
 
 ## 7. Thuế và báo cáo
 
@@ -117,6 +125,7 @@
 | TC-TAX-03 | Xuất XML với bộ fixture | Pass XSD/validator và import HTKK đúng phiên bản |
 | TC-TAX-04 | Thiếu/sai MST hoặc hồ sơ | Chặn xuất; chỉ rõ trường cần sửa; không dùng fallback |
 | TC-TAX-05 | Export cùng dữ liệu hai lần | Nội dung deterministic hoặc metadata biến đổi được mô tả; có checksum/audit |
+| TC-TAX-09 | Cùng shop/kỳ giữa báo cáo thuế và tổng hợp bán hàng | Doanh thu tháng/năm sau hoàn khớp tuyệt đối; không tải toàn bộ đơn vào bộ nhớ; thiếu policy DB phải fail rõ, không dùng ngưỡng hard-code |
 | TC-REP-01 | Excel/XML với dataset lớn và ký tự Việt | Không mất dòng, không lỗi encoding, tổng kiểm soát khớp |
 
 ## 8. Dữ liệu, migration và API
@@ -128,6 +137,18 @@
 | TC-DATA-03 | Cold start Vercel | Chỉ kết nối DB; không chạy DDL; request đầu trong SLA |
 | TC-API-01 | Validation sai và not-found | Dùng 400/404 phù hợp, response contract thống nhất |
 | TC-API-02 | Lỗi server | Không lộ stack, SQL, token, secret hoặc PII nhạy cảm |
+| TC-DATA-04 | Tắt/làm lỗi API giá vốn, thông báo, AI và ảnh | UI hiện loading/error/retry; không biến lỗi thành AVG, số 0, dữ liệu rỗng hoặc dữ liệu mẫu; Flutter không chứa secret backend |
+| TC-DATA-05 | Membership DB lỗi hoặc yêu cầu chuyển tới shop ID không thuộc tài khoản | Không cấp phiên mới khi context shop lỗi; UI hiện lỗi DB; giữ nguyên shop hiện tại, không rơi về shop đầu |
+| TC-DATA-06 | Tồn master đủ nhưng tổng lô thiếu khi ghi nhận bán | Backend từ chối và rollback toàn bộ đơn/tồn/sổ cái; không bù giá từ master sản phẩm |
+| TC-DATA-07 | API sales/kho/tài chính/sản phẩm/nhãn/tìm shop lỗi hoặc trả sai cấu trúc | UI hiện lỗi tải dữ liệu; không hiển thị như danh sách DB rỗng; retry gọi lại API |
+| TC-DATA-08 | Tổng dòng hóa đơn bán cao hơn header đúng bằng chiết khấu đơn gốc | Phân loại “chiết khấu chưa phân bổ vào dòng”; không gộp vào sai lệch tiền hàng chưa giải thích; vẫn giữ trạng thái cần xử lý dữ liệu |
+| TC-DATA-09 | Response summary thiếu doanh thu/lợi nhuận/dòng tiền/kỳ hoặc biểu đồ | Provider trả lỗi dữ liệu không đầy đủ; UI không dựng KPI 0 từ trường bị thiếu |
+| TC-DATA-10 | Response tồn kho thiếu `productTotal` hoặc ABC thiếu trường đối soát/kỳ | Màn Kho hiện lỗi dữ liệu; không dùng số dòng trang đầu hoặc số 0 thay cho tổng DB |
+| TC-DATA-11 | Response khách hàng/nhà cung cấp/công nợ thiếu metadata, tổng tiền, nhóm tuổi nợ hoặc danh sách | UI hiện lỗi tải từ DB và cho thử lại; không hiển thị “chưa có dữ liệu” hoặc KPI 0 giả |
+| TC-DATA-12 | Response giao dịch/nhóm chi/hóa đơn/chốt ngày thiếu metadata, tổng hoặc danh sách | Provider trả lỗi; không dựng bảng/biểu đồ rỗng giả; lịch sử chốt ngày trả đủ `totalPages` |
+| TC-DATA-13 | Chuỗi ngày bán hàng thiếu doanh thu, giá vốn, lợi nhuận, biên lãi hoặc số đơn | Provider trả lỗi; không dựng biểu đồ từ số 0. Khi đủ dữ liệu, tổng chuỗi ngày khớp tổng kỳ; mỗi ngày doanh thu ở cột trái, lợi nhuận gộp ở cột phải và hỗ trợ giá trị âm |
+| TC-TAX-10 | Shop thiếu hoặc có `businessSector` ngoài danh mục backend | Chặn tải cấu hình thuế và hiện lỗi; không tự chọn ngành thương mại hoặc tiếp tục tính thuế |
+| TC-FIN-11 | Chốt ngày có chênh lệch, thiếu tài khoản CASH hoặc lỗi ghi sổ | Phiếu chốt, giao dịch, journal và số dư cùng rollback; không lưu trạng thái một phần |
 
 ## 9. UX, responsive và accessibility
 
@@ -149,6 +170,7 @@ cụ và thiết bị hỗ trợ phù hợp.
 | TC-AI-01 | Hỏi thông tin thuế có nguồn còn/đã hết hiệu lực | Chỉ dùng nguồn được duyệt; có citation; nguồn hết hiệu lực bị loại |
 | TC-AI-02 | Không có nguồn đủ tin cậy | Trả “chưa đủ dữ liệu”, không bịa hoặc khẳng định pháp lý |
 | TC-AI-03 | Gỡ tài liệu | Tài liệu không còn được retrieval; có audit |
+| TC-AI-04 | DB lỗi/rỗng và nhân viên thiếu/có quyền settings truy cập kho AI | Lỗi không biến thành số 0/rỗng; có retry; doanh thu dùng cùng SalesService; view/edit bị chặn đúng cấp; không lộ key ra frontend |
 | TC-AUD-01 | Sale/return/stock/role/tax export | Log đủ actor/shop/action/time/correlation, redaction dữ liệu nhạy cảm |
 
 ## 11. Điều kiện đóng phiên bản

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, raw } from 'express';
 import * as productCtrl from '../controllers/product.controller';
 import { requirePermission } from '../middleware/permission.middleware';
 
@@ -7,7 +7,12 @@ const router = Router();
 // Products
 router.get('/products', requirePermission('products', 'view'), productCtrl.findAllProducts);
 router.post('/products', requirePermission('products', 'edit'), productCtrl.createProduct);
-router.post('/products/image-upload/presign', requirePermission('products', 'edit'), productCtrl.createProductImageUpload);
+router.post(
+    '/products/image-upload',
+    requirePermission('products', 'edit'),
+    raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '4mb' }),
+    productCtrl.uploadProductImage,
+);
 router.post('/products/image-upload/confirm', requirePermission('products', 'edit'), productCtrl.confirmProductImageUpload);
 router.post('/products/image-upload/delete', requirePermission('products', 'edit'), productCtrl.deleteProductImageUpload);
 router.get('/products/:id', requirePermission('products', 'view'), productCtrl.findProductById);

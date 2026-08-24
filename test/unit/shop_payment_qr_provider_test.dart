@@ -21,18 +21,6 @@ class _FakeQrApiClient extends ApiClient {
   @override
   Future<dynamic> post(String path, {dynamic data}) async {
     calls.add(path);
-    if (path.endsWith('/presign')) {
-      return {
-        'uploadUrl': 'https://api.cloudinary.com/v1_1/demo/image/upload',
-        'objectKey': 'smartstock/shops/4/payment-qr/qr',
-        'fields': {
-          'api_key': 'public-key',
-          'timestamp': '1',
-          'signature': 'signature',
-          'public_id': 'smartstock/shops/4/payment-qr/qr',
-        },
-      };
-    }
     return {
       'imageUrl':
           'https://res.cloudinary.com/demo/image/upload/'
@@ -41,16 +29,15 @@ class _FakeQrApiClient extends ApiClient {
   }
 
   @override
-  Future<Map<String, dynamic>> postSignedImageUpload(
-    String url,
+  Future<Map<String, dynamic>> postImage(
+    String path,
     Uint8List bytes,
     String fileName,
     String contentType,
-    Map<String, dynamic> fields,
   ) async {
-    calls.add('POST $url $contentType');
+    calls.add('$path $contentType');
     uploadedBytes = bytes;
-    return {'public_id': fields['public_id']};
+    return {'objectKey': 'smartstock/shops/4/payment-qr/qr'};
   }
 }
 
@@ -80,8 +67,7 @@ void main() {
     expect(api.uploadedBytes, bytes);
     expect(api.calls, [
       '/shop-payment-qr',
-      '/shop-payment-qr/presign',
-      'POST https://api.cloudinary.com/v1_1/demo/image/upload image/webp',
+      '/shop-payment-qr/upload image/webp',
       '/shop-payment-qr/confirm',
     ]);
   });

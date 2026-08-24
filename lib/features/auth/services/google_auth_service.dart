@@ -12,17 +12,11 @@ class GoogleAuthService {
   GoogleAuthService._();
 
   static final GoogleAuthService instance = GoogleAuthService._();
-  static const _defaultWebClientId =
-      '124075638912-hk0076lmjvgqa0iqec75aerpoe4lcpfq.apps.googleusercontent.com';
   static const _envWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
-  static String get _webClientId =>
-      _envWebClientId.isNotEmpty ? _envWebClientId : _defaultWebClientId;
 
   static const _envServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
   );
-  static String get _serverClientId =>
-      _envServerClientId.isNotEmpty ? _envServerClientId : _defaultWebClientId;
 
   static const _iosClientId = String.fromEnvironment('GOOGLE_IOS_CLIENT_ID');
 
@@ -35,7 +29,12 @@ class GoogleAuthService {
 
   Future<void> _initializeOnce() async {
     if (kIsWeb) {
-      await _signIn.initialize(clientId: _webClientId);
+      if (_envWebClientId.isEmpty) {
+        throw const GoogleAuthConfigurationException(
+          'Thiếu GOOGLE_WEB_CLIENT_ID trong cấu hình build.',
+        );
+      }
+      await _signIn.initialize(clientId: _envWebClientId);
       return;
     }
     final isApple =
@@ -46,9 +45,14 @@ class GoogleAuthService {
         'Thiếu GOOGLE_IOS_CLIENT_ID khi build ứng dụng Apple.',
       );
     }
+    if (!isApple && _envServerClientId.isEmpty) {
+      throw const GoogleAuthConfigurationException(
+        'Thiếu GOOGLE_SERVER_CLIENT_ID trong cấu hình build.',
+      );
+    }
     await _signIn.initialize(
       clientId: isApple ? _iosClientId : null,
-      serverClientId: _serverClientId,
+      serverClientId: isApple ? null : _envServerClientId,
     );
   }
 

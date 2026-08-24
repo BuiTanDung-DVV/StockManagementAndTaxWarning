@@ -37,5 +37,14 @@ void main() {
         isFalse,
       );
     });
+
+    test('uses the explanation threshold supplied by backend', () {
+      final result = assessClosingCash(
+        rawActualCash: '100000',
+        expectedCash: 0,
+        explanationThreshold: 150000,
+      );
+      expect(result.needsExplanation, isFalse);
+    });
   });
 }

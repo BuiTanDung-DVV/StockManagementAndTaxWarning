@@ -12,6 +12,7 @@ import {
   sendOtp,
 } from '../controllers/auth.controller';
 import { authenticateJwt } from '../middleware/auth.middleware';
+import { searchAddresses } from '../controllers/address-lookup.controller';
 import {
   googleRateLimit,
   loginRateLimit,
@@ -30,6 +31,7 @@ router.post('/refresh-token', requireTrustedWebRequest, refreshToken);
 router.post('/logout', requireTrustedWebRequest, logout);
 router.post('/complete-onboarding', authenticateJwt, completeOnboarding);
 router.get('/search-shops', authenticateJwt, searchShops);
+router.get('/address-suggestions', authenticateJwt, searchAddresses);
 router.post('/send-otp', otpRateLimit, requireTrustedWebRequest, sendOtp);
 
 export default router;

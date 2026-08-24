@@ -53,34 +53,30 @@ class AiDocument {
     isActive: json['isActive'] ?? json['is_active'] ?? true,
     createdAt: json['createdAt'] != null
         ? DateTime.parse(json['createdAt'])
-        : (json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now()),
+        : (json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : DateTime.now()),
   );
 }
 
-class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
+class AiKnowledgeNotifier extends AsyncNotifier<List<AiDocument>> {
   @override
-  List<AiDocument> build() {
-    ref.watch(shopProvider);
-    _loadFromBackend();
-    return const [];
+  Future<List<AiDocument>> build() async {
+    final shopState = ref.watch(shopProvider);
+    if (shopState.isAllShops || shopState.currentShopId == null) {
+      throw StateError('Vui lòng chọn một cửa hàng để tải kho tài liệu AI.');
+    }
+    final response = await _api.get('/ai-knowledge');
+    if (response is! List) {
+      throw const FormatException('Phản hồi kho tài liệu AI không hợp lệ.');
+    }
+    return response
+        .whereType<Map>()
+        .map((item) => AiDocument.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
   ApiClient get _api => ref.read(apiClientProvider);
-
-  Future<void> _loadFromBackend() async {
-    try {
-      final response = await _api.get('/ai/knowledge');
-      if (response is List) {
-        state = response
-            .whereType<Map>()
-            .map((item) => AiDocument.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-      }
-    } catch (error) {
-      // Keep the last successfully loaded database state. Do not replace it
-      // with local sample documents when the server is unavailable.
-    }
-  }
 
   Future<void> addDocument({
     required String title,
@@ -88,7 +84,7 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
     required String content,
   }) async {
     final response = await _api.post(
-      '/ai/knowledge',
+      '/ai-knowledge',
       data: {
         'title': title.trim(),
         'category': category.trim(),
@@ -96,32 +92,38 @@ class AiKnowledgeNotifier extends Notifier<List<AiDocument>> {
       },
     );
     final doc = AiDocument.fromJson(Map<String, dynamic>.from(response as Map));
-    state = [doc, ...state];
+    final current = state.asData?.value ?? const <AiDocument>[];
+    state = AsyncData([doc, ...current]);
   }
 
   Future<void> removeDocument(String id) async {
-    await _api.delete('/ai/knowledge/$id');
-    state = state.where((d) => d.id != id).toList();
+    await _api.delete('/ai-knowledge/$id');
+    final current = state.asData?.value ?? const <AiDocument>[];
+    state = AsyncData(current.where((d) => d.id != id).toList());
   }
 
   Future<void> toggleDocument(String id) async {
-    final matches = state.where((document) => document.id == id);
+    final currentDocuments = state.asData?.value ?? const <AiDocument>[];
+    final matches = currentDocuments.where((document) => document.id == id);
     if (matches.isEmpty) return;
     final current = matches.first;
     final response = await _api.put(
-      '/ai/knowledge/$id',
+      '/ai-knowledge/$id',
       data: {'isActive': !current.isActive},
     );
     final updated = AiDocument.fromJson(
       Map<String, dynamic>.from(response as Map),
     );
-    state = state.map((d) {
-      return d.id == id ? updated : d;
-    }).toList();
+    state = AsyncData(
+      currentDocuments.map((d) {
+        return d.id == id ? updated : d;
+      }).toList(),
+    );
   }
 }
 
 final aiKnowledgeProvider =
-    NotifierProvider<AiKnowledgeNotifier, List<AiDocument>>(
+    AsyncNotifierProvider<AiKnowledgeNotifier, List<AiDocument>>(
       AiKnowledgeNotifier.new,
+      retry: (_, _) => null,
     );

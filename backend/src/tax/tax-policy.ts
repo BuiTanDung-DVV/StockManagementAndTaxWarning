@@ -1,13 +1,12 @@
-export const CURRENT_TAX_POLICY = {
-    fiscalYear: 2026,
-    effectiveFrom: '2026-01-01',
-    taxExemptionThreshold: 1_000_000_000,
-    warningRevenueThreshold: 900_000_000,
-    eInvoiceThreshold: 1_000_000_000,
-    sourceCode: '141/2026/NĐ-CP',
-    sourceUrl:
-        'https://vanban.chinhphu.vn/?classid=1&docid=217960&pageid=27160&typegroupid=4',
-} as const;
+export interface TaxPolicy {
+    fiscalYear: number;
+    effectiveFrom: string;
+    taxExemptionThreshold: number;
+    warningRevenueThreshold: number;
+    eInvoiceThreshold: number;
+    sourceCode: string;
+    sourceUrl: string;
+}
 
 export class TaxValidationError extends Error {
     constructor(message: string) {
@@ -57,7 +56,11 @@ export const requireValidTaxCode = (value?: string | null): string => {
     return taxCode;
 };
 
-export const validateTaxPeriod = (period: string, year: string): void => {
+export const validateTaxPeriod = (
+    period: string,
+    year: string,
+    supportedFiscalYear: number,
+): void => {
     if (!/^(?:0[1-9]|1[0-2]|Q[1-4])$/.test(period)) {
         throw new TaxValidationError(
             'Kỳ tính thuế phải là tháng 01-12 hoặc quý Q1-Q4.',
@@ -66,9 +69,9 @@ export const validateTaxPeriod = (period: string, year: string): void => {
     if (!/^\d{4}$/.test(year) || Number(year) < 2000 || Number(year) > 2100) {
         throw new TaxValidationError('Năm tính thuế không hợp lệ.');
     }
-    if (Number(year) !== CURRENT_TAX_POLICY.fiscalYear) {
+    if (Number(year) !== supportedFiscalYear) {
         throw new TaxValidationError(
-            `Hệ thống hiện chỉ có bộ quy tắc thuế đã xác minh cho năm ${CURRENT_TAX_POLICY.fiscalYear}.`,
+            `Hệ thống hiện chỉ có bộ quy tắc thuế đã xác minh cho năm ${supportedFiscalYear}.`,
         );
     }
 };

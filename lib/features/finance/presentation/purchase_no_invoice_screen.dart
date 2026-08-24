@@ -32,7 +32,6 @@ class _PurchaseNoInvoiceScreenState
 
   @override
   Widget build(BuildContext context) {
-    final pnAsync = ref.watch(purchasesNoInvoiceProvider(_page));
     final shop = ref.watch(shopProvider);
     final isOwner = shop.isOwner;
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
@@ -52,6 +51,12 @@ class _PurchaseNoInvoiceScreenState
       required bool pendingTabOnly,
       required bool showQuickFilter,
     }) {
+      final requestedStatus = pendingTabOnly
+          ? 'PENDING'
+          : (_statusFilter == 'ALL' ? null : _statusFilter);
+      final pnAsync = ref.watch(
+        purchasesNoInvoiceProvider((page: _page, status: requestedStatus)),
+      );
       return pnAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
@@ -62,13 +67,9 @@ class _PurchaseNoInvoiceScreenState
               .whereType<Map>()
               .map((e) => Map<String, dynamic>.from(e))
               .toList();
-          final filtered = _filterItems(items, pendingTabOnly: pendingTabOnly);
-          final totalAmount = filtered.fold<num>(
-            0,
-            (s, i) => s + asNum(i['totalAmount']),
-          );
+          final totalAmount = asNum(data['filteredAmountTotal']);
 
-          if (filtered.isEmpty) {
+          if (items.isEmpty) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -80,7 +81,7 @@ class _PurchaseNoInvoiceScreenState
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    rawItems.isEmpty
+                    requestedStatus == null
                         ? 'Chưa có bảng kê nào'
                         : 'Không có dữ liệu phù hợp bộ lọc',
                     style: const TextStyle(fontSize: 16, color: Colors.grey),
@@ -98,10 +99,10 @@ class _PurchaseNoInvoiceScreenState
 
           return RefreshIndicator(
             onRefresh: () async =>
-                ref.invalidate(purchasesNoInvoiceProvider(_page)),
+                ref.invalidate(purchasesNoInvoiceProvider),
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: filtered.length + (showQuickFilter ? 3 : 2),
+              itemCount: items.length + (showQuickFilter ? 3 : 2),
               itemBuilder: (_, index) {
                 if (index == 0) {
                   return Container(
@@ -153,7 +154,7 @@ class _PurchaseNoInvoiceScreenState
                   );
                 }
 
-                if (index == filtered.length + listStartIndex) {
+                if (index == items.length + listStartIndex) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Row(
@@ -186,7 +187,7 @@ class _PurchaseNoInvoiceScreenState
                   );
                 }
 
-                final p = filtered[index - listStartIndex];
+                final p = items[index - listStartIndex];
                 final detailItems = (p['items'] as List?) ?? const [];
                 final approvalStatus = (p['approvalStatus'] ?? 'PENDING')
                     .toString()
@@ -372,29 +373,6 @@ class _PurchaseNoInvoiceScreenState
     );
   }
 
-  List<Map<String, dynamic>> _filterItems(
-    List<Map<String, dynamic>> items, {
-    required bool pendingTabOnly,
-  }) {
-    final base = pendingTabOnly
-        ? items.where(
-            (i) =>
-                (i['approvalStatus'] ?? 'PENDING').toString().toUpperCase() ==
-                'PENDING',
-          )
-        : items;
-    if (_statusFilter == 'ALL' || pendingTabOnly) {
-      return base.toList();
-    }
-    return base
-        .where(
-          (i) =>
-              (i['approvalStatus'] ?? 'PENDING').toString().toUpperCase() ==
-              _statusFilter,
-        )
-        .toList();
-  }
-
   Widget _filterChip(String value, String label) {
     final selected = _statusFilter == value;
     return ChoiceChip(
@@ -402,6 +380,7 @@ class _PurchaseNoInvoiceScreenState
       selected: selected,
       onSelected: (_) => setState(() {
         _statusFilter = value;
+        _page = 1;
       }),
     );
   }
@@ -412,7 +391,7 @@ class _PurchaseNoInvoiceScreenState
       builder: (ctx) => _AddPurchaseNoInvoiceDialog(formatCurrency: _fmt),
     );
     if (saved == true && mounted) {
-      ref.invalidate(purchasesNoInvoiceProvider(_page));
+      ref.invalidate(purchasesNoInvoiceProvider);
     }
   }
 
@@ -521,13 +500,13 @@ class _PurchaseNoInvoiceScreenState
             );
       }
       if (!mounted) return;
-      ref.invalidate(purchasesNoInvoiceProvider(_page));
+      ref.invalidate(purchasesNoInvoiceProvider);
       ToastService.showSuccess(
         approve ? 'Da duyet bang ke' : 'Da tu choi bang ke',
       );
     } catch (e) {
       if (!mounted) return;
-      ToastService.showSuccess('Khong the cap nhat phe duyet: $e');
+      ToastService.showError('Không thể cập nhật phê duyệt: $e');
     } finally {
       notesController.dispose();
     }

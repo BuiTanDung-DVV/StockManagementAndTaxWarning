@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { SupplierService } from '../services/supplier.service';
+import { PartyInputError } from '../party/party-input.utils';
 
 const supplierService = new SupplierService();
 
@@ -15,7 +16,7 @@ export const findOne = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await supplierService.create((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof PartyInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 
 export const update = async (req: Request, res: Response) => {
@@ -30,7 +31,7 @@ export const remove = async (req: Request, res: Response) => {
 
 export const payables = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await supplierService.getPayables((req as any).shopId, +req.params.id) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof PartyInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 
 export const payablesAging = async (req: Request, res: Response) => {

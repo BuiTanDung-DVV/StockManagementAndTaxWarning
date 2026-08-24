@@ -22,6 +22,7 @@ class ShopState {
   final List<Map<String, dynamic>> userShops;
   final bool isLoading;
   final bool isAllShops;
+  final String? errorMessage;
 
   const ShopState({
     this.currentShopId,
@@ -34,6 +35,7 @@ class ShopState {
     this.userShops = const [],
     this.isLoading = true,
     this.isAllShops = false,
+    this.errorMessage,
   });
 
   bool get isOwner =>
@@ -107,6 +109,8 @@ class ShopState {
     List<Map<String, dynamic>>? userShops,
     bool? isLoading,
     bool? isAllShops,
+    String? errorMessage,
+    bool clearError = false,
   }) => ShopState(
     currentShopId: currentShopId ?? this.currentShopId,
     currentShopName: currentShopName ?? this.currentShopName,
@@ -118,6 +122,7 @@ class ShopState {
     userShops: userShops ?? this.userShops,
     isLoading: isLoading ?? this.isLoading,
     isAllShops: isAllShops ?? this.isAllShops,
+    errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
   );
 }
 
@@ -145,10 +150,13 @@ class ShopNotifier extends Notifier<ShopState> {
 
   /// Load user shops from API
   Future<void> loadUserShops() async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       final data = await _api.get('/my-shops');
-      final shops = (data as List)
+      if (data is! List) {
+        throw const FormatException('Danh sách cửa hàng từ API không hợp lệ');
+      }
+      final shops = data
           .map((s) => Map<String, dynamic>.from(s as Map))
           .toList();
       if (shops.isEmpty) {
@@ -173,7 +181,10 @@ class ShopNotifier extends Notifier<ShopState> {
       _selectShop(shops, current);
     } catch (e) {
       debugPrint('ShopProvider.loadUserShops error: $e');
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Không thể tải danh sách cửa hàng từ cơ sở dữ liệu.',
+      );
     }
   }
 
@@ -188,15 +199,15 @@ class ShopNotifier extends Notifier<ShopState> {
     }
     final activeShops = state.userShops.where(_isUsableShop).toList();
     if (activeShops.isEmpty) return;
-    final shop = activeShops.firstWhere(
+    final matches = activeShops.where(
       (s) => parseShopRecordId(s['shopId']) == shopId,
-      orElse: () => activeShops.first,
     );
+    if (matches.isEmpty) return;
+    final shop = matches.first;
     _selectShop(state.userShops, shop);
   }
 
-  bool _isUsableShop(Map<String, dynamic> shop) =>
-      _isUsableShopRecord(shop);
+  bool _isUsableShop(Map<String, dynamic> shop) => _isUsableShopRecord(shop);
 
   void _selectAllShops(List<Map<String, dynamic>> shops) {
     final usableShops = shops.where(_isUsableShop).toList();

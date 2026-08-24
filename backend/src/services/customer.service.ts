@@ -1,5 +1,10 @@
 import { AppDataSource } from '../config/db.config';
-import { Customer, Receivable, DebtEvidence } from '../customer/entities';
+import {
+    Customer,
+    DebtEvidence,
+    DebtPaymentHistory,
+    Receivable,
+} from '../customer/entities';
 import { config } from '../config/env.config';
 import {
     debtEvidenceImageKeyFromPublicUrl,
@@ -9,7 +14,21 @@ import {
 import { Not, In } from 'typeorm';
 import { SalesOrder } from '../sales/entities';
 import { calculateRemainingDebt } from '../customer/debt.utils';
+import { classifyDebtAging } from '../customer/debt-aging.utils';
 import { resolveVietnamBusinessDayEnd } from '../finance/finance-period.utils';
+import { normalizeCustomerInput } from '../party/party-input.utils';
+import { FinanceService } from './finance.service';
+import { PostingService } from './posting.service';
+import {
+    normalizeSettledPaymentMethod,
+    paymentLedgerAccountCode,
+} from '../sales/payment-ledger.utils';
+import {
+    normalizeReceivableListQuery,
+    ReceivableListQueryInput,
+    NormalizedReceivableListQuery,
+} from '../customer/receivable-list-query.utils';
+import { vietnamDateKey } from '../finance/finance-period.utils';
 
 export class CustomerService {
     private customerRepo = AppDataSource.getRepository(Customer);
@@ -17,6 +36,8 @@ export class CustomerService {
     private evidenceRepo = AppDataSource.getRepository(DebtEvidence);
     private imageStorageService = new ImageStorageService();
     private orderRepo = AppDataSource.getRepository(SalesOrder);
+    private financeService = new FinanceService();
+    private postingService = new PostingService();
 
     async findAll(shopId: number, page = 1, limit = 20, search?: string) {
         const qb = this.customerRepo.createQueryBuilder('c')
@@ -35,12 +56,12 @@ export class CustomerService {
     }
 
     async create(shopId: number, dto: Partial<Customer>) {
-        return this.customerRepo.save(this.customerRepo.create({ ...this.normalizeCustomerDto(dto), shopId, code: 'CUS' + Date.now().toString().slice(-6) }));
+        return this.customerRepo.save(this.customerRepo.create({ ...normalizeCustomerInput(dto, true), shopId, code: 'CUS' + Date.now().toString().slice(-6) }));
     }
 
     async update(shopId: number, id: number, dto: Partial<Customer>) {
         const customer = await this.findById(shopId, id);
-        Object.assign(customer, this.normalizeCustomerDto(dto));
+        Object.assign(customer, normalizeCustomerInput(dto));
         return this.customerRepo.save(customer);
     }
 
@@ -91,6 +112,119 @@ export class CustomerService {
             customer.balance = Number(customer.balance || 0) + remaining;
             await manager.save(Customer, customer);
             return saved;
+        });
+    }
+
+    async collectManualReceivablePayment(
+        shopId: number,
+        receivableId: number,
+        recordedBy: number | undefined,
+        dto: { amount?: unknown; method?: unknown; notes?: unknown },
+    ) {
+        const amount = Number(dto.amount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            throw new Error('Validation: Payment amount must be greater than 0');
+        }
+        const paymentMethod = normalizeSettledPaymentMethod(
+            String(dto.method || 'CASH'),
+        );
+        const notes = String(dto.notes || '').trim();
+        if (notes.length > 500) {
+            throw new Error('Validation: Notes must not exceed 500 characters');
+        }
+
+        return AppDataSource.transaction(async (manager) => {
+            const receivable = await manager.findOne(Receivable, {
+                where: { id: receivableId, shopId },
+                relations: ['customer'],
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!receivable) throw new Error('Receivable not found');
+            if (receivable.status === 'PAID' || receivable.status === 'CANCELLED') {
+                throw new Error('Validation: Receivable is already closed');
+            }
+            if (Number(receivable.orderId) > 0) {
+                throw new Error(
+                    'Validation: Linked receivable must use the sales order payment workflow',
+                );
+            }
+
+            const payment = calculateRemainingDebt(
+                Number(receivable.amount),
+                Number(receivable.paidAmount || 0),
+            );
+            if (amount > payment) {
+                throw new Error(
+                    'Validation: Payment amount exceeds remaining receivable balance',
+                );
+            }
+
+            receivable.paidAmount = Number(receivable.paidAmount || 0) + amount;
+            const remaining = calculateRemainingDebt(
+                Number(receivable.amount),
+                Number(receivable.paidAmount),
+            );
+            receivable.status = remaining === 0 ? 'PAID' : 'PARTIAL';
+            await manager.save(Receivable, receivable);
+
+            const history = await manager.save(
+                DebtPaymentHistory,
+                manager.create(DebtPaymentHistory, {
+                    shopId,
+                    receivable,
+                    amount,
+                    paymentMethod,
+                    paymentDate: new Date(),
+                    notes: notes || undefined,
+                    recordedBy,
+                }),
+            );
+
+            const customer = receivable.customer?.shopId === shopId
+                ? receivable.customer
+                : undefined;
+            if (!customer) throw new Error('Customer not found');
+            customer.balance = Math.max(
+                Number(customer.balance || 0) - amount,
+                0,
+            );
+            await manager.save(Customer, customer);
+
+            await this.financeService.createCashTransaction(shopId, {
+                amount,
+                type: 'INCOME',
+                category: 'DEBT_COLLECTION',
+                paymentMethod,
+                referenceType: 'DEBT_COLLECTION',
+                referenceId: receivable.id,
+                counterparty: customer.name,
+                description: `Thu nợ khách hàng ${customer.name}`,
+                transactionDate: new Date(),
+                createdBy: recordedBy,
+            } as any, manager);
+            await this.postingService.postJournal(
+                shopId,
+                'DEBT_COLLECTION',
+                receivable.id,
+                `Thu nợ khách hàng ${customer.name}`,
+                [
+                    {
+                        accountCode: paymentLedgerAccountCode(paymentMethod),
+                        amount,
+                        entryType: 'DEBIT',
+                    },
+                    { accountCode: '131', amount, entryType: 'CREDIT' },
+                ],
+                manager,
+            );
+
+            return {
+                receivableId: receivable.id,
+                paymentHistoryId: history.id,
+                paidAmount: Number(receivable.paidAmount),
+                remaining,
+                status: receivable.status,
+            };
         });
     }
 
@@ -163,6 +297,183 @@ export class CustomerService {
                 status: daysOverdue > 0 ? 'OVERDUE' : receivable.status,
             };
         });
+    }
+
+    private buildOpenReceivableQuery(
+        shopId: number,
+        query: NormalizedReceivableListQuery,
+    ) {
+        const asOfDate = vietnamDateKey(query.asOf);
+        const qb = this.receivableRepo.createQueryBuilder('receivable')
+            .leftJoinAndSelect(
+                'receivable.customer',
+                'customer',
+                'customer.shopId = :shopId',
+                { shopId },
+            )
+            .leftJoin(
+                SalesOrder,
+                'salesOrder',
+                'salesOrder.id = receivable.orderId AND salesOrder.shopId = :shopId',
+                { shopId },
+            )
+            .where('receivable.shopId = :shopId', { shopId })
+            .andWhere('receivable.status NOT IN (:...closedStatuses)', {
+                closedStatuses: ['PAID', 'CANCELLED'],
+            })
+            .andWhere(
+                '(receivable.amount - COALESCE(receivable.paidAmount, 0)) > 0',
+            );
+
+        if (query.search) {
+            qb.andWhere(
+                `(
+                    customer.name ILIKE :search OR
+                    customer.phone ILIKE :search OR
+                    customer.zaloPhone ILIKE :search OR
+                    customer.code ILIKE :search OR
+                    salesOrder.orderCode ILIKE :search
+                )`,
+                { search: `%${query.search}%` },
+            );
+        }
+        if (query.status === 'OVERDUE') {
+            qb.andWhere('receivable.dueDate < :asOfDate', { asOfDate });
+        } else if (query.status === 'CURRENT') {
+            qb.andWhere('receivable.dueDate >= :asOfDate', { asOfDate });
+        }
+
+        if (query.sort === 'REMAINING_DESC') {
+            qb.orderBy(
+                '(receivable.amount - COALESCE(receivable.paidAmount, 0))',
+                'DESC',
+            ).addOrderBy('receivable.dueDate', 'ASC');
+        } else if (query.sort === 'CUSTOMER_ASC') {
+            qb.orderBy('LOWER(customer.name)', 'ASC')
+                .addOrderBy('receivable.dueDate', 'ASC');
+        } else {
+            qb.orderBy('receivable.dueDate', 'ASC')
+                .addOrderBy('receivable.createdAt', 'ASC');
+        }
+        return qb;
+    }
+
+    private async mapOpenReceivableRows(
+        shopId: number,
+        receivables: Receivable[],
+        asOf: Date,
+    ) {
+        const orderIds = [
+            ...new Set(
+                receivables
+                    .map((receivable) => Number(receivable.orderId))
+                    .filter((id) => Number.isInteger(id) && id > 0),
+            ),
+        ];
+        const orders = orderIds.length
+            ? await this.orderRepo.find({
+                where: { shopId, id: In(orderIds) },
+            })
+            : [];
+        const orderCodes = new Map(
+            orders.map((order) => [order.id, order.orderCode]),
+        );
+
+        return receivables.map((receivable) => {
+            const customer = receivable.customer?.shopId === shopId
+                ? receivable.customer
+                : undefined;
+            const totalAmount = Number(receivable.amount);
+            const paidAmount = Number(receivable.paidAmount || 0);
+            const remaining = calculateRemainingDebt(totalAmount, paidAmount);
+            const aging = classifyDebtAging(receivable.dueDate, asOf);
+            return {
+                id: receivable.id,
+                customerId: customer?.id,
+                customerName: customer?.name || 'Khách hàng',
+                customerPhone: customer?.zaloPhone || customer?.phone || '',
+                orderId: receivable.orderId,
+                orderCode: orderCodes.get(Number(receivable.orderId)) ||
+                    `CN-${receivable.id}`,
+                createdAt: receivable.createdAt,
+                dueDate: receivable.dueDate,
+                totalAmount,
+                paidAmount,
+                remaining,
+                daysOverdue: aging.daysOverdue,
+                status: aging.daysOverdue > 0 ? 'OVERDUE' : receivable.status,
+            };
+        });
+    }
+
+    private async getOpenReceivableSummary(shopId: number, asOf: Date) {
+        const asOfDate = vietnamDateKey(asOf);
+        const raw = await this.receivableRepo.createQueryBuilder('receivable')
+            .select(
+                'COALESCE(SUM(receivable.amount - COALESCE(receivable.paidAmount, 0)), 0)',
+                'outstanding',
+            )
+            .addSelect(
+                `COALESCE(SUM(
+                    CASE WHEN receivable.dueDate < :asOfDate
+                    THEN receivable.amount - COALESCE(receivable.paidAmount, 0)
+                    ELSE 0 END
+                ), 0)`,
+                'overdue',
+            )
+            .addSelect('COUNT(*)', 'receivableCount')
+            .addSelect('COUNT(DISTINCT receivable.customer)', 'customerCount')
+            .where('receivable.shopId = :shopId', { shopId })
+            .andWhere('receivable.status NOT IN (:...closedStatuses)', {
+                closedStatuses: ['PAID', 'CANCELLED'],
+            })
+            .andWhere(
+                '(receivable.amount - COALESCE(receivable.paidAmount, 0)) > 0',
+            )
+            .setParameter('asOfDate', asOfDate)
+            .getRawOne();
+
+        return {
+            outstanding: Number(raw?.outstanding || 0),
+            overdue: Number(raw?.overdue || 0),
+            customerCount: Number(raw?.customerCount || 0),
+            receivableCount: Number(raw?.receivableCount || 0),
+        };
+    }
+
+    async getOpenReceivablesPage(
+        shopId: number,
+        input: ReceivableListQueryInput,
+    ) {
+        const query = normalizeReceivableListQuery(input);
+        const qb = this.buildOpenReceivableQuery(shopId, query);
+        const [receivables, total] = await qb
+            .skip((query.page - 1) * query.limit)
+            .take(query.limit)
+            .getManyAndCount();
+        const [items, summary] = await Promise.all([
+            this.mapOpenReceivableRows(shopId, receivables, query.asOf),
+            this.getOpenReceivableSummary(shopId, query.asOf),
+        ]);
+        return {
+            items,
+            total,
+            page: query.page,
+            limit: query.limit,
+            totalPages: Math.max(1, Math.ceil(total / query.limit)),
+            summary,
+            asOf: query.asOf,
+        };
+    }
+
+    async exportOpenReceivables(
+        shopId: number,
+        input: ReceivableListQueryInput,
+    ) {
+        const query = normalizeReceivableListQuery(input);
+        const receivables = await this.buildOpenReceivableQuery(shopId, query)
+            .getMany();
+        return this.mapOpenReceivableRows(shopId, receivables, query.asOf);
     }
 
     async getDebtEvidence(shopId: number, customerId: number) {
@@ -258,12 +569,13 @@ export class CustomerService {
             past30: number;
             past60: number;
             past90: number;
+            overdue: number;
             overdueDays: number;
             lastPaymentDate: Date | null;
         }>();
 
         for (const r of receivables) {
-            const remaining = Number(r.amount) - Number(r.paidAmount);
+            const remaining = calculateRemainingDebt(Number(r.amount), Number(r.paidAmount));
             if (remaining <= 0) continue;
             receivableCount += 1;
             totalDebt += remaining;
@@ -279,6 +591,7 @@ export class CustomerService {
                     past30: 0,
                     past60: 0,
                     past90: 0,
+                    overdue: 0,
                     overdueDays: 0,
                     lastPaymentDate: null,
                 });
@@ -286,22 +599,15 @@ export class CustomerService {
             const customerBucket = byCustomer.get(customerId)!;
             customerBucket.total += remaining;
 
-            const daysDiff = Math.floor((now.getTime() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-            if (daysDiff <= 0) {
-                buckets.current += remaining;
-                customerBucket.current += remaining;
-            } else if (daysDiff <= 30) {
-                buckets.past30 += remaining;
-                customerBucket.past30 += remaining;
-                customerBucket.overdueDays = Math.max(customerBucket.overdueDays, daysDiff);
-            } else if (daysDiff <= 60) {
-                buckets.past60 += remaining;
-                customerBucket.past60 += remaining;
-                customerBucket.overdueDays = Math.max(customerBucket.overdueDays, daysDiff);
-            } else {
-                buckets.past90 += remaining;
-                customerBucket.past90 += remaining;
-                customerBucket.overdueDays = Math.max(customerBucket.overdueDays, daysDiff);
+            const aging = classifyDebtAging(r.dueDate, now);
+            buckets[aging.bucket] += remaining;
+            customerBucket[aging.bucket] += remaining;
+            if (aging.daysOverdue > 0) {
+                customerBucket.overdue += remaining;
+                customerBucket.overdueDays = Math.max(
+                    customerBucket.overdueDays,
+                    aging.daysOverdue,
+                );
             }
 
             if (Array.isArray(r.paymentHistory) && r.paymentHistory.length > 0) {
@@ -315,7 +621,7 @@ export class CustomerService {
         }
 
         const customers = Array.from(byCustomer.values())
-            .sort((a, b) => b.total - a.total)
+            .sort((a, b) => b.overdue - a.overdue || b.total - a.total)
             .map((c) => ({
                 ...c,
                 lastPaymentDate: c.lastPaymentDate ? c.lastPaymentDate.toISOString() : null,
@@ -334,9 +640,13 @@ export class CustomerService {
             },
             totalDebt,
             receivableCount,
+            customerCount: customers.length,
             customers,
             summary: {
                 totalDebt,
+                overdueDebt,
+                receivableCount,
+                customerCount: customers.length,
                 currentRatio: totalDebt > 0 ? Number((buckets.current / totalDebt).toFixed(4)) : 0,
                 overdueRatio: totalDebt > 0 ? Number((overdueDebt / totalDebt).toFixed(4)) : 0,
             },
@@ -368,12 +678,4 @@ export class CustomerService {
         return overdueItems;
     }
 
-    private normalizeCustomerDto(dto: any) {
-        const normalized = { ...dto };
-        if (normalized.notes === undefined && normalized.note !== undefined) {
-            normalized.notes = normalized.note;
-        }
-        delete normalized.note;
-        return normalized;
-    }
 }

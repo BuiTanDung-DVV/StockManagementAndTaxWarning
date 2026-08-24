@@ -113,8 +113,9 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
           if (revenue == 0 && cogs == 0 && expenses == 0) {
             return const AppEmpty(
               visual: AppEmptyVisual.finance,
-              message: 'Chưa có dữ liệu giao dịch phát sinh',
-              subtitle: 'Thêm giao dịch thu/chi để xem báo cáo KQKD',
+              message: 'Chưa có dữ liệu doanh thu và chi phí trong kỳ',
+              subtitle:
+                  'Ghi nhận bán hàng và các khoản chi phí để lập báo cáo KQKD.',
             );
           }
 

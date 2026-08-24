@@ -253,6 +253,9 @@ export class Invoice {
     @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
     subtotal: number;
 
+    @Column({ name: 'discount_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
+    discountAmount: number;
+
     @Column({ name: 'tax_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
     taxAmount: number;
 
@@ -293,6 +296,9 @@ export class InvoiceItem {
     @ManyToOne(() => Product, { nullable: true })
     @JoinColumn({ name: 'product_id' })
     product: Product;
+
+    @Column({ name: 'product_id', nullable: true })
+    productId: number | null;
 
     @Column({ name: 'item_name', length: 200 })
     itemName: string;

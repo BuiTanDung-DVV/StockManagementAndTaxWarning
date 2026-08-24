@@ -38,8 +38,8 @@ class _ShopPaymentQrDialogState extends ConsumerState<ShopPaymentQrDialog> {
       if (file == null) return;
 
       final bytes = await file.readAsBytes();
-      if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-        ToastService.showError('Ảnh QR phải nhỏ hơn 5 MB');
+      if (bytes.isEmpty || bytes.length > 4 * 1024 * 1024) {
+        ToastService.showError('Ảnh QR phải không quá 4 MB');
         return;
       }
 

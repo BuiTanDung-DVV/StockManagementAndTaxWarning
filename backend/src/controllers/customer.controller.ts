@@ -4,6 +4,7 @@ import {
     ImageStorageError,
     ImageStorageService,
 } from '../services/image-storage.service';
+import { PartyInputError } from '../party/party-input.utils';
 
 const customerService = new CustomerService();
 const imageStorageService = new ImageStorageService();
@@ -22,14 +23,20 @@ const evidenceStorageError = (res: Response, error: unknown) => {
     });
 };
 
-export const createDebtEvidenceImageUpload = async (
+export const uploadDebtEvidenceImage = async (
     req: Request,
     res: Response,
 ) => {
     try {
-        const data = await imageStorageService.createDebtEvidenceImageUpload(
+        const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+        const data = await imageStorageService.uploadDebtEvidenceImage(
             (req as any).shopId,
-            req.body,
+            {
+                fileName: String(req.headers['x-file-name'] || 'image'),
+                contentType: String(req.headers['content-type'] || '').split(';')[0],
+                size: bytes.length,
+            },
+            bytes,
         );
         return res.json({ success: true, data });
     } catch (error) {
@@ -79,12 +86,12 @@ export const findOne = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await customerService.create((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof PartyInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 
 export const update = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await customerService.update((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof PartyInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 
 export const remove = async (req: Request, res: Response) => {
@@ -159,6 +166,64 @@ export const addEvidence = async (req: Request, res: Response) => {
         const validation = String(e.message || '').startsWith('Validation:');
         res.status(e.message === 'Receivable not found' ? 404 : validation ? 400 : 500)
             .json({ success: false, message: e.message });
+    }
+};
+
+export const openReceivablesPage = async (req: Request, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await customerService.getOpenReceivablesPage(
+                (req as any).shopId,
+                req.query,
+            ),
+        });
+    } catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : 500)
+            .json({ success: false, message: e.message });
+    }
+};
+
+export const exportOpenReceivables = async (req: Request, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await customerService.exportOpenReceivables(
+                (req as any).shopId,
+                req.query,
+            ),
+        });
+    } catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : 500)
+            .json({ success: false, message: e.message });
+    }
+};
+
+export const collectManualReceivablePayment = async (
+    req: Request,
+    res: Response,
+) => {
+    try {
+        res.json({
+            success: true,
+            data: await customerService.collectManualReceivablePayment(
+                (req as any).shopId,
+                +req.params.receivableId,
+                (req as any).user?.sub,
+                req.body,
+            ),
+        });
+    } catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        const status = e.message === 'Receivable not found' ||
+            e.message === 'Customer not found'
+            ? 404
+            : validation
+                ? 400
+                : 500;
+        res.status(status).json({ success: false, message: e.message });
     }
 };
 

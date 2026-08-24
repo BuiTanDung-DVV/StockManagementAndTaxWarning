@@ -1,37 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../finance/providers/tax_reference_provider.dart';
 
-class TaxSupportScreen extends StatelessWidget {
+IconData _taxLinkIcon(String iconKey) => switch (iconKey) {
+  'support' => Icons.support_agent_outlined,
+  'receipt' => Icons.receipt_long_outlined,
+  _ => Icons.account_balance_outlined,
+};
+
+Color _taxLinkColor(String colorRole) => switch (colorRole) {
+  'SUCCESS' => AppColors.success,
+  'WARNING' => AppColors.warning,
+  _ => AppColors.primary,
+};
+
+class TaxSupportScreen extends ConsumerWidget {
   const TaxSupportScreen({super.key});
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
-    final links = [
-      {
-        'title': 'Cổng thông tin Cục Thuế',
-        'desc': 'Tin chính sách, thủ tục và phần mềm chính thức',
-        'url': 'https://www.gdt.gov.vn',
-        'icon': Icons.account_balance_outlined,
-        'color': AppColors.primary,
-      },
-      {
-        'title': 'Thuế điện tử',
-        'desc': 'Khai và nộp thuế điện tử trên cổng chính thức',
-        'url': 'https://thuedientu.gdt.gov.vn',
-        'icon': Icons.support_agent,
-        'color': AppColors.success,
-      },
-      {
-        'title': 'Tra cứu hóa đơn',
-        'desc': 'Tra cứu hóa đơn điện tử của Cục Thuế',
-        'url': 'https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don',
-        'icon': Icons.receipt_long,
-        'color': AppColors.warning,
-      },
-    ];
+    final referenceAsync = ref.watch(taxReferenceDataProvider);
+    if (referenceAsync.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (referenceAsync.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Hỗ trợ Thuế')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Không thể tải liên kết hỗ trợ từ DB: ${referenceAsync.error}',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+    final links = referenceAsync.requireValue.supportLinks;
 
     return Scaffold(
       appBar: AppBar(title: Text('Hỗ trợ Thuế')),
@@ -86,8 +96,8 @@ class TaxSupportScreen extends StatelessWidget {
               (l) => GestureDetector(
                 onTap: () => _showLinkDialog(
                   context,
-                  l['title'] as String,
-                  l['url'] as String,
+                  l.title,
+                  l.url,
                 ),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 8),
@@ -101,13 +111,15 @@ class TaxSupportScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: (l['color'] as Color).withValues(alpha: 0.1),
+                          color: _taxLinkColor(l.colorRole).withValues(
+                            alpha: 0.1,
+                          ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          l['icon'] as IconData,
+                          _taxLinkIcon(l.iconKey),
                           size: 20,
-                          color: l['color'] as Color,
+                          color: _taxLinkColor(l.colorRole),
                         ),
                       ),
                       SizedBox(width: 12),
@@ -116,14 +128,14 @@ class TaxSupportScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l['title'] as String,
+                              l.title,
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 14,
                               ),
                             ),
                             Text(
-                              l['desc'] as String,
+                              l.description,
                               style: TextStyle(
                                 fontSize: 11,
                                 color: c.textSecondary,

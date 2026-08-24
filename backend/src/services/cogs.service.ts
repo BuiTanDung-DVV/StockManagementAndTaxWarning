@@ -19,11 +19,10 @@ export class COGSService {
 
     /** Lấy phương pháp tính giá vốn hiện tại */
     async getCostingMethod(shopId?: number): Promise<'FIFO' | 'AVG'> {
-        if (shopId) {
-            const shop = await this.shopRepo.findOne({ where: { id: shopId } });
-            return (shop?.costingMethod === 'FIFO' ? 'FIFO' : 'AVG');
-        }
-        return 'AVG'; // Default fallback
+        if (!shopId) throw new Error('Validation: Shop is required for costing');
+        const shop = await this.shopRepo.findOne({ where: { id: shopId } });
+        if (!shop) throw new Error('Validation: Shop not found for costing');
+        return shop.costingMethod === 'FIFO' ? 'FIFO' : 'AVG';
     }
 
     /**
@@ -36,6 +35,9 @@ export class COGSService {
         unitCost: number;
         lotDeductions: { lotId: number; qty: number; costPrice: number }[];
     }> {
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+            throw new Error('Validation: COGS quantity must be greater than 0');
+        }
         const costingMethod = method || await this.getCostingMethod(shopId);
 
         if (costingMethod === 'FIFO') {
@@ -66,13 +68,10 @@ export class COGSService {
             remaining -= take;
         }
 
-        // Nếu còn thiếu (hết lô), fallback giá trung bình từ products.cost_price
         if (remaining > 0) {
-            const whereClause: any = { id: productId };
-            if (shopId) whereClause.shopId = shopId;
-            const product = await this.productRepo.findOne({ where: whereClause });
-            const fallbackPrice = Number(product?.costPrice || 0);
-            totalCost += remaining * fallbackPrice;
+            throw new Error(
+                `Validation: Inventory lots for product ${productId} are short by ${remaining}`,
+            );
         }
 
         const unitCost = quantity > 0 ? totalCost / quantity : 0;
@@ -92,16 +91,12 @@ export class COGSService {
         const totalValue = Number(avgResult?.totalValue || 0);
         const totalQty = Number(avgResult?.totalQty || 0);
 
-        let unitCost: number;
-        if (totalQty > 0) {
-            unitCost = totalValue / totalQty;
-        } else {
-            // Fallback: dùng cost_price từ products
-            const whereClause: any = { id: productId };
-            if (shopId) whereClause.shopId = shopId;
-            const product = await this.productRepo.findOne({ where: whereClause });
-            unitCost = Number(product?.costPrice || 0);
+        if (totalQty < quantity) {
+            throw new Error(
+                `Validation: Inventory lots for product ${productId} are short by ${quantity - totalQty}`,
+            );
         }
+        const unitCost = totalValue / totalQty;
 
         const totalCost = unitCost * quantity;
 
@@ -121,6 +116,11 @@ export class COGSService {
             lotDeductions.push({ lotId: lot.id, qty: take, costPrice: Number(lot.costPrice) });
             remaining -= take;
         }
+        if (remaining > 0) {
+            throw new Error(
+                `Validation: Inventory lots for product ${productId} are short by ${remaining}`,
+            );
+        }
 
         return { totalCost, unitCost, lotDeductions };
     }
@@ -131,10 +131,13 @@ export class COGSService {
             const qb = manager
                 ? manager.createQueryBuilder().update(InventoryLot)
                 : this.lotRepo.createQueryBuilder().update(InventoryLot);
-            await qb
+            const result = await qb
                 .set({ remainingQty: () => `remaining_qty - ${d.qty}` })
                 .where('id = :id AND remaining_qty >= :qty', { id: d.lotId, qty: d.qty })
                 .execute();
+            if (result.affected !== 1) {
+                throw new Error(`Validation: Inventory lot ${d.lotId} no longer has enough stock`);
+            }
         }
     }
 
@@ -148,6 +151,24 @@ export class COGSService {
         notes?: string;
         shopId?: number;
     }, manager?: EntityManager) {
+        if (!data.shopId) {
+            throw new Error('Validation: Shop is required for inventory lot');
+        }
+        if (!Number.isFinite(data.quantity) || data.quantity <= 0) {
+            throw new Error('Validation: Inventory lot quantity must be greater than 0');
+        }
+        if (!Number.isFinite(data.costPrice) || data.costPrice < 0) {
+            throw new Error('Validation: Inventory lot cost must be non-negative');
+        }
+        const productRepo = manager
+            ? manager.getRepository(Product)
+            : this.productRepo;
+        const product = await productRepo.findOne({
+            where: { id: data.productId, shopId: data.shopId },
+        });
+        if (!product) {
+            throw new Error('Validation: Product does not belong to the active shop');
+        }
         const repo = manager ? manager.getRepository(InventoryLot) : this.lotRepo;
         const lot = repo.create({
             productId: data.productId,
@@ -190,6 +211,13 @@ export class COGSService {
 
     /** Giá bình quân gia quyền hiện tại */
     async getWeightedAvgCost(productId: number, shopId?: number): Promise<number> {
+        if (!shopId) throw new Error('Validation: Shop is required for costing');
+        const product = await this.productRepo.findOne({
+            where: { id: productId, shopId },
+        });
+        if (!product) {
+            throw new Error('Validation: Product does not belong to the active shop');
+        }
         const qb = this.lotRepo
             .createQueryBuilder('l')
             .select('SUM(l.remaining_qty * l.cost_price) / NULLIF(SUM(l.remaining_qty), 0)', 'avgCost')
@@ -197,13 +225,10 @@ export class COGSService {
         if (shopId) qb.andWhere('l.shop_id = :shopId', { shopId });
         const avgResult = await qb.getRawOne();
 
-        if (Number(avgResult?.avgCost) > 0) return Number(avgResult.avgCost);
-
-        // Fallback
-        const whereClause: any = { id: productId };
-        if (shopId) whereClause.shopId = shopId;
-        const product = await this.productRepo.findOne({ where: whereClause });
-        return Number(product?.costPrice || 0);
+        if (Number(avgResult?.avgCost) >= 0 && avgResult?.avgCost != null) {
+            return Number(avgResult.avgCost);
+        }
+        throw new Error('Validation: Product has no remaining inventory lots');
     }
 
     /** Giá trị tồn kho theo sản phẩm hoặc toàn bộ */

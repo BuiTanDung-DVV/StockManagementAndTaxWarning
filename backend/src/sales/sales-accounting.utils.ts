@@ -6,6 +6,14 @@ export type SalesAccountingSplit = {
     receivableAmount: number;
 };
 
+export type SalesTaxLine = {
+    subtotal: number;
+    taxRate: number;
+    taxAmount: number;
+};
+
+const roundMoney = (value: number): number => Math.round(value * 100) / 100;
+
 export const calculateAllocatedMerchandiseRevenue = (
     lineSubtotal: number,
     orderSubtotal: number,
@@ -20,6 +28,47 @@ export const calculateAllocatedMerchandiseRevenue = (
     }
     if (orderSubtotal === 0) return 0;
     return lineSubtotal * (1 - discountAmount / orderSubtotal);
+};
+
+export const calculateSalesTaxLines = (
+    lines: Array<{ subtotal: number; taxRate: number }>,
+    orderSubtotal: number,
+    discountAmount: number,
+): { lines: SalesTaxLine[]; taxAmount: number } => {
+    if (!Number.isFinite(orderSubtotal) || orderSubtotal < 0) {
+        throw new Error('Validation: Order subtotal must be a non-negative number');
+    }
+    if (!Number.isFinite(discountAmount) || discountAmount < 0 || discountAmount > orderSubtotal) {
+        throw new Error('Validation: Discount must be between 0 and subtotal');
+    }
+
+    const calculatedLines = lines.map((line) => {
+        const subtotal = Number(line.subtotal);
+        const taxRate = Number(line.taxRate);
+        if (!Number.isFinite(subtotal) || subtotal < 0) {
+            throw new Error('Validation: Line subtotal must be a non-negative number');
+        }
+        if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) {
+            throw new Error('Validation: Product tax rate in database is invalid');
+        }
+        const taxableAmount = calculateAllocatedMerchandiseRevenue(
+            subtotal,
+            orderSubtotal,
+            discountAmount,
+        );
+        return {
+            subtotal,
+            taxRate,
+            taxAmount: roundMoney(taxableAmount * taxRate / 100),
+        };
+    });
+
+    return {
+        lines: calculatedLines,
+        taxAmount: roundMoney(
+            calculatedLines.reduce((sum, line) => sum + line.taxAmount, 0),
+        ),
+    };
 };
 
 export const buildAllocatedMerchandiseRevenueSql = (

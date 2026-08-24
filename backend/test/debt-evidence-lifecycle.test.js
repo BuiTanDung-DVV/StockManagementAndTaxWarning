@@ -10,7 +10,8 @@ test('debt evidence routes require customer permissions', () => {
   );
 
   assert.match(routes, /customers\/:id\/evidence.*customers', 'view'/);
-  assert.match(routes, /evidence-upload\/presign.*customers', 'edit'/);
+  assert.match(routes, /evidence-upload'.*customers', 'edit'/s);
+  assert.doesNotMatch(routes, /presign/);
   assert.match(routes, /evidence-upload\/confirm.*customers', 'edit'/);
   assert.match(routes, /customers\/evidence\/:evidenceId.*customers', 'edit'/);
 });

@@ -7,12 +7,19 @@ import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/tax_config_provider.dart';
 import '../../tax/services/tax_service.dart';
 import '../providers/finance_provider.dart';
+import '../providers/tax_reference_provider.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
   symbol: '₫',
   decimalDigits: 0,
 );
+
+IconData _taxFormIcon(String iconKey) => switch (iconKey) {
+  'list' => Icons.list_alt,
+  'article' => Icons.article_outlined,
+  _ => Icons.description_outlined,
+};
 
 class TaxDeclarationScreen extends ConsumerWidget {
   const TaxDeclarationScreen({super.key});
@@ -21,6 +28,48 @@ class TaxDeclarationScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final config = ref.watch(taxConfigProvider);
+    if (!config.isLoaded) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text('Kê khai thuế'),
+        ),
+        body: Center(
+          child: config.isLoading
+              ? const CircularProgressIndicator()
+              : Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    config.errorMessage ?? 'Không thể tải cấu hình thuế từ DB.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+        ),
+      );
+    }
+
+    final referenceAsync = ref.watch(taxReferenceDataProvider);
+    if (referenceAsync.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (referenceAsync.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Kê khai thuế')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Không thể tải danh mục biểu mẫu từ DB: ${referenceAsync.error}',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+    final forms = referenceAsync.requireValue.forms;
 
     // Fetch real revenue from profit-loss API instead of hardcoded 450M
     final now = DateTime.now();
@@ -31,30 +80,6 @@ class TaxDeclarationScreen extends ConsumerWidget {
     ).toIso8601String().split('T').first;
     final to = now.toIso8601String().split('T').first;
     final plAsync = ref.watch(profitLossProvider((from: from, to: to)));
-
-    final forms = [
-      {
-        'form': '01/CNKD',
-        'name': 'Tờ khai thuế HKD/CNKD',
-        'desc': 'Dành cho HKD nộp thuế theo phương pháp kê khai',
-        'status': 'ready',
-        'icon': Icons.description,
-      },
-      {
-        'form': '01/BK-STK',
-        'name': 'Bảng kê sổ tay khoán',
-        'desc': 'Bảng kê chi tiết theo sổ tay khoán',
-        'status': 'ready',
-        'icon': Icons.list_alt,
-      },
-      {
-        'form': '01/TKN-CNKD',
-        'name': 'Tờ khai thuế khoán',
-        'desc': 'Dành cho HKD nộp thuế khoán',
-        'status': 'draft',
-        'icon': Icons.article,
-      },
-    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -222,7 +247,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 ...forms.map((f) {
-                  final isReady = f['status'] == 'ready';
+                  final isReady = f.isReady;
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(14),
@@ -242,7 +267,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
-                                f['icon'] as IconData,
+                                _taxFormIcon(f.iconKey),
                                 size: 20,
                                 color: AppColors.primary,
                               ),
@@ -255,7 +280,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                                   Row(
                                     children: [
                                       Text(
-                                        f['form'] as String,
+                                        f.code,
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.primary,
@@ -292,7 +317,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                                     ],
                                   ),
                                   Text(
-                                    f['name'] as String,
+                                    f.name,
                                     style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
@@ -305,7 +330,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          f['desc'] as String,
+                          f.description,
                           style: TextStyle(
                             fontSize: 11,
                             color: c.textSecondary,
@@ -319,8 +344,8 @@ class TaxDeclarationScreen extends ConsumerWidget {
                                 onPressed: () => _showExportDialog(
                                   context,
                                   ref,
-                                  f['form'] as String,
-                                  f['name'] as String,
+                                  f.code,
+                                  f.name,
                                 ),
                                 icon: const Icon(Icons.download, size: 16),
                                 label: const Text(
@@ -341,7 +366,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
                               child: ElevatedButton.icon(
                                 onPressed: () => _showSubmitDialog(
                                   context,
-                                  f['name'] as String,
+                                  f.name,
                                 ),
                                 icon: const Icon(Icons.cloud_upload, size: 16),
                                 label: const Text(

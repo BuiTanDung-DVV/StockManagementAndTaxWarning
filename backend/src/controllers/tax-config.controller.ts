@@ -1,71 +1,24 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/db.config';
 import { ShopProfile } from '../system/entities';
-import { CURRENT_TAX_POLICY } from '../tax/tax-policy';
+import {
+    taxPolicyService,
+    TaxPolicyConfigurationError,
+} from '../services/tax-policy.service';
 
 export const getTaxConfig = async (req: Request, res: Response) => {
     try {
         const shopId = (req as any).shopId;
         
-        // Fetch shop configuration
-        let shopConfig = null;
-        if (shopId) {
-            const shopRepo = AppDataSource.getRepository(ShopProfile);
-            const shop = await shopRepo.findOne({ where: { shopId } });
-            if (shop) {
-                shopConfig = {
-                    businessSector: shop.businessSector,
-                    applyVatReduction: false,
-                    customVatRate: shop.customVatRate,
-                    customPitRate: shop.customPitRate
-                };
-            }
-        }
-
-        // Cấu hình luật thuế HKD 2026
-        const config: any = {
-            fiscalYear: CURRENT_TAX_POLICY.fiscalYear,
-            thresholds: {
-                tier1: 250000000,
-                tier2: 500000000,
-                tier3: CURRENT_TAX_POLICY.warningRevenueThreshold,
-                tier4: CURRENT_TAX_POLICY.taxExemptionThreshold,
-            },
-            policy: CURRENT_TAX_POLICY,
-            taxRates: {
-                wholesale_retail: {
-                    vat: 0.01, // 1%
-                    pit: 0.005, // 0.5%
-                },
-                manufacturing_transport: {
-                    vat: 0.03, // 3%
-                    pit: 0.015, // 1.5%
-                },
-                services: {
-                    vat: 0.05, // 5%
-                    pit: 0.02, // 2%
-                },
-                other: {
-                    vat: 0.02, // 2%
-                    pit: 0.01, // 1%
-                }
-            },
-            currentPolicies: {
-                // Chính sách giảm phụ thuộc nhóm hàng; chưa đủ dữ liệu để áp dụng toàn shop.
-                vatReductionActive: false,
-                vatReductionRate: 0.0,
-                vatReductionScope: 'PRODUCT_LEVEL_NOT_SUPPORTED',
-            }
-        };
-
-        if (shopConfig) {
-            config.shopConfig = shopConfig;
-        }
-
+        const config = await taxPolicyService.getShopTaxConfiguration(shopId);
         res.json({ success: true, data: config });
     } catch (error) {
         console.error('Error fetching tax config:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch tax config' });
+        const status = error instanceof TaxPolicyConfigurationError ? 503 : 500;
+        res.status(status).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Không thể tải cấu hình thuế',
+        });
     }
 };
 
@@ -75,9 +28,9 @@ export const updateTaxConfig = async (req: Request, res: Response) => {
         if (!shopId) return res.status(400).json({ success: false, message: 'Missing shopId' });
 
         const shopRepo = AppDataSource.getRepository(ShopProfile);
-        let shop = await shopRepo.findOne({ where: { shopId } });
+        const shop = await shopRepo.findOne({ where: { shopId } });
         if (!shop) {
-            shop = shopRepo.create({ shopId, shopName: 'My Shop' });
+            return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ cửa hàng' });
         }
         
         if (req.body.businessSector !== undefined) shop.businessSector = req.body.businessSector;

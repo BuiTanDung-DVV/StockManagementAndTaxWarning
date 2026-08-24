@@ -137,7 +137,7 @@ Ký hiệu:
 | Stock-take launcher | `/stock-take` | Có guide/FAB; điều hướng bằng `MaterialPageRoute` ngoài router | P1 | Router thống nhất, primary action rõ, recent/open count |
 | Stock-take form | Nội bộ | Product picker trang 1; file 1.078 dòng | P0 | Stepper compact, server search/scan, variance summary, confirm |
 | Stock-take history | Nội bộ | List nhỏ, chưa pagination/filter | P1 | Paged history, status/date/user filter, variance totals |
-| XNT report | `/xnt-report` | Có guide nhưng dùng `DataTable` riêng, không pagination | P1 | Report header, date/scope, paged table/card, qty + value + method |
+| XNT report | `/xnt-report` | Có guide, kỳ báo cáo, phân trang 20; mobile card và desktop table dùng cùng dữ liệu DB | P1 | Bổ sung bộ lọc kho và giá trị tồn khi ledger có đơn giá đáng tin cậy |
 
 ### 3.8 Finance — 16 màn
 
@@ -231,4 +231,3 @@ Lưu ý: staff management và role config là hai widget trong cùng file nên b
 - [Audit tổng thể UI, luồng và báo cáo](20_COMPREHENSIVE_UI_FLOW_REPORTING_AUDIT_20260801.md)
 - [Ma trận chụp production](21_PRODUCTION_SCREEN_CAPTURE_MATRIX_20260801.md)
 - [Backlog và roadmap](10_PRODUCT_BACKLOG_AND_RELEASE_ROADMAP.md)
-

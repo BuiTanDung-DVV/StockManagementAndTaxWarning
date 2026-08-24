@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { getMetadataArgsStorage } = require('typeorm');
 
 require('../dist/config/db.config');
@@ -39,4 +41,26 @@ test('finance router does not expose mock e-invoice issuance', () => {
     .map((layer) => layer.route?.path)
     .filter(Boolean);
   assert.equal(paths.includes('/invoices/:id/issue'), false);
+});
+
+test('linked invoices cannot be edited or deleted outside source documents', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'services', 'finance.service.ts'),
+    'utf8',
+  );
+  assert.match(source, /Linked invoice must be updated from its source document/);
+  assert.match(source, /Linked invoice must be deleted from its source document/);
+  assert.match(source, /Invoice source reference is server-controlled/);
+});
+
+test('manual invoice deletion removes detail rows in the same transaction', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'services', 'finance.service.ts'),
+    'utf8',
+  );
+  assert.match(
+    source,
+    /manager\.getRepository\(InvoiceItem\)\.delete\(\{ invoice: \{ id \} \}\)/,
+  );
+  assert.match(source, /async deleteInvoice[\s\S]*AppDataSource\.transaction/);
 });

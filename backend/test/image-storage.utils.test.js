@@ -15,7 +15,7 @@ const {
   validateProductImageUpload,
 } = require('../dist/services/image-storage.service');
 
-test('accepts supported product images within 5 MB', () => {
+test('accepts supported product images within 4 MB', () => {
   assert.deepEqual(
     validateProductImageUpload({
       fileName: 'bon-cau.webp',
@@ -47,7 +47,7 @@ test('rejects unsupported or oversized product images', () => {
         contentType: 'image/jpeg',
         size: MAX_PRODUCT_IMAGE_BYTES + 1,
       }),
-    /5 MB/,
+    /4 MB/,
   );
 });
 

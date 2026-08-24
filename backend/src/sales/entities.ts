@@ -95,6 +95,9 @@ export class SalesOrderItem {
     @Column({ name: 'shop_id', nullable: true })
     shopId: number;
 
+    @Column({ name: 'product_id' })
+    productId: number;
+
     @ManyToOne(() => Product)
     @JoinColumn({ name: 'product_id' })
     product: Product;

@@ -492,6 +492,19 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
     final label1 = widget.label1;
     final label2 = widget.label2;
     final filterWidget = widget.filterWidget;
+    final currentRevenue = currentData.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (num.tryParse(item['revenue']?.toString() ?? '0')?.toDouble() ?? 0),
+    );
+    final previousRevenue = previousData.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (num.tryParse(item['revenue']?.toString() ?? '0')?.toDouble() ?? 0),
+    );
+    final showsPreviousOnly = currentRevenue <= 0 && previousRevenue > 0;
 
     if (currentData.isEmpty && previousData.isEmpty) {
       return Container(
@@ -602,7 +615,7 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Doanh thu theo kỳ',
+                        'Doanh thu thuần theo kỳ',
                         style: GoogleFonts.manrope(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
@@ -634,14 +647,43 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
                     _buildLegendItem(label1, presentColor, c.textSecondary),
                   ],
                 ),
+                if (showsPreviousOnly) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: pastColor.withValues(alpha: 0.09),
+                      borderRadius: BorderRadius.circular(AppRadius.control),
+                      border: Border.all(
+                        color: pastColor.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    child: Text(
+                      'Kỳ hiện tại chưa có doanh thu; các cột đang hiển thị số liệu kỳ trước để đối chiếu.',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: c.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final double minWidth =
-                    barGroups.length * (isMobile ? 58.0 : 66.0);
+                final groupWidth = dashboardChartGroupWidth(
+                  currentData,
+                  previousData,
+                  isMobile: isMobile,
+                );
+                final double minWidth = barGroups.length * groupWidth;
                 final canScroll = minWidth > constraints.maxWidth;
                 return Scrollbar(
                   controller: _horizontalController,
@@ -878,6 +920,26 @@ String dashboardChartPeriodLabel(
     );
   }
   return '';
+}
+
+double dashboardChartGroupWidth(
+  List<dynamic> currentData,
+  List<dynamic> previousData, {
+  required bool isMobile,
+}) {
+  final length = currentData.length > previousData.length
+      ? currentData.length
+      : previousData.length;
+  var usesMonthAndYear = false;
+  for (var index = 0; index < length; index++) {
+    if (dashboardChartPeriodLabel(currentData, previousData, index).length >=
+        7) {
+      usesMonthAndYear = true;
+      break;
+    }
+  }
+  if (isMobile && usesMonthAndYear) return 76;
+  return isMobile ? 58 : 66;
 }
 
 String _formatDashboardPeriod(String raw) {
@@ -2698,9 +2760,9 @@ class DashboardHeroHeader extends ConsumerWidget {
                     ),
                     const SizedBox(height: 14),
                     ElevatedButton.icon(
-                      onPressed: () => context.push('/pos'),
+                      onPressed: () => context.push('/sales/new'),
                       icon: const Icon(Icons.flash_on_rounded, size: 16),
-                      label: const Text('Bán Hàng (POS)'),
+                      label: const Text('Ghi nhận bán hàng'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: Colors.white,
@@ -2765,9 +2827,9 @@ class DashboardHeroHeader extends ConsumerWidget {
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
-                      onPressed: () => context.push('/pos'),
+                      onPressed: () => context.push('/sales/new'),
                       icon: const Icon(Icons.flash_on_rounded, size: 16),
-                      label: const Text('Bán Hàng (POS)'),
+                      label: const Text('Ghi nhận bán hàng'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: Colors.white,
@@ -2939,46 +3001,62 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
     }
 
     if (hasFinance) {
-      final now = DateTime.now();
-      final ytdFrom = '${now.year}-01-01';
-      final ytdTo = now.toIso8601String().split('T')[0];
-      final ytdSalesAsync = ref.watch(
-        salesSummaryProvider((from: ytdFrom, to: ytdTo)),
-      );
-      final thresholds = ref.watch(taxConfigProvider).thresholds;
+      final taxConfig = ref.watch(taxConfigProvider);
+      if (!taxConfig.isLoaded) {
+        chips.add(
+          _chip(
+            onTap: () => context.push('/tax-calculator'),
+            color: Colors.blueGrey,
+            icon: Icons.account_balance_outlined,
+            label: taxConfig.isLoading
+                ? 'Thuế: Đang tải cấu hình từ DB'
+                : 'Thuế: Chưa có cấu hình hợp lệ',
+            action: taxConfig.isLoading ? null : 'Kiểm tra',
+          ),
+        );
+      } else {
+        final now = DateTime.now();
+        final ytdFrom = '${now.year}-01-01';
+        final ytdTo = now.toIso8601String().split('T')[0];
+        final ytdSalesAsync = ref.watch(
+          salesSummaryProvider((from: ytdFrom, to: ytdTo)),
+        );
+        final thresholds = taxConfig.thresholds!;
 
-      chips.add(
-        ytdSalesAsync.when(
-          loading: () => _chip(
-            onTap: () => context.push('/tax-calculator'),
-            color: Colors.blueGrey,
-            icon: Icons.account_balance_outlined,
-            label: 'Thuế HKD 2026: Đang tải doanh thu',
-          ),
-          error: (_, _) => _chip(
-            onTap: () => context.push('/tax-calculator'),
-            color: Colors.blueGrey,
-            icon: Icons.account_balance_outlined,
-            label: 'Thuế HKD 2026: Chưa tải được',
-            action: 'Kiểm tra',
-          ),
-          data: (data) {
-            final revenue =
-                num.tryParse(
-                  data['totalRevenue']?.toString() ?? '0',
-                )?.toDouble() ??
-                0;
-            final color = thresholds.getColor(revenue);
-            return _chip(
+        chips.add(
+          ytdSalesAsync.when(
+            loading: () => _chip(
               onTap: () => context.push('/tax-calculator'),
-              color: color,
+              color: Colors.blueGrey,
               icon: Icons.account_balance_outlined,
-              label: 'Thuế HKD 2026: ${thresholds.getTierLabel(revenue)}',
-              action: 'Chi tiết',
-            );
-          },
-        ),
-      );
+              label: 'Thuế HKD ${taxConfig.fiscalYear}: Đang tải doanh thu',
+            ),
+            error: (_, _) => _chip(
+              onTap: () => context.push('/tax-calculator'),
+              color: Colors.blueGrey,
+              icon: Icons.account_balance_outlined,
+              label: 'Thuế HKD ${taxConfig.fiscalYear}: Chưa tải được',
+              action: 'Kiểm tra',
+            ),
+            data: (data) {
+              final revenue =
+                  num.tryParse(
+                    data['totalRevenue']?.toString() ?? '0',
+                  )?.toDouble() ??
+                  0;
+              final color = thresholds.getColor(revenue);
+              return _chip(
+                onTap: () => context.push('/tax-calculator'),
+                color: color,
+                icon: Icons.account_balance_outlined,
+                label:
+                    'Thuế HKD ${taxConfig.fiscalYear}: ${thresholds.getTierLabel(revenue)}',
+                action: 'Chi tiết',
+              );
+            },
+          ),
+        );
+      }
     }
 
     return Column(
@@ -3017,49 +3095,67 @@ class _DashboardPriorityListState extends ConsumerState<DashboardPriorityList> {
     final entries = <Widget>[];
 
     if (shopState.isOwner || shopState.hasPermission('finance')) {
-      final today = DateTime.now();
-      final salesAsync = ref.watch(
-        salesSummaryProvider((
-          from: '${today.year}-01-01',
-          to: today.toIso8601String().split('T').first,
-        )),
-      );
-      final thresholds = ref.watch(taxConfigProvider).thresholds;
-      entries.add(
-        salesAsync.when(
-          loading: () => _PriorityRow(
+      final taxConfig = ref.watch(taxConfigProvider);
+      if (!taxConfig.isLoaded) {
+        entries.add(
+          _PriorityRow(
             number: entries.length + 1,
             title: 'Kiểm tra nghĩa vụ thuế',
-            detail: 'Đang tải doanh thu năm',
-            status: 'Đang tải',
-            statusColor: colors.textMuted,
+            detail: taxConfig.isLoading
+                ? 'Đang tải cấu hình từ DB'
+                : 'Cấu hình thuế chưa hợp lệ',
+            status: taxConfig.isLoading ? 'Đang tải' : 'Kiểm tra',
+            statusColor: taxConfig.isLoading
+                ? colors.textMuted
+                : AppColors.warning,
             onTap: () => context.push('/tax-calculator'),
           ),
-          error: (_, _) => _PriorityRow(
-            number: entries.length + 1,
-            title: 'Kiểm tra nghĩa vụ thuế',
-            detail: 'Chưa tải được doanh thu năm',
-            status: 'Kiểm tra',
-            statusColor: AppColors.warning,
-            onTap: () => context.push('/tax-calculator'),
-          ),
-          data: (data) {
-            final revenue =
-                num.tryParse(
-                  data['totalRevenue']?.toString() ?? '0',
-                )?.toDouble() ??
-                0.0;
-            return _PriorityRow(
+        );
+      } else {
+        final today = DateTime.now();
+        final salesAsync = ref.watch(
+          salesSummaryProvider((
+            from: '${today.year}-01-01',
+            to: today.toIso8601String().split('T').first,
+          )),
+        );
+        final thresholds = taxConfig.thresholds!;
+        entries.add(
+          salesAsync.when(
+            loading: () => _PriorityRow(
               number: entries.length + 1,
-              title: 'Thuế hộ kinh doanh ${today.year}',
-              detail: thresholds.getTierLabel(revenue),
-              status: 'Chi tiết',
-              statusColor: thresholds.getColor(revenue),
+              title: 'Kiểm tra nghĩa vụ thuế',
+              detail: 'Đang tải doanh thu năm',
+              status: 'Đang tải',
+              statusColor: colors.textMuted,
               onTap: () => context.push('/tax-calculator'),
-            );
-          },
-        ),
-      );
+            ),
+            error: (_, _) => _PriorityRow(
+              number: entries.length + 1,
+              title: 'Kiểm tra nghĩa vụ thuế',
+              detail: 'Chưa tải được doanh thu năm',
+              status: 'Kiểm tra',
+              statusColor: AppColors.warning,
+              onTap: () => context.push('/tax-calculator'),
+            ),
+            data: (data) {
+              final revenue =
+                  num.tryParse(
+                    data['totalRevenue']?.toString() ?? '0',
+                  )?.toDouble() ??
+                  0.0;
+              return _PriorityRow(
+                number: entries.length + 1,
+                title: 'Thuế hộ kinh doanh ${taxConfig.fiscalYear}',
+                detail: thresholds.getTierLabel(revenue),
+                status: 'Chi tiết',
+                statusColor: thresholds.getColor(revenue),
+                onTap: () => context.push('/tax-calculator'),
+              );
+            },
+          ),
+        );
+      }
     }
 
     if (shopState.isOwner || shopState.hasPermission('inventory')) {
@@ -3087,7 +3183,7 @@ class _DashboardPriorityListState extends ConsumerState<DashboardPriorityList> {
                 number: entries.length + 1,
                 title: items.isEmpty
                     ? 'Tồn kho trong định mức'
-                    : '${items.length} sản phẩm dưới định mức tồn',
+                    : '${items.length} sản phẩm dưới định mức tồn tổng',
                 detail: items.isEmpty
                     ? 'Chưa có sản phẩm cần nhập thêm'
                     : 'Kiểm tra và đề xuất nhập hàng',
@@ -3176,9 +3272,9 @@ class _DashboardPriorityListState extends ConsumerState<DashboardPriorityList> {
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   'Các việc cần chú ý trước khi xem báo cáo chi tiết.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.textSecondary,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -3386,11 +3482,6 @@ class DashboardRecentOrdersList extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () =>
-                      ExcelExportService.exportOrdersToExcel(transactions),
-                  child: const Text('Xuất Excel'),
-                ),
-                TextButton(
                   onPressed: () => context.push('/sales'),
                   child: const Text('Xem tất cả'),
                 ),
@@ -3427,7 +3518,7 @@ class DashboardRecentOrdersList extends StatelessWidget {
                       children: [
                         Expanded(flex: 2, child: Text('Mã đơn')),
                         Expanded(flex: 3, child: Text('Khách hàng')),
-                        Expanded(flex: 2, child: Text('Ngày đặt')),
+                        Expanded(flex: 2, child: Text('Ngày giao dịch')),
                         Expanded(
                           flex: 2,
                           child: Text('Giá trị', textAlign: TextAlign.right),
@@ -3609,7 +3700,7 @@ class _RecentOrderData {
       customer: item['customer']?['name']?.toString() ?? 'Khách mua lẻ',
       date: dateValue == null
           ? 'Chưa rõ'
-          : DateFormat('dd/MM/yyyy HH:mm').format(dateValue),
+          : DateFormat('dd/MM/yyyy').format(dateValue.toLocal()),
       total: _currFmt.format(amount),
     );
   }

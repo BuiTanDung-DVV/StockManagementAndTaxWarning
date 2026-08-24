@@ -49,6 +49,16 @@ type ScreenCoverageRow = {
   notifications: number;
 };
 
+type SalesReturnQualityRow = {
+  shopId: number;
+  grossNetSalesRevenue: string | number;
+  returnNetSalesRevenue: string | number;
+  returnRatePct: string | number;
+  returnCount: number;
+  returnedSkuCount: number;
+  missingReasonCount: number;
+};
+
 async function main(): Promise<void> {
   await AppDataSource.initialize();
   try {
@@ -154,6 +164,53 @@ async function main(): Promise<void> {
       FROM shop_profiles sp
       ORDER BY sp.id
     `) as ScreenCoverageRow[];
+    const salesReturnQualityRows = await AppDataSource.query(`
+      WITH sales AS (
+        SELECT
+          o.shop_id,
+          COALESCE(SUM(o.subtotal - o.discount_amount), 0) AS gross_net_sales
+        FROM sales_orders o
+        WHERE UPPER(COALESCE(o.status, '')) != 'CANCELLED'
+        GROUP BY o.shop_id
+      ), returns AS (
+        SELECT
+          r.shop_id,
+          COALESCE(SUM(
+            ri.subtotal - CASE
+              WHEN returned_order.subtotal > 0
+                THEN returned_order.discount_amount * ri.subtotal / returned_order.subtotal
+              ELSE 0
+            END
+          ), 0) AS return_net_sales,
+          COUNT(DISTINCT r.id)::int AS return_count,
+          COUNT(DISTINCT ri.product_id)::int AS returned_sku_count,
+          COUNT(DISTINCT r.id) FILTER (
+            WHERE NULLIF(BTRIM(COALESCE(r.reason, '')), '') IS NULL
+          )::int AS missing_reason_count
+        FROM sales_returns r
+        JOIN sales_orders returned_order ON returned_order.id = r.order_id
+        JOIN sales_return_items ri ON ri.return_id = r.id
+        WHERE UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
+        GROUP BY r.shop_id
+      )
+      SELECT
+        sp.id AS "shopId",
+        COALESCE(sales.gross_net_sales, 0) AS "grossNetSalesRevenue",
+        COALESCE(returns.return_net_sales, 0) AS "returnNetSalesRevenue",
+        CASE
+          WHEN COALESCE(sales.gross_net_sales, 0) > 0
+            THEN COALESCE(returns.return_net_sales, 0) /
+              sales.gross_net_sales * 100
+          ELSE 0
+        END AS "returnRatePct",
+        COALESCE(returns.return_count, 0)::int AS "returnCount",
+        COALESCE(returns.returned_sku_count, 0)::int AS "returnedSkuCount",
+        COALESCE(returns.missing_reason_count, 0)::int AS "missingReasonCount"
+      FROM shop_profiles sp
+      LEFT JOIN sales ON sales.shop_id = sp.id
+      LEFT JOIN returns ON returns.shop_id = sp.id
+      ORDER BY sp.id
+    `) as SalesReturnQualityRow[];
 
     console.table(rows.map((row) => ({
       id: Number(row.id),
@@ -177,6 +234,16 @@ async function main(): Promise<void> {
       ]),
     )));
     console.table(schemaRows);
+    console.log('Chất lượng dữ liệu trả hàng và tỷ lệ trên doanh thu hàng hóa thuần:');
+    console.table(salesReturnQualityRows.map((row) => ({
+      shopId: Number(row.shopId),
+      grossNetSalesRevenue: Math.round(Number(row.grossNetSalesRevenue)),
+      returnNetSalesRevenue: Math.round(Number(row.returnNetSalesRevenue)),
+      returnRatePct: Number(Number(row.returnRatePct).toFixed(2)),
+      returnCount: Number(row.returnCount),
+      returnedSkuCount: Number(row.returnedSkuCount),
+      missingReasonCount: Number(row.missingReasonCount),
+    })));
   } finally {
     await AppDataSource.destroy();
   }

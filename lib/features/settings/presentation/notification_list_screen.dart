@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../providers/notification_provider.dart';
 
 class NotificationListScreen extends ConsumerStatefulWidget {
@@ -37,7 +38,21 @@ class _NotificationListScreenState
             ),
         ],
       ),
-      body: notif.items.isEmpty
+      body: notif.isLoading && notif.items.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : notif.errorMessage != null && notif.items.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: AppInlineError(
+                  message: notif.errorMessage!,
+                  onRetry: () => ref
+                      .read(notificationProvider.notifier)
+                      .loadNotifications(),
+                ),
+              ),
+            )
+          : notif.items.isEmpty
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

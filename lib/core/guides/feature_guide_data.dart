@@ -43,7 +43,8 @@ const Map<String, FeatureGuide> featureGuides = {
       FeatureGuideItem(
         intro:
             'Thao tác nhanh: nhấn 1 nút vào ngay Bán hàng, Nhập hàng, Kiểm kho, Nhân viên.',
-        example: 'Lúc đông khách, nhấn nhanh "Bán hàng" là vào POS ngay.',
+        example:
+            'Khi có khách mua hàng, nhấn "Ghi nhận bán hàng" để lập giao dịch mới.',
       ),
       FeatureGuideItem(
         intro:
@@ -54,14 +55,14 @@ const Map<String, FeatureGuide> featureGuides = {
     ],
   ),
 
-  // ── 2. Bán hàng POS ──
+  // ── 2. Ghi nhận giao dịch bán hàng ──
   'pos': FeatureGuide(
-    title: 'Bán hàng (POS)',
+    title: 'Ghi nhận giao dịch bán hàng',
     icon: '🛒',
     items: [
       FeatureGuideItem(
         intro:
-            'Màn hình bán hàng chính: chọn sản phẩm → nhập số lượng → chọn thanh toán → xác nhận. Hỗ trợ quét barcode, tự động tính tổng.',
+            'Chọn sản phẩm → nhập số lượng → chọn khách hàng và cách thanh toán → xác nhận giao dịch. Hệ thống tự tính tổng và ghi nhận công nợ khi cần.',
         example:
             'Khách mua 3 món, chọn từng SP, app tính tổng 450k, nhận tiền mặt, xong.',
       ),

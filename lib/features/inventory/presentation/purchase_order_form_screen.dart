@@ -84,11 +84,11 @@ class _PurchaseOrderFormScreenState
       final hasSuppliers =
           ((suppliersAsync.value?['items'] as List?)?.isNotEmpty ?? false);
       if (_supplierId == null && hasSuppliers) {
-        ToastService.showSuccess('Vui lòng chọn Nhà cung cấp!');
+        ToastService.showError('Vui lòng chọn Nhà cung cấp!');
         return;
       }
       if (!hasSuppliers) {
-        ToastService.showSuccess(
+        ToastService.showError(
           'Chưa có Nhà cung cấp nào. Vui lòng tạo Nhà cung cấp trước!',
         );
         return;
@@ -96,20 +96,20 @@ class _PurchaseOrderFormScreenState
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
       if (_items.isEmpty) {
-        ToastService.showSuccess(
+        ToastService.showError(
           'Vui lòng thêm ít nhất 1 sản phẩm để nhập hàng!',
         );
         return;
       }
       for (var i in _items) {
         if (i.productId == null) {
-          ToastService.showSuccess(
+          ToastService.showError(
             'Vui lòng chọn sản phẩm cho tất cả các dòng!',
           );
           return;
         }
         if (i.quantity <= 0) {
-          ToastService.showSuccess('Số lượng sản phẩm nhập phải lớn hơn 0!');
+          ToastService.showError('Số lượng sản phẩm nhập phải lớn hơn 0!');
           return;
         }
       }

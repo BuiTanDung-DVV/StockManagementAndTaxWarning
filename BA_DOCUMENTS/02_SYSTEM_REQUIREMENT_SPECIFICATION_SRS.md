@@ -38,7 +38,8 @@ Nguồn:
 
 ### 3.2 Bán hàng và quan hệ khách hàng
 
-`/sales`, `/pos`, `/sales/:id`, `/sales/returns/:id`, `/customer-debts`,
+`/sales`, `/sales/new`, `/sales/:id`, `/sales/returns/:id`, `/customer-debts`,
+trong đó `/pos` chỉ là route chuyển tiếp tương thích cho liên kết cũ,
 `/customers`, `/customers/form`, `/customers/:id`, `/suppliers`,
 `/suppliers/form`, `/suppliers/:id`.
 
@@ -268,7 +269,7 @@ Chưa có load test; các số trên là tiêu chí đề xuất.
 2. Lint/test chạy trong CI; nếu bị chặn phải dừng phát hành theo policy đã duyệt.
 3. Push `main` không force.
 4. Hai Vercel project phải dùng cùng commit.
-5. Smoke test đăng nhập/dashboard/POS/kho/tài chính/thuế/settings.
+5. Smoke test đăng nhập/dashboard/ghi nhận bán hàng/kho/tài chính/thuế/settings.
 6. Có rollback bằng deployment trước; migration phải backward-compatible trong cửa sổ rollout.
 
 ## 10. Giới hạn baseline

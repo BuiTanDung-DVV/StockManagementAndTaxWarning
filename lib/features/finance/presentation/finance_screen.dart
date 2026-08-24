@@ -8,6 +8,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/reporting_period.dart';
+import '../../../core/utils/data_freshness.dart';
 import '../../../core/utils/finance_display.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
@@ -15,6 +16,7 @@ import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/chart_widgets.dart';
+import '../../../core/widgets/data_freshness_banner.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../providers/finance_provider.dart';
 
@@ -169,6 +171,36 @@ class FinanceScreen extends ConsumerWidget {
                   ),
                 ),
                 summaryAsync.when(
+                  data: (data) {
+                    final assessment = assessDataFreshness(
+                      latestDate: data['latestTransactionDate'],
+                      periodFrom: DateTime.parse(from),
+                      periodTo: DateTime.parse(to),
+                      recordCount:
+                          asDouble(data['totalIncome'] ?? data['income']) !=
+                                  0 ||
+                              asDouble(
+                                    data['totalExpense'] ?? data['expense'],
+                                  ) !=
+                                  0
+                          ? 1
+                          : 0,
+                    );
+                    if (!assessment.requiresAttention) {
+                      return const SizedBox.shrink();
+                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: DataFreshnessBanner(
+                        assessment: assessment,
+                        dataLabel: 'thu chi',
+                      ),
+                    );
+                  },
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
+                ),
+                summaryAsync.when(
                   data: (data) =>
                       _FinanceMetricStrip(data: data, periodLabel: periodLabel),
                   loading: () => const _FinanceMetricLoading(),
@@ -262,7 +294,7 @@ class FinanceScreen extends ConsumerWidget {
                     onRetry: () => ref.invalidate(transactionsProvider),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xxl),
+                SizedBox(height: compactLayout ? AppSpacing.xxl : 104),
               ],
             ),
           ),
@@ -280,24 +312,35 @@ class _FinanceMetricStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 900;
     final balance = asDouble(
       data['cashBalance'] ?? data['currentBalance'] ?? data['balance'],
     );
     final income = asDouble(data['totalIncome'] ?? data['income']);
     final expense = asDouble(data['totalExpense'] ?? data['expense']);
     final net = income - expense;
+    final rawAsOf = data['period'] is Map
+        ? (data['period'] as Map)['to']?.toString()
+        : null;
+    final asOf = rawAsOf == null ? null : DateTime.tryParse(rawAsOf);
+    final balanceDateLabel = asOf == null
+        ? 'Hiện tại'
+        : 'Tại ${DateFormat('dd/MM/yyyy').format(asOf.toLocal())}';
 
     return AppFillGrid(
-      minItemWidth: 190,
+      minItemWidth: compact ? 150 : 190,
       maxColumns: 4,
-      itemHeight: 88,
+      spacing: compact ? AppSpacing.sm : AppSpacing.md,
+      runSpacing: compact ? AppSpacing.sm : AppSpacing.md,
+      itemHeight: compact ? 96 : 88,
       children: [
         AppKpiCard(
           title: 'Quỹ tiền mặt',
           value: _currencyFormat.format(balance),
           color: AppColors.primary,
           assetPath: AppAssets.cash,
-          badgeText: 'Hiện tại',
+          badgeText: balanceDateLabel,
+          compact: compact,
         ),
         AppKpiCard(
           title: 'Tổng thu',
@@ -305,6 +348,7 @@ class _FinanceMetricStrip extends StatelessWidget {
           color: AppColors.success,
           assetPath: AppAssets.revenue,
           badgeText: periodLabel,
+          compact: compact,
         ),
         AppKpiCard(
           title: 'Tổng chi',
@@ -312,6 +356,7 @@ class _FinanceMetricStrip extends StatelessWidget {
           color: AppColors.danger,
           assetPath: AppAssets.orders,
           badgeText: periodLabel,
+          compact: compact,
         ),
         AppKpiCard(
           title: 'Dòng tiền thuần',
@@ -319,6 +364,7 @@ class _FinanceMetricStrip extends StatelessWidget {
           color: net >= 0 ? AppColors.success : AppColors.danger,
           assetPath: AppAssets.profit,
           badgeText: periodLabel,
+          compact: compact,
         ),
       ],
     );
@@ -357,7 +403,9 @@ class _CashFlowPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chartHeight = MediaQuery.sizeOf(context).width < 600 ? 250.0 : 300.0;
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final chartHeight = compact ? 286.0 : 316.0;
+    final emptyHeight = compact ? 150.0 : 180.0;
     final dailyFlow = ((data['dailyFlow'] as List?) ?? const [])
         .whereType<Map>()
         .toList();
@@ -390,7 +438,7 @@ class _CashFlowPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           if (dailyFlow.isEmpty || !hasMovement)
             SizedBox(
-              height: chartHeight,
+              height: emptyHeight,
               child: const AppEmpty(
                 visual: AppEmptyVisual.finance,
                 message: 'Chưa có giao dịch thu–chi trong kỳ',
@@ -425,12 +473,15 @@ class _ExpenseCategoryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final chartHeight = MediaQuery.sizeOf(context).width < 600 ? 250.0 : 300.0;
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final chartHeight = compact ? 250.0 : 300.0;
+    final emptyHeight = compact ? 96.0 : 108.0;
     final categories =
         ((data['categories'] as List?) ?? (data['items'] as List?) ?? const [])
             .whereType<Map>()
-            .take(5)
+            .take(6)
             .toList();
+    final total = asDouble(data['total']);
     final maximum = categories.fold<double>(0, (current, item) {
       final value = asDouble(item['total'] ?? item['amount'] ?? item['value']);
       return value > current ? value : current;
@@ -442,13 +493,13 @@ class _ExpenseCategoryPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionLead(
-            title: 'Nhóm chi phí lớn',
-            subtitle: '$periodLabel · Năm nhóm có tổng chi cao nhất.',
+            title: 'Nhóm tiền chi lớn',
+            subtitle: '$periodLabel · Tỷ trọng trong tổng tiền chi.',
           ),
           const SizedBox(height: AppSpacing.lg),
           if (categories.isEmpty)
             SizedBox(
-              height: chartHeight,
+              height: emptyHeight,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -481,6 +532,7 @@ class _ExpenseCategoryPanel extends StatelessWidget {
                             categories[index]['value'],
                       ),
                       maximum: maximum,
+                      total: total,
                     ),
                     if (index < categories.length - 1)
                       const SizedBox(height: AppSpacing.md),
@@ -498,17 +550,20 @@ class _ExpenseCategoryRow extends StatelessWidget {
   final String name;
   final double value;
   final double maximum;
+  final double total;
 
   const _ExpenseCategoryRow({
     required this.name,
     required this.value,
     required this.maximum,
+    required this.total,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final progress = maximum <= 0 ? 0.0 : (value / maximum).clamp(0.0, 1.0);
+    final share = total <= 0 ? 0.0 : value / total * 100;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,7 +583,7 @@ class _ExpenseCategoryRow extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(
-              _currencyFormat.format(value),
+              '${share.toStringAsFixed(1)}% · ${_currencyFormat.format(value)}',
               style: TextStyle(
                 color: colors.textPrimary,
                 fontSize: 12,
@@ -762,9 +817,7 @@ class _DesktopTransactionRow extends StatelessWidget {
           Expanded(
             flex: 4,
             child: Text(
-              transaction['description']?.toString() ??
-                  transaction['note']?.toString() ??
-                  (isIncome ? 'Giao dịch thu' : 'Giao dịch chi'),
+              financeTransactionDescription(transaction),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -773,7 +826,9 @@ class _DesktopTransactionRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              transaction['paymentMethod']?.toString() ?? 'Tiền mặt',
+              financePaymentMethodLabel(
+                transaction['paymentMethod']?.toString(),
+              ),
               style: TextStyle(color: colors.textSecondary, fontSize: 12),
             ),
           ),
@@ -835,9 +890,7 @@ class _MobileTransactionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transaction['description']?.toString() ??
-                      transaction['note']?.toString() ??
-                      (isIncome ? 'Giao dịch thu' : 'Giao dịch chi'),
+                  financeTransactionDescription(transaction),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -847,7 +900,9 @@ class _MobileTransactionRow extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  transaction['paymentMethod']?.toString() ?? 'Tiền mặt',
+                  financePaymentMethodLabel(
+                    transaction['paymentMethod']?.toString(),
+                  ),
                   style: TextStyle(color: colors.textSecondary, fontSize: 12),
                 ),
               ],

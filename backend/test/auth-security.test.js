@@ -200,6 +200,24 @@ test('refresh token reuse commits family revocation before returning 401', async
   assert.equal(transactionCommitted, true);
 });
 
+test('shop lookup failure aborts authentication before issuing a session', async () => {
+  const service = new AuthService();
+  let sessionIssued = false;
+  service.getUserShops = async () => {
+    throw new Error('database unavailable');
+  };
+  service.createSessionTokens = async () => {
+    sessionIssued = true;
+    return { accessToken: 'access', refreshToken: 'refresh', sessionId: 'session' };
+  };
+
+  await assert.rejects(
+    service.issueAuthResult({ id: 7 }),
+    /database unavailable/,
+  );
+  assert.equal(sessionIssued, false);
+});
+
 test('auth migration requires explicit OTP reset confirmation and is idempotent', () => {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'src', 'scripts', 'apply-auth-migration.ts'),

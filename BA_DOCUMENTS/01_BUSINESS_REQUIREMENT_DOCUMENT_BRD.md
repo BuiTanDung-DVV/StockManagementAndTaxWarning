@@ -17,7 +17,7 @@
 | BR-TAX-02 | API chuẩn hóa số thuế đầu vào và số phải nộp không âm; số nộp thừa được tách riêng | Đã xác minh code/test; chưa production |
 | BR-TAX-03 | Thiếu/sai MST và placeholder cũ `0123456789` đều chặn xuất XML | Đã xác minh code/test; chưa production |
 | BR-UX-01 | Các vùng dashboard/finance liên quan dùng error/retry rõ hơn thay vì số fallback | Đã xác minh code; chưa production |
-| BR-SALE-06 | CTA POS mobile có khoảng an toàn; AI không phủ POS mobile | Đã xác minh code; test layout đã bổ sung nhưng chưa chạy lại; chưa kiểm tra production |
+| BR-SALE-06 | CTA ghi nhận bán hàng trên mobile có khoảng an toàn; AI không phủ luồng xác nhận giao dịch | Đã xác minh code và test layout; chưa kiểm tra production sau đổi thuật ngữ |
 
 Các yêu cầu vẫn mở: transaction toàn vẹn sale/return, đối soát số liệu production,
 XSD/import HTKK, accessibility, migration `system_configs` và kiểm thử thiết bị
@@ -73,7 +73,7 @@ pháp lý, kế toán hoặc cơ quan thuế.
 | Vai trò | Nhu cầu chính | Quyền quyết định |
 |---|---|---|
 | Chủ cửa hàng | Tổng quan, lợi nhuận, thuế, nhân viên, cấu hình | Nghiệp vụ và phát hành |
-| Nhân viên bán hàng | POS, khách hàng, đơn, thu nợ theo quyền | Vận hành bán hàng |
+| Nhân viên bán hàng | Ghi nhận giao dịch bán, khách hàng, đơn, thu nợ theo quyền | Vận hành bán hàng |
 | Nhân viên kho | Nhập, kiểm kê, XNT, cảnh báo tồn | Vận hành kho |
 | Kế toán/người phụ trách tài chính | Sổ quỹ, công nợ, báo cáo, xuất dữ liệu | Xác nhận số liệu |
 | BA/PO | Requirement, acceptance, ưu tiên backlog | Phạm vi phiên bản |
@@ -87,7 +87,7 @@ pháp lý, kế toán hoặc cơ quan thuế.
 - Đăng ký email/OTP, đăng nhập, quên/đặt lại mật khẩu, refresh token.
 - Cửa hàng, thành viên, vai trò và permission.
 - Sản phẩm, danh mục, tag, đơn vị quy đổi, lô và lịch sử giá.
-- POS, đơn bán, payment, hoàn hàng.
+- Ghi nhận giao dịch bán, đơn bán, thanh toán, công nợ và hoàn hàng.
 - Kho, movement, PO, kiểm kê, XNT và cảnh báo.
 - Khách hàng, nhà cung cấp, khoản phải thu/phải trả.
 - Sổ quỹ, giao dịch, P&L, dự báo, hóa đơn và nghĩa vụ thuế.
@@ -122,12 +122,12 @@ pháp lý, kế toán hoặc cơ quan thuế.
 
 | ID | Yêu cầu | Mức ưu tiên | Trạng thái baseline |
 |---|---|---|---|
-| BR-SALE-01 | POS tìm hàng, thêm giỏ, chọn khách và thanh toán | Must | Đúng một phần |
+| BR-SALE-01 | Luồng ghi nhận bán hàng tìm hàng, chọn số lượng, khách và cách thanh toán | Must | Đúng một phần |
 | BR-SALE-02 | Đơn/payment/tồn/COGS ghi atomically | Must | Bị chặn |
 | BR-SALE-03 | Đơn nợ tạo khoản phải thu | Must | Đúng một phần |
 | BR-SALE-04 | Hoàn/hủy đảo tác động đúng một lần | Must | Bị chặn |
 | BR-SALE-05 | Summary khớp danh sách theo cùng filter | Must | Không chính xác |
-| BR-SALE-06 | POS hoàn tất được trên mobile | Must | Không chính xác |
+| BR-SALE-06 | Giao dịch bán hoàn tất được trên mobile | Must | Đúng một phần |
 
 ### 7.3 Kho và giá vốn
 
@@ -136,7 +136,7 @@ pháp lý, kế toán hoặc cơ quan thuế.
 | BR-INV-01 | Cảnh báo dưới định mức khớp tồn hiện tại | Must | Đã xác minh |
 | BR-INV-02 | Nhập hàng cập nhật tồn/lô/giá vốn | Must | Bị chặn |
 | BR-INV-03 | Kiểm kê và điều chỉnh có lý do/người duyệt | Must | Đúng một phần |
-| BR-INV-04 | Báo cáo XNT cân theo công thức | Must | Bị chặn |
+| BR-INV-04 | Báo cáo XNT cân theo công thức | Must | Đã xác minh local và DB chỉ đọc; chưa smoke test production bản mới |
 | BR-INV-05 | Giá vốn nhất quán giữa đơn, kho và P&L | Must | Đúng một phần |
 
 ### 7.4 Tài chính và công nợ
@@ -207,5 +207,5 @@ pháp lý, kế toán hoặc cơ quan thuế.
 - Dashboard, sales, finance, công nợ và tồn kho khớp bộ dữ liệu kiểm soát.
 - Employee không thể vượt quyền bằng shop ID hoặc `all`.
 - Rule thuế có nguồn/hiệu lực; không còn nội dung 100 triệu như quy định hiện hành.
-- POS mobile hoàn tất được luồng chính.
+- Luồng ghi nhận giao dịch bán hoàn tất được trên mobile.
 - Build/lint/test chạy trong CI và ma trận truy vết được cập nhật.

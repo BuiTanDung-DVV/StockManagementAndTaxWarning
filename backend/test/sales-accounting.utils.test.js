@@ -7,6 +7,7 @@ const {
   buildAllocatedMerchandiseRevenueSql,
   calculateAllocatedMerchandiseRevenue,
   calculateSalesAccountingSplit,
+  calculateSalesTaxLines,
 } = require('../dist/sales/sales-accounting.utils.js');
 
 test('sales accounting separates net revenue, output tax, cash and receivable', () => {
@@ -45,6 +46,33 @@ test('order discount is allocated proportionally to product revenue', () => {
   );
 });
 
+test('sales tax is recalculated from database line rates after discount allocation', () => {
+  assert.deepEqual(
+    calculateSalesTaxLines(
+      [
+        { subtotal: 600_000, taxRate: 10 },
+        { subtotal: 400_000, taxRate: 5 },
+      ],
+      1_000_000,
+      100_000,
+    ),
+    {
+      lines: [
+        { subtotal: 600_000, taxRate: 10, taxAmount: 54_000 },
+        { subtotal: 400_000, taxRate: 5, taxAmount: 18_000 },
+      ],
+      taxAmount: 72_000,
+    },
+  );
+});
+
+test('sales tax rejects an invalid rate loaded from database', () => {
+  assert.throws(
+    () => calculateSalesTaxLines([{ subtotal: 100, taxRate: 101 }], 100, 0),
+    /Product tax rate in database is invalid/,
+  );
+});
+
 test('allocated revenue SQL guards zero subtotal and legacy excessive discounts', () => {
   const sql = buildAllocatedMerchandiseRevenueSql('oi.subtotal', 'o');
   assert.match(sql, /COALESCE\(o\.subtotal, 0\) <= 0/);
@@ -71,16 +99,21 @@ test('full return uses server prices and reverses every accounting component', (
   assert.match(source, /accountCode: '632'/);
 });
 
-test('return reporting reverses the returned order value, not only cash refunded', () => {
+test('sales summary reports net merchandise revenue without output VAT', () => {
   const sales = fs.readFileSync(
     path.join(__dirname, '..', 'src', 'services', 'sales.service.ts'),
     'utf8',
   );
-  const tax = fs.readFileSync(
-    path.join(__dirname, '..', 'src', 'services', 'tax.service.ts'),
-    'utf8',
+  assert.match(sales, /SUM\(o\.subtotal - o\.discount_amount\)/);
+  assert.match(sales, /JOIN sales_return_items ri ON ri\.return_id = r\.id/);
+  assert.match(sales, /buildAllocatedMerchandiseRevenueSql\(\s*'ri\.subtotal'/);
+  assert.match(sales, /sold_item\.tax_amount \* ri\.quantity \/ sold_item\.quantity/);
+  assert.doesNotMatch(
+    sales,
+    /SUM\(returnedOrder\.subtotal - returnedOrder\.discount_amount\)/,
   );
-
-  assert.match(sales, /SUM\(returnedOrder\.total_amount\)/);
-  assert.match(tax, /salesReturn\.order\?\.totalAmount/);
+  assert.match(sales, /addSelect\('COALESCE\(SUM\(o\.tax_amount\), 0\)'/);
+  assert.match(sales, /SELECT SUM\(r\.refund_amount\)/);
+  assert.match(sales, /grossProfit: netSalesRevenue - totalCogs/);
+  assert.match(sales, /totalRevenue: grossChargedAmount - returnChargedAmount|const totalRevenue = grossChargedAmount - returnChargedAmount/);
 });

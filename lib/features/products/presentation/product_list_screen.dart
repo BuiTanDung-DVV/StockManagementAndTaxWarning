@@ -343,6 +343,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                 p['retailPrice'],
                           );
                           final stock = p['currentStock'] ?? p['stock'] ?? 0;
+                          final minStock = TypeParser.asDouble(
+                            p['minStock'] ??
+                                p['minimumStock'] ??
+                                p['min_stock'],
+                          );
                           final unit = p['unit']?.toString().trim();
                           final displayUnit = unit == null || unit.isEmpty
                               ? 'đơn vị'
@@ -355,7 +360,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                 : 'Còn tồn: $stock $displayUnit',
                             color: isOutOfStock
                                 ? AppColors.danger
-                                : (stock < 10
+                                : (productIsLowStock(stock, minStock)
                                       ? AppColors.warning
                                       : AppColors.success),
                           );
@@ -587,7 +592,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     }
 
     // Auto Tags Mechanism
-    if (stock > 0 && stock <= 10) {
+    final minStock = TypeParser.asDouble(
+      p['minStock'] ?? p['minimumStock'] ?? p['min_stock'],
+    );
+    if (productIsLowStock(stock, minStock)) {
       if (!tags.contains('Sắp hết')) tags.insert(0, 'Sắp hết');
     }
 
@@ -651,4 +659,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
   bool _isInternalTag(String tag) =>
       tag.trim().toLowerCase().startsWith('sim_tag_');
+}
+
+bool productIsLowStock(num stock, num minStock) {
+  return minStock > 0 && stock > 0 && stock <= minStock;
 }

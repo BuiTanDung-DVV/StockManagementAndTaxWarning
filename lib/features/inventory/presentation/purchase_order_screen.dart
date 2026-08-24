@@ -167,8 +167,8 @@ class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
                     po['supplierName'] ??
                     'Không rõ nhà cung cấp';
                 final totalAmount = asDouble(po['totalAmount']);
-                final createdAt =
-                    po['createdAt']?.toString().split('T').first ?? '';
+                final orderDate =
+                    po['orderDate']?.toString().split('T').first ?? '';
                 final invoiceNumber = po['invoiceNumber'] ?? '';
                 final status = (po['status'] ?? '').toString().toUpperCase();
 
@@ -265,7 +265,7 @@ class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  '${createdAt.isNotEmpty ? createdAt : ''}${invoiceNumber.isNotEmpty ? ' • HĐ: $invoiceNumber' : ''}',
+                                  '${orderDate.isNotEmpty ? orderDate : ''}${invoiceNumber.isNotEmpty ? ' • HĐ: $invoiceNumber' : ''}',
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
                                     color: c.textMuted,

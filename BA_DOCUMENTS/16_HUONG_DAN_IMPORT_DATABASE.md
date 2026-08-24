@@ -4,7 +4,7 @@
 
 Tài liệu này hướng dẫn tạo mới hoặc thay thế dữ liệu nghiệp vụ của SmartStock Tax.
 Bộ dữ liệu chuẩn mô phỏng cửa hàng hoạt động liên tục từ `2023-07-29` đến
-`2026-07-28`, gồm bán hàng, nhập kho, tồn kho, công nợ, dòng tiền, sổ kế toán,
+`2026-08-24`, gồm bán hàng, nhập kho, tồn kho, công nợ, dòng tiền, sổ kế toán,
 chốt quỹ và dữ liệu báo cáo.
 
 Hai hồ sơ ngành được hỗ trợ:
@@ -103,6 +103,54 @@ Kiểm tra thêm trên giao diện:
 - Số dư tài khoản khớp tổng thu trừ tổng chi.
 - Chốt quỹ có đủ từng ngày và không trùng trong cùng cửa hàng.
 
+### 4.5. Nối dài dữ liệu đến ngày kiểm thử
+
+Script nối dài chỉ thêm ngày còn thiếu, không xóa dữ liệu cũ. Mã chứng từ được tạo
+theo cửa hàng, ngày và số thứ tự nên chạy lại cùng khoảng ngày không tạo bản ghi trùng.
+
+Xem trước kế hoạch:
+
+```powershell
+npm run seed:extend-test-data -- --shop-ids=34,35 --from=2026-07-29 --to=2026-08-24 --orders-per-day=3
+```
+
+Ghi vào database sau khi đã xác nhận đúng phạm vi:
+
+```powershell
+npm run seed:extend-test-data -- --shop-ids=34,35 --from=2026-07-29 --to=2026-08-24 --orders-per-day=3 --apply
+```
+
+Mỗi ngày và mỗi cửa hàng có ba đơn bán đã thanh toán, một hóa đơn bán, một khoản
+chi vận hành và một lần chốt quỹ. Phương thức thanh toán luân phiên tiền mặt,
+chuyển khoản và QR; hàng bán, giá, giá vốn, tồn lô và khách hàng đều lấy từ DB.
+
+Kết quả ghi ngày 24/08/2026:
+
+| Cửa hàng | Đơn bán mới | Hóa đơn mới | Chi phí mới | Chốt quỹ mới |
+|---:|---:|---:|---:|---:|
+| 34 | 81 | 27 | 27 | 27 |
+| 35 | 81 | 27 | 27 | 27 |
+
+Sau khi chạy, cần đối soát thêm:
+
+```powershell
+node dist/scripts/audit-data-freshness.js --shop-ids=34,35 --as-of=2026-08-24
+node dist/scripts/audit-kpi-reconciliation.js --shop-ids=34,35 --from=2026-08-01 --to=2026-08-24
+node dist/scripts/audit-xnt-reconciliation.js --shop-ids=34,35 --from=2026-07-29 --to=2026-08-24
+```
+
+Nếu dữ liệu được tạo bởi phiên bản seed cũ thiếu bút toán thu công nợ 112, xem
+trước rồi mới backfill:
+
+```powershell
+npm run backfill:debt-collection-journals -- --shop-ids=34,35
+npm run backfill:debt-collection-journals -- --shop-ids=34,35 --apply
+```
+
+Script chỉ bổ sung phần chênh lệch qua cặp cân bằng `Nợ 112 / Có 131`, lưu ID
+bút toán trong bảng `data_repair_20260824_debt_collection_journals` và không thay
+đổi đơn bán, thanh toán hoặc số dư công nợ.
+
 ## 5. Cách thêm dữ liệu sau này
 
 ### Thêm qua giao diện hoặc API
@@ -168,6 +216,8 @@ tạo. Tổng chứng từ phải bằng tổng các dòng sau giảm giá và t
 - Mỗi hồ sơ ghi một marker phiên bản trong `activity_logs`.
 - Nếu marker đã tồn tại, script từ chối chạy lại trừ khi dùng chế độ thay thế.
 - Mã dữ liệu có chứa khóa cửa hàng để tránh trùng giữa nhiều cửa hàng.
+- Script nối dài bỏ qua chứng từ đã có cùng mã và đã được kiểm tra chạy lặp không
+  phát sinh thêm dữ liệu.
 
 ## 8. Hoàn tác và khôi phục
 

@@ -33,6 +33,25 @@ void main() {
     final icon = tester.widget<AppAssetIcon>(find.byType(AppAssetIcon));
     expect(icon.assetPath, AppAssets.emptyInventory);
   });
+
+  testWidgets('compact empty state fits a bounded chart panel', (tester) async {
+    await tester.pumpWidget(
+      const _TestApp(
+        child: SizedBox(
+          width: 400,
+          height: 150,
+          child: AppEmpty(
+            visual: AppEmptyVisual.finance,
+            message: 'Chưa có giao dịch thu–chi trong kỳ',
+            subtitle: 'Biểu đồ sẽ xuất hiện khi có giao dịch thực tế.',
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Chưa có giao dịch thu–chi trong kỳ'), findsOneWidget);
+  });
 }
 
 class _TestApp extends StatelessWidget {

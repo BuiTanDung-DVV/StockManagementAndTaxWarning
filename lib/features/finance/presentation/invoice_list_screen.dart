@@ -6,12 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/responsive_layout.dart';
+import '../../settings/providers/shop_provider.dart';
+import '../domain/invoice_data_quality.dart';
 import '../providers/finance_provider.dart';
+import 'invoice_editor_dialog.dart';
 
 class InvoiceListScreen extends ConsumerStatefulWidget {
   const InvoiceListScreen({super.key});
@@ -23,6 +27,7 @@ class InvoiceListScreen extends ConsumerStatefulWidget {
 class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   int _page = 1;
   String? _type;
+  bool _showAllPeriods = false;
 
   String _fmt(num v) => NumberFormat.currency(
     locale: 'vi_VN',
@@ -33,24 +38,40 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   @override
   Widget build(BuildContext context) {
     final ref = this.ref;
-    final invAsync = ref.watch(invoiceListProvider((page: _page, type: _type)));
-    final now = DateTime.now();
-    final from = DateTime(
-      now.year,
-      now.month,
-      1,
-    ).toIso8601String().split('T').first;
-    final to = now.toIso8601String().split('T').first;
+    final period = currentMonthReportingPeriod(DateTime.now());
+    final from = period.from;
+    final to = period.to;
+    final listPeriod = invoiceListPeriodParams(
+      showAll: _showAllPeriods,
+      from: from,
+      to: to,
+    );
+    final invAsync = ref.watch(
+      invoiceListProvider((
+        page: _page,
+        type: _type,
+        from: listPeriod.from,
+        to: listPeriod.to,
+      )),
+    );
+    final periodLabel = reportingCompactRangeLabel(
+      DateTime.parse(from),
+      DateTime.parse(to),
+    );
     final summaryAsync = ref.watch(
       invoiceSummaryProvider((from: from, to: to)),
+    );
+    final reconciliationAsync = ref.watch(
+      invoiceReconciliationProvider((from: null, to: null, all: true)),
     );
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
+    final canEdit = ref.watch(shopProvider).hasPermission('finance', 'edit');
 
     return Scaffold(
       backgroundColor: c.bg,
-      floatingActionButton: compactLayout
+      floatingActionButton: compactLayout || !canEdit
           ? null
           : AppPrimaryFloatingAction(
               label: 'Thêm hóa đơn',
@@ -63,7 +84,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
         title: const Text('Hóa đơn'),
         actions: [
           featureGuideButton(context, 'invoices'),
-          if (compactLayout)
+          if (compactLayout && canEdit)
             AppPrimaryHeaderAction(
               label: 'Thêm hóa đơn',
               assetPath: AppAssets.add,
@@ -128,11 +149,22 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                   ),
                 ),
 
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Các số VAT dưới đây chỉ dùng để đối chiếu dữ liệu hóa đơn, không thay thế nghĩa vụ thuế trên tờ khai.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: c.textSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
                 // Summary Metrics - Taste-Skill: Left-aligned, no heavy cards
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'Thuế VAT tháng này',
+                    'Đối chiếu VAT · $periodLabel',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: c.textPrimary,
@@ -148,6 +180,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                     final vatIn = asNum(summary['vatIn']);
                     final vatOut = asNum(summary['vatOut']);
                     final vatOwed = asNum(summary['vatOwed']);
+                    final vatCredit = asNum(summary['vatCredit']);
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -171,8 +204,10 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                             theme,
                           ),
                           _buildMetricItem(
-                            'Phải nộp',
-                            _fmt(vatOwed),
+                            vatOwed > 0
+                                ? 'Chênh lệch đầu ra − đầu vào'
+                                : 'Chênh lệch đầu vào − đầu ra',
+                            _fmt(vatOwed > 0 ? vatOwed : vatCredit),
                             vatOwed > 0 ? AppColors.danger : AppColors.success,
                             c,
                             theme,
@@ -181,6 +216,32 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                       ),
                     );
                   },
+                ),
+
+                const SizedBox(height: 20),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: reconciliationAsync.when(
+                    loading: () => const _InvoiceQualityLoading(),
+                    error: (_, _) => const _InvoiceQualityUnavailable(),
+                    data: (response) {
+                      final firstDate = DateTime.tryParse(
+                        response['from']?.toString() ?? '',
+                      );
+                      final lastDate = DateTime.tryParse(
+                        response['to']?.toString() ?? '',
+                      );
+                      final qualityPeriodLabel =
+                          firstDate != null && lastDate != null
+                          ? reportingCompactRangeLabel(firstDate, lastDate)
+                          : 'Toàn bộ dữ liệu';
+                      return _InvoiceQualityPanel(
+                        quality: InvoiceDataQuality.fromResponse(response),
+                        periodLabel: qualityPeriodLabel,
+                      );
+                    },
+                  ),
                 ),
 
                 const SizedBox(height: 32),
@@ -193,7 +254,9 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        'Danh sách hóa đơn',
+                        _showAllPeriods
+                            ? 'Danh sách hóa đơn · Toàn bộ'
+                            : 'Danh sách hóa đơn · $periodLabel',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: c.textPrimary,
@@ -211,24 +274,18 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                 const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final option in const <(String?, String)>[
-                        (null, 'Tất cả'),
-                        ('IN', 'Đầu vào'),
-                        ('OUT', 'Đầu ra'),
-                      ])
-                        ChoiceChip(
-                          label: Text(option.$2),
-                          selected: _type == option.$1,
-                          onSelected: (_) => setState(() {
-                            _type = option.$1;
-                            _page = 1;
-                          }),
-                        ),
-                    ],
+                  child: InvoiceListFilters(
+                    periodLabel: periodLabel,
+                    showAllPeriods: _showAllPeriods,
+                    type: _type,
+                    onPeriodChanged: (showAll) => setState(() {
+                      _showAllPeriods = showAll;
+                      _page = 1;
+                    }),
+                    onTypeChanged: (type) => setState(() {
+                      _type = type;
+                      _page = 1;
+                    }),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -236,12 +293,19 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                 if (items.isEmpty)
                   AppEmpty(
                     visual: AppEmptyVisual.document,
-                    message: 'Chưa có hóa đơn nào',
-                    action: ElevatedButton.icon(
-                      icon: const Icon(Icons.receipt),
-                      label: const Text('Thêm hóa đơn'),
-                      onPressed: () => _showAddDialog(context, ref),
-                    ),
+                    message: _showAllPeriods
+                        ? 'Chưa có hóa đơn nào'
+                        : 'Chưa có hóa đơn trong $periodLabel',
+                    subtitle: _showAllPeriods
+                        ? null
+                        : 'Chuyển sang “Toàn bộ thời gian” để xem dữ liệu các kỳ trước.',
+                    action: canEdit
+                        ? ElevatedButton.icon(
+                            icon: const Icon(Icons.receipt),
+                            label: const Text('Thêm hóa đơn'),
+                            onPressed: () => _showAddDialog(context, ref),
+                          )
+                        : null,
                   )
                 else
                   // Taste-Skill: Flat List
@@ -269,9 +333,12 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
                         return _InvoiceTile(
                           invoice: inv,
                           formatter: _fmt,
-                          onEdit: () => _showEditDialog(context, ref, inv),
-                          onDelete: () =>
-                              _confirmDelete(context, ref, inv['id']),
+                          onEdit: !canEdit || invoiceIsLinked(inv)
+                              ? null
+                              : () => _showEditDialog(context, ref, inv),
+                          onDelete: !canEdit || invoiceIsLinked(inv)
+                              ? null
+                              : () => _confirmDelete(context, ref, inv['id']),
                         );
                       },
                     ),
@@ -333,92 +400,16 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   }
 
   void _showAddDialog(BuildContext context, WidgetRef ref) {
-    final numC = TextEditingController();
-    final partnerC = TextEditingController();
-    final amountC = TextEditingController();
-    final vatC = TextEditingController();
-    String type = 'IN';
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Thêm hóa đơn'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: type,
-                items: const [
-                  DropdownMenuItem(value: 'IN', child: Text('Đầu vào')),
-                  DropdownMenuItem(value: 'OUT', child: Text('Đầu ra')),
-                ],
-                onChanged: (v) => type = v ?? 'IN',
-                decoration: const InputDecoration(labelText: 'Loại'),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: numC,
-                decoration: const InputDecoration(labelText: 'Số hóa đơn'),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: partnerC,
-                decoration: const InputDecoration(labelText: 'Đối tác'),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: amountC,
-                decoration: const InputDecoration(
-                  labelText: 'Số tiền trước thuế',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: vatC,
-                decoration: const InputDecoration(labelText: 'Tiền VAT'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final partnerName = partnerC.text.trim();
-              final subtotal = double.tryParse(amountC.text) ?? 0;
-              final taxAmount = double.tryParse(vatC.text) ?? 0;
-              if (partnerName.isEmpty || subtotal <= 0 || taxAmount < 0) {
-                ToastService.showError(
-                  'Vui lòng nhập đối tác, số tiền > 0 và VAT hợp lệ',
-                );
-                return;
-              }
-              await ref.read(financeRepoProvider).createInvoice({
-                'invoiceType': type,
-                'invoiceNumber': numC.text.trim().isEmpty
-                    ? null
-                    : numC.text.trim(),
-                'partnerName': partnerName,
-                'subtotal': subtotal,
-                'taxAmount': taxAmount,
-                'totalAmount': subtotal + taxAmount,
-                'invoiceDate': DateTime.now()
-                    .toIso8601String()
-                    .split('T')
-                    .first,
-              });
-              ref.invalidate(invoiceListProvider);
-              ref.invalidate(invoiceSummaryProvider);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
+      builder: (_) => InvoiceEditorDialog(
+        onSubmit: (payload) async {
+          await ref.read(financeRepoProvider).createInvoice(payload);
+          ref.invalidate(invoiceListProvider);
+          ref.invalidate(invoiceSummaryProvider);
+          ref.invalidate(invoiceReconciliationProvider);
+          ToastService.showSuccess('Đã thêm hóa đơn');
+        },
       ),
     );
   }
@@ -427,90 +418,44 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
     final invId = inv['id'] is int
         ? inv['id']
         : int.tryParse(inv['id']?.toString() ?? '0') ?? 0;
-    final numC = TextEditingController(text: inv['invoiceNumber']?.toString());
-    final partnerC = TextEditingController(
-      text: inv['partnerName']?.toString(),
-    );
-    final amountC = TextEditingController(text: inv['subtotal']?.toString());
-    final vatC = TextEditingController(text: inv['taxAmount']?.toString());
-    String type = inv['invoiceType']?.toString() ?? 'IN';
+    final detailFuture = ref.read(financeRepoProvider).findInvoiceById(invId);
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sửa hóa đơn'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: type,
-                items: const [
-                  DropdownMenuItem(value: 'IN', child: Text('Đầu vào')),
-                  DropdownMenuItem(value: 'OUT', child: Text('Đầu ra')),
-                ],
-                onChanged: (v) => type = v ?? 'IN',
-                decoration: const InputDecoration(labelText: 'Loại'),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: numC,
-                decoration: const InputDecoration(labelText: 'Số hóa đơn'),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: partnerC,
-                decoration: const InputDecoration(labelText: 'Đối tác'),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: amountC,
-                decoration: const InputDecoration(
-                  labelText: 'Số tiền trước thuế',
+      builder: (_) => FutureBuilder<Map<String, dynamic>>(
+        future: detailFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return AlertDialog(
+              title: const Text('Không thể mở hóa đơn'),
+              content: const Text('Không tải được chi tiết dòng hàng.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Đóng'),
                 ),
-                keyboardType: TextInputType.number,
+              ],
+            );
+          }
+          if (!snapshot.hasData) {
+            return const AlertDialog(
+              content: SizedBox(
+                width: 280,
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: vatC,
-                decoration: const InputDecoration(labelText: 'Tiền VAT'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final partnerName = partnerC.text.trim();
-              final subtotal = double.tryParse(amountC.text) ?? 0;
-              final taxAmount = double.tryParse(vatC.text) ?? 0;
-              if (partnerName.isEmpty || subtotal <= 0 || taxAmount < 0) {
-                ToastService.showError(
-                  'Vui lòng nhập đối tác, số tiền > 0 và VAT hợp lệ',
-                );
-                return;
-              }
-              await ref.read(financeRepoProvider).updateInvoice(invId, {
-                'invoiceType': type,
-                'invoiceNumber': numC.text.trim().isEmpty
-                    ? null
-                    : numC.text.trim(),
-                'partnerName': partnerName,
-                'subtotal': subtotal,
-                'taxAmount': taxAmount,
-                'totalAmount': subtotal + taxAmount,
-              });
+            );
+          }
+          return InvoiceEditorDialog(
+            initialInvoice: snapshot.data!,
+            onSubmit: (payload) async {
+              await ref.read(financeRepoProvider).updateInvoice(invId, payload);
               ref.invalidate(invoiceListProvider);
               ref.invalidate(invoiceSummaryProvider);
-              if (ctx.mounted) Navigator.pop(ctx);
+              ref.invalidate(invoiceReconciliationProvider);
+              ToastService.showSuccess('Đã cập nhật hóa đơn');
             },
-            child: const Text('Cập nhật'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -531,6 +476,7 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
           ToastService.showSuccess('Xóa hóa đơn thành công');
           ref.invalidate(invoiceListProvider);
           ref.invalidate(invoiceSummaryProvider);
+          ref.invalidate(invoiceReconciliationProvider);
         } catch (e) {
           ToastService.showError('Lỗi: $e');
         }
@@ -539,11 +485,273 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
   }
 }
 
+({String? from, String? to}) invoiceListPeriodParams({
+  required bool showAll,
+  required String from,
+  required String to,
+}) => showAll ? (from: null, to: null) : (from: from, to: to);
+
+class InvoiceListFilters extends StatelessWidget {
+  final String periodLabel;
+  final bool showAllPeriods;
+  final String? type;
+  final ValueChanged<bool> onPeriodChanged;
+  final ValueChanged<String?> onTypeChanged;
+
+  const InvoiceListFilters({
+    super.key,
+    required this.periodLabel,
+    required this.showAllPeriods,
+    required this.type,
+    required this.onPeriodChanged,
+    required this.onTypeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.cardAlt,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: colors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Bộ lọc danh sách',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Chỉ áp dụng cho các hóa đơn bên dưới; KPI VAT vẫn theo $periodLabel.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Kỳ hiện tại'),
+                selected: !showAllPeriods,
+                onSelected: (_) => onPeriodChanged(false),
+              ),
+              ChoiceChip(
+                label: const Text('Toàn bộ thời gian'),
+                selected: showAllPeriods,
+                onSelected: (_) => onPeriodChanged(true),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final option in const <(String?, String)>[
+                (null, 'Tất cả loại'),
+                ('IN', 'Đầu vào'),
+                ('OUT', 'Đầu ra'),
+              ])
+                ChoiceChip(
+                  label: Text(option.$2),
+                  selected: type == option.$1,
+                  onSelected: (_) => onTypeChanged(option.$1),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InvoiceQualityPanel extends StatelessWidget {
+  final InvoiceDataQuality quality;
+  final String periodLabel;
+
+  const _InvoiceQualityPanel({
+    required this.quality,
+    required this.periodLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    final hasData = quality.checkedInvoices > 0;
+    final accent = quality.hasIssues
+        ? AppColors.warning
+        : hasData
+        ? AppColors.success
+        : AppColors.info;
+    final details = <String>[
+      if (quality.missingItemInvoices > 0)
+        '${quality.missingItemInvoices} hóa đơn thiếu dòng chi tiết',
+      if (quality.headerTotalMismatchInvoices > 0)
+        '${quality.headerTotalMismatchInvoices} hóa đơn lệch tổng',
+      if (quality.headerSubtotalMismatchInvoices > 0)
+        '${quality.headerSubtotalMismatchInvoices} hóa đơn lệch tiền hàng với chi tiết',
+      if (quality.unallocatedDiscountInvoices > 0)
+        '${quality.unallocatedDiscountInvoices} hóa đơn bán chưa phân bổ chiết khấu vào dòng',
+      if (quality.headerTaxMismatchInvoices > 0)
+        '${quality.headerTaxMismatchInvoices} hóa đơn lệch tiền thuế với chi tiết',
+      if (quality.invalidLineItems > 0)
+        '${quality.invalidLineItems} dòng có số lượng không hợp lệ',
+      if (quality.lineSubtotalMismatchItems > 0)
+        '${quality.lineSubtotalMismatchItems} dòng lệch thành tiền',
+      if (quality.lineTaxMismatchItems > 0)
+        '${quality.lineTaxMismatchItems} dòng lệch tiền thuế',
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: accent.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(AppRadius.control),
+            ),
+            child: AppAssetIcon(
+              assetPath: AppAssets.emptyDocument,
+              size: 22,
+              color: accent,
+              semanticLabel: 'Chất lượng dữ liệu hóa đơn',
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  quality.hasIssues
+                      ? 'Cần rà soát dữ liệu hóa đơn'
+                      : hasData
+                      ? 'Dữ liệu hóa đơn đã cân bằng'
+                      : 'Chưa có hóa đơn trong kỳ để xác minh',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Đã kiểm tra ${quality.checkedInvoices} hóa đơn · $periodLabel',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: details
+                        .map(
+                          (label) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.card,
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.control,
+                              ),
+                              border: Border.all(
+                                color: accent.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Text(
+                              label,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Không dùng các hóa đơn này để chốt báo cáo trước khi rà soát chứng từ gốc.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InvoiceQualityLoading extends StatelessWidget {
+  const _InvoiceQualityLoading();
+
+  @override
+  Widget build(BuildContext context) => const LinearProgressIndicator();
+}
+
+class _InvoiceQualityUnavailable extends StatelessWidget {
+  const _InvoiceQualityUnavailable();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.08),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Text(
+        'Chưa thể xác minh chất lượng dữ liệu hóa đơn. Vui lòng tải lại trước khi chốt báo cáo.',
+        style: TextStyle(color: colors.textSecondary),
+      ),
+    );
+  }
+}
+
+bool invoiceIsLinked(Map<String, dynamic> invoice) {
+  final referenceType = invoice['referenceType']?.toString().trim();
+  return referenceType != null && referenceType.isNotEmpty;
+}
+
 class _InvoiceTile extends StatelessWidget {
   final Map<String, dynamic> invoice;
   final String Function(num value) formatter;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _InvoiceTile({
     required this.invoice,
@@ -562,16 +770,25 @@ class _InvoiceTile extends StatelessWidget {
     final partner = invoice['partnerName']?.toString().trim();
     final date = invoice['invoiceDate']?.toString().split('T').first ?? '';
     final total = asNum(invoice['totalAmount']);
+    final discount = asNum(invoice['discountAmount']);
     final tax = asNum(invoice['taxAmount']);
+    final detailLabel = discount > 0
+        ? 'Giảm ${formatter(discount)} • VAT ${formatter(tax)}'
+        : 'VAT ${formatter(tax)}';
 
-    Widget menu() => PopupMenuButton<String>(
-      tooltip: 'Thao tác hóa đơn',
-      onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
-      itemBuilder: (_) => const [
-        PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa')),
-        PopupMenuItem(value: 'delete', child: Text('Xóa hóa đơn')),
-      ],
-    );
+    Widget menu() => onEdit == null || onDelete == null
+        ? Tooltip(
+            message: 'Hóa đơn được quản lý từ chứng từ gốc',
+            child: Icon(Icons.lock_outline, color: colors.textMuted, size: 20),
+          )
+        : PopupMenuButton<String>(
+            tooltip: 'Thao tác hóa đơn',
+            onSelected: (value) => value == 'edit' ? onEdit!() : onDelete!(),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa')),
+              PopupMenuItem(value: 'delete', child: Text('Xóa hóa đơn')),
+            ],
+          );
 
     Widget typeBadge() => Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -651,7 +868,7 @@ class _InvoiceTile extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'VAT ${formatter(tax)}',
+                          detailLabel,
                           style: AppTheme.tabularStyle(
                             context,
                             fontSize: 10,
@@ -712,7 +929,7 @@ class _InvoiceTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'VAT ${formatter(tax)}',
+                      detailLabel,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.textMuted,
                       ),

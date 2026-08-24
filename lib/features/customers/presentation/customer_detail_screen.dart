@@ -61,6 +61,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         status: null,
         customerId: widget.id,
         search: null,
+        from: null,
+        to: null,
       )),
     );
 
@@ -316,8 +318,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       if (file == null) return;
 
       final bytes = await file.readAsBytes();
-      if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-        ToastService.showError('Ảnh chứng từ phải nhỏ hơn 5 MB');
+      if (bytes.isEmpty || bytes.length > 4 * 1024 * 1024) {
+        ToastService.showError('Ảnh chứng từ phải không quá 4 MB');
         return;
       }
       final contentType =

@@ -48,6 +48,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
     double totalReturns,
     int orderCount,
     String today,
+    double explanationThreshold,
   ) async {
     final assessment = assessClosingCash(
       rawActualCash: _closingCashController.text,
@@ -68,11 +69,12 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
 
     final cashDifference = closingCash - expectedCash;
 
-    if (cashDifference.abs() > 50000 && _notesController.text.trim().isEmpty) {
+    if (cashDifference.abs() > explanationThreshold &&
+        _notesController.text.trim().isEmpty) {
       setState(() {
         _submitting = false;
         _errorMessage =
-            'Chênh lệch két lớn hơn 50.000đ. Vui lòng nhập lý do giải trình vào phần ghi chú.';
+            'Chênh lệch két lớn hơn ${_fmt(explanationThreshold)}. Vui lòng nhập lý do giải trình vào phần ghi chú.';
       });
       return;
     }
@@ -171,11 +173,13 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
           // Opening & expected cash calculations from backend
           final openingCash = asNum(data['openingCash']);
           final expectedCash = asNum(data['expectedCash']);
+          final explanationThreshold = asNum(data['explanationThreshold']);
 
           // Calculated local variables
           final closingAssessment = assessClosingCash(
             rawActualCash: _closingCashController.text,
             expectedCash: expectedCash.toDouble(),
+            explanationThreshold: explanationThreshold.toDouble(),
           );
           final localDifference = closingAssessment.difference;
           final differenceValue = localDifference ?? 0;
@@ -822,6 +826,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                             totalReturns.toDouble(),
                             orderCount,
                             today,
+                            explanationThreshold.toDouble(),
                           ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,

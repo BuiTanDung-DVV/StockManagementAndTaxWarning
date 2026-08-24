@@ -12,18 +12,18 @@ Quy ước: `Đã xác minh`, `Đúng một phần`, `Không chính xác`, `Bị
 | Luồng/yêu cầu | UI/điểm vào | API và dữ liệu chính | Bằng chứng production | Bằng chứng local/test | Trạng thái | Việc bắt buộc để đóng |
 |---|---|---|---|---|---|---|
 | AUTH — đăng ký, OTP, login, refresh, logout | `/login`, `/register`, `/verify-otp` | `/auth/*`; `users`, `otps`, refresh-token family | Login và protected route hoạt động ở commit cũ | Auth hardening + backend P0 57/57 đạt; schema check xác nhận migration auth chưa chạy và còn 14 OTP chờ | Bị chặn | Phê duyệt hủy OTP cũ, backup, migration, cold-start và test OTP/refresh/reuse/logout production |
-| SALE — POS, giá bán, thanh toán | `/pos`, `/sales` | `/sales-orders`, payments; products, orders, cash, receivables | POS/list tải được và hiện giá bán | Local chỉ nhận giá bán lẻ/sỉ/khuyến mại đã cấu hình; chặn giá tùy ý, giảm giá sai và đơn rỗng; pricing test đạt | Đúng một phần — production chưa deploy | Smoke test giá bán; thiết kế override cần quyền/lý do/audit; TC-SALE-08/01/02 đạt production |
-| SALE — detail, hoàn/hủy | `/sales/:id`, modal hoàn | order detail, cancel, return; items, COGS, movements | List/detail cùng mã khác khách; hoàn không chọn dòng/số lượng | `findOne` thiếu relation customer; return chưa có item-level COGS | Không chính xác | Join customer; return theo item/quantity/cost lot; test nhiều lần hoàn và idempotency |
+| SALE — ghi nhận bán hàng, giá bán, thanh toán | `/sales/new`, `/sales` | `/sales-orders`, payments; products, orders, cash, receivables | Màn ghi nhận/list tải được và hiện giá bán | Backend chỉ nhận giá lẻ/sỉ/khuyến mại đã cấu hình; chặn giá tùy ý, giảm giá sai và đơn rỗng; pricing test đạt | Đúng một phần | Smoke test giá bán; thiết kế override cần quyền/lý do/audit; TC-SALE-08/01/02 đạt production |
+| SALE — detail, hoàn/hủy | `/sales/:id`, modal hoàn | order detail, cancel, return; items, COGS, movements | Sai tên khách đã được sửa và đối soát 200 đơn; hoàn một phần vẫn chưa có contract dòng hàng | Detail/customer: đã xác minh local; return item-level: bị chặn | Đúng một phần | Thiết kế return theo item/quantity/cost lot; test nhiều lần hoàn và idempotency trước khi mở nghiệp vụ |
 | PRODUCT/MEDIA — ảnh và giá | `/products`, `/products/:id`, form | product CRUD + Cloudinary lifecycle; `products.image_url` | List có ảnh thật nhưng detail hiện icon mặc định | Lifecycle thay/xóa ảnh đạt unit test | Đúng một phần | Một DTO/image contract cho list/detail/form; regression ảnh cũ bị xóa sau replace |
 | INV/PURCHASE — tồn, nhập, kiểm kê, XNT | `/inventory`, `/purchase-orders`, `/stock-take`, `/xnt-report` | inventory, PO, stock take, movements, lots | KPI `20`/`112` mâu thuẫn; form PO 404; XNT mobile mất cột; có quantity 0 | KPI/min-stock đã sửa local; route form đã khai báo; chưa có invariant DB/concurrency test | Không chính xác | Deploy bản sửa sau gate; quantity > 0; unique tồn; XNT reconciliation và responsive test |
-| DEBT — công nợ và thu nợ | `/customer-debts`, `/debt-aging`, customer detail | receivables, payment history, cash transactions | 453 khoản nợ tải thật; thiếu pagination; nợ vượt hạn mức không cảnh báo | Helper thu nợ/remaining đạt unit test | Đúng một phần | Server pagination; exposure/limit control; thu nợ cập nhật debt+cash trong một transaction |
+| DEBT — công nợ và thu nợ | `/customer-debts`, `/debt-aging`, customer detail | receivables, payment history, cash transactions | 453/473 khoản nợ thật; đã phân trang/lọc DB; nợ vượt hạn mức chưa cảnh báo | KPI/grain, tuổi nợ, phân trang và thu nợ đạt test/đối soát đọc-only | Đúng một phần | Exposure/limit control; smoke test thu nợ thủ công; backfill bút toán lịch sử 111/112 |
 | FIN — sổ quỹ, chi phí, lương, chốt ca, P&L | `/finance`, `/expense-ledger`, `/salary-ledger`, `/daily-closing`, `/profit-loss` | cash transactions, summaries, closings | Chi phí tổng 0 nhưng có dòng ngoài kỳ; tháng lương sai; ô trống tạo chênh lệch âm trên production hiện tại | Local đã dùng cùng kỳ cho tổng/list, lọc lương tại API, giữ tiền thực tế nullable; backend P0 49/49, Flutter mục tiêu 5/5 và analyze sạch | Đúng một phần — production chưa deploy | Deploy khi được duyệt; chạy TC-FIN-04/05/06 với dữ liệu production và đối soát DB |
 | TAX — ước tính, cấu hình, nghĩa vụ, kê khai | `/tax-*`, `/tax-declaration` | `/tax/config`, `/tax/estimate`, `/tax/export-htkk`; tax rules/profile | Ngưỡng 1 tỷ có nguồn; kỳ/sort chưa đúng; chart mobile vỡ; “Nộp” chỉ mở hướng dẫn | Tax policy/MST 47/47 suite đạt | Đúng một phần, rủi ro cao | Rule version/effective date; sort kỳ; đổi đúng copy; XML qua XSD/HTKK fixture |
 | RBAC/MULTI-SHOP | menu, settings, chọn cửa hàng | middleware permission + shop scope; memberships, roles | “Tất cả cửa hàng” từng làm lỗi UI/khó quay lại; label quyền lẫn key kỹ thuật | Parser/scope/permission unit test đạt; route-policy FE/BE còn lệch | Không chính xác | Ma trận module×action dùng chung; negative test owner/view/edit/none ở single/all shops |
 | REPORT/EXPORT — bảng, biểu đồ, file | dashboard và mọi màn báo cáo | summary/read model/export endpoints | Có chart/KPI cơ bản nhưng thiếu drill-down, pagination, scope/filter/asOf; “Excel” có chỗ là CSV | Benchmark và grain dữ liệu đã lập; chưa có report contract test toàn miền | Đúng một phần | Metric contract; AppPagedTable; export toàn tập; reconciliation + checksum + encoding test |
 | AI/AUDIT | launcher, AI knowledge, activity log | knowledge documents, activity logs | AI che CTA; log ghi chung “Hệ thống/Cập nhật thông tin” | Có source quản lý tài liệu; chưa đủ actor/entity/before-after | Đúng một phần | Collision manager; source version/effective date; audit schema và negative-redaction test |
 | RESPONSIVE/ACCESSIBILITY | toàn app | UI/component layer | 47 ảnh mobile: card reflow khá, nhưng XNT/chart/CTA còn lỗi | Chưa có keyboard, screen reader, zoom 200%, contrast gate | Không chính xác; accessibility bị chặn | Matrix viewport, screenshot regression, focus/semantic/zoom/contrast chuyên biệt |
-| DATA QUALITY — invoice, master data, freshness | report/detail/export | invoices/items, products, movements, migrations | 60 invoice đầu vào thiếu item; 558 invoice không tự cân bằng giảm giá; tên sản phẩm chậm luân chuyển bị thiếu | Validator đọc đã phát hiện; chưa có migration/backfill được duyệt | Không chính xác | Data-quality gate trước báo cáo/export; backfill có đối soát và rollback |
+| DATA QUALITY — invoice, master data, freshness | dashboard/finance/inventory/invoice/report | invoices/items, sales, cash, products, movements, migrations | Đối soát DB và cảnh báo: 60 header thiếu item, 558 header lệch tổng dòng; sales/cash/movement dừng 28/07 nên KPI tháng 8 có thể rỗng | `invoice-data-quality.test.js`, `data-freshness.utils.test.js`, `audit:invoices`, `audit:freshness`; chưa có migration/backfill được duyệt | Đúng một phần | Data-quality gate và cảnh báo độ mới đã có; backfill/seed phải được duyệt, đối soát và rollback |
 
 ### Bằng chứng kiểm thử mới nhất
 
@@ -45,11 +45,12 @@ Quy ước: `Đã xác minh`, `Đúng một phần`, `Không chính xác`, `Bị
 | SALE-05 | `/#/sales` | list/summary status + `reporting_period.dart` | `sales-metric.utils.test.js`, `reporting_period_test.dart` | Backend test đạt; Flutter test chưa chạy lại | Chưa đối soát |
 | UX-ERR-01 | dashboard/finance | Async error/retry components | widget/source review | Đúng một phần | Chưa xác minh |
 | DATA-01 | invoice | một metadata owner và một route set | `invoice-metadata.test.js` | Đạt | Chưa smoke test |
+| DATA-02 | Danh sách hóa đơn cùng kỳ KPI VAT | Sổ hóa đơn | `/invoices`, `/invoices/summary` | `invoices` | `invoice-query.utils.test.js`, `audit:invoice-period` | Đã xác minh local/DB; chưa production |
 | TAX-02 | dashboard/tax/finance | `calculateOutstandingTax`, normalize DTO/read model | `tax-policy.test.js` | Đạt | Chưa xác minh |
 | TAX-04 | export XML | validator chặn thiếu/sai/placeholder MST | `tax-policy.test.js` | Đạt phạm vi MST | Chưa xác minh; XSD vẫn bị chặn |
-| DEBT-01 | `/#/customer-debts` | `/customer-receivables` | `debt.utils.test.js` + source review | Đạt phạm vi tính/API mapping | Chưa đối soát |
+| DEBT-01 | `/#/customer-debts` | `/customer-receivables/paged` | `debt.utils.test.js`, `receivable-list-query.utils.test.js` + DB read-only | Đạt phân trang/KPI/filter/export | Chưa production |
 | REP-CSV-01 | export công nợ | `buildCustomerDebtsCsv` | `excel_export_service_test.dart` | Test đã bổ sung, chưa chạy lại do toolchain | Chưa tải production |
-| UX-MOB-01 | `/#/pos` | CTA safe margin + `shouldShowAiAssistant` | `main_shell_layout_test.dart` | Test đã bổ sung, chưa chạy lại do toolchain | Chưa kiểm tra viewport |
+| UX-MOB-01 | `/#/sales/new` | CTA safe margin + `shouldShowAiAssistant` | `main_shell_layout_test.dart` | Test đã đạt; chờ kiểm tra production sau deploy | Đúng một phần |
 | REP-PERIOD-01 | dashboard/sales/finance | `currentMonthReportingPeriod` | `reporting_period_test.dart` | Test đã bổ sung, chưa chạy lại do toolchain | Chưa đối soát |
 
 Liên kết test: [`../backend/test/`](../backend/test/) và
@@ -57,7 +58,7 @@ Liên kết test: [`../backend/test/`](../backend/test/) và
 
 ## 1. Quy ước
 
-- `UI`: route production dùng hash, ví dụ `/#/pos`.
+- `UI`: route production dùng hash, ví dụ `/#/sales/new`; `/#/pos` chỉ chuyển tiếp liên kết cũ.
 - `API`: prefix chung `/api`.
 - `TC`: mã kiểm thử tại [11_ACCEPTANCE_TEST_CATALOG.md](11_ACCEPTANCE_TEST_CATALOG.md).
 - Trạng thái là kết quả của baseline ngày 25/07/2026, không phải cam kết tương lai.
@@ -72,32 +73,42 @@ Liên kết test: [`../backend/test/`](../backend/test/) và
 | RBAC-01 | Chỉ truy cập shop có membership | shell/settings | mọi route shop-scoped | `shop_members` | TC-RBAC-01 | Đúng một phần |
 | RBAC-02 | Quyền module được kiểm tra ở API | menu/module | middleware `requirePermission` | `shop_roles.permissions` | TC-RBAC-02 | Không chính xác |
 | RBAC-03 | Tổng hợp nhiều shop không nâng quyền | chuyển shop | header `x-shop-id: all` | `shop_members` | TC-RBAC-03 | Không chính xác |
-| SALE-01 | Tạo đơn tại POS | `/#/pos` | `POST /sales-orders` | `sales_orders`, `sales_order_items` | TC-SALE-01 | Đúng một phần |
-| SALE-02 | Ghi nhận nhiều phương thức thanh toán | POS | payment endpoint trong sales routes | `sales_order_payments` | TC-SALE-02 | Đúng một phần |
+| SALE-01 | Ghi nhận giao dịch bán | `/#/sales/new` | `POST /sales-orders` | `sales_orders`, `sales_order_items` | TC-SALE-01 | Đúng một phần |
+| SALE-02 | Ghi nhận nhiều phương thức thanh toán | Ghi nhận bán hàng | payment endpoint trong sales routes | `sales_order_payments` | TC-SALE-02 | Đúng một phần |
 | SALE-03 | Hoàn/hủy đảo tồn và tiền đúng | chi tiết đơn | return/cancel endpoints | `sales_returns`, movements, cash | TC-SALE-03 | Bị chặn |
-| SALE-04 | QR thanh toán có trạng thái xác nhận | POS/payment config | payment integration | payment config/payment | TC-SALE-04 | Bị chặn |
-| SALE-05 | Tổng hợp đơn khớp danh sách | `/#/sales` | `GET /sales-orders/summary` | `sales_orders` | TC-SALE-05 | Không chính xác |
-| INV-01 | Xem tồn và cảnh báo dưới định mức | `/#/inventory` | `/inventory/stock`, `/low-stock` | `inventory_stocks`, `products` | TC-INV-01 | Đã xác minh |
+| SALE-04 | QR thanh toán có trạng thái xác nhận | Ghi nhận bán hàng/payment config | payment integration | payment config/payment | TC-SALE-04 | Bị chặn |
+| SALE-05 | Tổng hợp đơn khớp danh sách theo cùng kỳ và trạng thái | `/#/sales` | `GET /sales-orders/summary`, `GET /sales-orders?from&to&status` | `sales_orders`, `sales_returns`, `sales_return_items`, sổ cái 511/632 | TC-SALE-05 | Đã sửa local, có test và đối soát DB/sổ cái chỉ đọc |
+| SALE-06 | Danh sách đơn ở chế độ tất cả cửa hàng dùng đúng phạm vi DB và chỉ cho xem | `/#/sales` | `GET /sales-orders` | `sales_orders`, dữ liệu cửa hàng từ `/my-shops` | TC-SALE-11 | Đã sửa local, có test và đối soát DB chỉ đọc |
+| SALE-07 | Top sản phẩm xếp đúng doanh thu thuần, số lượng, biên lãi và tăng trưởng kỳ trước | `/#/dashboard` | `GET /sales-orders/top-products` | `sales_orders`, `sales_order_items`, `sales_returns`, `sales_return_items`, `products` | TC-SALE-12 | Đã sửa local, có test và đối soát DB chỉ đọc |
+| SALE-08 | Đơn gần đây và lịch sử bán hàng sắp theo ngày giao dịch thật | `/`, `/#/sales` | `GET /sales-orders` | `sales_orders.order_date` | TC-SALE-13 | Đã sửa local, có test và đối soát DB chỉ đọc |
+| INV-01 | Xem tồn và cảnh báo dưới định mức theo đúng grain sản phẩm | `/#/inventory`, `/#/dashboard` | `/inventory/stock`, `/inventory/low-stock` | `inventory_stocks`, `products`, `warehouses` | TC-INV-01 | Đã sửa local, có test và đối soát DB chỉ đọc; DB hiện có 0 sản phẩm dưới định mức tổng |
+| INV-05 | Xem giá trị tồn và vốn hàng chậm theo đúng phạm vi cửa hàng | `/#/inventory` | `/inventory/stock`, `/categories-summary`, `/slow-moving` | `inventory_stocks`, `products`, `categories`, `sales_orders`, `sales_order_items` | TC-INV-09 | Đã sửa local, có test và đối soát DB chỉ đọc |
+| INV-06 | Tồn, lô và giá vốn bán hàng giữ invariant và fail-safe khi bán đồng thời | ghi nhận bán hàng/kiểm kê | `POST /sales-orders`, stock-take completion | `inventory_stocks`, `inventory_lots`, `sales_order_items`, `sales_orders` | TC-INV-13 | Đúng một phần: DB hiện khớp và bán fail-safe; kiểm kê có chênh lệch bị chặn chờ policy |
 | INV-02 | Nhập hàng tăng tồn và giá vốn | purchase order | purchase order receive | PO, items, stocks, lots | TC-INV-02 | Bị chặn |
 | INV-03 | Kiểm kê sinh điều chỉnh có truy vết | `/#/stock-take` | `/stock-takes` | stock takes, movements | TC-INV-03 | Đúng một phần |
-| INV-04 | Báo cáo XNT cân bằng | `/#/xnt-report` | `/inventory/xnt-report` | stocks, movements | TC-INV-04 | Bị chặn |
+| INV-04 | Báo cáo XNT cân bằng | `/#/xnt-report` | `/inventory/xnt-report` | `inventory_stocks`, `inventory_movements`, `products` | TC-INV-04 | Đã xác minh local, 100% SKU cân và khớp tồn hiện tại; mobile đã chuyển sang card |
 | FIN-01 | Sổ quỹ phản ánh thu/chi | `/#/finance` | `/cash-accounts`, `/cash-transactions/summary` | cash accounts/transactions | TC-FIN-01 | Đúng một phần |
 | FIN-02 | Dashboard và tài chính dùng cùng định nghĩa số dư | `/`, `/#/finance` | sales + cash summaries | sales, cash | TC-FIN-02 | Không chính xác |
 | FIN-03 | Lợi nhuận khớp doanh thu trừ giá vốn/chi phí | `/`, `/#/profit-loss` | profit-loss/summary | sales, COGS, cash | TC-FIN-03 | Đúng một phần |
-| DEBT-01 | Sổ nợ lấy từ khoản phải thu thật | `/#/customer-debts` | customer receivables | `receivables`, payment history | TC-DEBT-01 | Không chính xác |
-| DEBT-02 | Thu nợ cập nhật công nợ và sổ quỹ | sổ nợ | receivable payment | receivables, cash | TC-DEBT-02 | Bị chặn |
-| DEBT-03 | Excel nợ phản ánh dữ liệu nguồn | sổ nợ | export | receivables | TC-DEBT-03 | Không chính xác |
+| FIN-04 | Tổng quan dòng tiền ghi rõ kỳ/as-of và nhóm chi khớp tổng | `/#/finance` | `/cash-transactions/summary`, `/expenses-by-category` | `cash_transactions` | TC-FIN-04 | Đã sửa local, có test và đối soát DB chỉ đọc |
+| DEBT-01 | Sổ nợ lấy từ khoản phải thu thật và đếm đúng grain | `/#/customer-debts` | `/customer-receivables/paged` | `receivables`, `customers`, `sales_orders` | TC-DEBT-01 | Đã sửa local, có test và đối soát DB chỉ đọc |
+| DEBT-02 | Thu nợ cập nhật công nợ và sổ quỹ | sổ nợ | payment theo đơn hoặc `/customers/receivables/:id/payments` | `receivables`, `debt_payment_history`, `cash_transactions`, journal | TC-DEBT-02 | Đã sửa local, có test; dữ liệu lịch sử 111/112 còn sai |
+| DEBT-03 | Báo cáo tuổi nợ dùng cùng ngày và đúng grain | `/#/debt-aging` | `/customers/debt-aging?asOf=` | `receivables`, `customers`, `debt_payment_history` | TC-DEBT-05 | Đã sửa local, có test và đối soát DB chỉ đọc |
+| DEBT-04 | Excel nợ phản ánh toàn bộ dữ liệu phù hợp bộ lọc | sổ nợ | `/customer-receivables/export` | `receivables`, `customers`, `sales_orders` | TC-DEBT-03/04 | Đã sửa local, export DB khớp tổng dòng lọc; chưa tải production |
 | TAX-01 | Tính thuế theo quy định có hiệu lực | `/#/tax-estimate` | `/tax/estimate`, `/tax/config` | `tax_rules`, shop profile | TC-TAX-01 | Không chính xác |
 | TAX-02 | Không sinh nghĩa vụ thuế âm | dashboard/tax | tax estimate | sales, tax rules | TC-TAX-02 | Không chính xác |
 | TAX-03 | XML đúng schema và import HTKK được | `/#/tax-estimate` | `/tax/export-htkk` | tax data, shop profile | TC-TAX-03 | Bị chặn |
 | TAX-04 | Không dùng MST giả/fallback trong tệp chính thức | tax export | `/tax/export-htkk` | `shop_profiles.tax_code` | TC-TAX-04 | Không chính xác |
+| TAX-05 | Doanh thu làm căn cứ báo cáo thuế khớp sổ bán hàng cùng kỳ | `/#/tax-*`, Dashboard | `/tax/report`, `/sales-orders/summary` | `sales_orders`, `sales_order_items`, `sales_returns`, `sales_return_items` | TC-TAX-09 | Đã sửa local và đối soát DB; báo cáo hoàn chỉnh bị chặn do thiếu cấu hình chính sách DB |
 | REPORT-01 | Xuất Excel có đủ cột, đúng tổng | các màn báo cáo | tùy module | dữ liệu module | TC-REP-01 | Bị chặn |
 | DATA-01 | Mỗi bảng chỉ có một mô hình sở hữu rõ | N/A | finance/system routes | `invoices` | TC-DATA-01 | Không chính xác |
 | DATA-02 | Schema thay đổi bằng migration có kiểm soát | N/A | startup/serverless | migrations | TC-DATA-02 | Không chính xác |
+| DATA-03 | Dữ liệu runtime không dùng mock/fallback và secret chỉ nằm ở backend | toàn app | mọi API nghiệp vụ, image, AI | PostgreSQL và biến môi trường backend | TC-DATA-04 | Đã sửa local, có test và audit DB chỉ đọc; production authenticated chưa xác minh |
 | UX-01 | Có loading/empty/error state rõ | toàn app | mọi API | N/A | TC-UX-01 | Đúng một phần |
-| UX-02 | Luồng chính dùng được ở 390×844 | dashboard/POS/settings | N/A | N/A | TC-UX-02 | Không chính xác |
+| UX-02 | Luồng chính dùng được ở 390×844 | dashboard/ghi nhận bán hàng/settings | N/A | N/A | TC-UX-02 | Đúng một phần |
 | UX-03 | Đạt chuẩn accessibility đã chọn | toàn app | N/A | N/A | TC-UX-03 | Bị chặn |
 | AI-01 | Trợ lý chỉ dùng tri thức đã duyệt và còn hiệu lực | widget/kho tri thức | AI integration | knowledge store | TC-AI-01 | Không chính xác |
+| AI-02 | Ngữ cảnh AI lấy dữ liệu DB đúng công thức, fail rõ khi lỗi và kho tài liệu có RBAC | trợ lý/kho tri thức | `/ai/chat`, `/ai-knowledge`, `/ai/knowledge` | sales, returns, inventory, receivables, tax obligations, `ai_knowledge_documents` | TC-AI-04 | Đã sửa local, có test và đối soát DB chỉ đọc |
 | AUDIT-01 | Thao tác quan trọng có audit log | settings/activity logs | `/activity-logs` | `activity_logs` | TC-AUD-01 | Đúng một phần |
 
 ## 3. Khoảng trống truy vết

@@ -7,12 +7,16 @@ class TaxWarningWidget extends StatelessWidget {
   final double totalRevenue;
   final double vatOwed;
   final double pitOwed;
+  final double exemptionThreshold;
+  final String policySourceCode;
 
   const TaxWarningWidget({
     super.key,
     required this.totalRevenue,
     required this.vatOwed,
     required this.pitOwed,
+    required this.exemptionThreshold,
+    required this.policySourceCode,
   });
 
   void _showDisclaimer(BuildContext context) {
@@ -126,7 +130,7 @@ class TaxWarningWidget extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Theo Nghị định 141/2026/NĐ-CP, doanh thu năm từ 1 tỷ đồng trở xuống không phải nộp GTGT và TNCN. Hệ thống chỉ hỗ trợ ước tính.',
+                    'Theo $policySourceCode, ngưỡng doanh thu năm hiện được cấu hình là ${fmt.format(exemptionThreshold)}. Hệ thống chỉ hỗ trợ ước tính.',
                     style: TextStyle(
                       fontStyle: FontStyle.italic,
                       color: c.textSecondary,
