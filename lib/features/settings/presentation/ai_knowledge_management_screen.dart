@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../providers/ai_knowledge_provider.dart';
@@ -180,7 +181,8 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final docs = ref.watch(aiKnowledgeProvider);
+    final docsAsync = ref.watch(aiKnowledgeProvider);
+    final docs = docsAsync.asData?.value ?? const <AiDocument>[];
 
     return Scaffold(
       appBar: AppBar(
@@ -245,10 +247,12 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                AppSectionHeader(
-                  title: 'Danh sách tài liệu',
-                  icon: HugeIcons.strokeRoundedFolder01,
-                  iconColor: AppColors.primary,
+                Expanded(
+                  child: AppSectionHeader(
+                    title: 'Danh sách tài liệu',
+                    icon: HugeIcons.strokeRoundedFolder01,
+                    iconColor: AppColors.primary,
+                  ),
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _showAddDocumentModal(context, ref),
@@ -270,7 +274,17 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
 
-            if (docs.isEmpty)
+            if (docsAsync.isLoading)
+              const Padding(
+                padding: EdgeInsets.all(40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (docsAsync.hasError)
+              AppInlineError(
+                message: 'Không thể tải kho tài liệu AI từ cơ sở dữ liệu.',
+                onRetry: () => ref.invalidate(aiKnowledgeProvider),
+              )
+            else if (docs.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(40),
                 child: Center(

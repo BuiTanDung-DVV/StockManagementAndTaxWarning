@@ -1,18 +1,19 @@
 import { Request, Response } from 'express';
 import { aiService } from '../services/ai.service';
+import {
+  AiShopContextError,
+  requireAiShopId,
+} from '../ai/ai-shop-context.utils';
 
-const getShopId = (req: Request): number => {
-  const shopId = (req as any).shopId ?? (req as any).user?.shopId ?? ((req as any).shopIds && (req as any).shopIds[0]);
-  const parsed = Number(shopId);
-  if (!shopId || isNaN(parsed) || parsed <= 0) {
-    return 1; // Fallback shop ID default
-  }
-  return parsed;
+export const getAiShopId = (req: Request): number => {
+  return requireAiShopId((req as any).shopId);
 };
+
+const aiErrorStatus = (error: unknown) => error instanceof AiShopContextError ? 400 : 500;
 
 export const chatWithAdvisor = async (req: Request, res: Response): Promise<void> => {
   try {
-    const shopId = getShopId(req);
+    const shopId = getAiShopId(req);
     const { question, history } = req.body;
 
     if (!question || typeof question !== 'string' || !question.trim()) {
@@ -27,7 +28,7 @@ export const chatWithAdvisor = async (req: Request, res: Response): Promise<void
     });
   } catch (error: any) {
     console.error('Lỗi khi gọi chatWithAdvisor controller:', error);
-    res.status(500).json({
+    res.status(aiErrorStatus(error)).json({
       success: false,
       message: error?.message || 'Lỗi hệ thống khi kết nối với Trợ lý AI',
     });
@@ -36,7 +37,7 @@ export const chatWithAdvisor = async (req: Request, res: Response): Promise<void
 
 export const getQuickInsights = async (req: Request, res: Response): Promise<void> => {
   try {
-    const shopId = getShopId(req);
+    const shopId = getAiShopId(req);
     const insights = await aiService.getQuickInsights(shopId);
     res.json({
       success: true,
@@ -44,7 +45,7 @@ export const getQuickInsights = async (req: Request, res: Response): Promise<voi
     });
   } catch (error: any) {
     console.error('Lỗi khi gọi getQuickInsights controller:', error);
-    res.status(500).json({
+    res.status(aiErrorStatus(error)).json({
       success: false,
       message: error?.message || 'Lỗi khi lấy thông tin phân tích nhanh',
     });
@@ -53,7 +54,7 @@ export const getQuickInsights = async (req: Request, res: Response): Promise<voi
 
 export const getKnowledgeDocuments = async (req: Request, res: Response): Promise<void> => {
   try {
-    const shopId = getShopId(req);
+    const shopId = getAiShopId(req);
     const docs = await aiService.getKnowledgeDocs(shopId);
     res.json({
       success: true,
@@ -61,7 +62,7 @@ export const getKnowledgeDocuments = async (req: Request, res: Response): Promis
     });
   } catch (error: any) {
     console.error('Lỗi khi lấy danh sách tài liệu tri thức:', error);
-    res.status(500).json({
+    res.status(aiErrorStatus(error)).json({
       success: false,
       message: error?.message || 'Lỗi khi truy vấn kho tài liệu tri thức',
     });
@@ -70,7 +71,7 @@ export const getKnowledgeDocuments = async (req: Request, res: Response): Promis
 
 export const createKnowledgeDocument = async (req: Request, res: Response): Promise<void> => {
   try {
-    const shopId = getShopId(req);
+    const shopId = getAiShopId(req);
     const userId = (req as any).user?.id;
     const { title, category, content, isActive } = req.body;
 
@@ -87,7 +88,7 @@ export const createKnowledgeDocument = async (req: Request, res: Response): Prom
     });
   } catch (error: any) {
     console.error('Lỗi khi tạo tài liệu tri thức:', error);
-    res.status(500).json({
+    res.status(aiErrorStatus(error)).json({
       success: false,
       message: error?.message || 'Lỗi khi tạo tài liệu tri thức mới',
     });
@@ -96,7 +97,7 @@ export const createKnowledgeDocument = async (req: Request, res: Response): Prom
 
 export const updateKnowledgeDocument = async (req: Request, res: Response): Promise<void> => {
   try {
-    const shopId = getShopId(req);
+    const shopId = getAiShopId(req);
     const docId = Number(req.params.id);
 
     if (!docId || isNaN(docId)) {
@@ -112,7 +113,7 @@ export const updateKnowledgeDocument = async (req: Request, res: Response): Prom
     });
   } catch (error: any) {
     console.error('Lỗi khi cập nhật tài liệu tri thức:', error);
-    res.status(500).json({
+    res.status(aiErrorStatus(error)).json({
       success: false,
       message: error?.message || 'Lỗi khi cập nhật tài liệu tri thức',
     });
@@ -121,7 +122,7 @@ export const updateKnowledgeDocument = async (req: Request, res: Response): Prom
 
 export const deleteKnowledgeDocument = async (req: Request, res: Response): Promise<void> => {
   try {
-    const shopId = getShopId(req);
+    const shopId = getAiShopId(req);
     const docId = Number(req.params.id);
 
     if (!docId || isNaN(docId)) {
@@ -141,7 +142,7 @@ export const deleteKnowledgeDocument = async (req: Request, res: Response): Prom
     });
   } catch (error: any) {
     console.error('Lỗi khi xóa tài liệu tri thức:', error);
-    res.status(500).json({
+    res.status(aiErrorStatus(error)).json({
       success: false,
       message: error?.message || 'Lỗi khi xóa tài liệu tri thức',
     });

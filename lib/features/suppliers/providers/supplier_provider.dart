@@ -13,7 +13,8 @@ class SupplierRepository {
   }) async {
     final params = <String, dynamic>{'page': '$page', 'limit': '$limit'};
     if (search != null) params['search'] = search;
-    return await _api.get('/suppliers', params: params);
+    final data = await _api.get('/suppliers', params: params);
+    return _requirePagedResponse(data, 'Dữ liệu nhà cung cấp không hợp lệ');
   }
 
   Future<Map<String, dynamic>> findById(int id) async =>
@@ -23,10 +24,61 @@ class SupplierRepository {
   Future<Map<String, dynamic>> update(int id, Map<String, dynamic> dto) async =>
       await _api.put('/suppliers/$id', data: dto);
   Future<void> delete(int id) async => await _api.delete('/suppliers/$id');
-  Future<List<dynamic>> findPayables(int id) async =>
-      await _api.get('/suppliers/$id/payables');
-  Future<Map<String, dynamic>> getPayablesAging(String asOf) async =>
-      await _api.get('/suppliers/payables-aging', params: {'asOf': asOf});
+  Future<List<dynamic>> findPayables(int id) async {
+    final data = await _api.get('/suppliers/$id/payables');
+    if (data is! List) {
+      throw ApiException('Dữ liệu công nợ nhà cung cấp không hợp lệ');
+    }
+    return List<dynamic>.from(data);
+  }
+
+  Future<Map<String, dynamic>> getPayablesAging(String asOf) async {
+    final data = await _api.get(
+      '/suppliers/payables-aging',
+      params: {'asOf': asOf},
+    );
+    if (data is! Map ||
+        data['asOf'] == null ||
+        data['buckets'] is! Map ||
+        data['summary'] is! Map ||
+        data['suppliers'] is! List ||
+        data['items'] is! List) {
+      throw ApiException('Dữ liệu tuổi nợ phải trả không đầy đủ');
+    }
+    final summary = data['summary'] as Map;
+    final buckets = data['buckets'] as Map;
+    _requireNumericFields(summary, const [
+      'totalOutstanding',
+      'overdueOutstanding',
+      'overdueRatio',
+      'payableCount',
+      'supplierCount',
+    ]);
+    _requireNumericFields(buckets, const [
+      'current',
+      'past30',
+      'past60',
+      'past90',
+    ]);
+    return Map<String, dynamic>.from(data);
+  }
+}
+
+Map<String, dynamic> _requirePagedResponse(dynamic data, String message) {
+  if (data is! Map ||
+      data['items'] is! List ||
+      data['total'] is! num ||
+      data['page'] is! num ||
+      data['totalPages'] is! num) {
+    throw ApiException(message);
+  }
+  return Map<String, dynamic>.from(data);
+}
+
+void _requireNumericFields(Map<dynamic, dynamic> data, List<String> fields) {
+  if (fields.any((field) => data[field] is! num)) {
+    throw ApiException('Dữ liệu tuổi nợ phải trả không đầy đủ');
+  }
 }
 
 final supplierRepoProvider = Provider<SupplierRepository>((ref) {

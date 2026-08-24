@@ -7,15 +7,12 @@ class FinanceRepository {
   FinanceRepository(this._api);
 
   List<dynamic> _normalizeList(dynamic value) {
-    if (value is List) return value;
+    if (value is List) return List<dynamic>.from(value);
     if (value is Map) {
       final nested = value['items'] ?? value['data'];
-      if (nested is List) return nested;
-      if (nested is Map && nested.isNotEmpty) return [nested];
-      if (value.isEmpty) return [];
-      if (value.containsKey('id')) return [value];
+      if (nested is List) return List<dynamic>.from(nested);
     }
-    return [];
+    throw ApiException('Dữ liệu tài chính không hợp lệ');
   }
 
   Future<Map<String, dynamic>> findTransactions({
@@ -31,7 +28,11 @@ class FinanceRepository {
     if (category != null) params['category'] = category;
     if (from != null) params['from'] = from;
     if (to != null) params['to'] = to;
-    return await _api.get('/cash-transactions', params: params);
+    return _requirePagedResponse(
+      await _api.get('/cash-transactions', params: params),
+      'Dữ liệu giao dịch tài chính không hợp lệ',
+      extraNumericFields: const ['filteredAmountTotal'],
+    );
   }
 
   Future<Map<String, dynamic>> createTransaction(
@@ -47,24 +48,76 @@ class FinanceRepository {
   Future<Map<String, dynamic>> getCashFlowSummary(
     String from,
     String to,
-  ) async => await _api.get(
-    '/cash-transactions/summary',
-    params: {'from': from, 'to': to},
-  );
+  ) async {
+    final data = Map<String, dynamic>.from(
+      await _api.get(
+        '/cash-transactions/summary',
+        params: {'from': from, 'to': to},
+      ),
+    );
+    _requireNumericFields(data, const [
+      'income',
+      'expense',
+      'netCashFlow',
+      'cashBalance',
+    ], 'tổng quan dòng tiền');
+    if (data['dailyFlow'] is! List || data['period'] is! Map) {
+      throw ApiException('Dữ liệu tổng quan dòng tiền không đầy đủ');
+    }
+    return data;
+  }
 
-  Future<Map<String, dynamic>> getProfitLoss(String from, String to) async =>
+  Future<Map<String, dynamic>> getProfitLoss(String from, String to) async {
+    final data = Map<String, dynamic>.from(
       await _api.get(
         '/cash-transactions/profit-loss',
         params: {'from': from, 'to': to},
-      );
+      ),
+    );
+    _requireNumericFields(data, const [
+      'revenue',
+      'cogs',
+      'grossProfit',
+      'operatingExpenses',
+      'netProfit',
+      'grossMarginPct',
+      'netMarginPct',
+    ], 'báo cáo lãi lỗ');
+    if (data['from'] == null || data['to'] == null) {
+      throw ApiException('Dữ liệu báo cáo lãi lỗ không đầy đủ');
+    }
+    return data;
+  }
 
-  Future<Map<String, dynamic>> getInvoiceReconciliation(
-    String from,
-    String to,
-  ) async => await _api.get(
-    '/cash-transactions/invoice-reconciliation',
-    params: {'from': from, 'to': to},
-  );
+  void _requireNumericFields(
+    Map<String, dynamic> data,
+    List<String> keys,
+    String label,
+  ) {
+    final invalid = keys.any((key) {
+      final value = num.tryParse(data[key]?.toString() ?? '');
+      return value == null || !value.isFinite;
+    });
+    if (invalid) throw ApiException('Dữ liệu $label không đầy đủ');
+  }
+
+  Future<Map<String, dynamic>> getInvoiceReconciliation({
+    String? from,
+    String? to,
+    bool all = false,
+  }) async {
+    final params = <String, dynamic>{};
+    if (all) {
+      params['scope'] = 'ALL';
+    } else {
+      if (from != null) params['from'] = from;
+      if (to != null) params['to'] = to;
+    }
+    return await _api.get(
+      '/cash-transactions/invoice-reconciliation',
+      params: params,
+    );
+  }
 
   Future<Map<String, dynamic>> getExpensesByCategory({
     String? from,
@@ -73,10 +126,26 @@ class FinanceRepository {
     final params = <String, dynamic>{};
     if (from != null) params['from'] = from;
     if (to != null) params['to'] = to;
-    return await _api.get(
+    final data = await _api.get(
       '/cash-transactions/expenses-by-category',
       params: params,
     );
+    if (data is! Map ||
+        data['categories'] is! List ||
+        data['recentItems'] is! List ||
+        data['total'] is! num) {
+      throw ApiException('Dữ liệu phân loại chi phí không đầy đủ');
+    }
+    final invalidCategory = (data['categories'] as List).any(
+      (item) =>
+          item is! Map ||
+          item['amount'] is! num ||
+          item['count'] is! num,
+    );
+    if (invalidCategory) {
+      throw ApiException('Dữ liệu phân loại chi phí không đầy đủ');
+    }
+    return Map<String, dynamic>.from(data);
   }
 
   Future<Map<String, dynamic>> getDailyClosing(String date) async =>
@@ -85,9 +154,12 @@ class FinanceRepository {
   Future<Map<String, dynamic>> getDailyClosings({
     int page = 1,
     int limit = 20,
-  }) async => await _api.get(
-    '/daily-closings',
-    params: {'page': '$page', 'limit': '$limit'},
+  }) async => _requirePagedResponse(
+    await _api.get(
+      '/daily-closings',
+      params: {'page': '$page', 'limit': '$limit'},
+    ),
+    'Dữ liệu lịch sử chốt ngày không hợp lệ',
   );
 
   Future<Map<String, dynamic>> createDailyClosing(
@@ -138,14 +210,28 @@ class FinanceRepository {
     if (type != null) params['type'] = type;
     if (from != null) params['from'] = from;
     if (to != null) params['to'] = to;
-    return await _api.get('/invoices', params: params);
+    return _requirePagedResponse(
+      await _api.get('/invoices', params: params),
+      'Dữ liệu hóa đơn không hợp lệ',
+    );
   }
 
   Future<Map<String, dynamic>> getInvoiceSummary(
     String from,
     String to,
-  ) async =>
-      await _api.get('/invoices/summary', params: {'from': from, 'to': to});
+  ) async {
+    final data = await _api.get(
+      '/invoices/summary',
+      params: {'from': from, 'to': to},
+    );
+    if (data is! Map ||
+        const ['vatIn', 'vatOut', 'vatOwed', 'vatCredit'].any(
+          (field) => data[field] is! num,
+        )) {
+      throw ApiException('Dữ liệu tổng hợp hóa đơn không đầy đủ');
+    }
+    return Map<String, dynamic>.from(data);
+  }
 
   Future<Map<String, dynamic>> findInvoiceById(int id) async =>
       await _api.get('/invoices/$id');
@@ -161,9 +247,10 @@ class FinanceRepository {
   Future<Map<String, dynamic>> findPurchasesNoInvoice({
     int page = 1,
     int limit = 20,
+    String? status,
   }) async => await _api.get(
     '/purchases-without-invoice',
-    params: {'page': '$page', 'limit': '$limit'},
+    params: {'page': '$page', 'limit': '$limit', 'status': ?status},
   );
 
   Future<Map<String, dynamic>> createPurchaseNoInvoice(
@@ -198,6 +285,23 @@ class FinanceRepository {
   ) async => await _api.put('/tax-obligations/$id', data: dto);
   Future<void> deleteTaxObligation(int id) async =>
       await _api.delete('/tax-obligations/$id');
+}
+
+Map<String, dynamic> _requirePagedResponse(
+  dynamic data,
+  String message, {
+  List<String> extraNumericFields = const [],
+}) {
+  if (data is! Map ||
+      data['items'] is! List ||
+      data['total'] is! num ||
+      data['page'] is! num ||
+      data['limit'] is! num ||
+      data['totalPages'] is! num ||
+      extraNumericFields.any((field) => data[field] is! num)) {
+    throw ApiException(message);
+  }
+  return Map<String, dynamic>.from(data);
 }
 
 final financeRepoProvider = Provider<FinanceRepository>((ref) {
@@ -248,13 +352,17 @@ final profitLossProvider =
     });
 
 final invoiceReconciliationProvider =
-    FutureProvider.family<Map<String, dynamic>, ({String from, String to})>((
-      ref,
-      args,
-    ) {
+    FutureProvider.family<
+      Map<String, dynamic>,
+      ({String? from, String? to, bool all})
+    >((ref, args) {
       return ref
           .watch(financeRepoProvider)
-          .getInvoiceReconciliation(args.from, args.to);
+          .getInvoiceReconciliation(
+            from: args.from,
+            to: args.to,
+            all: args.all,
+          );
     });
 
 final expensesByCategoryProvider = FutureProvider<Map<String, dynamic>>((ref) {
@@ -294,13 +402,18 @@ final budgetPlansProvider = FutureProvider<List<dynamic>>((ref) {
 });
 
 final invoiceListProvider =
-    FutureProvider.family<Map<String, dynamic>, ({int page, String? type})>((
-      ref,
-      args,
-    ) {
+    FutureProvider.family<
+      Map<String, dynamic>,
+      ({int page, String? type, String? from, String? to})
+    >((ref, args) {
       return ref
           .watch(financeRepoProvider)
-          .findInvoices(page: args.page, type: args.type);
+          .findInvoices(
+            page: args.page,
+            type: args.type,
+            from: args.from,
+            to: args.to,
+          );
     });
 
 final invoiceSummaryProvider =
@@ -314,8 +427,13 @@ final invoiceSummaryProvider =
     });
 
 final purchasesNoInvoiceProvider =
-    FutureProvider.family<Map<String, dynamic>, int>((ref, page) {
-      return ref.watch(financeRepoProvider).findPurchasesNoInvoice(page: page);
+    FutureProvider.family<Map<String, dynamic>, ({int page, String? status})>((
+      ref,
+      args,
+    ) {
+      return ref
+          .watch(financeRepoProvider)
+          .findPurchasesNoInvoice(page: args.page, status: args.status);
     });
 
 final taxObligationsProvider = FutureProvider<Map<String, dynamic>>((ref) {

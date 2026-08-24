@@ -15,7 +15,8 @@ class CustomerRepository {
   }) async {
     final params = <String, dynamic>{'page': '$page', 'limit': '$limit'};
     if (search != null) params['search'] = search;
-    return await _api.get('/customers', params: params);
+    final data = await _api.get('/customers', params: params);
+    return _requirePagedResponse(data, 'Dữ liệu khách hàng không hợp lệ');
   }
 
   Future<Map<String, dynamic>> findById(int id) async =>
@@ -25,44 +26,30 @@ class CustomerRepository {
   Future<Map<String, dynamic>> update(int id, Map<String, dynamic> dto) async =>
       await _api.put('/customers/$id', data: dto);
   Future<void> delete(int id) async => await _api.delete('/customers/$id');
-  Future<List<dynamic>> findReceivables(int id) async =>
-      await _api.get('/customers/$id/receivables');
+  Future<List<dynamic>> findReceivables(int id) async => _requireListResponse(
+    await _api.get('/customers/$id/receivables'),
+    'Dữ liệu công nợ khách hàng không hợp lệ',
+  );
   Future<List<dynamic>> findEvidence(int customerId) async =>
-      await _api.get('/customers/$customerId/evidence');
+      _requireListResponse(
+        await _api.get('/customers/$customerId/evidence'),
+        'Dữ liệu chứng từ công nợ không hợp lệ',
+      );
 
   Future<Map<String, dynamic>> uploadEvidenceImage({
     required String fileName,
     required String contentType,
     required Uint8List bytes,
   }) async {
-    final signed = Map<String, dynamic>.from(
-      await _api.post(
-        '/customers/evidence-upload/presign',
-        data: {
-          'fileName': fileName,
-          'contentType': contentType,
-          'size': bytes.length,
-        },
-      ),
-    );
-    final uploadUrl = signed['uploadUrl']?.toString() ?? '';
-    final objectKey = signed['objectKey']?.toString() ?? '';
-    final fields = Map<String, dynamic>.from(
-      signed['fields'] as Map? ?? const {},
-    );
-    if (uploadUrl.isEmpty || objectKey.isEmpty || fields.isEmpty) {
-      throw ApiException('Máy chủ không tạo được liên kết tải chứng từ');
-    }
-
-    final uploaded = await _api.postSignedImageUpload(
-      uploadUrl,
+    final uploaded = await _api.postImage(
+      '/customers/evidence-upload',
       bytes,
       fileName,
       contentType,
-      fields,
     );
-    if (uploaded['public_id']?.toString() != objectKey) {
-      throw ApiException('Cloudinary trả về định danh chứng từ không hợp lệ');
+    final objectKey = uploaded['objectKey']?.toString() ?? '';
+    if (objectKey.isEmpty) {
+      throw ApiException('Máy chủ không trả về định danh chứng từ');
     }
     return Map<String, dynamic>.from(
       await _api.post(
@@ -89,14 +76,87 @@ class CustomerRepository {
 
   Future<void> deleteEvidence(int evidenceId) async =>
       await _api.delete('/customers/evidence/$evidenceId');
+  Future<Map<String, dynamic>> collectReceivablePayment(
+    int receivableId,
+    Map<String, dynamic> dto,
+  ) async => await _api.post(
+    '/customers/receivables/$receivableId/payments',
+    data: dto,
+  );
   Future<Map<String, dynamic>> getDebtAging({String? asOf}) async {
     final params = <String, dynamic>{};
     if (asOf != null) params['asOf'] = asOf;
-    return await _api.get('/customers/debt-aging', params: params);
+    final data = await _api.get('/customers/debt-aging', params: params);
+    if (data is! Map ||
+        data['asOf'] == null ||
+        data['buckets'] is! Map ||
+        data['summary'] is! Map ||
+        data['customers'] is! List) {
+      throw ApiException('Dữ liệu tuổi nợ phải thu không đầy đủ');
+    }
+    final summary = data['summary'] as Map;
+    final buckets = data['buckets'] as Map;
+    _requireNumericFields(summary, const [
+      'totalDebt',
+      'overdueDebt',
+      'receivableCount',
+      'customerCount',
+      'currentRatio',
+      'overdueRatio',
+    ], 'Dữ liệu tuổi nợ phải thu không đầy đủ');
+    _requireNumericFields(buckets, const [
+      'current',
+      'past30',
+      'past60',
+      'past90',
+    ], 'Dữ liệu tuổi nợ phải thu không đầy đủ');
+    return Map<String, dynamic>.from(data);
   }
 
-  Future<List<dynamic>> findOverdueDebts() async =>
-      await _api.get('/customers/overdue-debts');
+  Future<Map<String, dynamic>> getOpenReceivablesPage({
+    required Map<String, dynamic> params,
+  }) async => _requirePagedResponse(
+    await _api.get('/customer-receivables/paged', params: params),
+    'Dữ liệu danh sách công nợ không hợp lệ',
+  );
+
+  Future<List<dynamic>> exportOpenReceivables({
+    required Map<String, dynamic> params,
+  }) async => _requireListResponse(
+    await _api.get('/customer-receivables/export', params: params),
+    'Dữ liệu xuất công nợ không hợp lệ',
+  );
+
+  Future<List<dynamic>> findOverdueDebts() async => _requireListResponse(
+    await _api.get('/customers/overdue-debts'),
+    'Dữ liệu nợ quá hạn không hợp lệ',
+  );
+}
+
+Map<String, dynamic> _requirePagedResponse(dynamic data, String message) {
+  if (data is! Map ||
+      data['items'] is! List ||
+      data['total'] is! num ||
+      data['page'] is! num ||
+      data['totalPages'] is! num) {
+    throw ApiException(message);
+  }
+  return Map<String, dynamic>.from(data);
+}
+
+List<dynamic> _requireListResponse(dynamic data, String message) {
+  if (data is! List) throw ApiException(message);
+  return List<dynamic>.from(data);
+}
+
+void _requireNumericFields(
+  Map<dynamic, dynamic> data,
+  List<String> fields,
+  String message,
+) {
+  if (fields.any((field) => data[field] is! num)) {
+    throw ApiException(message);
+  }
 }
 
 final customerRepoProvider = Provider<CustomerRepository>((ref) {

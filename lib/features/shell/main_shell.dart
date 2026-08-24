@@ -44,9 +44,13 @@ bool shouldShowAiAssistant({
   required String location,
   required double viewportWidth,
 }) {
-  final isPos = location == '/pos' || location.startsWith('/pos/');
+  final isSalesEntry =
+      location == '/sales/new' ||
+      location.startsWith('/sales/new/') ||
+      location == '/pos' ||
+      location.startsWith('/pos/');
   final isQr = location == '/qr-payment' || location.startsWith('/qr-payment/');
-  return !isPos && !isQr;
+  return !isSalesEntry && !isQr;
 }
 
 bool shouldShowShellUtilityHeader(String location) {
@@ -528,7 +532,7 @@ class _DesktopSidebar extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'SmartStock POS & Tax',
+                            'SmartStock',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium

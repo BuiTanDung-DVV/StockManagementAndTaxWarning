@@ -308,49 +308,27 @@ class ApiClient {
     }
   }
 
-  /// Uploads an image directly to Cloudinary without forwarding the app's
-  /// authorization token or shop headers to the storage provider.
-  Future<Map<String, dynamic>> postSignedImageUpload(
-    String url,
+  /// Sends image bytes to the authenticated backend. Storage credentials and
+  /// provider-specific signing never leave the server.
+  Future<Map<String, dynamic>> postImage(
+    String path,
     Uint8List bytes,
     String fileName,
     String contentType,
-    Map<String, dynamic> fields,
   ) async {
     try {
-      final uploadClient = Dio(
-        BaseOptions(
-          connectTimeout: const Duration(seconds: 60),
-          sendTimeout: const Duration(seconds: 60),
-          receiveTimeout: const Duration(seconds: 60),
+      final response = await _dio.post(
+        _cleanPath(path),
+        data: bytes,
+        options: Options(
+          contentType: contentType,
+          headers: {'x-file-name': fileName},
         ),
       );
-      final form = FormData.fromMap({
-        ...fields,
-        'file': MultipartFile.fromBytes(bytes, filename: fileName),
-      });
-      final response = await uploadClient.post<Map<String, dynamic>>(
-        url,
-        data: form,
-        options: Options(contentType: 'multipart/form-data'),
-      );
-      return Map<String, dynamic>.from(response.data ?? const {});
+      return Map<String, dynamic>.from(_extract(response) as Map);
     } on DioException catch (e) {
-      String? responseMessage;
-      final responseData = e.response?.data;
-      if (responseData is Map) {
-        final errorData = responseData['error'];
-        if (errorData is Map) {
-          responseMessage = errorData['message']?.toString();
-        }
-      }
-      throw ApiException(
-        responseMessage ??
-            (e.response?.statusCode == 401
-                ? 'Chữ ký tải ảnh đã hết hạn, vui lòng thử lại'
-                : 'Không thể tải ảnh lên Cloudinary'),
-        e.response?.statusCode,
-      );
+      if (e.error is ApiException) throw e.error!;
+      throw ApiException('Không thể tải ảnh lên máy chủ', e.response?.statusCode);
     }
   }
 

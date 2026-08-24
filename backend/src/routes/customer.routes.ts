@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, raw } from 'express';
 import * as customerCtrl from '../controllers/customer.controller';
 import { requirePermission } from '../middleware/permission.middleware';
 
@@ -7,8 +7,15 @@ const router = Router();
 router.get('/customers', requirePermission('customers', 'view'), customerCtrl.findAll);
 router.get('/customers/overdue-debts', requirePermission('customers', 'view'), customerCtrl.overdueDebts);
 router.get('/customers/debt-aging', requirePermission('customers', 'view'), customerCtrl.debtAging);
+router.get('/customer-receivables/paged', requirePermission('customers', 'view'), customerCtrl.openReceivablesPage);
+router.get('/customer-receivables/export', requirePermission('customers', 'view'), customerCtrl.exportOpenReceivables);
 router.get('/customer-receivables', requirePermission('customers', 'view'), customerCtrl.openReceivables);
-router.post('/customers/evidence-upload/presign', requirePermission('customers', 'edit'), customerCtrl.createDebtEvidenceImageUpload);
+router.post(
+    '/customers/evidence-upload',
+    requirePermission('customers', 'edit'),
+    raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '4mb' }),
+    customerCtrl.uploadDebtEvidenceImage,
+);
 router.post('/customers/evidence-upload/confirm', requirePermission('customers', 'edit'), customerCtrl.confirmDebtEvidenceImageUpload);
 router.post('/customers/evidence-upload/delete', requirePermission('customers', 'edit'), customerCtrl.deleteDebtEvidenceImageUpload);
 router.get('/customers/:id/evidence', requirePermission('customers', 'view'), customerCtrl.getDebtEvidence);
@@ -20,6 +27,7 @@ router.delete('/customers/:id', requirePermission('customers', 'full'), customer
 // Receivables
 router.get('/customers/:id/receivables', requirePermission('customers', 'view'), customerCtrl.receivables);
 router.post('/customers/:id/receivables', requirePermission('customers', 'edit'), customerCtrl.createReceivable);
+router.post('/customers/receivables/:receivableId/payments', requirePermission('customers', 'edit'), customerCtrl.collectManualReceivablePayment);
 
 // Evidence and Payments (nested under receivables)
 router.post('/customers/receivables/:receivableId/evidence', requirePermission('customers', 'edit'), customerCtrl.addEvidence);

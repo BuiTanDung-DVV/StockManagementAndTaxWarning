@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/finance_display.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../providers/finance_provider.dart';
 
@@ -13,13 +15,6 @@ final _currFmt = NumberFormat.currency(
   symbol: '₫',
   decimalDigits: 0,
 );
-final _today = DateTime.now();
-final _from = DateTime(
-  _today.year,
-  _today.month,
-  1,
-).toIso8601String().split('T')[0];
-final _to = _today.toIso8601String().split('T')[0];
 
 class TransactionHistoryScreen extends ConsumerStatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -37,14 +32,21 @@ class _TransactionHistoryScreenState
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
+    final period = currentMonthReportingPeriod(DateTime.now());
+    final from = period.from;
+    final to = period.to;
+    final periodLabel = reportingCompactRangeLabel(
+      DateTime.parse(from),
+      DateTime.parse(to),
+    );
     final txAsync = ref.watch(
       transactionsProvider((
         page: _page,
         limit: 20,
         type: _type,
         category: null,
-        from: _from,
-        to: _to,
+        from: from,
+        to: to,
       )),
     );
 
@@ -68,7 +70,7 @@ class _TransactionHistoryScreenState
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
-                  'Phạm vi: tháng này',
+                  'Phạm vi: $periodLabel',
                   style: TextStyle(
                     color: c.textSecondary,
                     fontSize: 12,
@@ -176,9 +178,7 @@ class _TransactionHistoryScreenState
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        tx['description'] ??
-                                            tx['note'] ??
-                                            (isIncome ? 'Thu' : 'Chi'),
+                                        financeTransactionDescription(tx),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w500,
                                           fontSize: 13,
@@ -186,7 +186,9 @@ class _TransactionHistoryScreenState
                                       ),
                                       SizedBox(height: 4),
                                       Text(
-                                        tx['paymentMethod'] ?? 'Tiền mặt',
+                                        financePaymentMethodLabel(
+                                          tx['paymentMethod']?.toString(),
+                                        ),
                                         style: TextStyle(
                                           fontSize: 11,
                                           color: c.textSecondary,

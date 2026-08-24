@@ -17,6 +17,7 @@ import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/responsive_layout.dart';
+import '../../settings/providers/shop_provider.dart';
 import '../providers/sales_provider.dart';
 
 final _currencyFormat = NumberFormat.currency(
@@ -24,6 +25,7 @@ final _currencyFormat = NumberFormat.currency(
   symbol: '₫',
   decimalDigits: 0,
 );
+final _quantityFormat = NumberFormat.decimalPattern('vi_VN');
 
 bool salesListUsesCompactLayout(double width) =>
     width < AppBreakpoints.compactNavigation;
@@ -45,6 +47,41 @@ int salesListTotalItems(Map<String, dynamic> data) {
       : ((data['items'] as List?)?.length ?? 0);
 }
 
+String salesOrderDateLabel(Object? value) {
+  final parsed = DateTime.tryParse(value?.toString() ?? '');
+  if (parsed == null) return 'Chưa rõ ngày';
+  return DateFormat('dd/MM/yyyy').format(parsed.toLocal());
+}
+
+({String? from, String? to}) salesListPeriodParams({
+  required bool currentPeriodOnly,
+  required DateTime now,
+}) {
+  if (!currentPeriodOnly) return (from: null, to: null);
+  final period = currentMonthReportingPeriod(now);
+  return (from: period.from, to: period.to);
+}
+
+bool salesListCanCreateTransaction({
+  required bool isAllShops,
+  required bool canEdit,
+}) => !isAllShops && canEdit;
+
+String? salesOrderShopName(
+  Map<String, dynamic> order,
+  List<Map<String, dynamic>> shops,
+) {
+  final orderShopId = parseShopRecordId(order['shopId'] ?? order['shop_id']);
+  if (orderShopId == null) return null;
+  for (final shop in shops) {
+    if (parseShopRecordId(shop['shopId']) == orderShopId) {
+      final name = shop['shopName']?.toString().trim();
+      return name == null || name.isEmpty ? null : name;
+    }
+  }
+  return null;
+}
+
 class SalesListScreen extends ConsumerStatefulWidget {
   const SalesListScreen({super.key});
 
@@ -56,6 +93,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   int _page = 1;
   String? _status;
   String _searchQuery = '';
+  bool _currentPeriodOnly = true;
   Timer? _searchDebounce;
 
   @override
@@ -76,9 +114,44 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     });
   }
 
+  void _openOrder(Map<String, dynamic> order, ShopState shopState) {
+    final orderId = int.tryParse(order['id']?.toString() ?? '');
+    if (orderId == null) return;
+    if (shopState.isAllShops) {
+      final orderShopId = parseShopRecordId(
+        order['shopId'] ?? order['shop_id'],
+      );
+      if (orderShopId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đơn hàng chưa có thông tin cửa hàng hợp lệ.'),
+          ),
+        );
+        return;
+      }
+      ref.read(shopProvider.notifier).switchShop(orderShopId);
+    }
+    context.push('/sales/$orderId');
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final now = DateTime.now();
+    final reportingPeriod = currentMonthReportingPeriod(now);
+    final listPeriod = salesListPeriodParams(
+      currentPeriodOnly: _currentPeriodOnly,
+      now: now,
+    );
+    final reportingPeriodLabel = reportingCompactRangeLabel(
+      DateTime.parse(reportingPeriod.from),
+      DateTime.parse(reportingPeriod.to),
+    );
+    final shopState = ref.watch(shopProvider);
+    final canCreateTransaction = salesListCanCreateTransaction(
+      isAllShops: shopState.isAllShops,
+      canEdit: shopState.hasPermission('sales', 'edit'),
+    );
     final compactLayout = salesListUsesCompactLayout(
       MediaQuery.sizeOf(context).width,
     );
@@ -88,6 +161,8 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
         status: _status,
         customerId: null,
         search: _searchQuery,
+        from: listPeriod.from,
+        to: listPeriod.to,
       )),
     );
     Widget headerActions({required bool compact}) => Wrap(
@@ -95,18 +170,18 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         featureGuideButton(context, 'sales_list'),
-        if (compact)
+        if (compact && canCreateTransaction)
           Tooltip(
-            message: 'Mở POS',
+            message: 'Ghi nhận bán hàng',
             child: FloatingActionButton.small(
               heroTag: 'sales-open-pos-action-compact',
               elevation: 0,
-              onPressed: () => context.push('/pos'),
+              onPressed: () => context.push('/sales/new'),
               child: const AppAssetIcon(
                 assetPath: AppAssets.orders,
                 size: 18,
                 color: Colors.white,
-                semanticLabel: 'Mở POS',
+                semanticLabel: 'Ghi nhận bán hàng',
               ),
             ),
           ),
@@ -115,13 +190,13 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: compactLayout
+      floatingActionButton: compactLayout || !canCreateTransaction
           ? null
           : AppPrimaryFloatingAction(
-              label: 'Mở POS',
+              label: 'Ghi nhận bán hàng',
               assetPath: AppAssets.orders,
               heroTag: 'sales-open-pos-action',
-              onPressed: () => context.push('/pos'),
+              onPressed: () => context.push('/sales/new'),
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
@@ -131,6 +206,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
             ref.invalidate(salesListProvider);
             ref.invalidate(salesSummaryProvider);
             ref.invalidate(paymentSummaryProvider);
+            ref.invalidate(topReturnedProductsProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -149,12 +225,19 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                     compactAction: headerActions(compact: true),
                   ),
                   _SalesSummarySection(
+                    period: reportingPeriod,
                     onRetry: () => ref.invalidate(salesSummaryProvider),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _SalesListControls(
                     status: _status,
+                    currentPeriodOnly: _currentPeriodOnly,
+                    periodLabel: reportingPeriodLabel,
                     onSearchChanged: _onSearchChanged,
+                    onPeriodChanged: (value) => setState(() {
+                      _currentPeriodOnly = value;
+                      _page = 1;
+                    }),
                     onStatusChanged: (value) => setState(() {
                       _status = value;
                       _page = 1;
@@ -165,11 +248,12 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                     data: (data) {
                       final items = (data['items'] as List?) ?? const [];
                       if (items.isEmpty) {
-                        return const AppEmpty(
+                        return AppEmpty(
                           visual: AppEmptyVisual.sales,
                           message: 'Không tìm thấy đơn hàng',
-                          subtitle:
-                              'Thử thay đổi bộ lọc hoặc tạo đơn mới từ màn hình POS.',
+                          subtitle: shopState.isAllShops
+                              ? 'Thử thay đổi bộ lọc hoặc chọn một cửa hàng cụ thể.'
+                              : 'Thử thay đổi bộ lọc hoặc ghi nhận một giao dịch bán mới.',
                         );
                       }
 
@@ -205,7 +289,9 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                         ),
                                   itemBuilder: (context, index) {
                                     if (desktop && index == 0) {
-                                      return const _SalesTableHeader();
+                                      return _SalesTableHeader(
+                                        showShopName: shopState.isAllShops,
+                                      );
                                     }
                                     final itemIndex = desktop
                                         ? index - 1
@@ -213,8 +299,19 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
                                     return _OrderRow(
                                       order: items[itemIndex],
                                       desktop: desktop,
-                                      onTap: () => context.push(
-                                        '/sales/${items[itemIndex]['id']}',
+                                      shopName: shopState.isAllShops
+                                          ? salesOrderShopName(
+                                              Map<String, dynamic>.from(
+                                                items[itemIndex] as Map,
+                                              ),
+                                              shopState.userShops,
+                                            )
+                                          : null,
+                                      onTap: () => _openOrder(
+                                        Map<String, dynamic>.from(
+                                          items[itemIndex] as Map,
+                                        ),
+                                        shopState,
                                       ),
                                     );
                                   },
@@ -310,12 +407,18 @@ class _SalesPagination extends StatelessWidget {
 
 class _SalesListControls extends StatelessWidget {
   final String? status;
+  final bool currentPeriodOnly;
+  final String periodLabel;
   final ValueChanged<String> onSearchChanged;
+  final ValueChanged<bool> onPeriodChanged;
   final ValueChanged<String?> onStatusChanged;
 
   const _SalesListControls({
     required this.status,
+    required this.currentPeriodOnly,
+    required this.periodLabel,
     required this.onSearchChanged,
+    required this.onPeriodChanged,
     required this.onStatusChanged,
   });
 
@@ -353,12 +456,25 @@ class _SalesListControls extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  'Tìm kiếm và trạng thái chỉ áp dụng cho danh sách bên dưới.',
+                  'Kỳ, tìm kiếm và trạng thái chỉ áp dụng cho danh sách bên dưới.',
                   style: textTheme.bodySmall?.copyWith(
                     color: colors.textSecondary,
                   ),
                 ),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.sm,
+              AppSpacing.xs,
+              AppSpacing.sm,
+              0,
+            ),
+            child: _SalesPeriodFilter(
+              currentPeriodOnly: currentPeriodOnly,
+              periodLabel: periodLabel,
+              onChanged: onPeriodChanged,
             ),
           ),
           FilterBar(
@@ -376,6 +492,47 @@ class _SalesListControls extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SalesPeriodFilter extends StatelessWidget {
+  final bool currentPeriodOnly;
+  final String periodLabel;
+  final ValueChanged<bool> onChanged;
+
+  const _SalesPeriodFilter({
+    required this.currentPeriodOnly,
+    required this.periodLabel,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          'Kỳ danh sách',
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        SegmentedButton<bool>(
+          showSelectedIcon: false,
+          segments: [
+            ButtonSegment(
+              value: true,
+              label: Text('Tháng hiện tại · $periodLabel'),
+            ),
+            const ButtonSegment(value: false, label: Text('Toàn bộ')),
+          ],
+          selected: {currentPeriodOnly},
+          onSelectionChanged: (values) => onChanged(values.first),
+        ),
+      ],
     );
   }
 }
@@ -424,19 +581,22 @@ class _SalesStatusFilter extends StatelessWidget {
 }
 
 class _SalesSummarySection extends ConsumerWidget {
+  final ({String from, String to}) period;
   final VoidCallback onRetry;
 
-  const _SalesSummarySection({required this.onRetry});
+  const _SalesSummarySection({required this.period, required this.onRetry});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppThemeColors.of(context);
-    final period = currentMonthReportingPeriod(DateTime.now());
     final summaryAsync = ref.watch(
       salesSummaryProvider((from: period.from, to: period.to)),
     );
     final paymentAsync = ref.watch(
       paymentSummaryProvider((from: period.from, to: period.to)),
+    );
+    final topReturnsAsync = ref.watch(
+      topReturnedProductsProvider((from: period.from, to: period.to)),
     );
     final periodLabel = reportingCompactRangeLabel(
       DateTime.parse(period.from),
@@ -460,7 +620,8 @@ class _SalesSummarySection extends ConsumerWidget {
             data['orderCount'] ?? data['totalOrders'] ?? data['count'] ?? 0;
         final revenue =
             double.tryParse(
-              data['totalRevenue']?.toString() ??
+              data['netSalesRevenue']?.toString() ??
+                  data['totalRevenue']?.toString() ??
                   data['revenue']?.toString() ??
                   '0',
             ) ??
@@ -472,6 +633,11 @@ class _SalesSummarySection extends ConsumerWidget {
                   '0',
             ) ??
             0;
+        final returnNetSalesRevenue =
+            double.tryParse(data['returnNetSalesRevenue']?.toString() ?? '0') ??
+            0;
+        final returnRatePct =
+            double.tryParse(data['returnRatePct']?.toString() ?? '0') ?? 0;
         final daily = (data['daily'] as List?) ?? const [];
         final lastSeven = daily.length > 7
             ? daily.sublist(daily.length - 7)
@@ -487,6 +653,12 @@ class _SalesSummarySection extends ConsumerWidget {
                   0,
             )
             .toList();
+        final grossProfitValues = lastSeven
+            .map<double>(
+              (item) =>
+                  double.tryParse(item['grossProfit']?.toString() ?? '') ?? 0,
+            )
+            .toList();
         final barLabels = lastSeven.map<String>((item) {
           final date = item['date']?.toString() ?? '';
           final parts = date.split('-');
@@ -497,87 +669,108 @@ class _SalesSummarySection extends ConsumerWidget {
           _SalesMetric(
             label: 'Đơn hàng',
             value: '$orderCount',
+            periodLabel: periodLabel,
             assetPath: AppAssets.orders,
             color: Theme.of(context).colorScheme.primary,
           ),
           _SalesMetric(
-            label: 'Doanh thu',
+            label: 'Doanh thu thuần',
             value: _currencyFormat.format(revenue),
+            periodLabel: periodLabel,
             assetPath: AppAssets.revenue,
             color: AppColors.success,
           ),
           _SalesMetric(
             label: 'Lợi nhuận gộp',
             value: _currencyFormat.format(grossProfit),
+            periodLabel: periodLabel,
             assetPath: AppAssets.profit,
             color: grossProfit < 0 ? AppColors.danger : AppColors.success,
+          ),
+          _SalesMetric(
+            label: 'Tỷ lệ hàng trả',
+            value: '${NumberFormat('0.00', 'vi_VN').format(returnRatePct)}%',
+            periodLabel:
+                '${_currencyFormat.format(returnNetSalesRevenue)} hàng trả',
+            assetPath: AppAssets.orders,
+            color: AppColors.warning,
           ),
         ];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (barValues.length >= 3 && barValues.any((value) => value > 0))
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final revenueChart = ChartCard(
-                      title: 'Doanh thu 7 ngày gần nhất',
-                      height: 230,
-                      trailing: Text(
-                        'Đơn vị: đồng',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colors.textMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final hasRevenueData =
+                      barValues.length >= 3 &&
+                      barValues.any((value) => value > 0);
+                  final revenueChart = ChartCard(
+                    title: 'Doanh thu & lợi nhuận gộp 7 ngày',
+                    height: 270,
+                    trailing: Text(
+                      'Đơn vị: đồng',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors.textMuted,
+                        fontWeight: FontWeight.w600,
                       ),
-                      child: MiniBarChart(
-                        values: barValues,
-                        labels: barLabels,
-                        tooltipLabels: barLabels,
-                        barColor: Theme.of(context).colorScheme.primary,
-                        showLeftTitles: true,
-                        valueSuffix: ' đồng',
+                    ),
+                    child: hasRevenueData
+                        ? MiniGroupedBarChart(
+                            primaryValues: barValues,
+                            secondaryValues: grossProfitValues,
+                            labels: barLabels,
+                            primaryLabel: 'Doanh thu thuần',
+                            secondaryLabel: 'Lợi nhuận gộp',
+                            primaryColor: Theme.of(context).colorScheme.primary,
+                            secondaryColor: AppColors.warning,
+                          )
+                        : const AppEmpty(
+                            visual: AppEmptyVisual.sales,
+                            message: 'Chưa có doanh thu trong 7 ngày gần nhất',
+                            subtitle:
+                                'Biểu đồ sẽ tự cập nhật khi có giao dịch bán đã ghi nhận.',
+                          ),
+                  );
+                  final paymentPanel = paymentAsync.when(
+                    data: (items) => _PaymentMethodBreakdown(
+                      items: items,
+                      periodLabel: periodLabel,
+                    ),
+                    loading: () => const AppShimmer(
+                      child: ShimmerBox(
+                        width: double.infinity,
+                        height: 270,
+                        radius: AppRadius.card,
                       ),
-                    );
-                    final paymentPanel = paymentAsync.when(
-                      data: (items) => _PaymentMethodBreakdown(
-                        items: items,
-                        periodLabel: periodLabel,
-                      ),
-                      loading: () => const AppShimmer(
-                        child: ShimmerBox(
-                          width: double.infinity,
-                          height: 230,
-                          radius: AppRadius.card,
-                        ),
-                      ),
-                      error: (_, _) => const AppInlineError(
-                        message: 'Không thể tải cơ cấu thanh toán.',
-                      ),
-                    );
+                    ),
+                    error: (_, _) => const AppInlineError(
+                      message: 'Không thể tải cơ cấu thanh toán.',
+                    ),
+                  );
 
-                    if (constraints.maxWidth < 860) {
-                      return Column(
-                        children: [
-                          revenueChart,
-                          const SizedBox(height: AppSpacing.md),
-                          paymentPanel,
-                        ],
-                      );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  if (constraints.maxWidth < 860) {
+                    return Column(
                       children: [
-                        Expanded(flex: 2, child: revenueChart),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(child: paymentPanel),
+                        revenueChart,
+                        const SizedBox(height: AppSpacing.md),
+                        paymentPanel,
                       ],
                     );
-                  },
-                ),
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 2, child: revenueChart),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(child: paymentPanel),
+                    ],
+                  );
+                },
               ),
+            ),
             Container(
               decoration: BoxDecoration(
                 color: colors.surface,
@@ -615,9 +808,291 @@ class _SalesSummarySection extends ConsumerWidget {
                 },
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            topReturnsAsync.when(
+              data: (items) => _TopReturnedProductsPanel(
+                items: items,
+                periodLabel: periodLabel,
+              ),
+              loading: () => const AppShimmer(
+                child: ShimmerBox(
+                  width: double.infinity,
+                  height: 190,
+                  radius: AppRadius.card,
+                ),
+              ),
+              error: (_, _) => const AppInlineError(
+                message: 'Không thể tải danh sách sản phẩm bị trả.',
+              ),
+            ),
           ],
         );
       },
+    );
+  }
+}
+
+class _TopReturnedProductsPanel extends StatelessWidget {
+  final List<dynamic> items;
+  final String periodLabel;
+
+  const _TopReturnedProductsPanel({
+    required this.items,
+    required this.periodLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final rows = items
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colors.cardAlt,
+              border: Border(
+                bottom: BorderSide(color: colors.divider),
+                left: const BorderSide(color: AppColors.warning, width: 3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sản phẩm bị trả nhiều',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Ưu tiên kiểm tra chất lượng hàng, tư vấn bán và nguyên nhân đổi trả.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Text(
+                  periodLabel,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (rows.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: AppEmpty(
+                visual: AppEmptyVisual.sales,
+                message: 'Chưa có hàng trả trong kỳ',
+                subtitle: 'Các phiếu trả hợp lệ sẽ được tổng hợp tại đây.',
+              ),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final desktop = constraints.maxWidth >= 760;
+                return Column(
+                  children: [
+                    if (desktop) const _TopReturnTableHeader(),
+                    for (var index = 0; index < rows.length; index++) ...[
+                      if (index > 0) Divider(height: 1, color: colors.divider),
+                      _TopReturnRow(item: rows[index], desktop: desktop),
+                    ],
+                  ],
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopReturnTableHeader extends StatelessWidget {
+  const _TopReturnTableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: colors.textMuted,
+      fontWeight: FontWeight.w700,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          Expanded(flex: 4, child: Text('SẢN PHẨM', style: style)),
+          Expanded(flex: 3, child: Text('LÝ DO GẦN NHẤT', style: style)),
+          Expanded(
+            child: Text('LƯỢT', textAlign: TextAlign.right, style: style),
+          ),
+          Expanded(
+            child: Text('SL', textAlign: TextAlign.right, style: style),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text('GIÁ TRỊ', textAlign: TextAlign.right, style: style),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopReturnRow extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final bool desktop;
+
+  const _TopReturnRow({required this.item, required this.desktop});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final name = item['name']?.toString() ?? 'Sản phẩm chưa có tên';
+    final unit = item['unit']?.toString() ?? 'Sản phẩm';
+    final reason = item['latestReason']?.toString() ?? 'Không ghi nhận';
+    final returnCount =
+        int.tryParse(item['returnCount']?.toString() ?? '') ?? 0;
+    final quantity = double.tryParse(item['quantity']?.toString() ?? '') ?? 0;
+    final value = double.tryParse(item['value']?.toString() ?? '') ?? 0;
+
+    if (!desktop) {
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  _currencyFormat.format(value),
+                  style: AppTheme.tabularStyle(
+                    context,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.danger,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              reason,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '$returnCount lượt · ${_quantityFormat.format(quantity)} $unit',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 12,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              reason,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '$returnCount',
+              textAlign: TextAlign.right,
+              style: AppTheme.tabularStyle(context, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              _quantityFormat.format(quantity),
+              textAlign: TextAlign.right,
+              style: AppTheme.tabularStyle(context, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              _currencyFormat.format(value),
+              textAlign: TextAlign.right,
+              style: AppTheme.tabularStyle(
+                context,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.danger,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -814,7 +1289,7 @@ class _SalesMetricCell extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Tháng này',
+            metric.periodLabel,
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
@@ -846,7 +1321,7 @@ class _SalesMetricRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              '${metric.label} • Tháng này',
+              '${metric.label} • ${metric.periodLabel}',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
@@ -871,7 +1346,9 @@ class _SalesMetricRow extends StatelessWidget {
 }
 
 class _SalesTableHeader extends StatelessWidget {
-  const _SalesTableHeader();
+  final bool showShopName;
+
+  const _SalesTableHeader({required this.showShopName});
 
   @override
   Widget build(BuildContext context) {
@@ -879,13 +1356,17 @@ class _SalesTableHeader extends StatelessWidget {
     return Container(
       color: colors.cardAlt,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: const Row(
+      child: Row(
         children: [
-          Expanded(flex: 2, child: Text('Mã đơn')),
-          Expanded(flex: 3, child: Text('Khách hàng')),
-          Expanded(flex: 2, child: Text('Thanh toán')),
-          Expanded(flex: 2, child: Text('Trạng thái')),
           Expanded(
+            flex: 2,
+            child: Text(showShopName ? 'Mã đơn / Cửa hàng' : 'Mã đơn'),
+          ),
+          const Expanded(flex: 3, child: Text('Khách hàng')),
+          const Expanded(flex: 2, child: Text('Ngày giao dịch')),
+          const Expanded(flex: 2, child: Text('Thanh toán')),
+          const Expanded(flex: 2, child: Text('Trạng thái')),
+          const Expanded(
             flex: 2,
             child: Text('Tổng tiền', textAlign: TextAlign.right),
           ),
@@ -898,11 +1379,13 @@ class _SalesTableHeader extends StatelessWidget {
 class _OrderRow extends StatelessWidget {
   final Map<String, dynamic> order;
   final bool desktop;
+  final String? shopName;
   final VoidCallback onTap;
 
   const _OrderRow({
     required this.order,
     required this.desktop,
+    this.shopName,
     required this.onTap,
   });
 
@@ -920,6 +1403,7 @@ class _OrderRow extends StatelessWidget {
         0;
     final customer = order['customer']?['name']?.toString() ?? 'Khách mua lẻ';
     final code = order['orderCode']?.toString() ?? 'DH-${order['id']}';
+    final orderDate = salesOrderDateLabel(order['orderDate']);
     final payment = paid >= total && paid > 0
         ? 'Đã thanh toán'
         : paid > 0
@@ -938,14 +1422,29 @@ class _OrderRow extends StatelessWidget {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: Text(
-                      code,
-                      style: AppTheme.tabularStyle(
-                        context,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          code,
+                          style: AppTheme.tabularStyle(
+                            context,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        if (shopName != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            shopName!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: colors.textSecondary),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   Expanded(
@@ -954,6 +1453,15 @@ class _OrderRow extends StatelessWidget {
                       customer,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      orderDate,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -1016,6 +1524,22 @@ class _OrderRow extends StatelessWidget {
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(fontWeight: FontWeight.w500),
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Ngày giao dịch: $orderDate',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: colors.textSecondary),
+                            ),
+                            if (shopName != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                shopName!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(color: colors.textSecondary),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1055,12 +1579,14 @@ class _OrderRow extends StatelessWidget {
 class _SalesMetric {
   final String label;
   final String value;
+  final String periodLabel;
   final String assetPath;
   final Color color;
 
   const _SalesMetric({
     required this.label,
     required this.value,
+    required this.periodLabel,
     required this.assetPath,
     required this.color,
   });
@@ -1073,14 +1599,23 @@ class _OrderStatus {
   const _OrderStatus(this.label, this.color);
 
   factory _OrderStatus.from(String? value) {
-    switch (value) {
-      case 'COMPLETED':
-      case 'DELIVERED':
-        return const _OrderStatus('Hoàn thành', AppColors.success);
-      case 'PENDING':
-        return const _OrderStatus('Chờ xử lý', AppColors.warning);
-      default:
-        return const _OrderStatus('Đã hủy', AppColors.danger);
-    }
+    final presentation = salesOrderStatusPresentation(value);
+    return _OrderStatus(presentation.label, presentation.color);
+  }
+}
+
+({String label, Color color}) salesOrderStatusPresentation(String? value) {
+  switch (value?.trim().toUpperCase()) {
+    case 'COMPLETED':
+    case 'DELIVERED':
+      return (label: 'Hoàn thành', color: AppColors.success);
+    case 'CONFIRMED':
+      return (label: 'Đã xác nhận', color: AppColors.info);
+    case 'PENDING':
+      return (label: 'Chờ xử lý', color: AppColors.warning);
+    case 'CANCELLED':
+      return (label: 'Đã hủy', color: AppColors.danger);
+    default:
+      return (label: 'Không xác định', color: AppColors.warning);
   }
 }

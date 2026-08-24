@@ -106,18 +106,36 @@ class _StockTakeHistoryScreenState
                   );
                 }
                 final st = items[i] as Map;
-                final code = st['code'] ?? 'ST-${st['id']}';
-                final createdAt = st['createdAt']?.toString() ?? '';
-                String dateLabel = createdAt;
-                if (createdAt.isNotEmpty && createdAt.contains('T')) {
+                final code =
+                    st['stockTakeCode'] ?? st['code'] ?? 'ST-${st['id']}';
+                final stockTakeDate =
+                    (st['stockTakeDate'] ?? st['createdAt'])?.toString() ?? '';
+                String dateLabel = stockTakeDate;
+                if (stockTakeDate.isNotEmpty) {
                   try {
-                    final dt = DateTime.parse(createdAt).toLocal();
-                    dateLabel = DateFormat('dd/MM/yyyy HH:mm').format(dt);
+                    final dt = DateTime.parse(stockTakeDate).toLocal();
+                    dateLabel = stockTakeDate.contains('T')
+                        ? DateFormat('dd/MM/yyyy HH:mm').format(dt)
+                        : DateFormat('dd/MM/yyyy').format(dt);
                   } catch (_) {}
                 }
                 final status = (st['status'] ?? '').toString().toUpperCase();
-                final note = st['note']?.toString() ?? '';
+                final note = (st['notes'] ?? st['note'])?.toString() ?? '';
                 final isCompleted = status == 'COMPLETED';
+                final isDraft = status == 'DRAFT' || status.isEmpty;
+                final stockTakeItems = (st['items'] as List?) ?? const [];
+                final differenceCount = stockTakeItems.where((item) {
+                  if (item is! Map) return false;
+                  final difference = num.tryParse(
+                    item['difference']?.toString() ?? '0',
+                  );
+                  return difference != null && difference != 0;
+                }).length;
+                final statusLabel = isCompleted
+                    ? 'Đã hoàn tất'
+                    : status == 'CANCELLED'
+                    ? 'Đã hủy'
+                    : 'Bản nháp';
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -162,6 +180,30 @@ class _StockTakeHistoryScreenState
                                 color: c.textSecondary,
                               ),
                             ),
+                            const SizedBox(height: 3),
+                            Text(
+                              statusLabel,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: isCompleted
+                                    ? AppColors.success
+                                    : isDraft
+                                    ? AppColors.warning
+                                    : c.textMuted,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${stockTakeItems.length} sản phẩm • $differenceCount có chênh lệch',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: differenceCount > 0
+                                    ? AppColors.danger
+                                    : c.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             if (note.isNotEmpty) ...[
                               const SizedBox(height: 2),
                               Text(
@@ -178,45 +220,112 @@ class _StockTakeHistoryScreenState
                           ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.redAccent,
-                          size: 20,
-                        ),
-                        tooltip: 'Xóa phiếu kiểm',
-                        onPressed: () {
-                          AppConfirmModal.show(
-                            context,
-                            title: 'Xóa phiếu kiểm',
-                            message:
-                                'Bạn có chắc chắn muốn xóa phiếu kiểm kê này?',
-                            confirmText: 'Xóa',
-                            cancelText: 'Hủy',
-                          ).then((confirm) async {
-                            if (confirm == true) {
+                      if (isDraft)
+                        PopupMenuButton<String>(
+                          tooltip: 'Thao tác phiếu kiểm kê',
+                          onSelected: (action) async {
+                            final id = st['id'] is int
+                                ? st['id'] as int
+                                : int.tryParse(st['id']?.toString() ?? '0') ??
+                                      0;
+                            if (id <= 0) return;
+                            if (action == 'complete') {
+                              final confirm = await AppConfirmModal.show(
+                                context,
+                                title: 'Hoàn tất kiểm kê',
+                                message:
+                                    'Hệ thống sẽ đối chiếu lại tồn kho hiện tại trong DB và cập nhật theo số thực tế đã nhập. Bạn muốn tiếp tục?',
+                                confirmText: 'Hoàn tất',
+                                cancelText: 'Quay lại',
+                              );
+                              if (confirm != true) return;
                               try {
-                                final id = st['id'] is int
-                                    ? st['id']
-                                    : int.tryParse(
-                                            st['id']?.toString() ?? '0',
-                                          ) ??
-                                          0;
                                 await ref
                                     .read(inventoryRepoProvider)
-                                    .deleteStockTake(id);
+                                    .updateStockTakeStatus(id, 'COMPLETED');
                                 ToastService.showSuccess(
-                                  'Xóa phiếu kiểm thành công',
+                                  'Đã hoàn tất và cập nhật tồn kho',
                                 );
                                 ref.invalidate(stockTakesProvider);
                                 ref.invalidate(stockProvider);
+                                ref.invalidate(stockPageProvider);
+                                ref.invalidate(lowStockProvider);
                               } catch (e) {
-                                ToastService.showError('Lỗi: $e');
+                                ToastService.showError(
+                                  'Không thể hoàn tất phiếu: $e',
+                                );
                               }
+                              return;
                             }
-                          });
-                        },
-                      ),
+                            if (action == 'cancel') {
+                              try {
+                                await ref
+                                    .read(inventoryRepoProvider)
+                                    .updateStockTakeStatus(id, 'CANCELLED');
+                                ToastService.showSuccess(
+                                  'Đã hủy phiếu kiểm kê',
+                                );
+                                ref.invalidate(stockTakesProvider);
+                              } catch (e) {
+                                ToastService.showError(
+                                  'Không thể hủy phiếu: $e',
+                                );
+                              }
+                              return;
+                            }
+                            if (action == 'delete') {
+                              AppConfirmModal.show(
+                                context,
+                                title: 'Xóa phiếu kiểm',
+                                message:
+                                    'Bạn có chắc chắn muốn xóa phiếu kiểm kê này?',
+                                confirmText: 'Xóa',
+                                cancelText: 'Hủy',
+                              ).then((confirm) async {
+                                if (confirm == true) {
+                                  try {
+                                    await ref
+                                        .read(inventoryRepoProvider)
+                                        .deleteStockTake(id);
+                                    ToastService.showSuccess(
+                                      'Xóa phiếu kiểm thành công',
+                                    );
+                                    ref.invalidate(stockTakesProvider);
+                                    ref.invalidate(stockProvider);
+                                  } catch (e) {
+                                    ToastService.showError('Lỗi: $e');
+                                  }
+                                }
+                              });
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'complete',
+                              child: ListTile(
+                                leading: Icon(Icons.task_alt_rounded),
+                                title: Text('Hoàn tất phiếu'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'cancel',
+                              child: ListTile(
+                                leading: Icon(Icons.cancel_outlined),
+                                title: Text('Hủy phiếu'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: Icon(Icons.delete_outline),
+                                title: Text('Xóa bản nháp'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 );

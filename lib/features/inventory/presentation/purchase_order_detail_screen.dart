@@ -34,8 +34,8 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
         purchaseOrder['supplierName'] ??
         'Không rõ nhà cung cấp';
     final totalAmount = asDouble(purchaseOrder['totalAmount']);
-    final createdAt =
-        purchaseOrder['createdAt']?.toString().split('T').first ?? '';
+    final orderDate =
+        purchaseOrder['orderDate']?.toString().split('T').first ?? '';
     final invoiceNumber = purchaseOrder['invoiceNumber'] ?? '';
     final status = (purchaseOrder['status'] ?? '').toString().toUpperCase();
 
@@ -76,11 +76,12 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            tooltip: 'Xóa đơn nhập',
-            onPressed: () => _confirmDelete(context, ref),
-          ),
+          if (status == 'PENDING')
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              tooltip: 'Xóa đơn nhập đang chờ',
+              onPressed: () => _confirmDelete(context, ref),
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -99,8 +100,8 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   _buildInfoRow('Mã đơn hàng', code.toString(), c),
-                  if (createdAt.isNotEmpty)
-                    _buildInfoRow('Ngày tạo', createdAt, c),
+                  if (orderDate.isNotEmpty)
+                    _buildInfoRow('Ngày nhập hàng', orderDate, c),
                   _buildInfoRow('Nhà cung cấp', supplierName, c),
                   if (invoiceNumber.isNotEmpty)
                     _buildInfoRow('Số hóa đơn', invoiceNumber, c),

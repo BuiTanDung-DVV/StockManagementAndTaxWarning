@@ -28,12 +28,20 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
   void _onSearch(String query) async {
     if (query.trim().length > 2) {
       setState(() => _isSearching = true);
-      final results = await ref.read(authProvider.notifier).searchShops(query);
-      if (mounted) {
-        setState(() {
-          _searchResults = results;
-          _isSearching = false;
-        });
+      try {
+        final results = await ref
+            .read(authProvider.notifier)
+            .searchShops(query);
+        if (mounted) {
+          setState(() => _searchResults = results);
+        }
+      } catch (error) {
+        if (mounted) {
+          setState(() => _searchResults = []);
+          ToastService.showError('Không thể tải cửa hàng từ cơ sở dữ liệu');
+        }
+      } finally {
+        if (mounted) setState(() => _isSearching = false);
       }
     } else {
       if (mounted) {

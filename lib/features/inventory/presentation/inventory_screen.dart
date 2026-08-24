@@ -7,10 +7,12 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
+import '../../../core/utils/data_freshness.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/data_freshness_banner.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/inventory_provider.dart';
@@ -30,6 +32,7 @@ class InventoryScreen extends ConsumerWidget {
     final slowMovingAsync = ref.watch(slowMovingProvider);
     final categoriesAsync = ref.watch(inventoryCategoriesSummaryProvider);
     final abcPeriod = comparisonReportingDates('year', DateTime.now());
+    final currentPeriod = currentMonthReportingPeriod(DateTime.now());
     final abcAsync = ref.watch(
       inventoryAbcProvider((
         from: abcPeriod.currentFrom,
@@ -122,10 +125,32 @@ class InventoryScreen extends ConsumerWidget {
                   AppPageHeader(
                     title: 'Quản lý kho',
                     subtitle:
-                        'Ưu tiên sản phẩm cần nhập, sắp hết hạn và tồn chậm luân chuyển.',
+                        'Ưu tiên sản phẩm cần nhập, sắp hoặc đã hết hạn và tồn chậm luân chuyển.',
                     dense: true,
                     action: headerActions(compact: compactLayout),
                     compactAction: headerActions(compact: true),
+                  ),
+                  stockPageAsync.when(
+                    data: (data) {
+                      final assessment = assessDataFreshness(
+                        latestDate: data['latestMovementDate'],
+                        periodFrom: DateTime.parse(currentPeriod.from),
+                        periodTo: DateTime.parse(currentPeriod.to),
+                        recordCount: 0,
+                      );
+                      if (!assessment.requiresAttention) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                        child: DataFreshnessBanner(
+                          assessment: assessment,
+                          dataLabel: 'biến động kho',
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
                   _InventoryMetricStrip(
                     stock: stockAsync,
@@ -136,6 +161,7 @@ class InventoryScreen extends ConsumerWidget {
                     ),
                     lowStock: lowStockAsync,
                     expiring: expiringAsync,
+                    categories: categoriesAsync,
                     warehouses: warehousesAsync,
                     isAllShops: shopState.isAllShops,
                     activeShopCount: shopState.userShops
@@ -165,6 +191,7 @@ class InventoryScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.lg),
                   _InventoryActionWorkspace(
                     lowStock: lowStockAsync,
+                    expiring: expiringAsync,
                     slowMoving: slowMovingAsync,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -177,7 +204,7 @@ class InventoryScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _CategoryDistribution(asyncValue: categoriesAsync),
-                  const SizedBox(height: AppSpacing.xl),
+                  SizedBox(height: compactLayout ? AppSpacing.xl : 104),
                 ],
               ),
             ),
@@ -235,9 +262,8 @@ class _InventoryAbcPanel extends StatelessWidget {
                     children: [
                       Text(
                         'Phân tích ABC theo doanh thu hàng hóa',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
@@ -345,8 +371,9 @@ class _InventoryAbcPanel extends StatelessWidget {
                               width: width,
                               child: _InventoryAbcGradeCard(
                                 grade: grade,
-                                skuCount:
-                                    _inventoryAbcNumber(raw['skuCount']).toInt(),
+                                skuCount: _inventoryAbcNumber(
+                                  raw['skuCount'],
+                                ).toInt(),
                                 revenueShare: _inventoryAbcNumber(
                                   raw['revenueShare'],
                                 ),
@@ -377,7 +404,11 @@ class _InventoryAbcPanel extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    for (var index = 0; index < revenueItems.length; index++) ...[
+                    for (
+                      var index = 0;
+                      index < revenueItems.length;
+                      index++
+                    ) ...[
                       if (index > 0) const SizedBox(height: AppSpacing.sm),
                       _InventoryAbcProductRow(
                         item: revenueItems[index],
@@ -528,9 +559,9 @@ class _InventoryAbcGradeCard extends StatelessWidget {
                   'Giá trị tồn: $money',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.textSecondary,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -637,9 +668,9 @@ class _InventoryAbcProductRow extends StatelessWidget {
                       : '${item['sku'] ?? ''} · ${item['category'] ?? 'Chưa phân loại'} · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.textMuted,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
                 ),
               ],
             ),
@@ -770,6 +801,7 @@ class _InventoryMetricStrip extends StatelessWidget {
   final int? totalProducts;
   final AsyncValue<List<dynamic>> lowStock;
   final AsyncValue<List<dynamic>> expiring;
+  final AsyncValue<List<dynamic>> categories;
   final AsyncValue<List<dynamic>>? warehouses;
   final bool isAllShops;
   final int activeShopCount;
@@ -779,6 +811,7 @@ class _InventoryMetricStrip extends StatelessWidget {
     required this.totalProducts,
     required this.lowStock,
     required this.expiring,
+    required this.categories,
     required this.warehouses,
     required this.isAllShops,
     required this.activeShopCount,
@@ -809,7 +842,7 @@ class _InventoryMetricStrip extends StatelessWidget {
         context: 'Cần kiểm tra nhập hàng',
       ),
       _InventoryMetric(
-        label: 'Sắp hết hạn',
+        label: 'Sắp/quá hạn',
         value: expiring.when(
           data: (items) => '${items.length}',
           loading: () => 'Đang tải',
@@ -818,15 +851,16 @@ class _InventoryMetricStrip extends StatelessWidget {
         context: 'Cần xử lý trước hạn',
       ),
       _InventoryMetric(
-        label: isAllShops ? 'Cửa hàng hoạt động' : 'Kho hoạt động',
-        value: isAllShops
-            ? '$activeShopCount'
-            : warehouses!.when(
-                data: (items) => '${items.length}',
-                loading: () => 'Đang tải',
-                error: (_, _) => 'Chưa tải',
-              ),
-        context: isAllShops ? 'Trong phạm vi tổng hợp' : 'Cửa hàng hiện tại',
+        label: 'Giá trị tồn kho',
+        value: categories.when(
+          data: (items) =>
+              _compactInventoryMoney(inventoryCategoryTotals(items).totalValue),
+          loading: () => 'Đang tải',
+          error: (_, _) => 'Chưa tải',
+        ),
+        context: isAllShops
+            ? '$activeShopCount cửa hàng · theo giá vốn'
+            : '${warehouses?.asData?.value.length ?? 0} kho · theo giá vốn',
       ),
     ];
 
@@ -835,9 +869,38 @@ class _InventoryMetricStrip extends StatelessWidget {
 }
 
 int inventoryProductTotal(Map<String, dynamic> page) {
+  final productTotal = int.tryParse(page['productTotal']?.toString() ?? '');
+  if (productTotal != null && productTotal >= 0) return productTotal;
   final total = int.tryParse(page['total']?.toString() ?? '');
   if (total != null && total >= 0) return total;
   return (page['items'] as List?)?.length ?? 0;
+}
+
+String _compactInventoryMoney(double value) {
+  if (value >= 1000000000) {
+    return '${NumberFormat('#,##0.##', 'vi_VN').format(value / 1000000000)} tỷ ₫';
+  }
+  if (value >= 1000000) {
+    return '${NumberFormat('#,##0.#', 'vi_VN').format(value / 1000000)} triệu ₫';
+  }
+  return NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+    decimalDigits: 0,
+  ).format(value);
+}
+
+({double totalValue, int skuCount}) inventorySlowMovingTotals(
+  Iterable<dynamic> items,
+) {
+  var totalValue = 0.0;
+  var skuCount = 0;
+  for (final item in items) {
+    if (item is! Map) continue;
+    totalValue += num.tryParse(item['stockValue']?.toString() ?? '') ?? 0;
+    skuCount++;
+  }
+  return (totalValue: totalValue, skuCount: skuCount);
 }
 
 String inventoryIssueProductName(dynamic item) {
@@ -853,6 +916,20 @@ num inventoryIssueQuantity(dynamic item) {
   final value =
       item['currentQuantity'] ?? item['quantity'] ?? item['currentStock'] ?? 0;
   return value is num ? value : num.tryParse(value.toString()) ?? 0;
+}
+
+String inventoryLowStockStatus(dynamic item) {
+  if (item is! Map) return 'Tổng tồn 0';
+  final quantity = inventoryIssueQuantity(item);
+  final unit =
+      item['product']?['unit']?.toString() ?? item['unit']?.toString() ?? '';
+  final warehouseCount = int.tryParse(
+    item['warehouseCount']?.toString() ?? '',
+  );
+  final warehouseLabel = warehouseCount == null
+      ? ''
+      : ' · $warehouseCount kho';
+  return 'Tổng tồn $quantity${unit.isEmpty ? '' : ' $unit'}$warehouseLabel';
 }
 
 ({double totalValue, int totalSkuCount}) inventoryCategoryTotals(
@@ -1047,10 +1124,12 @@ class _InventoryMetricRow extends StatelessWidget {
 
 class _InventoryActionWorkspace extends StatelessWidget {
   final AsyncValue<List<dynamic>> lowStock;
+  final AsyncValue<List<dynamic>> expiring;
   final AsyncValue<List<dynamic>> slowMoving;
 
   const _InventoryActionWorkspace({
     required this.lowStock,
+    required this.expiring,
     required this.slowMoving,
   });
 
@@ -1062,19 +1141,16 @@ class _InventoryActionWorkspace extends StatelessWidget {
           title: 'Dưới định mức tồn',
           emptyMessage: 'Không có sản phẩm dưới định mức.',
           asyncValue: lowStock,
-          statusBuilder: (item) {
-            final quantity = item['currentQuantity'] ?? item['quantity'] ?? 0;
-            final unit =
-                item['product']?['unit']?.toString() ??
-                item['unit']?.toString() ??
-                '';
-            return 'Tồn $quantity${unit.isEmpty ? '' : ' $unit'}';
-          },
+          statusBuilder: inventoryLowStockStatus,
         );
         final slowPanel = _InventoryIssuePanel(
-          title: 'Chậm luân chuyển',
+          title: 'Tồn chậm giữ vốn',
           emptyMessage: 'Không có sản phẩm chậm luân chuyển.',
           asyncValue: slowMoving,
+          summaryBuilder: (items) {
+            final totals = inventorySlowMovingTotals(items);
+            return '${totals.skuCount} SKU · ${_compactInventoryMoney(totals.totalValue)} theo giá vốn';
+          },
           statusBuilder: (item) {
             final quantity = inventoryIssueQuantity(item);
             final unit =
@@ -1085,15 +1161,48 @@ class _InventoryActionWorkspace extends StatelessWidget {
               item['daysSinceLastSale']?.toString() ?? '',
             );
             final age = days == null ? 'Chưa từng bán' : '$days ngày chưa bán';
-            return '$age • Tồn $quantity${unit.isEmpty ? '' : ' $unit'}';
+            final stockValue = num.tryParse(
+              item['stockValue']?.toString() ?? '',
+            );
+            final capital = stockValue == null
+                ? ''
+                : ' · ${_compactInventoryMoney(stockValue.toDouble())}';
+            return '$age • Tồn $quantity${unit.isEmpty ? '' : ' $unit'}$capital';
           },
         );
+        final expiringPanel = _InventoryIssuePanel(
+          title: 'Sắp hoặc đã hết hạn',
+          emptyMessage: 'Không có lô hàng sắp hoặc đã hết hạn.',
+          asyncValue: expiring,
+          statusBuilder: (item) =>
+              inventoryExpiringStatus(item, DateTime.now()),
+        );
 
-        if (constraints.maxWidth < 900) {
+        if (constraints.maxWidth < 760) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               lowPanel,
+              const SizedBox(height: AppSpacing.md),
+              expiringPanel,
+              const SizedBox(height: AppSpacing.md),
+              slowPanel,
+            ],
+          );
+        }
+
+        if (constraints.maxWidth < 1120) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: lowPanel),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(child: expiringPanel),
+                ],
+              ),
               const SizedBox(height: AppSpacing.md),
               slowPanel,
             ],
@@ -1104,7 +1213,9 @@ class _InventoryActionWorkspace extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: lowPanel),
-            const SizedBox(width: AppSpacing.lg),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: expiringPanel),
+            const SizedBox(width: AppSpacing.md),
             Expanded(child: slowPanel),
           ],
         );
@@ -1118,12 +1229,14 @@ class _InventoryIssuePanel extends StatelessWidget {
   final String emptyMessage;
   final AsyncValue<List<dynamic>> asyncValue;
   final String Function(dynamic item) statusBuilder;
+  final String Function(List<dynamic> items)? summaryBuilder;
 
   const _InventoryIssuePanel({
     required this.title,
     required this.emptyMessage,
     required this.asyncValue,
     required this.statusBuilder,
+    this.summaryBuilder,
   });
 
   @override
@@ -1180,6 +1293,28 @@ class _InventoryIssuePanel extends StatelessWidget {
               }
               return Column(
                 children: [
+                  if (summaryBuilder != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          summaryBuilder!(items),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: colors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ),
+                    Divider(height: 1, color: colors.divider),
+                  ],
                   for (
                     var index = 0;
                     index < items.take(5).length;
@@ -1218,6 +1353,8 @@ class _InventoryIssueRow extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final name = inventoryIssueProductName(item);
 
+    final compact = MediaQuery.sizeOf(context).width < 680;
+
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
@@ -1236,27 +1373,69 @@ class _InventoryIssueRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                ),
+                if (compact) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    status,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            status,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColors.danger,
-              fontWeight: FontWeight.w600,
+          if (!compact) ...[
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Text(
+                status,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
+}
+
+String inventoryExpiringStatus(dynamic item, DateTime today) {
+  final raw =
+      item['expiryDate']?.toString() ?? item['expiry_date']?.toString() ?? '';
+  final expiry = DateTime.tryParse(raw);
+  final quantity = inventoryIssueQuantity(item);
+  final unit =
+      item['product']?['unit']?.toString() ?? item['unit']?.toString() ?? '';
+  final stock = 'Tồn $quantity${unit.isEmpty ? '' : ' $unit'}';
+  if (expiry == null) return stock;
+
+  final todayOnly = DateTime(today.year, today.month, today.day);
+  final expiryOnly = DateTime(expiry.year, expiry.month, expiry.day);
+  final days = expiryOnly.difference(todayOnly).inDays;
+  if (days < 0) return 'Quá hạn ${days.abs()} ngày · $stock';
+  if (days == 0) return 'Hết hạn hôm nay · $stock';
+  return 'Còn $days ngày · $stock';
 }
 
 class _CategoryDistribution extends StatelessWidget {

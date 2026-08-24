@@ -23,7 +23,11 @@ void main() {
     expect(mobileNavigationItemWidth(540, 5), closeTo(104.8, 0.01));
   });
 
-  test('hides AI assistant on POS and QR payment flows', () {
+  test('hides AI assistant on sales-entry and QR payment flows', () {
+    expect(
+      shouldShowAiAssistant(location: '/sales/new', viewportWidth: 390),
+      isFalse,
+    );
     expect(shouldShowAiAssistant(location: '/', viewportWidth: 390), isTrue);
     expect(
       shouldShowAiAssistant(location: '/pos', viewportWidth: 390),

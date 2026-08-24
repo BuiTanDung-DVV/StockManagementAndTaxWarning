@@ -4,6 +4,14 @@ import { InventoryMovement, InventoryStock, Warehouse } from '../inventory/entit
 import { Brackets } from 'typeorm';
 import { COGSService } from './cogs.service';
 import { ImageStorageService } from './image-storage.service';
+import {
+    normalizeBatchInput,
+    normalizeCategoryInput,
+    normalizeCostItemInput,
+    normalizeCostTypeInput,
+    normalizeProductInput,
+    normalizeUnitConversionInput,
+} from '../product/product-input.utils';
 
 export class ProductService {
     private productRepo = AppDataSource.getRepository(Product);
@@ -55,18 +63,20 @@ export class ProductService {
     }
 
     async createProduct(shopId: number, dto: any) {
-        const rawBarcode = dto.barcode !== null && dto.barcode !== undefined ? String(dto.barcode).trim() : '';
-        dto.barcode = rawBarcode === '' ? null : rawBarcode;
-        const sku = String(dto.sku || '').trim() || `SKU${Date.now().toString().slice(-8)}`;
+        const input = normalizeProductInput(shopId, dto, {
+            requireName: true,
+            allowOpeningStock: true,
+        });
+        const sku = String(input.sku || '').trim() || `SKU${Date.now().toString().slice(-8)}`;
         const existsSku = await this.productRepo.findOne({ where: { sku, shopId, isActive: true } });
         if (existsSku) throw new Error('Mã SKU này đã tồn tại trong hệ thống');
-        if (dto.barcode) {
-            const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId, isActive: true } });
+        if (input.barcode) {
+            const existsBarcode = await this.productRepo.findOne({ where: { barcode: String(input.barcode), shopId, isActive: true } });
             if (existsBarcode) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
         }
-        const openingQty = Number(dto.currentStock ?? dto.openingStock ?? 0);
-        const providedWarehouseId = Number(dto.warehouseId || 0);
-        const productPayload = { ...dto };
+        const openingQty = Number(input.currentStock ?? input.openingStock ?? 0);
+        const providedWarehouseId = Number(input.warehouseId || 0);
+        const productPayload = { ...input };
         delete productPayload.currentStock;
         delete productPayload.openingStock;
         delete productPayload.warehouseId;
@@ -100,23 +110,22 @@ export class ProductService {
     }
 
     async updateProduct(shopId: number, id: number, dto: any) {
-        const rawBarcode = dto.barcode !== null && dto.barcode !== undefined ? String(dto.barcode).trim() : '';
-        dto.barcode = rawBarcode === '' ? null : rawBarcode;
+        const input = normalizeProductInput(shopId, dto);
         const product = await this.loadProductEntity(shopId, id);
         const previousImageUrl = product.imageUrl;
         const imageWasChanged =
-            Object.prototype.hasOwnProperty.call(dto, 'imageUrl') &&
-            dto.imageUrl !== previousImageUrl;
-        if (dto.sku && String(dto.sku).trim() !== product.sku) {
-            const existsSku = await this.productRepo.findOne({ where: { sku: String(dto.sku).trim(), shopId, isActive: true } });
+            Object.prototype.hasOwnProperty.call(input, 'imageUrl') &&
+            input.imageUrl !== previousImageUrl;
+        if (input.sku && String(input.sku).trim() !== product.sku) {
+            const existsSku = await this.productRepo.findOne({ where: { sku: String(input.sku).trim(), shopId, isActive: true } });
             if (existsSku) throw new Error('Mã SKU này đã tồn tại trong hệ thống');
         }
-        if (dto.barcode && dto.barcode !== product.barcode) {
-            const existsBarcode = await this.productRepo.findOne({ where: { barcode: dto.barcode, shopId, isActive: true } });
+        if (input.barcode && input.barcode !== product.barcode) {
+            const existsBarcode = await this.productRepo.findOne({ where: { barcode: String(input.barcode), shopId, isActive: true } });
             if (existsBarcode) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
         }
 
-        const { currentStock, openingStock, warehouseId, ...productPayload } = dto;
+        const { currentStock, openingStock, warehouseId, ...productPayload } = input;
         Object.assign(product, productPayload);
         try {
             await this.productRepo.save(product);
@@ -200,16 +209,18 @@ export class ProductService {
     // === COST TYPES ===
     async findAllCostTypes(shopId: number) { return this.costTypeRepo.find({ where: { isActive: true, shopId }, order: { sortOrder: 'ASC' } }); }
     async createCostType(shopId: number, dto: Partial<CostType>) {
-        if (await this.costTypeRepo.findOne({ where: { name: dto.name as string, shopId } })) throw new Error('Cost type name exists');
-        return this.costTypeRepo.save(this.costTypeRepo.create({ ...dto, shopId }));
+        const input = normalizeCostTypeInput(dto);
+        if (await this.costTypeRepo.findOne({ where: { name: input.name as string, shopId } })) throw new Error('Cost type name exists');
+        return this.costTypeRepo.save(this.costTypeRepo.create({ ...input, description: input.description ?? undefined, isActive: true, shopId }));
     }
 
     // === COST ITEMS ===
     async addCostItem(shopId: number, productId: number, costTypeId: number, amount: number, calculationType = 'FIXED', notes?: string) {
+        const input = normalizeCostItemInput(costTypeId, amount, calculationType, notes);
         const product = await this.findProductById(shopId, productId);
-        const costType = await this.costTypeRepo.findOne({ where: { id: costTypeId, shopId } });
+        const costType = await this.costTypeRepo.findOne({ where: { id: input.costTypeId, shopId } });
         if (!costType) throw new Error('Cost type not found');
-        const item = this.costItemRepo.create({ product, costType, amount, calculationType, notes, shopId });
+        const item = this.costItemRepo.create({ product, costType, amount: input.amount, calculationType: input.calculationType, notes: input.notes ?? undefined, shopId });
         await this.costItemRepo.save(item);
         await this.calculateSuggestedPrice(shopId, productId);
         return item;
@@ -229,19 +240,34 @@ export class ProductService {
     async findBatches(shopId: number, productId: number) { return this.batchRepo.find({ where: { product: { id: productId, shopId } as any, isActive: true, shopId } as any }); }
     async createBatch(shopId: number, productId: number, dto: Partial<ProductBatch>) {
         const product = await this.findProductById(shopId, productId);
-        return this.batchRepo.save(this.batchRepo.create({ ...dto, product, shopId }));
+        const input = normalizeBatchInput(dto);
+        return this.batchRepo.save(this.batchRepo.create({
+            ...input,
+            manufacturingDate: input.manufacturingDate ? new Date(`${input.manufacturingDate}T00:00:00Z`) : undefined,
+            expiryDate: input.expiryDate ? new Date(`${input.expiryDate}T00:00:00Z`) : undefined,
+            costPrice: input.costPrice ?? undefined,
+            supplierName: input.supplierName ?? undefined,
+            notes: input.notes ?? undefined,
+            isActive: true,
+            product,
+            shopId,
+        }));
     }
 
     // === UNIT CONVERSIONS ===
     async findConversions(shopId: number, productId: number) { return this.unitRepo.find({ where: { product: { id: productId, shopId } as any, shopId } as any }); }
     async createConversion(shopId: number, productId: number, dto: Partial<UnitConversion>) {
         const product = await this.findProductById(shopId, productId);
-        return this.unitRepo.save(this.unitRepo.create({ ...dto, product, shopId }));
+        const input = normalizeUnitConversionInput(dto);
+        return this.unitRepo.save(this.unitRepo.create({ ...input, sellingPricePerUnit: input.sellingPricePerUnit ?? undefined, product, shopId }));
     }
 
     // === CATEGORIES ===
     async findAllCategories(shopId: number) { return this.categoryRepo.find({ where: { isActive: true, shopId } }); }
-    async createCategory(shopId: number, dto: Partial<Category>) { return this.categoryRepo.save(this.categoryRepo.create({ ...dto, shopId })); }
+    async createCategory(shopId: number, dto: Partial<Category>) {
+        const input = normalizeCategoryInput(dto);
+        return this.categoryRepo.save(this.categoryRepo.create({ ...input, description: input.description ?? undefined, isActive: true, shopId }));
+    }
 
     private async loadProductEntity(shopId: number, id: number) {
         const product = await this.productRepo.findOne({

@@ -252,7 +252,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/', builder: (_, _) => const DashboardScreen()),
           // Sales
           GoRoute(path: '/sales', builder: (_, _) => const SalesListScreen()),
-          GoRoute(path: '/pos', builder: (_, _) => const PosScreen()),
+          GoRoute(
+            path: '/sales/new',
+            builder: (_, _) => const PosScreen(),
+          ),
+          GoRoute(path: '/pos', redirect: (_, _) => '/sales/new'),
           GoRoute(
             path: '/sales/:id',
             builder: (_, state) =>

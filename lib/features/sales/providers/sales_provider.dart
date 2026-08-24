@@ -12,12 +12,18 @@ class SalesRepository {
     String? status,
     int? customerId,
     String? search,
+    String? from,
+    String? to,
   }) async {
     final params = <String, dynamic>{'page': '$page', 'limit': '$limit'};
     if (status != null) params['status'] = status;
     if (customerId != null) params['customerId'] = '$customerId';
     if (search != null && search.trim().isNotEmpty) {
       params['search'] = search.trim();
+    }
+    if (from != null && to != null) {
+      params['from'] = from;
+      params['to'] = to;
     }
     return await _api.get('/sales-orders', params: params);
   }
@@ -37,8 +43,50 @@ class SalesRepository {
     Map<String, dynamic> dto,
   ) async => await _api.post('/sales-orders/$id/returns', data: dto);
 
-  Future<Map<String, dynamic>> getSummary(String from, String to) async =>
-      await _api.get('/sales-orders/summary', params: {'from': from, 'to': to});
+  Future<Map<String, dynamic>> getSummary(String from, String to) async {
+    final data = Map<String, dynamic>.from(
+      await _api.get('/sales-orders/summary', params: {'from': from, 'to': to}),
+    );
+    const numericKeys = [
+      'orderCount',
+      'netSalesRevenue',
+      'grossProfit',
+      'returnNetSalesRevenue',
+      'returnRatePct',
+      'totalCogs',
+    ];
+    final hasInvalidMetric = numericKeys.any((key) {
+      final value = num.tryParse(data[key]?.toString() ?? '');
+      return value == null || !value.isFinite;
+    });
+    final daily = data['daily'];
+    final period = data['period'];
+    final hasInvalidDaily =
+        daily is List &&
+        daily.any((item) {
+          if (item is! Map || item['date'] == null) return true;
+          return const [
+            'revenue',
+            'cogs',
+            'grossProfit',
+            'marginPct',
+            'orderCount',
+          ].any((key) {
+            final value = num.tryParse(item[key]?.toString() ?? '');
+            return value == null || !value.isFinite;
+          });
+        });
+    if (hasInvalidMetric ||
+        daily is! List ||
+        hasInvalidDaily ||
+        period is! Map ||
+        period['from'] == null ||
+        period['to'] == null ||
+        data['timezone'] == null) {
+      throw ApiException('Dữ liệu tổng quan bán hàng không đầy đủ');
+    }
+    return data;
+  }
 
   Future<List<dynamic>> getTopProducts(
     String from,
@@ -52,7 +100,10 @@ class SalesRepository {
       params['previousTo'] = previousTo;
     }
     final res = await _api.get('/sales-orders/top-products', params: params);
-    return res as List<dynamic>? ?? [];
+    if (res is! List) {
+      throw ApiException('Dữ liệu sản phẩm bán chạy không hợp lệ');
+    }
+    return List<dynamic>.from(res);
   }
 
   Future<List<dynamic>> getPaymentSummary(String from, String to) async {
@@ -60,7 +111,21 @@ class SalesRepository {
       '/sales-orders/payment-summary',
       params: {'from': from, 'to': to},
     );
-    return res as List<dynamic>? ?? [];
+    if (res is! List) {
+      throw ApiException('Dữ liệu phương thức thanh toán không hợp lệ');
+    }
+    return List<dynamic>.from(res);
+  }
+
+  Future<List<dynamic>> getTopReturnedProducts(String from, String to) async {
+    final res = await _api.get(
+      '/sales-orders/top-returns',
+      params: {'from': from, 'to': to},
+    );
+    if (res is! List) {
+      throw ApiException('Dữ liệu sản phẩm hoàn trả không hợp lệ');
+    }
+    return List<dynamic>.from(res);
   }
 }
 
@@ -72,7 +137,14 @@ final salesRepoProvider = Provider<SalesRepository>((ref) {
 final salesListProvider =
     FutureProvider.family<
       Map<String, dynamic>,
-      ({int page, String? status, int? customerId, String? search})
+      ({
+        int page,
+        String? status,
+        int? customerId,
+        String? search,
+        String? from,
+        String? to,
+      })
     >((ref, args) {
       return ref
           .watch(salesRepoProvider)
@@ -81,6 +153,8 @@ final salesListProvider =
             status: args.status,
             customerId: args.customerId,
             search: args.search,
+            from: args.from,
+            to: args.to,
           );
     });
 
@@ -118,7 +192,11 @@ final recentTransactionsProvider = FutureProvider<List<dynamic>>((ref) async {
   final shopState = ref.watch(shopProvider);
   if (shopState.userShops.isEmpty) return [];
   final res = await ref.watch(salesRepoProvider).findAll(page: 1, limit: 5);
-  return res['items'] as List<dynamic>? ?? [];
+  final items = res['items'];
+  if (items is! List) {
+    throw ApiException('Dữ liệu giao dịch gần đây không hợp lệ');
+  }
+  return List<dynamic>.from(items);
 });
 
 final paymentSummaryProvider =
@@ -127,4 +205,14 @@ final paymentSummaryProvider =
       args,
     ) {
       return ref.watch(salesRepoProvider).getPaymentSummary(args.from, args.to);
+    });
+
+final topReturnedProductsProvider =
+    FutureProvider.family<List<dynamic>, ({String from, String to})>((
+      ref,
+      args,
+    ) {
+      return ref
+          .watch(salesRepoProvider)
+          .getTopReturnedProducts(args.from, args.to);
     });

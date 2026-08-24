@@ -65,4 +65,59 @@ void main() {
     expect(dashboardCanViewSalesInsights(dashboardUser), isTrue);
     expect(dashboardCanViewSalesInsights(inventoryOnlyUser), isFalse);
   });
+
+  test('refresh keeps sales insights independent from finance permission', () {
+    final salesOnly = dashboardRefreshPlan(
+      hasSalesInsights: true,
+      hasFinance: false,
+      hasInventory: false,
+    );
+    final financeOnly = dashboardRefreshPlan(
+      hasSalesInsights: false,
+      hasFinance: true,
+      hasInventory: false,
+    );
+
+    expect(salesOnly.sales, isTrue);
+    expect(salesOnly.finance, isFalse);
+    expect(financeOnly.sales, isFalse);
+    expect(financeOnly.finance, isTrue);
+  });
+
+  test('recent orders follow sales permission instead of finance permission', () {
+    const salesUser = ShopState(
+      currentShopId: 1,
+      memberType: 'EMPLOYEE',
+      status: 'ACTIVE',
+      permissions: {'sales': 'view', 'finance': 'none'},
+      userShops: [
+        {'shopId': 1, 'memberType': 'EMPLOYEE', 'status': 'ACTIVE'},
+      ],
+      isLoading: false,
+    );
+    const financeUser = ShopState(
+      currentShopId: 1,
+      memberType: 'EMPLOYEE',
+      status: 'ACTIVE',
+      permissions: {'sales': 'none', 'finance': 'view'},
+      userShops: [
+        {'shopId': 1, 'memberType': 'EMPLOYEE', 'status': 'ACTIVE'},
+      ],
+      isLoading: false,
+    );
+    const dashboardUser = ShopState(
+      currentShopId: 1,
+      memberType: 'EMPLOYEE',
+      status: 'ACTIVE',
+      permissions: {'dashboard': 'view', 'sales': 'none'},
+      userShops: [
+        {'shopId': 1, 'memberType': 'EMPLOYEE', 'status': 'ACTIVE'},
+      ],
+      isLoading: false,
+    );
+
+    expect(dashboardCanViewRecentOrders(salesUser), isTrue);
+    expect(dashboardCanViewRecentOrders(financeUser), isFalse);
+    expect(dashboardCanViewRecentOrders(dashboardUser), isFalse);
+  });
 }

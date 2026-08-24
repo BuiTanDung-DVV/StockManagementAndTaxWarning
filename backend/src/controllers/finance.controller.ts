@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { FinanceService } from '../services/finance.service';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { InvoiceQueryInputError } from '../finance/invoice-query.utils';
 
 const financeService = new FinanceService();
 
@@ -11,7 +12,7 @@ export const getCashTransactions = async (req: Request, res: Response) => {
         res.json({
             success: true,
             data: await financeService.getCashTransactions(
-                (req as any).shopId,
+                getShopId(req),
                 +(req.query.page || 1),
                 +(req.query.limit || 20),
                 req.query.type as string,
@@ -52,11 +53,14 @@ export const getProfitLoss = async (req: Request, res: Response) => {
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 };
 export const getInvoiceReconciliation = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.getInvoiceReconciliation((req as any).shopId, req.query.from as string, req.query.to as string) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    try { res.json({ success: true, data: await financeService.getInvoiceReconciliation((req as any).shopId, req.query.from as string, req.query.to as string, req.query.scope as string) }); }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : 500).json({ success: false, message: validation ? String(e.message).replace('Validation: ', '') : e.message });
+    }
 };
 export const getExpensesByCategory = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.getExpensesByCategory((req as any).shopId, req.query.from as string, req.query.to as string) }); }
+    try { res.json({ success: true, data: await financeService.getExpensesByCategory(getShopId(req), req.query.from as string, req.query.to as string) }); }
     catch (e: any) {
         const invalidPeriod = String(e.message).startsWith('Invalid ');
         res.status(invalidPeriod ? 400 : 500).json({ success: false, message: e.message });
@@ -73,7 +77,10 @@ export const getDailyClosingByDate = async (req: Request, res: Response) => {
 };
 export const createDailyClosing = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.createDailyClosing((req as any).shopId, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : 500).json({ success: false, message: e.message });
+    }
 };
 
 export const getCashAccounts = async (req: Request, res: Response) => {
@@ -129,8 +136,14 @@ export const deleteBudgetPlan = async (req: Request, res: Response) => {
 
 // Invoices
 export const getInvoices = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.getInvoices((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.type as string) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    try { res.json({ success: true, data: await financeService.getInvoices((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20), req.query.type as string, req.query.from as string, req.query.to as string) }); }
+    catch (e: any) {
+        const validation = e instanceof InvoiceQueryInputError;
+        res.status(validation ? 400 : 500).json({
+            success: false,
+            message: validation ? e.message : 'Không thể tải danh sách hóa đơn',
+        });
+    }
 };
 export const getInvoiceSummary = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.getInvoiceSummary((req as any).shopId, req.query.from as string, req.query.to as string) }); }
@@ -162,7 +175,13 @@ export const updateInvoice = async (req: Request, res: Response) => {
 };
 export const deleteInvoice = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await financeService.deleteInvoice((req as any).shopId, +req.params.id) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const validation = String(e.message || '').startsWith('Validation:');
+        res.status(validation ? 400 : 500).json({
+            success: false,
+            message: validation ? String(e.message).replace('Validation: ', '') : e.message,
+        });
+    }
 };
 
 // Tax Obligations
@@ -185,8 +204,20 @@ export const deleteTaxObligation = async (req: Request, res: Response) => {
 
 // Purchases Without Invoice
 export const getPurchasesWithoutInvoice = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await financeService.getPurchasesWithoutInvoice((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20)) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    try {
+        res.json({
+            success: true,
+            data: await financeService.getPurchasesWithoutInvoice(
+                (req as any).shopId,
+                +(req.query.page || 1),
+                +(req.query.limit || 20),
+                req.query.status as string,
+            ),
+        });
+    }
+    catch (e: any) {
+        res.status(String(e.message || '').startsWith('Validation:') ? 400 : 500).json({ success: false, message: e.message });
+    }
 };
 export const createPurchaseWithoutInvoice = async (req: AuthRequest, res: Response) => {
     try {

@@ -147,7 +147,7 @@ class _CompactBrandHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'SmartStock POS & Tax',
+              'SmartStock',
               style: TextStyle(
                 color: colors.textPrimary,
                 fontSize: 19,

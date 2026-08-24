@@ -3,6 +3,8 @@ import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/tax_service.dart';
 import '../widgets/tax_warning_widget.dart';
+import '../../settings/providers/tax_config_provider.dart';
+import '../../../core/widgets/app_animations.dart';
 
 class TaxEstimateScreen extends ConsumerStatefulWidget {
   const TaxEstimateScreen({super.key});
@@ -16,19 +18,14 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
   String _selectedYear = DateTime.now().year.toString();
 
   bool _isLoading = false;
+  bool _didStart = false;
   Map<String, dynamic>? _reportData;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchEstimate();
-    });
-  }
+  String? _errorMessage;
 
   Future<void> _fetchEstimate() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
 
     try {
@@ -37,12 +34,16 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
         _selectedPeriod,
         _selectedYear,
       );
-      setState(() {
-        _reportData = data;
-      });
+      if (!mounted) return;
+      setState(() => _reportData = data);
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        setState(() {
+          _reportData = null;
+          _errorMessage =
+              'Không thể tải báo cáo của kỳ đã chọn. Kiểm tra cấu hình thuế từ DB rồi thử lại.';
+        });
+        ToastService.showError('Không thể tải báo cáo thuế kỳ đã chọn.');
       }
     } finally {
       if (mounted) {
@@ -69,6 +70,37 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final config = ref.watch(taxConfigProvider);
+    if (!config.isLoaded) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Ước tính & xuất thuế (HTKK)')),
+        body: Center(
+          child: config.isLoading
+              ? const CircularProgressIndicator()
+              : Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: AppInlineError(
+                    message:
+                        config.errorMessage ??
+                        'Không thể tải cấu hình thuế từ DB.',
+                    onRetry: () => ref
+                        .read(taxConfigProvider.notifier)
+                        .refresh(),
+                  ),
+                ),
+        ),
+      );
+    }
+    final fiscalYear = config.fiscalYear.toString();
+    if (!_didStart) {
+      _didStart = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _selectedYear = fiscalYear);
+          _fetchEstimate();
+        }
+      });
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Ước Tính & Xuất Thuế (HTKK)')),
       body: Padding(
@@ -109,8 +141,11 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                   child: DropdownButtonFormField<String>(
                     initialValue: _selectedYear,
                     decoration: const InputDecoration(labelText: 'Năm'),
-                    items: const [
-                      DropdownMenuItem(value: '2026', child: Text('2026')),
+                    items: [
+                      DropdownMenuItem(
+                        value: fiscalYear,
+                        child: Text(fiscalYear),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) {
@@ -127,6 +162,11 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
             const SizedBox(height: 24),
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
+                : _errorMessage != null
+                ? AppInlineError(
+                    message: _errorMessage!,
+                    onRetry: _fetchEstimate,
+                  )
                 : _reportData != null
                 ? Column(
                     children: [
@@ -146,6 +186,9 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                               _reportData!['pitOwed'].toString(),
                             ) ??
                             0,
+                        exemptionThreshold: config.thresholds!.tier4,
+                        policySourceCode:
+                            config.policySourceCode ?? 'văn bản đang hiệu lực',
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
@@ -163,7 +206,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                       ),
                     ],
                   )
-                : const Text('Chưa có dữ liệu'),
+                : const Text('Chưa có dữ liệu cho kỳ đã chọn.'),
           ],
         ),
       ),

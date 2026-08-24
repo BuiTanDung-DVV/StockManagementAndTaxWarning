@@ -63,23 +63,15 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   final List<_AssistantMessage> _messages = const [
     _AssistantMessage(
       fromUser: false,
-      text: '''### 👋 Chào bạn!
-
-Tôi là **Trợ lý AI chuyên nghiệp** tư vấn về Quản lý Bán hàng, Tồn kho và Nghĩa vụ Thuế cho Hộ kinh doanh.
-
-Bạn có thể đặt bất kỳ câu hỏi nào cho tôi về:
-- 📊 **Doanh thu & Nghĩa vụ Thuế**: Ngưỡng chịu thuế mới (1 tỷ VNĐ/năm từ 2026), thuế VAT & TNCN.
-- 📦 **Tồn kho & Định mức**: Danh sách hàng sắp hết, quy trình kiểm kê và nhập kho bổ sung.
-- 💳 **Công nợ khách hàng**: Hạn mức nợ, đối soát và thu hồi công nợ.
-
-Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây giờ?''',
+      text:
+          'Chào bạn! Tôi có thể tra cứu dữ liệu bán hàng, tồn kho, công nợ và các tài liệu đang bật của cửa hàng.',
     ),
   ].toList();
 
   final List<String> _quickQuestions = const [
-    'Ngưỡng doanh thu và nghĩa vụ thuế',
-    'Cách xử lý hàng dưới định mức',
-    'Quy trình thu công nợ khách hàng',
+    'Tóm tắt tình hình cửa hàng',
+    'Sản phẩm nào cần xử lý tồn kho?',
+    'Công nợ nào cần ưu tiên?',
   ];
 
   @override
@@ -219,7 +211,7 @@ Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây g
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const launcherSize = Size(72, 80);
+        const launcherSize = Size(64, 72);
         const margin = 12.0;
         final minimumTop = math.min(
           widget.topSafeInset + margin,
@@ -248,7 +240,7 @@ Tôi có thể hỗ trợ thông tin gì cho cửa hàng của bạn ngay bây g
           widget.topSafeInset + AppSpacing.md,
         );
         final desktopPanelHeight = math.min(
-          680.0,
+          560.0,
           math.max(0.0, constraints.maxHeight - desktopPanelTop - 16),
         );
 
@@ -801,7 +793,7 @@ class _AssistantLauncher extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: 12,
+            top: 10,
             bottom: 0,
             child: Tooltip(
               message: 'Kéo để đổi vị trí • Nhấn để hỏi AI',
@@ -818,10 +810,10 @@ class _AssistantLauncher extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     child: Container(
                       padding: EdgeInsets.fromLTRB(
-                        compact ? 8 : 7,
-                        7,
-                        compact ? 8 : 12,
-                        7,
+                        compact ? 7 : 7,
+                        6,
+                        compact ? 7 : 12,
+                        6,
                       ),
                       decoration: BoxDecoration(
                         color: primary.withValues(alpha: 0.04),
@@ -837,7 +829,7 @@ class _AssistantLauncher extends StatelessWidget {
                         children: [
                           AppAssetIcon(
                             assetPath: AppAssets.aiMascot,
-                            size: compact ? 48 : 52,
+                            size: compact ? 40 : 52,
                             semanticLabel: 'Stocky, trợ lý SmartStock',
                           ),
                           if (!compact) ...[
@@ -891,13 +883,13 @@ class _AssistantLauncher extends StatelessWidget {
                   onTap: onHide,
                   customBorder: const CircleBorder(),
                   child: SizedBox.square(
-                    dimension: 26,
+                    dimension: 22,
                     child: Center(
                       child: Text(
                         '×',
                         style: TextStyle(
                           color: colors.textSecondary,
-                          fontSize: 18,
+                          fontSize: 16,
                           height: 1,
                           fontWeight: FontWeight.w600,
                         ),

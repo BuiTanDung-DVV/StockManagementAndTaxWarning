@@ -384,17 +384,11 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<List<Map<String, dynamic>>> searchShops(String query) async {
     if (query.trim().isEmpty) return [];
-    try {
-      final response = await _api.get('/shops/search', params: {'q': query});
-      if (response is List) {
-        return response
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-      }
-      return [];
-    } catch (e) {
-      return [];
+    final response = await _api.get('/shops/search', params: {'q': query});
+    if (response is! List) {
+      throw ApiException('Dữ liệu tìm kiếm cửa hàng không hợp lệ');
     }
+    return response.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   Future<bool> requestJoinShop(int shopId) async {

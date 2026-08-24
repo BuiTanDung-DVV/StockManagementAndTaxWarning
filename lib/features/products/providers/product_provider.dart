@@ -35,34 +35,15 @@ class ProductRepository {
     required String contentType,
     required Uint8List bytes,
   }) async {
-    final signed = Map<String, dynamic>.from(
-      await _api.post(
-        '/products/image-upload/presign',
-        data: {
-          'fileName': fileName,
-          'contentType': contentType,
-          'size': bytes.length,
-        },
-      ),
-    );
-    final uploadUrl = signed['uploadUrl']?.toString() ?? '';
-    final objectKey = signed['objectKey']?.toString() ?? '';
-    final fields = Map<String, dynamic>.from(
-      signed['fields'] as Map? ?? const {},
-    );
-    if (uploadUrl.isEmpty || objectKey.isEmpty || fields.isEmpty) {
-      throw ApiException('Máy chủ không tạo được liên kết tải ảnh');
-    }
-
-    final uploaded = await _api.postSignedImageUpload(
-      uploadUrl,
+    final uploaded = await _api.postImage(
+      '/products/image-upload',
       bytes,
       fileName,
       contentType,
-      fields,
     );
-    if (uploaded['public_id']?.toString() != objectKey) {
-      throw ApiException('Cloudinary trả về định danh ảnh không hợp lệ');
+    final objectKey = uploaded['objectKey']?.toString() ?? '';
+    if (objectKey.isEmpty) {
+      throw ApiException('Máy chủ không trả về định danh ảnh');
     }
     return Map<String, dynamic>.from(
       await _api.post(
@@ -120,7 +101,10 @@ final availableTagsProvider = FutureProvider<List<TagModel>>((ref) async {
 
   // Fetch recent products to find used tags not in managed list
   final res = await ref.watch(productRepoProvider).findAll(limit: 500);
-  final items = (res['items'] as List?) ?? [];
+  final items = res['items'];
+  if (items is! List) {
+    throw ApiException('Dữ liệu sản phẩm không hợp lệ');
+  }
   final Set<String> usedTags = {};
 
   for (final item in items) {

@@ -9,4 +9,12 @@ void main() {
     expect(productListUsesCompactLayout(800), isFalse);
     expect(productListUsesCompactLayout(1200), isFalse);
   });
+
+  test('product low-stock status follows the database minimum', () {
+    expect(productIsLowStock(8, 5), isFalse);
+    expect(productIsLowStock(5, 5), isTrue);
+    expect(productIsLowStock(3, 12), isTrue);
+    expect(productIsLowStock(3, 0), isFalse);
+    expect(productIsLowStock(0, 10), isFalse);
+  });
 }

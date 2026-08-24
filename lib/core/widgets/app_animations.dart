@@ -74,56 +74,138 @@ class AppEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: size + 20,
-                height: size + 20,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.07),
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                  border: Border.all(color: c.divider),
-                ),
-                child: AppAssetIcon(
-                  assetPath: _resolvedAssetPath,
-                  size: size,
-                  semanticLabel: message,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact =
+            constraints.hasBoundedHeight && constraints.maxHeight < 240;
+        final visualSize = compact && size > 36 ? 36.0 : size;
+        if (compact) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(AppRadius.card),
+                        border: Border.all(color: c.divider),
+                      ),
+                      child: AppAssetIcon(
+                        assetPath: _resolvedAssetPath,
+                        size: 36,
+                        semanticLabel: message,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            message,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: c.textPrimary,
+                                ),
+                          ),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              subtitle!,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: c.textSecondary,
+                                    height: 1.3,
+                                  ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (action != null) ...[
+                      const SizedBox(width: 8),
+                      action!,
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: c.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  subtitle!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: c.textSecondary,
-                    height: 1.45,
+            ),
+          );
+        }
+        return Center(
+          child: Padding(
+            padding: EdgeInsets.all(compact ? 12 : 32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: visualSize + 20,
+                    height: visualSize + 20,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(color: c.divider),
+                    ),
+                    child: AppAssetIcon(
+                      assetPath: _resolvedAssetPath,
+                      size: visualSize,
+                      semanticLabel: message,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-              if (action != null) ...[const SizedBox(height: 16), action!],
-            ],
+                  SizedBox(height: compact ? 8 : 16),
+                  Text(
+                    message,
+                    style:
+                        (compact
+                                ? Theme.of(context).textTheme.titleSmall
+                                : Theme.of(context).textTheme.titleMedium)
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: c.textPrimary,
+                            ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (subtitle != null) ...[
+                    SizedBox(height: compact ? 4 : 6),
+                    Text(
+                      subtitle!,
+                      style:
+                          (compact
+                                  ? Theme.of(context).textTheme.bodySmall
+                                  : Theme.of(context).textTheme.bodyMedium)
+                              ?.copyWith(
+                                color: c.textSecondary,
+                                height: compact ? 1.3 : 1.45,
+                              ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  if (action != null) ...[
+                    SizedBox(height: compact ? 8 : 16),
+                    action!,
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

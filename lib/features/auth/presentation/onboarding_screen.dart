@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 import '../../../core/assets/app_assets.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
@@ -456,54 +456,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     setState(() => _isSearchingAddress = true);
 
-    const String googleMapsApiKey = String.fromEnvironment('MAPS_API_KEY');
-
     try {
-      final dio = Dio();
-
-      if (googleMapsApiKey.isNotEmpty) {
-        // Use Google Maps Places Autocomplete
-        final res = await dio.get(
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json',
-          queryParameters: {
-            'input': query,
-            'key': googleMapsApiKey,
-            'language': 'vi',
-            'components': 'country:vn',
-          },
-        );
-
-        if (res.data != null && res.data['status'] == 'OK') {
-          final predictions = res.data['predictions'] as List;
-          final list = predictions
-              .map(
-                (p) => {
-                  'display_name': p['description'],
-                  'place_id': p['place_id'],
-                  'lat': null,
-                  'lon': null,
-                },
-              )
-              .toList();
-
-          if (mounted) setState(() => _addressSuggestions = list);
-          return;
-        }
-      }
-
-      // Fallback to Nominatim OpenStreetMap
-      final res = await dio.get(
-        'https://nominatim.openstreetmap.org/search',
-        queryParameters: {
-          'q': query,
-          'format': 'json',
-          'limit': 5,
-          'countrycodes': 'vn',
-        },
-        options: Options(headers: {'User-Agent': 'SmartStockTaxApp/1.0'}),
-      );
-      if (res.data is List) {
-        final list = List<Map<String, dynamic>>.from(res.data);
+      final response = await ref
+          .read(apiClientProvider)
+          .get('/auth/address-suggestions', params: {'q': query.trim()});
+      if (response is List) {
+        final list = response
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
         if (mounted) {
           setState(() {
             _addressSuggestions = list;
@@ -942,14 +903,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           onChanged: (val) async {
                             if (val.trim().length > 2) {
                               setState(() => _isSearching = true);
-                              final results = await ref
-                                  .read(authProvider.notifier)
-                                  .searchShops(val);
-                              if (mounted) {
-                                setState(() {
-                                  _searchResults = results;
-                                  _isSearching = false;
-                                });
+                              try {
+                                final results = await ref
+                                    .read(authProvider.notifier)
+                                    .searchShops(val);
+                                if (mounted) {
+                                  setState(() => _searchResults = results);
+                                }
+                              } catch (error) {
+                                if (mounted) {
+                                  setState(() => _searchResults = []);
+                                  ToastService.showError(
+                                    'Không thể tải cửa hàng từ cơ sở dữ liệu',
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isSearching = false);
+                                }
                               }
                             } else {
                               if (mounted) {

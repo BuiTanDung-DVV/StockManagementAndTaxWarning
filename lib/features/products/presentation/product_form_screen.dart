@@ -82,12 +82,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       final sellingPrice = double.tryParse(_sellPriceCtrl.text.trim()) ?? 0;
 
       if (name.isEmpty) {
-        ToastService.showSuccess('Vui lòng nhập tên sản phẩm');
+        ToastService.showError('Vui lòng nhập tên sản phẩm');
         setState(() => _saving = false);
         return;
       }
       if (sellingPrice <= 0) {
-        ToastService.showSuccess('Giá bán phải lớn hơn 0');
+        ToastService.showError('Giá bán phải lớn hơn 0');
         setState(() => _saving = false);
         return;
       }
@@ -118,12 +118,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         'costPrice': double.tryParse(_costPriceCtrl.text.trim()) ?? 0,
         'sellingPrice': sellingPrice,
         'wholesalePrice': double.tryParse(_wholesalePriceCtrl.text.trim()) ?? 0,
-        'currentStock': int.tryParse(_currentStockCtrl.text.trim()) ?? 0,
         'minStock': int.tryParse(_minStockCtrl.text.trim()) ?? 0,
         'description': _descCtrl.text.trim(),
         'tags': _tags,
         'imageUrl': imageUrl,
       };
+      if (!_isEdit) {
+        data['openingStock'] = int.tryParse(_currentStockCtrl.text.trim()) ?? 0;
+      }
       if (_isEdit) {
         await repo.update(widget.product!['id'], data);
       } else {
@@ -173,8 +175,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       if (file == null) return;
 
       final bytes = await file.readAsBytes();
-      if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-        ToastService.showError('Ảnh phải có dung lượng nhỏ hơn 5 MB');
+      if (bytes.isEmpty || bytes.length > 4 * 1024 * 1024) {
+        ToastService.showError('Ảnh phải có dung lượng không quá 4 MB');
         return;
       }
 
@@ -356,13 +358,16 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               _sectionHeader('Cấu hình kho hàng', theme, c),
               const SizedBox(height: 12),
               _field(
-                'Tồn kho hiện có',
+                _isEdit ? 'Tồn kho hiện tại (chỉ xem)' : 'Tồn kho ban đầu',
                 _currentStockCtrl,
                 HugeIcons.strokeRoundedPackageSearch,
                 c,
                 theme,
                 keyboardType: TextInputType.number,
-                hint: 'Số lượng tồn kho ban đầu',
+                enabled: !_isEdit,
+                hint: _isEdit
+                    ? 'Điều chỉnh bằng kiểm kê hoặc nhập hàng'
+                    : 'Số lượng tồn khi bắt đầu sử dụng',
               ),
               const SizedBox(height: 12),
               _field(
@@ -545,7 +550,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         ),
         const SizedBox(height: 3),
         Text(
-          'JPG, PNG hoặc WEBP • tối đa 5 MB',
+          'JPG, PNG hoặc WEBP • tối đa 4 MB',
           style: GoogleFonts.inter(fontSize: 11, color: c.textMuted),
         ),
       ],
@@ -582,10 +587,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     TextInputType? keyboardType,
     int maxLines = 1,
     String? hint,
+    bool enabled = true,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: ctrl,
+      enabled: enabled,
       keyboardType: keyboardType,
       maxLines: maxLines,
       validator: validator,

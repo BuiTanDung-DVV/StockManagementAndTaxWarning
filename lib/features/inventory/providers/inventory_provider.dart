@@ -6,8 +6,8 @@ class InventoryRepository {
   final ApiClient _api;
   InventoryRepository(this._api);
 
-  Future<dynamic> getCurrentStock({int? warehouseId}) async {
-    final params = <String, dynamic>{};
+  Future<dynamic> getCurrentStock({int? warehouseId, int limit = 500}) async {
+    final params = <String, dynamic>{'page': '1', 'limit': '$limit'};
     if (warehouseId != null) params['warehouseId'] = '$warehouseId';
     return await _api.get('/inventory/stock', params: params);
   }
@@ -32,7 +32,10 @@ class InventoryRepository {
 
   Future<List<dynamic>> getCategoriesSummary() async {
     final res = await _api.get('/inventory/categories-summary');
-    return res as List<dynamic>? ?? [];
+    if (res is! List) {
+      throw ApiException('Dữ liệu tổng hợp danh mục kho không hợp lệ');
+    }
+    return List<dynamic>.from(res);
   }
 
   Future<Map<String, dynamic>> getAbcAnalysis(String from, String to) async {
@@ -40,7 +43,33 @@ class InventoryRepository {
       '/inventory/abc-analysis',
       params: {'from': from, 'to': to},
     );
-    return Map<String, dynamic>.from(result as Map);
+    if (result is! Map) {
+      throw ApiException('Dữ liệu phân tích ABC không hợp lệ');
+    }
+    final data = Map<String, dynamic>.from(result);
+    const numericKeys = [
+      'totalRevenue',
+      'classificationRevenue',
+      'negativeReturnAdjustment',
+      'returnedMoreThanSoldSkuCount',
+      'totalStockValue',
+      'skuCount',
+    ];
+    final hasInvalidMetric = numericKeys.any((key) {
+      final value = num.tryParse(data[key]?.toString() ?? '');
+      return value == null || !value.isFinite;
+    });
+    final period = data['period'];
+    if (hasInvalidMetric ||
+        data['grades'] is! List ||
+        data['items'] is! List ||
+        period is! Map ||
+        period['from'] == null ||
+        period['to'] == null ||
+        data['timezone'] == null) {
+      throw ApiException('Dữ liệu phân tích ABC không đầy đủ');
+    }
+    return data;
   }
 
   Future<Map<String, dynamic>> getXNTReport(
@@ -101,6 +130,11 @@ class InventoryRepository {
 
   Future<void> deleteStockTake(int id) async =>
       await _api.delete('/stock-takes/$id');
+
+  Future<Map<String, dynamic>> updateStockTakeStatus(
+    int id,
+    String status,
+  ) async => await _api.put('/stock-takes/$id', data: {'status': status});
 }
 
 final inventoryRepoProvider = Provider<InventoryRepository>((ref) {
@@ -115,23 +149,31 @@ final stockPageProvider = FutureProvider.family<Map<String, dynamic>, int?>((
   final result = await ref
       .watch(inventoryRepoProvider)
       .getCurrentStock(warehouseId: warehouseId);
-  if (result is Map) return Map<String, dynamic>.from(result);
+  if (result is Map) {
+    final page = Map<String, dynamic>.from(result);
+    final items = page['items'];
+    final total = num.tryParse(page['total']?.toString() ?? '');
+    final productTotal = num.tryParse(page['productTotal']?.toString() ?? '');
+    if (items is! List ||
+        total == null ||
+        !total.isFinite ||
+        productTotal == null ||
+        !productTotal.isFinite) {
+      throw ApiException('Dữ liệu tồn kho không đầy đủ');
+    }
+    return page;
+  }
   if (result is List) {
     return {
       'items': result,
       'total': result.length,
+      'productTotal': result.length,
       'page': 1,
       'limit': result.length,
       'totalPages': 1,
     };
   }
-  return const {
-    'items': <dynamic>[],
-    'total': 0,
-    'page': 1,
-    'limit': 0,
-    'totalPages': 0,
-  };
+  throw ApiException('Dữ liệu tồn kho không hợp lệ');
 });
 
 final stockProvider = FutureProvider.family<List<dynamic>, int?>((
@@ -142,8 +184,11 @@ final stockProvider = FutureProvider.family<List<dynamic>, int?>((
       .watch(inventoryRepoProvider)
       .getCurrentStock(warehouseId: warehouseId);
   if (result is List) return result;
-  if (result is Map) return (result['items'] as List?) ?? [];
-  return [];
+  if (result is Map) {
+    final items = result['items'];
+    if (items is List) return List<dynamic>.from(items);
+  }
+  throw ApiException('Dữ liệu tồn kho không hợp lệ');
 });
 
 final lowStockProvider = FutureProvider<List<dynamic>>((ref) {
@@ -193,10 +238,10 @@ final inventoryCategoriesSummaryProvider = FutureProvider<List<dynamic>>((ref) {
 });
 
 final inventoryAbcProvider =
-    FutureProvider.family<
-      Map<String, dynamic>,
-      ({String from, String to})
-    >((ref, args) {
+    FutureProvider.family<Map<String, dynamic>, ({String from, String to})>((
+      ref,
+      args,
+    ) {
       return ref
           .watch(inventoryRepoProvider)
           .getAbcAnalysis(args.from, args.to);

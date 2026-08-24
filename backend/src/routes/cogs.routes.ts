@@ -51,15 +51,4 @@ router.get('/lots/:productId', requirePermission('inventory', 'view'), async (re
     }
 });
 
-// POST /api/cogs/lots — Thêm lô tồn kho thủ công
-router.post('/lots', requirePermission('inventory', 'edit'), async (req: Request, res: Response) => {
-    try {
-        const shopId = (req as AuthRequest).shopId;
-        const lot = await svc.addInventoryLot({ ...req.body, shopId });
-        res.json({ success: true, data: lot, message: 'Thêm lô tồn kho thành công' });
-    } catch (e: any) {
-        res.status(400).json({ success: false, message: e.message });
-    }
-});
-
 export default router;

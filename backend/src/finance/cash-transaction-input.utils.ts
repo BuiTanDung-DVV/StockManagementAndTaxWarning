@@ -21,6 +21,30 @@ export function cashLedgerAccountCode(paymentMethod: unknown): '111' | '112' {
     return normalizeCashPaymentMethod(paymentMethod) === 'CASH' ? '111' : '112';
 }
 
+export function cashTransactionCounterAccountCode(
+    type: unknown,
+    category: unknown,
+): '411' | '341' | '511' | '642' | '711' {
+    const normalizedType = String(type || '').trim().toUpperCase();
+    const normalizedCategory = String(category || '').trim().toUpperCase();
+
+    if (normalizedType === 'EXPENSE') return '642';
+    if (normalizedType !== 'INCOME') {
+        throw new Error('Validation: Type must be INCOME or EXPENSE');
+    }
+
+    switch (normalizedCategory) {
+        case 'CAPITAL':
+            return '411';
+        case 'LOAN':
+            return '341';
+        case 'SALES':
+            return '511';
+        default:
+            return '711';
+    }
+}
+
 export function normalizeCashTransactionInput(
     input: Partial<CashTransaction> & { description?: string },
     current?: CashTransaction,

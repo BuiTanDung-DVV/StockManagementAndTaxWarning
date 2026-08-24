@@ -13,6 +13,13 @@ final _currFmt = NumberFormat.currency(
   decimalDigits: 0,
 );
 
+String _compactMoney(double value) {
+  if (value >= 1000000000) {
+    return '${(value / 1000000000).toStringAsFixed(value % 1000000000 == 0 ? 0 : 1)} tỷ';
+  }
+  return '${(value / 1000000).toStringAsFixed(0)} triệu';
+}
+
 class TaxCalculatorScreen extends ConsumerStatefulWidget {
   const TaxCalculatorScreen({super.key});
 
@@ -37,17 +44,40 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final config = ref.watch(taxConfigProvider);
-    final thresholds = config.thresholds;
+    if (!config.isLoaded) {
+      return Scaffold(
+        backgroundColor: c.bg,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text('Công cụ tính thuế'),
+        ),
+        body: Center(
+          child: config.isLoading
+              ? const CircularProgressIndicator()
+              : Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    config.errorMessage ?? 'Không thể tải cấu hình thuế từ DB.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+        ),
+      );
+    }
+    final thresholds = config.thresholds!;
     final vat = config.calculateVat(_revenue);
     final pit = config.calculatePit(_revenue);
     final total = vat + pit;
     final afterTax = _revenue - total;
 
     // Parameters for custom milestones progress
-    const double maxScale = 1200000000.0; // 1.2 billion max scale
+    final double maxScale = thresholds.tier4 * 1.2;
     final double progressRatio = (_revenue / maxScale).clamp(0.0, 1.0);
-    const double milestone1Ratio = 900000000.0 / maxScale; // 90% warning
-    const double milestone2Ratio = 1000000000.0 / maxScale; // 1B mark
+    final double milestone1Ratio = thresholds.tier3 / maxScale;
+    final double milestone2Ratio = thresholds.tier4 / maxScale;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -57,7 +87,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Công cụ Tính Thuế HKD 2026',
+          'Công cụ tính thuế HKD ${config.fiscalYear}',
           style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -116,7 +146,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Tỷ suất: GTGT ${(config.effectiveVatRate * 100).toStringAsFixed(1)}% • TNCN ${(config.businessType.pitRate * 100).toStringAsFixed(1)}%',
+                          'Tỷ suất: GTGT ${(config.effectiveVatRate * 100).toStringAsFixed(1)}% • TNCN ${(config.effectivePitRate * 100).toStringAsFixed(1)}%',
                           style: TextStyle(
                             fontSize: 11,
                             color: c.textSecondary,
@@ -256,7 +286,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Cảnh Báo Ngưỡng Doanh Thu 2026',
+                        'Cảnh báo ngưỡng doanh thu ${config.fiscalYear}',
                         style: GoogleFonts.manrope(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -317,7 +347,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   width: 16,
                                   height: 16,
                                   decoration: BoxDecoration(
-                                    color: _revenue >= 900000000.0
+                                    color: _revenue >= thresholds.tier3
                                         ? AppColors.warning
                                         : c.textMuted.withValues(alpha: 0.5),
                                     shape: BoxShape.circle,
@@ -326,7 +356,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                       width: 2.5,
                                     ),
                                     boxShadow: [
-                                      if (_revenue >= 900000000.0)
+                                      if (_revenue >= thresholds.tier3)
                                         BoxShadow(
                                           color: AppColors.warning.withValues(
                                             alpha: 0.5,
@@ -346,7 +376,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   width: 16,
                                   height: 16,
                                   decoration: BoxDecoration(
-                                    color: _revenue >= 1000000000.0
+                                    color: _revenue >= thresholds.tier4
                                         ? AppColors.danger
                                         : c.textMuted.withValues(alpha: 0.5),
                                     shape: BoxShape.circle,
@@ -355,7 +385,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                       width: 2.5,
                                     ),
                                     boxShadow: [
-                                      if (_revenue >= 1000000000.0)
+                                      if (_revenue >= thresholds.tier4)
                                         BoxShadow(
                                           color: AppColors.danger.withValues(
                                             alpha: 0.5,
@@ -393,11 +423,11 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '900M',
+                                        _compactMoney(thresholds.tier3),
                                         style: GoogleFonts.manrope(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: _revenue >= 900000000.0
+                                          color: _revenue >= thresholds.tier3
                                               ? AppColors.warning
                                               : c.textSecondary,
                                         ),
@@ -423,11 +453,11 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      '1 Tỷ',
+                                      _compactMoney(thresholds.tier4),
                                       style: GoogleFonts.manrope(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: _revenue >= 1000000000.0
+                                        color: _revenue >= thresholds.tier4
                                             ? AppColors.danger
                                             : c.textSecondary,
                                       ),
@@ -542,14 +572,14 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                     const SizedBox(height: 4),
                     _TaxRow(
                       '  └ Miễn giảm 20% (NQ 204)',
-                      '−${_currFmt.format(config.businessType.vatRate * _revenue * 0.2)}',
+                      '−${_currFmt.format(config.effectiveVatRate * _revenue * 0.2)}',
                       AppColors.success,
                       isItalic: true,
                     ),
                   ],
                   const SizedBox(height: 12),
                   _TaxRow(
-                    'Thuế TNCN (${(config.businessType.pitRate * 100).toStringAsFixed(1)}%)',
+                    'Thuế TNCN (${(config.effectivePitRate * 100).toStringAsFixed(1)}%)',
                     _currFmt.format(pit),
                     AppColors.info,
                   ),
@@ -607,7 +637,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                     Expanded(
                       child: Text(
                         thresholds.mustUseEInvoice(_revenue)
-                            ? 'Doanh thu năm trên 1 tỷ đồng thuộc diện phải áp dụng Hóa đơn điện tử theo Nghị định 141/2026/NĐ-CP.'
+                            ? 'Doanh thu năm trên ${_compactMoney(thresholds.tier4)} thuộc diện phải áp dụng hóa đơn điện tử theo ${config.policySourceCode}.'
                             : thresholds.canUseInvoice(_revenue)
                             ? 'Có thể đăng ký sử dụng HĐĐT tự nguyện nếu đáp ứng điều kiện; chưa thuộc diện bắt buộc theo ngưỡng doanh thu.'
                             : 'Chưa xác định điều kiện sử dụng HĐĐT.',

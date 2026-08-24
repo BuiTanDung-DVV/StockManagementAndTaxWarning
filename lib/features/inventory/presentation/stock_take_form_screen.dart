@@ -92,6 +92,13 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
           return;
         }
       }
+      final selectedProductIds = _items.map((item) => item.productId).toList();
+      if (selectedProductIds.toSet().length != selectedProductIds.length) {
+        ToastService.showError(
+          'Mỗi sản phẩm chỉ được xuất hiện một lần trong phiếu kiểm kê.',
+        );
+        return;
+      }
       setState(() => _currentStep = 2);
     }
   }
@@ -107,7 +114,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       context,
       title: 'Xác nhận lưu',
       message:
-          'Bạn có chắc chắn muốn lưu phiếu kiểm kê này? Số lượng tồn kho thực tế sẽ được cập nhật ngay lập tức.',
+          'Bạn có chắc chắn muốn lưu phiếu kiểm kê nháp? Tồn kho chỉ thay đổi sau khi phiếu được hoàn tất.',
       confirmText: 'Lưu',
       cancelText: 'Hủy',
     );
@@ -121,13 +128,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
         'stockTakeDate': DateTime.now().toIso8601String(),
         'notes': _notesCtrl.text.trim(),
         'items': _items
-            .map(
-              (i) => {
-                'productId': i.productId,
-                'systemQty': i.systemQty,
-                'actualQty': i.actualQty,
-              },
-            )
+            .map((i) => {'productId': i.productId, 'actualQty': i.actualQty})
             .toList(),
       };
 
@@ -155,7 +156,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
     final theme = Theme.of(context);
     final warehousesAsync = ref.watch(warehousesProvider);
     final productsAsync = ref.watch(productOptionsProvider);
-    final stockAsync = ref.watch(stockProvider(null));
+    final stockAsync = ref.watch(stockProvider(_warehouseId));
 
     // Map stock for dynamic filling
     final stockMap = <int, int>{};

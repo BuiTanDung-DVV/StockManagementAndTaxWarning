@@ -6,37 +6,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../providers/system_provider.dart';
 
-/// Danh sách ngân hàng VietQR (mã bin + tên)
-const _vietqrBanks = <Map<String, String>>[
-  {'id': 'MB', 'name': 'MB Bank'},
-  {'id': 'VCB', 'name': 'Vietcombank'},
-  {'id': 'TCB', 'name': 'Techcombank'},
-  {'id': 'ACB', 'name': 'ACB'},
-  {'id': 'TPB', 'name': 'TPBank'},
-  {'id': 'VPB', 'name': 'VPBank'},
-  {'id': 'BIDV', 'name': 'BIDV'},
-  {'id': 'VTB', 'name': 'VietinBank'},
-  {'id': 'AGR', 'name': 'Agribank'},
-  {'id': 'SHB', 'name': 'SHB'},
-  {'id': 'STB', 'name': 'Sacombank'},
-  {'id': 'HDB', 'name': 'HDBank'},
-  {'id': 'MSB', 'name': 'MSB'},
-  {'id': 'OCB', 'name': 'OCB'},
-  {'id': 'LPB', 'name': 'LienVietPostBank'},
-  {'id': 'EIB', 'name': 'Eximbank'},
-  {'id': 'SCB', 'name': 'SCB'},
-  {'id': 'NAB', 'name': 'Nam A Bank'},
-  {'id': 'VAB', 'name': 'VietABank'},
-  {'id': 'SEAB', 'name': 'SeABank'},
-  {'id': 'BAB', 'name': 'Bac A Bank'},
-  {'id': 'PVCB', 'name': 'PVcomBank'},
-  {'id': 'KLB', 'name': 'KienlongBank'},
-  {'id': 'ABB', 'name': 'ABBank'},
-  {'id': 'WOO', 'name': 'Woori Bank VN'},
-  {'id': 'CAKE', 'name': 'CAKE by VPBank'},
-  {'id': 'UBANK', 'name': 'Ubank by VPBank'},
-];
-
 class PaymentConfigScreen extends ConsumerStatefulWidget {
   const PaymentConfigScreen({super.key});
   @override
@@ -97,12 +66,6 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      final bankName =
-          _vietqrBanks.firstWhere(
-            (b) => b['id'] == _bankId,
-            orElse: () => {},
-          )['name'] ??
-          '';
       await ref
           .read(apiClientProvider)
           .post(
@@ -110,7 +73,6 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
             data: {
               'bankId': _bankId,
               'bankAccount': _accountNoCtrl.text,
-              'bankName': bankName,
               'accountHolder': _accountNameCtrl.text,
             },
           );
@@ -132,6 +94,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final shopAsync = ref.watch(shopProfileProvider);
+    final banksAsync = ref.watch(paymentBanksProvider);
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -160,6 +123,23 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
         ),
         data: (shop) {
           _initFromProfile(shop);
+          if (banksAsync.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (banksAsync.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Không thể tải danh mục ngân hàng từ cơ sở dữ liệu.\n${banksAsync.error}',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(color: AppColors.danger),
+                ),
+              ),
+            );
+          }
+          final banks = banksAsync.value ?? const <Map<String, String>>[];
+          final selectedBankExists = banks.any((bank) => bank['id'] == _bankId);
           final qrUrl = _buildQrUrl();
 
           return SingleChildScrollView(
@@ -246,7 +226,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: _bankId,
+                    initialValue: selectedBankExists ? _bankId : null,
                     decoration: InputDecoration(
                       hintText: 'Chọn ngân hàng',
                       prefixIcon: Icon(
@@ -276,7 +256,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                         vertical: 14,
                       ),
                     ),
-                    items: _vietqrBanks
+                    items: banks
                         .map(
                           (b) => DropdownMenuItem(
                             value: b['id'],
@@ -427,7 +407,7 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _loading ? null : _save,
+                      onPressed: _loading || !selectedBankExists ? null : _save,
                       icon: _loading
                           ? const SizedBox(
                               width: 18,

@@ -2,8 +2,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AppDataSource } from '../config/db.config';
 import { config } from '../config/env.config';
 import { AiKnowledgeDocument } from '../system/entities';
+import { vietnamDateKey } from '../finance/finance-period.utils';
 
-import { tvplSearchService } from './tvpl-search.service';
+import { SalesService } from './sales.service';
 
 export interface ChatMessage {
   role: 'user' | 'model' | 'assistant';
@@ -24,16 +25,17 @@ export interface CreateKnowledgeDto {
 
 export class AiService {
   private knowledgeRepo = AppDataSource.getRepository(AiKnowledgeDocument);
+  private salesService = new SalesService();
 
   /**
    * Tổng hợp dữ liệu thực tế từ cơ sở dữ liệu của cửa hàng (Store Snapshot)
    */
   private async getStoreContext(shopId: number): Promise<string> {
-    let lowStockText = 'Không có sản phẩm nào chạm mức tồn kho tối thiểu.';
-    let revenue = '0';
-    let orders = 0;
-    let debt = '0';
-    let taxText = 'Không có nghĩa vụ thuế đọng hoặc quá hạn.';
+    let lowStockText: string | null = null;
+    let revenue: string | null = null;
+    let orders: number | null = null;
+    let debt: string | null = null;
+    let taxText: string | null = null;
 
     // 1. Tồn kho sản phẩm
     try {
@@ -61,6 +63,8 @@ export class AiService {
         lowStockText = lowStockResult.map((p: any) =>
           `- ${p.name} (SKU: ${p.sku || 'N/A'}): còn ${Number(p.current_stock || 0).toLocaleString('vi-VN')} ${p.unit || 'sản phẩm'}, định mức ${Number(p.min_stock || 0).toLocaleString('vi-VN')}`,
         ).join('\n');
+      } else {
+        lowStockText = 'Không có sản phẩm nào chạm mức tồn kho tối thiểu.';
       }
     } catch (e) {
       console.warn('AI StoreContext - Lỗi truy vấn sản phẩm:', e);
@@ -68,35 +72,15 @@ export class AiService {
 
     // 2. Doanh thu 30 ngày qua
     try {
-      const salesResult = await AppDataSource.query(`
-        WITH sales AS (
-          SELECT
-            COALESCE(SUM(total_amount), 0) AS gross_revenue,
-            COUNT(id) AS total_orders
-          FROM sales_orders
-          WHERE shop_id = $1
-            AND UPPER(COALESCE(status, '')) != 'CANCELLED'
-            AND order_date >= NOW() - INTERVAL '30 days'
-        ), returns AS (
-          SELECT COALESCE(SUM(o.total_amount), 0) AS return_value
-          FROM sales_returns r
-          JOIN sales_orders o
-            ON o.id = r.order_id
-            AND o.shop_id = r.shop_id
-          WHERE r.shop_id = $1
-            AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
-            AND r.return_date >= NOW() - INTERVAL '30 days'
-        )
-        SELECT
-          sales.gross_revenue - returns.return_value AS net_revenue,
-          sales.total_orders
-        FROM sales CROSS JOIN returns
-      `, [shopId]);
-
-      if (salesResult && salesResult.length > 0) {
-        revenue = Number(salesResult[0]?.net_revenue || 0).toLocaleString('vi-VN');
-        orders = Number(salesResult[0]?.total_orders || 0);
-      }
+      const toDate = new Date();
+      const fromDate = new Date(toDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+      const sales = await this.salesService.summary(
+        shopId,
+        vietnamDateKey(fromDate),
+        vietnamDateKey(toDate),
+      );
+      revenue = Number(sales.totalRevenue).toLocaleString('vi-VN');
+      orders = Number(sales.orderCount);
     } catch (e) {
       console.warn('AI StoreContext - Lỗi truy vấn doanh thu:', e);
     }
@@ -112,6 +96,8 @@ export class AiService {
 
       if (debtResult && debtResult.length > 0) {
         debt = Number(debtResult[0]?.total_debt || 0).toLocaleString('vi-VN');
+      } else {
+        debt = '0';
       }
     } catch (e) {
       console.warn('AI StoreContext - Lỗi truy vấn công nợ:', e);
@@ -128,6 +114,8 @@ export class AiService {
 
       if (taxObligations && taxObligations.length > 0) {
         taxText = taxObligations.map((t: any) => `- Kỳ thuế: ${t.period}, Số tiền còn lại: ${Number(t.amount).toLocaleString('vi-VN')} VNĐ, Trạng thái: ${t.status}, Hạn nộp: ${t.due_date ? new Date(t.due_date).toLocaleDateString('vi-VN') : 'N/A'}`).join('\n');
+      } else {
+        taxText = 'Không có nghĩa vụ thuế đọng hoặc quá hạn.';
       }
     } catch (e) {
       console.warn('AI StoreContext - Lỗi truy vấn nghĩa vụ thuế:', e);
@@ -135,12 +123,13 @@ export class AiService {
 
     return `
 === DỮ LIỆU THỰC TẾ CỬA HÀNG (CẬP NHẬT TỰ ĐỘNG) ===
-- Tổng doanh thu (30 ngày gần nhất): ${revenue} VNĐ (${orders} đơn hàng)
-- Tổng công nợ khách hàng cần thu: ${debt} VNĐ
+- Tổng doanh thu (30 ngày gần nhất): ${revenue === null ? 'CHƯA THỂ TRUY VẤN DB' : `${revenue} VNĐ (${orders} đơn hàng)`}
+- Tổng công nợ khách hàng cần thu: ${debt === null ? 'CHƯA THỂ TRUY VẤN DB' : `${debt} VNĐ`}
 - Sản phẩm trong danh mục cảnh báo tồn kho:
-${lowStockText}
+${lowStockText ?? 'CHƯA THỂ TRUY VẤN DB'}
 - Cảnh báo nghĩa vụ Thuế:
-${taxText}
+${taxText ?? 'CHƯA THỂ TRUY VẤN DB'}
+- Mọi mục ghi CHƯA THỂ TRUY VẤN DB là dữ liệu không khả dụng, không được suy diễn thành 0 hoặc trạng thái an toàn.
 =================================================
 `;
   }
@@ -158,9 +147,10 @@ ${taxText}
 
       if (!docs || docs.length === 0) {
         return `
-=== TÀI LIỆU TRI THỨC VÀ QUY ĐỊNH THUẾ ĐÃ CẤU HÌNH ===
-- Quy định mặc định: Áp dụng Thông tư 88/2021/TT-BTC về chế độ kế toán cho Hộ kinh doanh, cá nhân kinh doanh và Nghị định 123/2020/NĐ-CP về hóa đơn chứng từ.
-==================================================
+=== TÀI LIỆU TRI THỨC ĐÃ CẤU HÌNH TRONG CƠ SỞ DỮ LIỆU ===
+- Chưa có tài liệu đang hoạt động cho cửa hàng này.
+- Không được tự khẳng định quy định, ngưỡng hoặc nghĩa vụ pháp lý khi thiếu nguồn đã xác minh.
+==========================================================
 `;
       }
 
@@ -175,7 +165,12 @@ ${docsText}
 `;
     } catch (error) {
       console.error('Lỗi khi lấy tài liệu tri thức cho AI:', error);
-      return '';
+      return `
+=== TÀI LIỆU TRI THỨC ĐÃ CẤU HÌNH TRONG CƠ SỞ DỮ LIỆU ===
+- CHƯA THỂ TRUY VẤN DB.
+- Không được tự khẳng định quy định, ngưỡng hoặc nghĩa vụ pháp lý.
+==========================================================
+`;
     }
   }
 
@@ -186,29 +181,12 @@ ${docsText}
     const storeContext = await this.getStoreContext(shopId);
     const knowledgeContext = await this.getKnowledgeContext(shopId);
 
-    // Tra cứu TVPL hoàn toàn không bắt buộc - chạy non-blocking với timeout 1.5s
-    let tvplText = '';
-    try {
-      const tvplResults = await Promise.race([
-        tvplSearchService.searchLegalDocumentsByTitle(dto.question),
-        new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 1500)),
-      ]);
-      if (tvplResults && tvplResults.length > 0) {
-        tvplText = `=== THAM KHẢO VĂN BẢN (NẾU CÓ LIÊN QUAN) ===\n` +
-          tvplResults.map((r, i) => `${i + 1}. [${r.title}]\n   🔗 Link: ${r.url}`).join('\n');
-      }
-    } catch {
-      tvplText = '';
-    }
-
     const systemPrompt = `Bạn là Trợ lý AI thông minh chuyên tư vấn Quản lý Bán hàng, Tồn kho, Tài chính và Nghĩa vụ Thuế cho Hộ kinh doanh tại Việt Nam.
 
 Hướng dẫn trả lời:
 1. Trả lời tự nhiên, thông minh, đúng trọng tâm cho MỌI câu hỏi của chủ cửa hàng (từ bán hàng, xuất nhập kho, quản lý nợ, tài chính đến quy định pháp luật).
-2. Tự do vận dụng kiến thức rộng lớn của bạn. KHÔNG bắt buộc và KHÔNG bị phụ thuộc vào việc phải tra cứu từ Thư Viện Pháp Luật.
-3. QUY TẮC LINK CHUẨN:
-   - Chỉ đính kèm link Markdown \`[📄 Tên văn bản](Link TVPL)\` khi đường link đó NẰM TRONG phần THAM KHẢO VĂN BẢN đính kèm bên dưới.
-   - TUYỆT ĐỐI KHÔNG tự tạo link URL không có thật. Nếu nêu tên văn bản mà không có link chuẩn đính kèm, hãy chỉ ghi rõ tên văn bản (Ví dụ: Thông tư 88/2021/TT-BTC) mà KHÔNG kèm link Markdown.
+2. Với câu hỏi vận hành, chỉ dùng dữ liệu cửa hàng được cung cấp. Với câu hỏi pháp luật/thuế, chỉ kết luận khi có tài liệu DB hoặc kết quả tra cứu kèm nguồn; nếu thiếu nguồn phải nói rõ chưa đủ căn cứ xác minh.
+3. Chỉ nêu nguồn hoặc đường dẫn đã có nguyên văn trong kho tài liệu DB bên dưới. Tuyệt đối không tự tạo tên văn bản, trạng thái hiệu lực hoặc URL.
 4. Lồng ghép tự nhiên thông tin tình hình thực tế của Cửa hàng để đưa ra lời khuyên thực tế nhất.
 5. Trình bày tiếng Việt thân thiện, rõ ràng dạng Markdown.
 
@@ -216,13 +194,10 @@ Hướng dẫn trả lời:
 ${storeContext}
 
 ${knowledgeContext}
-
-${tvplText}
 --------------------------------------
 `;
 
     const key = config.geminiApiKey;
-    console.log(`[AI DEBUG] GEMINI_API_KEY check: present=${!!key}, length=${key ? key.length : 0}`);
 
     if (!key) {
       throw new Error('[AI ERROR] GEMINI_API_KEY is empty on Vercel environment variables. Please set GEMINI_API_KEY in Vercel Settings.');
@@ -355,9 +330,9 @@ Người dùng hỏi: ${dto.question}`;
 
     if (insights.length === 0) {
       insights.push({
-        title: 'Cửa hàng vận hành ổn định',
+        title: 'Chưa ghi nhận cảnh báo trong phạm vi đã kiểm tra',
         category: 'SALES',
-        description: 'Tồn kho, doanh thu và nghĩa vụ thuế hiện tại không có cảnh báo bất thường.',
+        description: 'Không có cảnh báo về hàng dưới định mức, nghĩa vụ thuế đang mở hoặc công nợ khách hàng trong dữ liệu hiện tại. Kết quả này không thay thế kiểm tra toàn bộ hoạt động cửa hàng.',
         priority: 'INFO',
       });
     }

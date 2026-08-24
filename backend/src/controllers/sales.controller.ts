@@ -25,16 +25,26 @@ export const findAll = async (req: Request, res: Response) => {
         res.json({
             success: true,
             data: await salesService.findAll(
-                (req as any).shopId,
+                (req as any).isAllShops ? (req as any).shopIds : (req as any).shopId,
                 +(req.query.page || 1),
                 +(req.query.limit || 20),
                 customerId,
                 req.query.status as string,
                 req.query.search as string,
+                req.query.from as string,
+                req.query.to as string,
             ),
         });
     }
     catch (e: any) {
+        const message = validationMessage(e);
+        if (message.startsWith('Validation:')) {
+            res.status(400).json({
+                success: false,
+                message: message.replace('Validation: ', ''),
+            });
+            return;
+        }
         console.error('Sales order list query failed:', validationMessage(e));
         res.status(500).json({
             success: false,
@@ -60,6 +70,20 @@ export const topProducts = async (req: Request, res: Response) => {
                 req.query.to as string,
                 req.query.previousFrom as string,
                 req.query.previousTo as string,
+            ),
+        });
+    }
+    catch (e: any) { res.status(400).json({ success: false, message: e.message }); }
+};
+
+export const topReturnedProducts = async (req: Request, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await salesService.getTopReturnedProducts(
+                getShopId(req),
+                req.query.from as string,
+                req.query.to as string,
             ),
         });
     }

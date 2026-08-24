@@ -323,14 +323,15 @@ async function main(): Promise<void> {
         WITH business_metric AS (
           SELECT
             COALESCE((
-              SELECT SUM(o.total_amount)
+              SELECT SUM(o.subtotal - o.discount_amount)
               FROM sales_orders o
               WHERE o.shop_id = $1
                 AND UPPER(COALESCE(o.status, '')) != 'CANCELLED'
             ), 0) -
             COALESCE((
-              SELECT SUM(r.refund_amount)
+              SELECT SUM(o.subtotal - o.discount_amount)
               FROM sales_returns r
+              JOIN sales_orders o ON o.id = r.order_id
               WHERE r.shop_id = $1
                 AND UPPER(COALESCE(r.status, '')) NOT IN ('CANCELLED', 'REJECTED')
             ), 0) AS net_revenue
@@ -649,11 +650,14 @@ async function main(): Promise<void> {
             OR ABS(COALESCE(i.tax_amount, 0) - COALESCE(SUM(ii.tax_amount), 0)) > 1
             OR ABS(
               COALESCE(i.total_amount, 0) -
-              (COALESCE(i.subtotal, 0) + COALESCE(i.tax_amount, 0))
+              (
+                COALESCE(i.subtotal, 0) - COALESCE(i.discount_amount, 0)
+                + COALESCE(i.tax_amount, 0)
+              )
             ) > 1
         ) invalid_invoices
       `,
-      'Header hiện dùng giá trị sau giảm nhưng invoice không có discount_amount; phải join đơn bán mới giải thích được chênh lệch.',
+      'Header, chiết khấu, thuế và tổng hóa đơn phải tự đối soát mà không phụ thuộc join chứng từ gốc.',
     );
     await add(
       'Dữ liệu lõi có đầy đủ cửa hàng sở hữu',

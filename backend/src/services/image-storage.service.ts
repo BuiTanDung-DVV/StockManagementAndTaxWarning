@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { v2 as cloudinary } from 'cloudinary';
 import { config } from '../config/env.config';
 
-export const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_PRODUCT_IMAGE_BYTES = 4 * 1024 * 1024;
 export const PRODUCT_IMAGE_TYPES = [
     'image/jpeg',
     'image/png',
@@ -41,7 +41,7 @@ export function validateProductImageUpload(
         throw new ImageStorageError('Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP', 400);
     }
     if (!Number.isInteger(size) || size <= 0 || size > MAX_PRODUCT_IMAGE_BYTES) {
-        throw new ImageStorageError('Ảnh phải có dung lượng từ 1 byte đến 5 MB', 400);
+        throw new ImageStorageError('Ảnh phải có dung lượng từ 1 byte đến 4 MB', 400);
     }
 
     return { fileName, contentType, size };
@@ -132,11 +132,12 @@ export function debtEvidenceImageKeyFromPublicUrl(
 export class ImageStorageService {
     private configured = false;
 
-    async createProductImageUpload(
+    async uploadProductImage(
         shopId: number,
         request: ProductImageUploadRequest,
+        bytes: Buffer,
     ) {
-        return this.createSignedUpload(shopId, request, 'products');
+        return this.uploadBuffer(shopId, request, bytes, 'products');
     }
 
     async confirmProductImage(shopId: number, objectKey: string) {
@@ -146,11 +147,12 @@ export class ImageStorageService {
         return this.confirmImage(objectKey, 'Ảnh sản phẩm');
     }
 
-    async createShopPaymentQrUpload(
+    async uploadShopPaymentQrImage(
         shopId: number,
         request: ProductImageUploadRequest,
+        bytes: Buffer,
     ) {
-        return this.createSignedUpload(shopId, request, 'payment-qr');
+        return this.uploadBuffer(shopId, request, bytes, 'payment-qr');
     }
 
     async confirmShopPaymentQr(shopId: number, objectKey: string) {
@@ -160,11 +162,12 @@ export class ImageStorageService {
         return this.confirmImage(objectKey, 'Ảnh QR');
     }
 
-    async createDebtEvidenceImageUpload(
+    async uploadDebtEvidenceImage(
         shopId: number,
         request: ProductImageUploadRequest,
+        bytes: Buffer,
     ) {
-        return this.createSignedUpload(shopId, request, 'debt-evidence');
+        return this.uploadBuffer(shopId, request, bytes, 'debt-evidence');
     }
 
     async confirmDebtEvidenceImage(shopId: number, objectKey: string) {
@@ -228,36 +231,57 @@ export class ImageStorageService {
         return this.destroy(objectKey);
     }
 
-    private createSignedUpload(
+    private async uploadBuffer(
         shopId: number,
         request: ProductImageUploadRequest,
+        bytes: Buffer,
         scope: 'products' | 'payment-qr' | 'debt-evidence',
     ) {
-        validateProductImageUpload(request);
+        const validated = validateProductImageUpload(request);
+        if (!Buffer.isBuffer(bytes) || bytes.length !== validated.size) {
+            throw new ImageStorageError('Dữ liệu ảnh không hợp lệ', 400);
+        }
         this.configure();
 
-        const timestamp = Math.floor(Date.now() / 1000);
         const publicId = `smartstock/shops/${shopId}/${scope}/${randomUUID()}`;
-        const signature = cloudinary.utils.api_sign_request(
-            {
-                public_id: publicId,
-                timestamp,
-            },
-            config.cloudinaryApiSecret,
-        );
+        let resource: any;
+        try {
+            resource = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    {
+                        public_id: publicId,
+                        resource_type: 'image',
+                        overwrite: false,
+                    },
+                    (error, result) => error ? reject(error) : resolve(result),
+                );
+                stream.end(bytes);
+            });
+        } catch {
+            throw new ImageStorageError('Không thể tải ảnh lên kho lưu trữ', 502);
+        }
+
+        const size = Number(resource?.bytes || 0);
+        const format = String(resource?.format || '').toLowerCase();
+        const pixels = Number(resource?.width || 0) * Number(resource?.height || 0);
+        if (
+            size <= 0 ||
+            size > MAX_PRODUCT_IMAGE_BYTES ||
+            !allowedCloudinaryFormats.has(format) ||
+            pixels <= 0 ||
+            pixels > 20_000_000
+        ) {
+            await this.safeDestroy(publicId);
+            throw new ImageStorageError('Ảnh tải lên không hợp lệ', 400);
+        }
 
         return {
-            uploadUrl:
-                `https://api.cloudinary.com/v1_1/${config.cloudinaryCloudName}/image/upload`,
+            imageUrl: String(resource.secure_url),
             objectKey: publicId,
-            expiresIn: 300,
-            maxSize: MAX_PRODUCT_IMAGE_BYTES,
-            fields: {
-                api_key: config.cloudinaryApiKey,
-                timestamp: String(timestamp),
-                signature,
-                public_id: publicId,
-            },
+            contentType: `image/${format === 'jpg' ? 'jpeg' : format}`,
+            size,
+            width: Number(resource.width),
+            height: Number(resource.height),
         };
     }
 
@@ -288,7 +312,7 @@ export class ImageStorageService {
         ) {
             await this.safeDestroy(objectKey);
             throw new ImageStorageError(
-                `${label} không hợp lệ, quá 5 MB hoặc có độ phân giải quá lớn`,
+                `${label} không hợp lệ, quá 4 MB hoặc có độ phân giải quá lớn`,
                 400,
             );
         }

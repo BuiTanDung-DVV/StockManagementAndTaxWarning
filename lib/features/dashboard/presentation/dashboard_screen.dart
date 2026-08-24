@@ -8,11 +8,13 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
+import '../../../core/utils/data_freshness.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/chart_widgets.dart';
+import '../../../core/widgets/data_freshness_banner.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/presentation/widgets/join_shop_dialog.dart';
 import '../../finance/providers/finance_provider.dart';
@@ -48,6 +50,16 @@ bool dashboardCanViewSalesInsights(ShopState shopState) =>
     shopState.isOwner ||
     shopState.hasPermission('sales') ||
     shopState.hasPermission('dashboard');
+
+bool dashboardCanViewRecentOrders(ShopState shopState) =>
+    !shopState.isAllShops &&
+    (shopState.isOwner || shopState.hasPermission('sales'));
+
+({bool sales, bool finance, bool inventory}) dashboardRefreshPlan({
+  required bool hasSalesInsights,
+  required bool hasFinance,
+  required bool hasInventory,
+}) => (sales: hasSalesInsights, finance: hasFinance, inventory: hasInventory);
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -104,7 +116,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           )
         : null;
     final recentTransactionsAsync =
-        hasFinance && shopState.userShops.isNotEmpty && !shopState.isAllShops
+        dashboardCanViewRecentOrders(shopState) &&
+            shopState.userShops.isNotEmpty
         ? ref.watch(recentTransactionsProvider)
         : null;
     final topProductsAsync = hasSalesInsights && shopState.userShops.isNotEmpty
@@ -117,15 +130,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             )),
           )
         : null;
+    final previousTopProductsAsync = topProductsAsync?.value?.isEmpty == true
+        ? ref.watch(
+            topProductsProvider((
+              from: periods.previousFrom,
+              to: periods.previousTo,
+              previousFrom: null,
+              previousTo: null,
+            )),
+          )
+        : null;
 
     if (shopState.userShops.isEmpty) {
       return Scaffold(
         backgroundColor: colors.bg,
         body: SafeArea(
-          child: _NoShopWorkspace(
-            onJoin: () => _showJoinShopDialog(context),
-            onReload: () => ref.invalidate(shopProvider),
-          ),
+          child: shopState.errorMessage != null
+              ? AppResponsiveContent(
+                  maxWidth: 720,
+                  verticalPadding: AppSpacing.xl,
+                  child: AppInlineError(
+                    message: shopState.errorMessage!,
+                    onRetry: () =>
+                        ref.read(shopProvider.notifier).loadUserShops(),
+                  ),
+                )
+              : _NoShopWorkspace(
+                  onJoin: () => _showJoinShopDialog(context),
+                  onReload: () =>
+                      ref.read(shopProvider.notifier).loadUserShops(),
+                ),
         ),
       );
     }
@@ -137,16 +171,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         featureGuideButton(context, 'dashboard'),
         if (compact && canSell)
           Tooltip(
-            message: 'Bán hàng',
+            message: 'Ghi nhận bán hàng',
             child: FloatingActionButton.small(
               heroTag: 'dashboard-sale-action-compact',
               elevation: 0,
-              onPressed: () => context.push('/pos'),
+              onPressed: () => context.push('/sales/new'),
               child: const AppAssetIcon(
                 assetPath: AppAssets.orders,
                 size: 18,
                 color: Colors.white,
-                semanticLabel: 'Bán hàng',
+                semanticLabel: 'Ghi nhận bán hàng',
               ),
             ),
           ),
@@ -157,10 +191,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       backgroundColor: Colors.transparent,
       floatingActionButton: canSell && !compactLayout
           ? AppPrimaryFloatingAction(
-              label: 'Bán hàng',
+              label: 'Ghi nhận bán hàng',
               assetPath: AppAssets.orders,
               heroTag: 'dashboard-sale-action',
-              onPressed: () => context.push('/pos'),
+              onPressed: () => context.push('/sales/new'),
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -168,15 +202,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         top: false,
         child: RefreshIndicator(
           onRefresh: () async {
-            if (hasSalesInsights) {
+            final refreshPlan = dashboardRefreshPlan(
+              hasSalesInsights: hasSalesInsights,
+              hasFinance: hasFinance,
+              hasInventory: hasInventory,
+            );
+            if (refreshPlan.sales) {
+              ref.invalidate(salesSummaryProvider);
               ref.invalidate(topProductsProvider);
             }
-            if (hasFinance) {
-              ref.invalidate(salesSummaryProvider);
+            if (refreshPlan.finance) {
               ref.invalidate(cashSummaryProvider);
               ref.invalidate(recentTransactionsProvider);
             }
-            if (hasInventory) ref.invalidate(lowStockProvider);
+            if (refreshPlan.inventory) ref.invalidate(lowStockProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -191,7 +230,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ? 'Tổng quan tất cả cửa hàng'
                         : 'Tình hình cửa hàng',
                     subtitle:
-                        '${shopState.currentShopName ?? 'Cửa hàng'} • ${periods.currentLabel} • cập nhật ${DateFormat('dd/MM/yyyy').format(today)}',
+                        '${shopState.currentShopName ?? 'Cửa hàng'} • ${periods.currentLabel} • đối chiếu đến ${DateFormat('dd/MM/yyyy').format(today)}',
                     dense: true,
                     titleStyle: GoogleFonts.manrope(
                       fontSize: 26,
@@ -222,6 +261,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
+                  if (salesAsync != null)
+                    salesAsync.when(
+                      data: (data) {
+                        final assessment = assessDataFreshness(
+                          latestDate: data['latestOrderDate'],
+                          periodFrom: DateTime.parse(periods.currentFrom),
+                          periodTo: DateTime.parse(periods.currentTo),
+                          recordCount:
+                              int.tryParse(
+                                (data['orderCount'] ?? 0).toString(),
+                              ) ??
+                              0,
+                        );
+                        if (!assessment.requiresAttention) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: DataFreshnessBanner(
+                            assessment: assessment,
+                            dataLabel: 'bán hàng',
+                          ),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
+                    ),
                   if (salesAsync != null)
                     salesAsync.when(
                       data: (salesData) {
@@ -273,6 +339,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     comparisonSales: comparisonAsync,
                     recentTransactions: recentTransactionsAsync,
                     topProducts: topProductsAsync,
+                    previousTopProducts: previousTopProductsAsync,
                     currentLabel: periods.currentLabel,
                     previousLabel: periods.previousLabel,
                     filter: filter,
@@ -300,12 +367,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     bool cashAvailable = true,
   }) {
     final revenue =
-        num.tryParse(salesData['totalRevenue']?.toString() ?? '0') ?? 0;
+        num.tryParse(
+          (salesData['netSalesRevenue'] ?? salesData['totalRevenue'])
+                  ?.toString() ??
+              '0',
+        ) ??
+        0;
     final profit =
         num.tryParse(salesData['grossProfit']?.toString() ?? '0') ?? 0;
     final orderCount = salesData['totalOrders'] ?? salesData['orderCount'] ?? 0;
     final previousRevenue =
-        num.tryParse(comparisonSalesData?['totalRevenue']?.toString() ?? '0') ??
+        num.tryParse(
+          (comparisonSalesData?['netSalesRevenue'] ??
+                      comparisonSalesData?['totalRevenue'])
+                  ?.toString() ??
+              '0',
+        ) ??
         0;
     final previousProfit =
         num.tryParse(comparisonSalesData?['grossProfit']?.toString() ?? '0') ??
@@ -677,6 +754,7 @@ class _DashboardWorkspace extends StatelessWidget {
   final AsyncValue<Map<String, dynamic>>? comparisonSales;
   final AsyncValue<List<dynamic>>? recentTransactions;
   final AsyncValue<List<dynamic>>? topProducts;
+  final AsyncValue<List<dynamic>>? previousTopProducts;
   final String currentLabel;
   final String previousLabel;
   final String filter;
@@ -687,6 +765,7 @@ class _DashboardWorkspace extends StatelessWidget {
     required this.comparisonSales,
     required this.recentTransactions,
     required this.topProducts,
+    required this.previousTopProducts,
     required this.currentLabel,
     required this.previousLabel,
     required this.filter,
@@ -704,10 +783,40 @@ class _DashboardWorkspace extends StatelessWidget {
       onFilterChanged: onFilterChanged,
     );
     final priorities = const DashboardPriorityList();
+    Widget productPanel(List<dynamic> items) {
+      if (items.isNotEmpty || previousTopProducts == null) {
+        return DashboardTopProductsRevenueChart(
+          items: items,
+          period: currentLabel,
+          comparisonPeriod: previousLabel,
+        );
+      }
+      return previousTopProducts!.when(
+        data: (previousItems) => DashboardTopProductsRevenueChart(
+          items: previousItems,
+          period: previousLabel,
+          isPreviousPeriodFallback: previousItems.isNotEmpty,
+        ),
+        loading: () => const Padding(
+          padding: EdgeInsets.only(top: AppSpacing.lg),
+          child: AppShimmer(
+            child: ShimmerBox(
+              width: double.infinity,
+              height: 220,
+              radius: AppRadius.card,
+            ),
+          ),
+        ),
+        error: (_, _) => DashboardTopProductsRevenueChart(
+          items: const [],
+          period: currentLabel,
+        ),
+      );
+    }
+
     final products =
         topProducts?.when(
-          data: (items) =>
-              _TopProductsRevenueChart(items: items, period: currentLabel),
+          data: productPanel,
           loading: () => const Padding(
             padding: EdgeInsets.only(top: AppSpacing.lg),
             child: AppShimmer(
@@ -777,24 +886,37 @@ class _DashboardWorkspace extends StatelessWidget {
   }
 }
 
-class _TopProductsRevenueChart extends StatelessWidget {
+class DashboardTopProductsRevenueChart extends StatelessWidget {
   final List<dynamic> items;
   final String period;
+  final String? comparisonPeriod;
+  final bool isPreviousPeriodFallback;
 
-  const _TopProductsRevenueChart({required this.items, required this.period});
+  const DashboardTopProductsRevenueChart({
+    super.key,
+    required this.items,
+    required this.period,
+    this.comparisonPeriod,
+    this.isPreviousPeriodFallback = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final products = items.take(10).toList();
+    final mobile = MediaQuery.sizeOf(context).width < 600;
     final chartHeight = products.isEmpty
-        ? 300.0
-        : (112 + products.length * 55).clamp(300, 662).toDouble();
+        ? 220.0
+        : mobile
+        ? (140 + products.length * 78).toDouble()
+        : (136 + products.length * 55).clamp(324, 686).toDouble();
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.lg),
       child: ChartCard(
-        title: 'Top sản phẩm bán chạy',
+        title: isPreviousPeriodFallback
+            ? 'Top sản phẩm kỳ trước'
+            : 'Top sản phẩm bán chạy',
         height: chartHeight,
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -815,7 +937,13 @@ class _TopProductsRevenueChart extends StatelessWidget {
             ? const EmptyChartPlaceholder(
                 message: 'Chưa có doanh thu sản phẩm trong kỳ này.',
               )
-            : _TopProductsHorizontalBars(products),
+            : _TopProductsHorizontalBars(
+                products,
+                allowGrowth: !isPreviousPeriodFallback,
+                comparisonPeriod: isPreviousPeriodFallback
+                    ? null
+                    : comparisonPeriod,
+              ),
       ),
     );
   }
@@ -823,8 +951,14 @@ class _TopProductsRevenueChart extends StatelessWidget {
 
 class _TopProductsHorizontalBars extends StatelessWidget {
   final List<dynamic> products;
+  final bool allowGrowth;
+  final String? comparisonPeriod;
 
-  const _TopProductsHorizontalBars(this.products);
+  const _TopProductsHorizontalBars(
+    this.products, {
+    required this.allowGrowth,
+    required this.comparisonPeriod,
+  });
 
   double _number(dynamic value) =>
       num.tryParse(value?.toString() ?? '0')?.toDouble() ?? 0;
@@ -838,11 +972,77 @@ class _TopProductsHorizontalBars extends StatelessWidget {
       (current, item) =>
           _number(item['value']) > current ? _number(item['value']) : current,
     );
-    final showGrowth = MediaQuery.sizeOf(context).width >= 700;
-    final showMargin = MediaQuery.sizeOf(context).width >= 900;
+    final width = MediaQuery.sizeOf(context).width;
+    final mobile = width < 600;
+    final showGrowth = allowGrowth && width >= 700;
+    final showMargin = width >= 900;
+    final comparisonCaption = allowGrowth && comparisonPeriod != null
+        ? 'Tăng trưởng so với $comparisonPeriod'
+        : null;
+
+    if (mobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (comparisonCaption != null) ...[
+            Text(
+              comparisonCaption,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          Expanded(
+            child: ListView.separated(
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: products.length,
+              separatorBuilder: (_, _) =>
+                  Divider(height: 1, color: colors.divider),
+              itemBuilder: (context, index) {
+                final product = products[index];
+                final revenue = _number(product['value']);
+                final quantity = _number(product['quantity']);
+                final growth = product['growthPct'] == null
+                    ? null
+                    : _number(product['growthPct']);
+                final growthStatus = allowGrowth
+                    ? product['growthStatus']?.toString()
+                    : 'NOT_REQUESTED';
+                return _TopProductMobileRow(
+                  rank: index + 1,
+                  name: product['name']?.toString() ?? 'Chưa rõ',
+                  quantity: quantity,
+                  unit: product['unit']?.toString() ?? 'sản phẩm',
+                  revenue: revenue,
+                  progress: maxRevenue <= 0 ? 0 : revenue / maxRevenue,
+                  growth: growth,
+                  growthStatus: growthStatus,
+                  color: primary.withValues(alpha: 1 - index * 0.045),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    }
 
     return Column(
       children: [
+        if (comparisonCaption != null) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              comparisonCaption,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(
@@ -922,12 +1122,12 @@ class _TopProductsHorizontalBars extends StatelessWidget {
               final quantity = _number(product['quantity']);
               final marginPct = _number(product['marginPct']);
               final progress = maxRevenue <= 0 ? 0.0 : revenue / maxRevenue;
-              final previousRevenue = product['previousValue'] == null
+              final growth = product['growthPct'] == null
                   ? null
-                  : _number(product['previousValue']);
-              final growth = previousRevenue == null || previousRevenue <= 0
-                  ? null
-                  : ((revenue - previousRevenue) / previousRevenue) * 100;
+                  : _number(product['growthPct']);
+              final growthStatus = allowGrowth
+                  ? product['growthStatus']?.toString()
+                  : 'NOT_REQUESTED';
 
               return _TopProductRankRow(
                 rank: index + 1,
@@ -938,6 +1138,7 @@ class _TopProductsHorizontalBars extends StatelessWidget {
                 unit: product['unit']?.toString() ?? 'sản phẩm',
                 progress: progress,
                 growth: growth,
+                growthStatus: growthStatus,
                 showGrowth: showGrowth,
                 showMargin: showMargin,
                 color: primary.withValues(alpha: 1 - index * 0.045),
@@ -946,6 +1147,135 @@ class _TopProductsHorizontalBars extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _TopProductMobileRow extends StatelessWidget {
+  final int rank;
+  final String name;
+  final double quantity;
+  final String unit;
+  final double revenue;
+  final double progress;
+  final double? growth;
+  final String? growthStatus;
+  final Color color;
+
+  const _TopProductMobileRow({
+    required this.rank,
+    required this.name,
+    required this.quantity,
+    required this.unit,
+    required this.revenue,
+    required this.progress,
+    required this.growth,
+    required this.growthStatus,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final quantityLabel = quantity == quantity.roundToDouble()
+        ? quantity.toInt().toString()
+        : NumberFormat('0.##', 'vi_VN').format(quantity);
+    final growthLabel = switch (growthStatus) {
+      'NEW' => 'Mới',
+      'NO_BASE' => 'Chưa có kỳ gốc',
+      'COMPARABLE' when growth != null =>
+        '${growth! >= 0 ? '▲' : '▼'} ${NumberFormat('0.0', 'vi_VN').format(growth!.abs())}%',
+      _ => null,
+    };
+    final growthColor = growth == null
+        ? AppColors.info
+        : growth! >= 0
+        ? AppColors.success
+        : AppColors.danger;
+
+    return SizedBox(
+      height: 77,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              rank.toString().padLeft(2, '0'),
+              style: AppTheme.tabularStyle(
+                context,
+                color: rank <= 3 ? color : colors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: colors.cardAlt,
+                    valueColor: AlwaysStoppedAnimation(color),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 2,
+                  children: [
+                    Text(
+                      '$quantityLabel $unit',
+                      style: AppTheme.tabularStyle(
+                        context,
+                        color: colors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '${compactVietnameseAmount(revenue)} ₫',
+                      style: AppTheme.tabularStyle(
+                        context,
+                        color: colors.textPrimary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (growthLabel != null)
+                      Text(
+                        growthLabel,
+                        style: AppTheme.tabularStyle(
+                          context,
+                          color: growthColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -959,6 +1289,7 @@ class _TopProductRankRow extends StatelessWidget {
   final String unit;
   final double progress;
   final double? growth;
+  final String? growthStatus;
   final bool showGrowth;
   final bool showMargin;
   final Color color;
@@ -972,6 +1303,7 @@ class _TopProductRankRow extends StatelessWidget {
     required this.unit,
     required this.progress,
     required this.growth,
+    required this.growthStatus,
     required this.showGrowth,
     required this.showMargin,
     required this.color,
@@ -1088,15 +1420,21 @@ class _TopProductRankRow extends StatelessWidget {
             SizedBox(
               width: 88,
               child: Text(
-                growth == null
-                    ? 'Chưa đủ dữ liệu'
-                    : '${growth! >= 0 ? '▲' : '▼'} ${NumberFormat('0.0', 'vi_VN').format(growth!.abs())}%',
+                switch (growthStatus) {
+                  'NEW' => 'Mới',
+                  'NO_BASE' => 'Không có gốc',
+                  'COMPARABLE' when growth != null =>
+                    '${growth! >= 0 ? '▲' : '▼'} ${NumberFormat('0.0', 'vi_VN').format(growth!.abs())}%',
+                  _ => 'Chưa đối chiếu',
+                },
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.right,
                 style: AppTheme.tabularStyle(
                   context,
-                  color: growth == null
+                  color: growthStatus == 'NEW'
+                      ? AppColors.info
+                      : growth == null
                       ? colors.textMuted
                       : growth! >= 0
                       ? AppColors.success

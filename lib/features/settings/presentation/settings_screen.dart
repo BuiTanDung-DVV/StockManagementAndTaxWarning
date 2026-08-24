@@ -110,10 +110,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Phương pháp tính giá vốn',
               description: costing.isLoading
                   ? 'Đang tải cấu hình…'
+                  : costing.errorMessage != null || !costing.hasData
+                  ? 'Chưa tải được cấu hình từ cơ sở dữ liệu.'
                   : costing.method == 'FIFO'
                   ? 'Đang dùng: Nhập trước – xuất trước (FIFO).'
                   : 'Đang dùng: Bình quân gia quyền (AVG).',
-              onTap: costing.isLoading
+              onTap: costing.isLoading || !costing.hasData
                   ? null
                   : () => _showCostingMethodPicker(context),
             ),
@@ -556,13 +558,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         size: 44,
         semanticLabel: 'SmartStock',
       ),
-      applicationName: 'SmartStock POS & Tax',
+      applicationName: 'SmartStock',
       applicationVersion: packageInfo.version,
-      applicationLegalese: 'SmartStock - Quản lý bán hàng & Cảnh báo thuế Hộ Kinh Doanh',
+      applicationLegalese:
+          'SmartStock - Quản lý bán hàng & Cảnh báo thuế Hộ Kinh Doanh',
       children: [
         const SizedBox(height: AppSpacing.md),
         const Text(
-          'Hệ thống quản lý bán hàng (POS), tồn kho, dòng tiền và tự động cảnh báo nghĩa vụ thuế cho Hộ Kinh Doanh cá thể tại Việt Nam.',
+          'Hệ thống ghi nhận giao dịch bán hàng, quản lý tồn kho, dòng tiền và cảnh báo nghĩa vụ thuế cho Hộ Kinh Doanh tại Việt Nam.',
           style: TextStyle(fontSize: 13, height: 1.45),
         ),
       ],

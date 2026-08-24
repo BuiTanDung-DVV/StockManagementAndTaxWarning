@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, raw } from 'express';
 import * as systemCtrl from '../controllers/system.controller';
 import { requirePermission } from '../middleware/permission.middleware';
 
@@ -7,8 +7,15 @@ const router = Router();
 // Shop Profile
 router.get('/shop-profile', requirePermission('settings', 'view'), systemCtrl.getShopProfile);
 router.post('/shop-profile', requirePermission('settings', 'edit'), systemCtrl.saveShopProfile);
+router.get('/payment-banks', requirePermission('settings', 'view'), systemCtrl.getPaymentBankOptions);
+router.get('/tax-reference-data', requirePermission('finance', 'view'), systemCtrl.getTaxReferenceData);
 router.get('/shop-payment-qr', systemCtrl.getShopPaymentQr);
-router.post('/shop-payment-qr/presign', requirePermission('settings', 'edit'), systemCtrl.createShopPaymentQrUpload);
+router.post(
+    '/shop-payment-qr/upload',
+    requirePermission('settings', 'edit'),
+    raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '4mb' }),
+    systemCtrl.uploadShopPaymentQrImage,
+);
 router.post('/shop-payment-qr/confirm', requirePermission('settings', 'edit'), systemCtrl.confirmShopPaymentQrUpload);
 
 // Activity Logs

@@ -34,7 +34,7 @@ export class EmailService {
             }
 
             const mailOptions = {
-                from: `"SmartStock POS & Tax" <${process.env.SMTP_USER}>`,
+                from: `"SmartStock" <${process.env.SMTP_USER}>`,
                 to: email,
                 subject: `${otpCode} là mã xác thực SmartStock của bạn`,
                 html: `
@@ -61,7 +61,7 @@ export class EmailService {
                                         <div style="display: inline-block;">
                                           <span style="font-size: 18px; font-weight: 800; color: #09090b; letter-spacing: -0.5px; vertical-align: middle;">SmartStock</span>
                                           <span style="display: inline-block; width: 6px; height: 6px; background-color: #2563eb; border-radius: 50%; margin: 0 6px 2px 6px; vertical-align: middle;"></span>
-                                          <span style="font-size: 12px; font-weight: 600; color: #2563eb; background-color: #eff6ff; padding: 3px 8px; border-radius: 6px; border: 1px solid #dbeafe; vertical-align: middle;">POS &amp; Tax</span>
+                                          <span style="font-size: 12px; font-weight: 600; color: #2563eb; background-color: #eff6ff; padding: 3px 8px; border-radius: 6px; border: 1px solid #dbeafe; vertical-align: middle;">Bán hàng &amp; Thuế</span>
                                         </div>
                                       </td>
                                     </tr>
@@ -95,7 +95,7 @@ export class EmailService {
                               <tr>
                                 <td style="background-color: #fafafa; padding: 20px 36px; border-top: 1px solid #f4f4f5; text-align: center;">
                                   <p style="margin: 0; font-size: 12px; color: #a1a1aa; line-height: 1.5;">
-                                    SmartStock POS &amp; Tax &bull; Bán hàng, Kho &amp; Thuế Hộ kinh doanh<br />
+                                    SmartStock &bull; Bán hàng, Kho &amp; Thuế Hộ kinh doanh<br />
                                     Email tự động, xin vui lòng không phản hồi.
                                   </p>
                                 </td>

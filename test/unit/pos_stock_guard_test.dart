@@ -36,4 +36,28 @@ void main() {
       );
     });
   });
+
+  test('sales draft displays tax from product data after discount allocation', () {
+    const state = CartState(
+      items: [
+        CartItem(
+          productId: 1,
+          name: 'Xi măng',
+          price: 600000,
+          taxRate: 10,
+        ),
+        CartItem(
+          productId: 2,
+          name: 'Sơn',
+          price: 400000,
+          taxRate: 5,
+        ),
+      ],
+      discountAmount: 100000,
+    );
+
+    expect(state.subtotal, 1000000);
+    expect(state.taxAmount, 72000);
+    expect(state.total, 972000);
+  });
 }

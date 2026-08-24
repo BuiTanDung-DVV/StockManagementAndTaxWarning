@@ -40,7 +40,10 @@ class TagRepository {
 
   Future<List<TagModel>> getAll({String type = 'product'}) async {
     final res = await _api.get('/tags', params: {'type': type});
-    final data = res as List? ?? [];
+    if (res is! List) {
+      throw ApiException('Dữ liệu nhãn sản phẩm không hợp lệ');
+    }
+    final data = List<dynamic>.from(res);
     return data.map((e) => TagModel.fromJson(e)).toList();
   }
 

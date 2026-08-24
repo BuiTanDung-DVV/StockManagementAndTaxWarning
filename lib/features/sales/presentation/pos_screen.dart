@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -36,6 +34,7 @@ class CartItem {
   final int productId;
   final String name;
   final double price;
+  final double taxRate;
   final int quantity;
   final int? availableStock;
 
@@ -43,6 +42,7 @@ class CartItem {
     required this.productId,
     required this.name,
     required this.price,
+    this.taxRate = 0,
     this.quantity = 1,
     this.availableStock,
   });
@@ -53,6 +53,7 @@ class CartItem {
     productId: productId,
     name: name,
     price: price,
+    taxRate: taxRate,
     quantity: quantity ?? this.quantity,
     availableStock: availableStock ?? this.availableStock,
   );
@@ -91,9 +92,23 @@ class CartState {
     this.notes,
   });
 
-  double get total =>
-      (items.fold<double>(0.0, (sum, i) => sum + i.subtotal) - discountAmount)
-          .clamp(0.0, double.infinity);
+  double get subtotal => items.fold<double>(
+    0.0,
+    (sum, item) => sum + item.subtotal,
+  );
+  double get taxableSubtotal => (subtotal - discountAmount).clamp(
+    0.0,
+    double.infinity,
+  );
+  double get taxAmount {
+    if (subtotal <= 0) return 0;
+    final discountRatio = (discountAmount / subtotal).clamp(0.0, 1.0);
+    return items.fold<double>(0.0, (sum, item) {
+      final taxableLine = item.subtotal * (1 - discountRatio);
+      return sum + taxableLine * item.taxRate / 100;
+    });
+  }
+  double get total => taxableSubtotal + taxAmount;
   int get itemCount => items.fold(0, (sum, i) => sum + i.quantity);
 
   CartState copyWith({
@@ -120,74 +135,16 @@ class CartState {
 
 /// Cart notifier (Riverpod v3 Notifier pattern)
 class CartNotifier extends Notifier<CartState> {
-  SharedPreferences? _prefs;
-
   @override
-  CartState build() {
-    _loadFromPrefs();
-    return const CartState();
-  }
+  CartState build() => const CartState();
 
-  Future<void> _loadFromPrefs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _prefs = prefs;
-      final jsonStr = prefs.getString('pos_cart_state');
-      if (jsonStr != null) {
-        final Map<String, dynamic> data = json.decode(jsonStr);
-        final List<dynamic> itemsJson = data['items'] ?? [];
-        final items = itemsJson
-            .map(
-              (e) => CartItem(
-                productId: e['productId'],
-                name: e['name'],
-                price: (e['price'] as num).toDouble(),
-                quantity: e['quantity'],
-                availableStock: e['availableStock'] as int?,
-              ),
-            )
-            .toList();
-        state = CartState(
-          items: items,
-          customerId: data['customerId'],
-          customerName: data['customerName'],
-          discountAmount: (data['discountAmount'] as num?)?.toDouble() ?? 0.0,
-          notes: data['notes'] as String?,
-        );
-      }
-    } catch (e) {
-      debugPrint('Error loading cart: $e');
-    }
-  }
-
-  Future<void> _saveToPrefs() async {
-    try {
-      final prefs = _prefs ?? await SharedPreferences.getInstance();
-      _prefs = prefs;
-      final data = {
-        'customerId': state.customerId,
-        'customerName': state.customerName,
-        'discountAmount': state.discountAmount,
-        'notes': state.notes,
-        'items': state.items
-            .map(
-              (e) => {
-                'productId': e.productId,
-                'name': e.name,
-                'price': e.price,
-                'quantity': e.quantity,
-                'availableStock': e.availableStock,
-              },
-            )
-            .toList(),
-      };
-      await prefs.setString('pos_cart_state', json.encode(data));
-    } catch (e) {
-      debugPrint('Error saving cart: $e');
-    }
-  }
-
-  bool add(int productId, String name, double price, {int? availableStock}) {
+  bool add(
+    int productId,
+    String name,
+    double price, {
+    double taxRate = 0,
+    int? availableStock,
+  }) {
     final existing = state.items
         .where((i) => i.productId == productId)
         .firstOrNull;
@@ -225,12 +182,12 @@ class CartNotifier extends Notifier<CartState> {
             productId: productId,
             name: name,
             price: price,
+            taxRate: taxRate,
             availableStock: availableStock,
           ),
         ],
       );
     }
-    _saveToPrefs();
     return true;
   }
 
@@ -255,7 +212,6 @@ class CartNotifier extends Notifier<CartState> {
           )
           .toList(),
     );
-    _saveToPrefs();
     return true;
   }
 
@@ -276,19 +232,16 @@ class CartNotifier extends Notifier<CartState> {
         items: state.items.where((i) => i.productId != productId).toList(),
       );
     }
-    _saveToPrefs();
   }
 
   void remove(int productId) {
     state = state.copyWith(
       items: state.items.where((i) => i.productId != productId).toList(),
     );
-    _saveToPrefs();
   }
 
   void clear() {
     state = const CartState();
-    _saveToPrefs();
   }
 
   void setCustomer(int? id, String? name) {
@@ -297,7 +250,6 @@ class CartNotifier extends Notifier<CartState> {
       customerName: name,
       clearCustomer: id == null,
     );
-    _saveToPrefs();
   }
 
   void setDiscount(double discount) {
@@ -305,7 +257,6 @@ class CartNotifier extends Notifier<CartState> {
       discountAmount: discount,
       clearDiscount: discount <= 0,
     );
-    _saveToPrefs();
   }
 
   void setNotes(String? notes) {
@@ -313,7 +264,6 @@ class CartNotifier extends Notifier<CartState> {
       notes: notes,
       clearNotes: notes == null || notes.isEmpty,
     );
-    _saveToPrefs();
   }
 }
 
@@ -354,13 +304,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bán hàng'),
+        title: const Text('Ghi nhận giao dịch bán hàng'),
         actions: [
           featureGuideButton(context, 'pos'),
           if (cart.items.isNotEmpty)
             TextButton(
               onPressed: () => _showCart(context),
-              child: Text('Giỏ (${cart.itemCount})'),
+              child: Text('Hàng đã chọn (${cart.itemCount})'),
             ),
           const SizedBox(width: 8),
         ],
@@ -475,7 +425,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                               ),
                             ),
                             child: Text(
-                              'Thanh toán',
+                              'Xác nhận',
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
@@ -626,10 +576,19 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         0,
                   );
                   final availableStock = availableStockOf(singleProduct);
+                  final taxRate = TypeParser.asDouble(
+                    singleProduct['taxRate'] ?? singleProduct['tax_rate'] ?? 0,
+                  );
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     final added = ref
                         .read(_cartProvider.notifier)
-                        .add(id, name, price, availableStock: availableStock);
+                        .add(
+                          id,
+                          name,
+                          price,
+                          taxRate: taxRate,
+                          availableStock: availableStock,
+                        );
                     _searchCtrl.clear();
                     setState(() {
                       _search = '';
@@ -692,6 +651,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                     p['sellingPrice'] ?? p['selling_price'] ?? 0,
                   );
                   final availableStock = availableStockOf(p);
+                  final taxRate = TypeParser.asDouble(
+                    p['taxRate'] ?? p['tax_rate'] ?? 0,
+                  );
                   final stockLabel = availableStock == null
                       ? 'Chưa rõ tồn'
                       : availableStock <= 0
@@ -832,6 +794,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                             id,
                                             name,
                                             price,
+                                            taxRate: taxRate,
                                             availableStock: availableStock,
                                           );
                                       if (added) {
@@ -904,8 +867,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           child: cart.items.isEmpty
               ? const AppEmpty(
                   visual: AppEmptyVisual.sales,
-                  message: 'Giỏ hàng đang trống',
-                  subtitle: 'Chọn sản phẩm từ danh sách để bắt đầu đơn hàng.',
+                  message: 'Chưa chọn sản phẩm',
+                  subtitle:
+                      'Chọn sản phẩm từ danh sách để bắt đầu giao dịch.',
                   size: 64,
                 )
               : ListView.separated(
@@ -994,6 +958,22 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (cart.taxAmount > 0) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Thuế theo cấu hình sản phẩm:',
+                      style: TextStyle(fontSize: 12, color: c.textSecondary),
+                    ),
+                    Text(
+                      _currFmt.format(cart.taxAmount),
+                      style: TextStyle(fontSize: 12, color: c.textSecondary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1162,7 +1142,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   ),
                 ),
                 child: Text(
-                  'XÁC NHẬN THANH TOÁN',
+                  'XÁC NHẬN GIAO DỊCH',
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.w900,
                     fontSize: 14,
@@ -1364,7 +1344,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Xác nhận thanh toán',
+                          'Xác nhận giao dịch bán',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -1392,6 +1372,28 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                             ),
                           ],
                         ),
+                        if (cart.taxAmount > 0) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Thuế theo dữ liệu sản phẩm',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: c.textSecondary,
+                                ),
+                              ),
+                              Text(
+                                _currFmt.format(cart.taxAmount),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         Text(
                           'Phương thức thanh toán:',
@@ -1803,10 +1805,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         if (cart.notes != null) 'notes': cart.notes,
         'paymentMethod': method,
         'status': method == 'CASH' ? 'DELIVERED' : 'PENDING',
-        'paidAmount': method == 'CASH' ? cart.total : 0,
+        'settleInFull': method == 'CASH',
+        'paidAmount': 0,
       });
 
       final orderId = result['id'] as int;
+      final serverTotal = TypeParser.asDouble(
+        result['totalAmount'] ?? result['total_amount'] ?? cart.total,
+      );
 
       if (method == 'CASH' || method == 'DEBT') {
         // Cash or debt payment - done immediately.
@@ -1869,7 +1875,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               builder: (_) => QrPaymentScreen(
                 orderId: orderId,
                 orderCode: orderCode,
-                totalAmount: cart.total,
+                totalAmount: serverTotal,
                 bankId: bankId,
                 accountNo: accountNo,
                 accountName: accountName,
@@ -1926,7 +1932,7 @@ class _CashConfirmDialogState extends State<_CashConfirmDialog> {
             semanticLabel: 'Tiền mặt',
           ),
           const SizedBox(width: 8),
-          const Text('Xác nhận tiền mặt'),
+          const Text('Ghi nhận tiền mặt'),
         ],
       ),
       content: SingleChildScrollView(
@@ -2025,7 +2031,7 @@ class _CashConfirmDialogState extends State<_CashConfirmDialog> {
             backgroundColor: AppColors.success,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Đã nhận tiền & Hoàn tất'),
+          child: const Text('Ghi nhận & hoàn tất'),
         ),
       ],
     );

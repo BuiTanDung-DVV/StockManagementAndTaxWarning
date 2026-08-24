@@ -1,592 +1,350 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
+import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/excel_export_service.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/chart_widgets.dart';
+import '../../../core/widgets/responsive_layout.dart';
 import '../../customers/providers/customer_provider.dart';
+
+bool debtAgingUsesMobileCards(double width) => width < 720;
+
+final _debtCurrency = NumberFormat.currency(
+  locale: 'vi_VN',
+  symbol: '₫',
+  decimalDigits: 0,
+);
+
+List<Map<String, dynamic>> debtAgingCustomers(Map<String, dynamic> data) {
+  return ((data['customers'] as List?) ?? const [])
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .toList();
+}
 
 class DebtAgingScreen extends ConsumerWidget {
   const DebtAgingScreen({super.key});
 
-  String _fmt(num v) => NumberFormat.currency(
-    locale: 'vi_VN',
-    symbol: '₫',
-    decimalDigits: 0,
-  ).format(v);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-    final asOf = DateTime.now().toIso8601String().split('T').first;
-    final agingAsync = ref.watch(debtAgingProvider(asOf));
-    final overdueAsync = ref.watch(overdueDebtsProvider);
+    final colors = AppThemeColors.of(context);
+    final asOf = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final reportAsync = ref.watch(debtAgingProvider(asOf));
+
+    Future<void> exportReport() async {
+      try {
+        final report = await ref.read(debtAgingProvider(asOf).future);
+        final launched = await ExcelExportService.exportDebtAgingToExcel(
+          report,
+        );
+        if (launched) {
+          ToastService.showSuccess('Đã tạo file Excel tuổi nợ');
+        } else {
+          ToastService.showError('Trình duyệt đã chặn tải file');
+        }
+      } catch (_) {
+        ToastService.showError('Không thể xuất báo cáo tuổi nợ');
+      }
+    }
+
+    Widget headerActions() => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        featureGuideButton(context, 'debt_aging'),
+        const SizedBox(width: AppSpacing.xs),
+        IconButton(
+          tooltip: 'Xuất Excel',
+          onPressed: exportReport,
+          icon: const Icon(Icons.file_download_outlined),
+        ),
+      ],
+    );
 
     return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Phân tích Tuổi nợ KH',
-          style: GoogleFonts.manrope(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          featureGuideButton(context, 'debt_aging'),
-          IconButton(
-            tooltip: 'Xuất Excel',
-            icon: const Icon(Icons.file_download_rounded),
-            onPressed: () async {
-              try {
-                final report = await ref.read(debtAgingProvider(asOf).future);
-                final launched =
-                    await ExcelExportService.exportDebtAgingToExcel(report);
-                if (launched) {
-                  ToastService.showSuccess('Đã tạo file Excel tuổi nợ');
-                } else {
-                  ToastService.showError('Trình duyệt đã chặn tải file');
-                }
-              } catch (_) {
-                ToastService.showError('Không thể xuất báo cáo tuổi nợ');
-              }
-            },
-          ),
-        ],
-      ),
-      body: agingAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Text('Lỗi: $e', style: TextStyle(color: AppColors.danger)),
-        ),
-        data: (agingData) {
-          final buckets = agingData['buckets'] as Map<String, dynamic>? ?? {};
-          final summary = agingData['summary'] as Map<String, dynamic>? ?? {};
-          final customers = (agingData['customers'] as List?) ?? const [];
-          final totalDebt = asNum(agingData['totalDebt']);
-          final current = asNum(buckets['current']);
-          final days30 = asNum(buckets['past30'] ?? buckets['days30']);
-          final days60 = asNum(buckets['past60'] ?? buckets['days60']);
-          final over90 = asNum(buckets['past90'] ?? buckets['over90']);
-
-          if (totalDebt == 0) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.verified_rounded,
-                      size: 64,
-                      color: AppColors.success,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Không phát sinh nợ phải thu',
-                    style: GoogleFonts.manrope(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: c.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          double pct(num v) => totalDebt > 0 ? v / totalDebt * 100 : 0;
-
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      backgroundColor: colors.bg,
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(debtAgingProvider(asOf)),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: AppResponsiveContent(
+            maxWidth: 1320,
+            verticalPadding: AppSpacing.lg,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Total debt card (Glassmorphic)
-                Container(
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                      width: 1.5,
+                AppPageHeader(
+                  title: 'Tuổi nợ phải thu',
+                  subtitle:
+                      'Theo dõi khoản khách hàng còn phải thanh toán và ưu tiên nợ đã quá hạn.',
+                  dense: true,
+                  breadcrumbs: [
+                    TextButton(
+                      onPressed: () => context.go('/finance'),
+                      child: const Text('Tài chính'),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withValues(
-                          alpha: 0.03,
-                        ),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Tổng dư nợ phải thu khách hàng',
-                        style: TextStyle(
-                          color: c.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _fmt(totalDebt),
-                        style: GoogleFonts.manrope(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          'Tỷ lệ nợ quá hạn: ${(asNum(summary['overdueRatio']) * 100).toStringAsFixed(1)}%',
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            color: AppColors.danger,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    const Text('Công nợ khách hàng'),
+                  ],
+                  action: headerActions(),
+                  compactAction: headerActions(),
                 ),
-                const SizedBox(height: 20),
-
-                // ── Debt Aging Bar Chart ──
-                ChartCard(
-                  title: 'Phân nhóm tuổi nợ',
-                  height: 270,
-                  trailing: Text(
-                    'Đơn vị: đồng',
-                    style: TextStyle(fontSize: 10, color: c.textMuted),
+                reportAsync.when(
+                  loading: () => const _DebtAgingLoading(),
+                  error: (_, _) => AppInlineError(
+                    message: 'Không thể tải báo cáo tuổi nợ phải thu.',
+                    onRetry: () => ref.invalidate(debtAgingProvider(asOf)),
                   ),
-                  child: MiniBarChart(
-                    values: [
-                      current.toDouble(),
-                      days30.toDouble(),
-                      days60.toDouble(),
-                      over90.toDouble(),
-                    ],
-                    labels: const ['Chưa hạn', '1-30', '31-60', '>60'],
-                    tooltipLabels: const [
-                      'Chưa đến hạn',
-                      'Quá hạn 1-30 ngày',
-                      'Quá hạn 31-60 ngày',
-                      'Quá hạn trên 60 ngày',
-                    ],
-                    showLeftTitles: true,
-                    valueSuffix: ' ₫',
-                    barColors: const [
-                      AppColors.success,
-                      AppColors.info,
-                      AppColors.warning,
-                      AppColors.danger,
-                    ],
-                  ),
+                  data: (data) => _DebtAgingReport(data: data, asOf: asOf),
                 ),
+                const SizedBox(height: AppSpacing.xxl),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                const SizedBox(height: 24),
+class _DebtAgingReport extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String asOf;
 
-                Text(
-                  'Phân loại theo kỳ hạn nợ',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: c.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
+  const _DebtAgingReport({required this.data, required this.asOf});
 
-                _AgingBar(
+  @override
+  Widget build(BuildContext context) {
+    final summary = data['summary'] as Map<String, dynamic>? ?? const {};
+    final buckets = data['buckets'] as Map<String, dynamic>? ?? const {};
+    final customers = debtAgingCustomers(data);
+    final total = asDouble(summary['totalDebt'] ?? data['totalDebt']);
+    final overdue = asDouble(summary['overdueDebt']);
+    final overdueRatio = asDouble(summary['overdueRatio']);
+    final receivableCount = asInt(
+      summary['receivableCount'] ?? data['receivableCount'],
+    );
+    final customerCount = asInt(
+      summary['customerCount'] ?? data['customerCount'] ?? customers.length,
+    );
+    final current = asDouble(buckets['current']);
+    final past30 = asDouble(buckets['past30'] ?? buckets['days30']);
+    final past60 = asDouble(buckets['past60'] ?? buckets['days60']);
+    final past90 = asDouble(
+      buckets['past90'] ?? buckets['days90'] ?? buckets['over90'],
+    );
+    final overdueCustomers = customers
+        .where((item) => asDouble(item['overdue']) > 0)
+        .toList();
+
+    if (total <= 0) {
+      return const AppEmpty(
+        visual: AppEmptyVisual.finance,
+        message: 'Không có khoản phải thu đang mở',
+        subtitle: 'Các khoản đã thanh toán hoặc đã hủy không được tính.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppFillGrid(
+          minItemWidth: 190,
+          maxColumns: 4,
+          itemHeight: 94,
+          children: [
+            AppKpiCard(
+              title: 'Tổng phải thu',
+              value: _debtCurrency.format(total),
+              color: AppColors.primary,
+              assetPath: AppAssets.cash,
+              badgeText: 'Tại ${_displayDate(asOf)}',
+            ),
+            AppKpiCard(
+              title: 'Đã quá hạn',
+              value: _debtCurrency.format(overdue),
+              color: AppColors.danger,
+              assetPath: AppAssets.orders,
+              badgeText:
+                  '${NumberFormat('0.0', 'vi_VN').format(overdueRatio * 100)}%',
+            ),
+            AppKpiCard(
+              title: 'Khoản đang mở',
+              value: NumberFormat.decimalPattern(
+                'vi_VN',
+              ).format(receivableCount),
+              color: AppColors.warning,
+              assetPath: AppAssets.book,
+              badgeText: 'Loại trừ đã trả/hủy',
+            ),
+            AppKpiCard(
+              title: 'Khách hàng còn nợ',
+              value: NumberFormat.decimalPattern('vi_VN').format(customerCount),
+              color: AppColors.info,
+              assetPath: AppAssets.inventory,
+              badgeText: 'Khách duy nhất',
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final chart = ChartCard(
+              title: 'Phân nhóm tuổi nợ phải thu',
+              height: 330,
+              trailing: const Text('Đơn vị: đồng'),
+              child: MiniBarChart(
+                values: [current, past30, past60, past90],
+                labels: const ['Chưa hạn', '1–30', '31–60', '>60'],
+                tooltipLabels: const [
                   'Chưa đến hạn',
-                  current / (totalDebt > 0 ? totalDebt : 1) * 100,
-                  _fmt(current),
-                  '${pct(current).toStringAsFixed(1)}%',
+                  'Quá hạn 1–30 ngày',
+                  'Quá hạn 31–60 ngày',
+                  'Quá hạn trên 60 ngày',
+                ],
+                showLeftTitles: true,
+                valueSuffix: ' ₫',
+                barColors: const [
                   AppColors.success,
-                ),
-                _AgingBar(
-                  'Từ 1 - 30 ngày',
-                  days30 / (totalDebt > 0 ? totalDebt : 1) * 100,
-                  _fmt(days30),
-                  '${pct(days30).toStringAsFixed(1)}%',
                   AppColors.info,
-                ),
-                _AgingBar(
-                  'Từ 31 - 60 ngày',
-                  days60 / (totalDebt > 0 ? totalDebt : 1) * 100,
-                  _fmt(days60),
-                  '${pct(days60).toStringAsFixed(1)}%',
                   AppColors.warning,
-                ),
-                _AgingBar(
-                  'Quá hạn > 60 ngày',
-                  over90 / (totalDebt > 0 ? totalDebt : 1) * 100,
-                  _fmt(over90),
-                  '${pct(over90).toStringAsFixed(1)}%',
                   AppColors.danger,
-                ),
+                ],
+              ),
+            );
+            final priority = _CustomerPriorityPanel(customers: customers);
 
-                if (customers.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    'Khách hàng dư nợ cao nhất',
-                    style: GoogleFonts.manrope(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ...customers.take(5).map<Widget>((item) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: c.card,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: c.divider.withValues(alpha: 0.5),
-                          width: 1,
-                        ),
+            if (constraints.maxWidth < 980) {
+              return Column(
+                children: [
+                  chart,
+                  const SizedBox(height: AppSpacing.md),
+                  priority,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: chart),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(flex: 2, child: priority),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        _OverdueCustomersSection(
+          customers: overdueCustomers,
+          totalCount: overdueCustomers.length,
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomerPriorityPanel extends StatelessWidget {
+  final List<Map<String, dynamic>> customers;
+
+  const _CustomerPriorityPanel({required this.customers});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final visible = customers.take(5).toList();
+    final maximum = visible.fold<double>(
+      0,
+      (value, item) =>
+          asDouble(item['total']) > value ? asDouble(item['total']) : value,
+    );
+
+    return AppCardContainer(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: SizedBox(
+        height: 294,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Khách hàng cần ưu tiên',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              'Xếp theo nợ quá hạn, sau đó đến tổng dư nợ.',
+              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: visible.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Chưa có khách hàng cần ưu tiên.',
+                        style: TextStyle(color: colors.textSecondary),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    )
+                  : ListView.separated(
+                      itemCount: visible.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.md),
+                      itemBuilder: (context, index) {
+                        final customer = visible[index];
+                        final total = asDouble(customer['total']);
+                        final overdue = asDouble(customer['overdue']);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  item['customerName'] ?? '',
-                                  style: GoogleFonts.manrope(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: c.textPrimary,
+                                Expanded(
+                                  child: Text(
+                                    '${index + 1}. ${customer['customerName'] ?? 'Chưa xác định'}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
                                 Text(
-                                  'Hạn quá hạn tối đa: ${item['overdueDays'] ?? 0} ngày',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: c.textSecondary,
-                                    fontWeight: FontWeight.w500,
+                                  _debtCurrency.format(total),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            _fmt(asNum(item['total'])),
-                            style: GoogleFonts.manrope(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              color: AppColors.danger,
+                            const SizedBox(height: AppSpacing.xxs),
+                            LinearProgressIndicator(
+                              value: maximum <= 0
+                                  ? 0
+                                  : (total / maximum).clamp(0, 1),
+                              minHeight: 6,
+                              borderRadius: BorderRadius.circular(4),
+                              backgroundColor: colors.divider,
+                              valueColor: AlwaysStoppedAnimation(
+                                overdue > 0
+                                    ? AppColors.danger
+                                    : AppColors.success,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-
-                const SizedBox(height: 24),
-                Text(
-                  'Khách hàng nợ quá hạn lâu nhất',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: c.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                overdueAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Text(
-                    'Lỗi tải nợ: $e',
-                    style: TextStyle(color: AppColors.danger),
-                  ),
-                  data: (overdueItems) {
-                    if (overdueItems.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          'Không có khách hàng nợ quá hạn',
-                          style: TextStyle(color: c.textMuted, fontSize: 13),
-                        ),
-                      );
-                    }
-                    return Column(
-                      children: overdueItems.take(10).map<Widget>((item) {
-                        final initialChar = (item['customerName'] ?? '?')[0]
-                            .toUpperCase();
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: c.card,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: AppColors.danger.withValues(alpha: 0.25),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              // Elegant Squircle Avatar
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: AppColors.danger.withValues(
-                                    alpha: 0.12,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppColors.danger.withValues(
-                                      alpha: 0.25,
-                                    ),
-                                    width: 1.5,
-                                  ),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  initialChar,
-                                  style: GoogleFonts.manrope(
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['customerName'] ?? '',
-                                      style: GoogleFonts.manrope(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                        color: c.textPrimary,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${_fmt(asNum(item['remaining']))} • ${item['daysOverdue'] ?? 0} ngày quá hạn',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.danger,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton.icon(
-                                onPressed: () => _showRemindDialog(
-                                  context,
-                                  item['customerName'] ?? '',
-                                  _fmt(asNum(item['remaining'])),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme.colorScheme.primary,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  minimumSize: Size.zero,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                icon: const Icon(Icons.send_rounded, size: 12),
-                                label: Text(
-                                  'Soạn nhắc nợ',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         );
-                      }).toList(),
-                    );
-                  },
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showRemindDialog(
-    BuildContext context,
-    String customerName,
-    String debtAmount,
-  ) {
-    final c = AppThemeColors.of(context);
-    final reminderText =
-        'Kính gửi $customerName, cửa hàng xin thông báo khoản công nợ hiện tại của quý khách là $debtAmount. Vui lòng liên hệ cửa hàng để đối chiếu và thanh toán. Xin cảm ơn.';
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: c.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(
-          'Soạn nội dung nhắc nợ',
-          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Khách hàng: $customerName',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Số tiền nợ: $debtAmount',
-              style: const TextStyle(
-                color: AppColors.danger,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Sao chép nội dung để gửi qua:',
-              style: TextStyle(
-                fontSize: 12,
-                color: c.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                _buildMethodBtn(
-                  context,
-                  Icons.content_copy_rounded,
-                  'Sao chép',
-                  Colors.blue,
-                  reminderText,
-                ),
-                _buildMethodBtn(
-                  context,
-                  Icons.sms_rounded,
-                  'SMS',
-                  Colors.teal,
-                  reminderText,
-                ),
-                _buildMethodBtn(
-                  context,
-                  Icons.alternate_email_rounded,
-                  'Email',
-                  Colors.redAccent,
-                  reminderText,
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Đóng',
-              style: TextStyle(
-                color: c.textSecondary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMethodBtn(
-    BuildContext context,
-    IconData icon,
-    String label,
-    Color color,
-    String reminderText,
-  ) {
-    return InkWell(
-      onTap: () async {
-        await Clipboard.setData(ClipboardData(text: reminderText));
-        if (!context.mounted) return;
-        Navigator.pop(context);
-        ToastService.showSuccess(
-          'Đã sao chép nội dung nhắc nợ. Bạn có thể dán vào $label.',
-        );
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              backgroundColor: color.withValues(alpha: 0.15),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: GoogleFonts.manrope(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
+                      },
+                    ),
             ),
           ],
         ),
@@ -595,101 +353,304 @@ class DebtAgingScreen extends ConsumerWidget {
   }
 }
 
-class _AgingBar extends StatelessWidget {
-  final String label, amount, pct;
-  final double widthPct;
-  final Color color;
-  const _AgingBar(this.label, this.widthPct, this.amount, this.pct, this.color);
+class _OverdueCustomersSection extends StatelessWidget {
+  final List<Map<String, dynamic>> customers;
+  final int totalCount;
+
+  const _OverdueCustomersSection({
+    required this.customers,
+    required this.totalCount,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.divider.withValues(alpha: 0.5), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (debtAgingUsesMobileCards(constraints.maxWidth)) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
               Text(
-                pct,
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                ),
+                'Khách hàng cần thu hồi sớm',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
+              const SizedBox(height: AppSpacing.sm),
+              if (customers.isEmpty)
+                const AppEmpty(
+                  visual: AppEmptyVisual.finance,
+                  message: 'Không có khách hàng nợ quá hạn',
+                )
+              else
+                for (final customer in customers.take(10))
+                  _OverdueCustomerMobileCard(customer: customer),
             ],
-          ),
-          const SizedBox(height: 10),
+          );
+        }
 
-          // Visual glassy progress indicator
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              height: 8,
-              color: c.surface,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width:
-                      MediaQuery.of(context).size.width *
-                      0.8 *
-                      (widthPct / 100).clamp(0.0, 1.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
-                    color: color,
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.35),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
+        return AppDataTable<Map<String, dynamic>>(
+          title: 'Khách hàng cần thu hồi sớm',
+          assetPath: AppAssets.cash,
+          iconColor: AppColors.danger,
+          headerAction: Text(
+            'Hiển thị ${customers.take(10).length}/$totalCount khách',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          columns: const [
+            AppDataTableColumn(title: 'KHÁCH HÀNG', flex: 4),
+            AppDataTableColumn(title: 'QUÁ HẠN LÂU NHẤT', flex: 2),
+            AppDataTableColumn(title: 'NỢ QUÁ HẠN', flex: 2, alignRight: true),
+            AppDataTableColumn(title: 'TỔNG DƯ NỢ', flex: 2, alignRight: true),
+            AppDataTableColumn(title: 'THAO TÁC', flex: 2, alignRight: true),
+          ],
+          items: customers.take(10).toList(),
+          rowBuilder: (context, customer, _) =>
+              _OverdueCustomerDesktopRow(customer: customer),
+          emptyMessage: 'Không có khách hàng nợ quá hạn.',
+        );
+      },
+    );
+  }
+}
+
+class _OverdueCustomerDesktopRow extends StatelessWidget {
+  final Map<String, dynamic> customer;
+
+  const _OverdueCustomerDesktopRow({required this.customer});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final days = asInt(customer['overdueDays']);
+    final name = customer['customerName']?.toString() ?? 'Chưa xác định';
+    final overdue = asDouble(customer['overdue']);
+    final total = asDouble(customer['total']);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: AppStatusBadge(
+                label: '$days ngày',
+                color: AppColors.danger,
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            amount,
-            style: GoogleFonts.manrope(
-              fontSize: 11,
-              color: color,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            flex: 2,
+            child: Text(
+              _debtCurrency.format(overdue),
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              _debtCurrency.format(total),
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => _showReminderDialog(
+                  context,
+                  customerName: name,
+                  debtAmount: _debtCurrency.format(total),
+                ),
+                child: const Text('Soạn nhắc nợ'),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _OverdueCustomerMobileCard extends StatelessWidget {
+  final Map<String, dynamic> customer;
+
+  const _OverdueCustomerMobileCard({required this.customer});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = customer['customerName']?.toString() ?? 'Chưa xác định';
+    final days = asInt(customer['overdueDays']);
+    final overdue = asDouble(customer['overdue']);
+    final total = asDouble(customer['total']);
+    return AppCardContainer(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              AppStatusBadge(
+                label: '$days ngày quá hạn',
+                color: AppColors.danger,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Quá hạn ${_debtCurrency.format(overdue)}',
+                  style: const TextStyle(
+                    color: AppColors.danger,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                _debtCurrency.format(total),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => _showReminderDialog(
+                context,
+                customerName: name,
+                debtAmount: _debtCurrency.format(total),
+              ),
+              child: const Text('Soạn nhắc nợ'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DebtAgingLoading extends StatelessWidget {
+  const _DebtAgingLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        ShimmerList(count: 2),
+        SizedBox(height: AppSpacing.lg),
+        AppShimmer(
+          child: ShimmerBox(
+            width: double.infinity,
+            height: 330,
+            radius: AppRadius.card,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+void _showReminderDialog(
+  BuildContext context, {
+  required String customerName,
+  required String debtAmount,
+}) {
+  final colors = AppThemeColors.of(context);
+  final reminderText =
+      'Kính gửi $customerName, cửa hàng xin thông báo khoản công nợ hiện tại của quý khách là $debtAmount. Vui lòng liên hệ cửa hàng để đối chiếu và thanh toán. Xin cảm ơn.';
+
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: colors.card,
+      title: const Text('Nội dung nhắc nợ'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Khách hàng: $customerName'),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Tổng dư nợ: $debtAmount',
+            style: const TextStyle(
+              color: AppColors.danger,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colors.cardAlt,
+              borderRadius: BorderRadius.circular(AppRadius.control),
+              border: Border.all(color: colors.divider),
+            ),
+            child: SelectableText(reminderText),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Đóng'),
+        ),
+        FilledButton.icon(
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: reminderText));
+            if (!dialogContext.mounted) return;
+            Navigator.pop(dialogContext);
+            ToastService.showSuccess('Đã sao chép nội dung nhắc nợ');
+          },
+          icon: const AppAssetIcon(
+            assetPath: AppAssets.copy,
+            size: 16,
+            color: Colors.white,
+          ),
+          label: const Text('Sao chép'),
+        ),
+      ],
+    ),
+  );
+}
+
+String _displayDate(dynamic value) {
+  final date = DateTime.tryParse(value?.toString() ?? '');
+  return date == null ? '—' : DateFormat('dd/MM/yyyy').format(date);
 }

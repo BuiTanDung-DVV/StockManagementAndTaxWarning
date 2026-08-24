@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+process.env.CLOUDINARY_CLOUD_NAME = 'demo';
+
 const { ProductService } = require('../dist/services/product.service');
 
 function createServiceWithProduct(product) {

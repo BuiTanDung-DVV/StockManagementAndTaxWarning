@@ -142,6 +142,9 @@ class StockTakeScreen extends ConsumerWidget {
                     item['productName'] ??
                     'Sản phẩm không tên';
                 final sku = item['product']?['sku'] ?? item['sku'] ?? '';
+                final unit = item['product']?['unit']?.toString().trim() ?? '';
+                final warehouseName =
+                    item['warehouse']?['name']?.toString().trim() ?? '';
                 final qty = item['currentQuantity'] ?? item['quantity'] ?? 0;
                 final minStock =
                     item['product']?['minStock'] ?? item['minStock'] ?? 0;
@@ -188,9 +191,17 @@ class StockTakeScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              sku.toString().isNotEmpty
-                                  ? 'SKU: $sku'
-                                  : 'Không có SKU',
+                              [
+                                if (sku.toString().isNotEmpty) 'SKU: $sku',
+                                if (warehouseName.isNotEmpty) warehouseName,
+                              ].isEmpty
+                                  ? 'Chưa có SKU và kho'
+                                  : [
+                                      if (sku.toString().isNotEmpty)
+                                        'SKU: $sku',
+                                      if (warehouseName.isNotEmpty)
+                                        warehouseName,
+                                    ].join(' • '),
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 color: c.textSecondary,
@@ -208,7 +219,7 @@ class StockTakeScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '$qty',
+                            '$qty${unit.isEmpty ? '' : ' $unit'}',
                             style: GoogleFonts.manrope(
                               fontWeight: FontWeight.w800,
                               fontSize: 18,

@@ -58,6 +58,7 @@ class AppKpiCard extends StatelessWidget {
   final String? badgeText;
   final List<double>? sparklineData;
   final bool isHero;
+  final bool compact;
 
   const AppKpiCard({
     super.key,
@@ -69,6 +70,7 @@ class AppKpiCard extends StatelessWidget {
     this.badgeText,
     this.sparklineData,
     this.isHero = false,
+    this.compact = false,
   });
 
   @override
@@ -130,7 +132,7 @@ class AppKpiCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (badgeText != null)
+              if (!compact && badgeText != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -153,21 +155,49 @@ class AppKpiCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 21,
-                fontWeight: FontWeight.w800,
-                color: c.textPrimary,
-                letterSpacing: -0.5,
-                height: 1.1,
-                fontFeatures: const [FontFeature.tabularFigures()],
+          Row(
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.inter(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      color: c.textPrimary,
+                      letterSpacing: -0.5,
+                      height: 1.1,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                    maxLines: 1,
+                  ),
+                ),
               ),
-              maxLines: 1,
-            ),
+              if (compact && badgeText != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: color.withValues(alpha: 0.25)),
+                  ),
+                  child: Text(
+                    badgeText!,
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
           if (sparklineData != null && sparklineData!.isNotEmpty) ...[
             const SizedBox(height: 8),

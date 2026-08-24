@@ -1,9 +1,9 @@
 import { AppDataSource } from '../config/db.config';
 import { CashTransaction, DailyClosing, CashAccount, CashflowForecast, BudgetPlan, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
-import { Invoice } from '../system/entities';
+import { Invoice, InvoiceItem } from '../system/entities';
 import { JournalEntry, JournalLine } from '../finance/ledger.entity';
 import { ActivityLog } from '../system/entities';
-import { Between, EntityManager } from 'typeorm';
+import { Between, EntityManager, In } from 'typeorm';
 import { SystemService } from './system.service';
 import { COGSService } from './cogs.service';
 import { InventoryMovement, InventoryStock, Warehouse } from '../inventory/entities';
@@ -21,12 +21,19 @@ import {
     resolveVietnamBusinessDayPeriod,
 } from '../finance/finance-period.utils';
 import { normalizeCashflowForecastInput } from '../finance/cashflow-forecast.utils';
-import { normalizeInvoiceInput } from '../finance/invoice-input.utils';
+import {
+    normalizeInvoiceInput,
+    normalizeInvoiceItems,
+} from '../finance/invoice-input.utils';
 import {
     cashLedgerAccountCode,
+    cashTransactionCounterAccountCode,
     normalizeCashTransactionInput,
 } from '../finance/cash-transaction-input.utils';
 import { normalizeBudgetPlanInput } from '../finance/budget-plan-input.utils';
+import { normalizeInvoiceDataQuality } from '../finance/invoice-data-quality.utils';
+import { normalizeInvoiceListQuery } from '../finance/invoice-query.utils';
+import { normalizeDatabaseBusinessDate } from '../system/data-freshness.utils';
 
 export class FinanceService {
     private cashTxRepo = AppDataSource.getRepository(CashTransaction);
@@ -71,7 +78,7 @@ export class FinanceService {
 
     // Cash Transactions
     async getCashTransactions(
-        shopId: number,
+        shopId: number | number[],
         page = 1,
         limit = 20,
         type?: string,
@@ -87,8 +94,12 @@ export class FinanceService {
             from,
             to,
         });
+        const shopCondition = Array.isArray(shopId)
+            ? 't.shop_id IN (:...shopIds)'
+            : 't.shop_id = :shopId';
+        const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
         const qb = this.cashTxRepo.createQueryBuilder('t')
-            .where('t.shop_id = :shopId', { shopId });
+            .where(shopCondition, shopParams);
         if (query.type) qb.andWhere('t.type = :type', { type: query.type });
         if (query.category) {
             qb.andWhere('t.category = :category', { category: query.category });
@@ -127,7 +138,7 @@ export class FinanceService {
         const saved = await repo.save(repo.create(safeDto as Partial<CashTransaction>));
 
         // === Journal Ledger: Chỉ ghi bút toán cho các giao dịch độc lập (không liên kết với Sales/Purchase) ===
-        const linkedRefTypes = ['SALES_ORDER', 'SALES_ORDER_CANCEL', 'SALES_RETURN', 'PURCHASE_ORDER', 'PURCHASE_WITHOUT_INVOICE'];
+        const linkedRefTypes = ['SALES_ORDER', 'SALES_ORDER_CANCEL', 'SALES_RETURN', 'PURCHASE_ORDER', 'PURCHASE_WITHOUT_INVOICE', 'DEBT_COLLECTION'];
         const refType = (dto as any).referenceType;
         if (!refType || !linkedRefTypes.includes(refType)) {
             const txType = normalized.type;
@@ -135,13 +146,17 @@ export class FinanceService {
             if (amount > 0) {
                 const lines: { accountCode: string; amount: number; entryType: 'DEBIT' | 'CREDIT' }[] = [];
                 const cashAccount = cashLedgerAccountCode(normalized.paymentMethod);
+                const counterAccount = cashTransactionCounterAccountCode(
+                    txType,
+                    normalized.category,
+                );
                 if (txType === 'INCOME') {
-                    // Thu nhập: Nợ TK 111 (Tiền mặt) / Có TK 511 (Doanh thu)
+                    // Tiền vào có thể là doanh thu, thu nhập khác, vốn góp hoặc tiền vay.
                     lines.push({ accountCode: cashAccount, amount, entryType: 'DEBIT' });
-                    lines.push({ accountCode: '511', amount, entryType: 'CREDIT' });
+                    lines.push({ accountCode: counterAccount, amount, entryType: 'CREDIT' });
                 } else if (txType === 'EXPENSE') {
                     // Chi phí: Nợ TK 642 (Chi phí) / Có TK 111 (Tiền mặt)
-                    lines.push({ accountCode: '642', amount, entryType: 'DEBIT' });
+                    lines.push({ accountCode: counterAccount, amount, entryType: 'DEBIT' });
                     lines.push({ accountCode: cashAccount, amount, entryType: 'CREDIT' });
                 }
                 if (lines.length > 0) {
@@ -181,13 +196,17 @@ export class FinanceService {
                 { isVoided: true },
             );
             const cashAccount = cashLedgerAccountCode(normalized.paymentMethod);
+            const counterAccount = cashTransactionCounterAccountCode(
+                normalized.type,
+                normalized.category,
+            );
             const lines = normalized.type === 'INCOME'
                 ? [
                     { accountCode: cashAccount, amount: normalized.amount, entryType: 'DEBIT' as const },
-                    { accountCode: '511', amount: normalized.amount, entryType: 'CREDIT' as const },
+                    { accountCode: counterAccount, amount: normalized.amount, entryType: 'CREDIT' as const },
                 ]
                 : [
-                    { accountCode: '642', amount: normalized.amount, entryType: 'DEBIT' as const },
+                    { accountCode: counterAccount, amount: normalized.amount, entryType: 'DEBIT' as const },
                     { accountCode: cashAccount, amount: normalized.amount, entryType: 'CREDIT' as const },
                 ];
             await this.postingService.postJournal(
@@ -220,24 +239,72 @@ export class FinanceService {
     }
 
     async updateInvoice(shopId: number, id: number, dto: Partial<Invoice>) {
-        const invoice = await this.invoiceRepo.findOne({
-            where: { id, shopId },
-            relations: ['items', 'items.product'],
+        return AppDataSource.transaction(async manager => {
+            const invoiceRepo = manager.getRepository(Invoice);
+            const invoice = await invoiceRepo.findOne({
+                where: { id, shopId },
+                relations: ['items', 'items.product'],
+            });
+            if (!invoice) throw new Error('Invoice not found');
+            if (invoice.referenceType && invoice.referenceId) {
+                throw new Error('Validation: Linked invoice must be updated from its source document');
+            }
+
+            const hasItems = Object.prototype.hasOwnProperty.call(dto, 'items');
+            const itemSummary = hasItems
+                ? normalizeInvoiceItems((dto as any).items)
+                : null;
+            if (itemSummary) {
+                await this.validateInvoiceItemProducts(
+                    manager,
+                    shopId,
+                    itemSummary.items.map(item => item.productId),
+                );
+            }
+            const normalized = normalizeInvoiceInput(
+                itemSummary
+                    ? { ...dto, subtotal: itemSummary.subtotal, taxAmount: itemSummary.taxAmount }
+                    : dto,
+                invoice,
+            );
+            const safeDto: any = { ...dto, ...normalized };
+            delete safeDto.id;
+            delete safeDto.shopId;
+            delete safeDto.createdAt;
+            delete safeDto.items;
+            Object.assign(invoice, safeDto);
+
+            if (itemSummary) {
+                await manager.getRepository(InvoiceItem).delete({ invoice: { id } });
+                invoice.items = itemSummary.items.map(item => manager.getRepository(InvoiceItem).create({
+                    invoice,
+                    productId: item.productId,
+                    itemName: item.itemName,
+                    unit: item.unit,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    subtotal: item.subtotal,
+                    taxRate: item.taxRate,
+                    taxAmount: item.taxAmount,
+                }));
+            }
+            return invoiceRepo.save(invoice);
         });
-        if (!invoice) throw new Error('Invoice not found');
-        const normalized = normalizeInvoiceInput(dto, invoice);
-        const safeDto: any = { ...dto, ...normalized };
-        delete safeDto.id;
-        delete safeDto.shopId;
-        delete safeDto.createdAt;
-        Object.assign(invoice, safeDto);
-        return this.invoiceRepo.save(invoice);
     }
 
     async deleteInvoice(shopId: number, id: number) {
-        const invoice = await this.invoiceRepo.findOne({ where: { id, shopId } });
-        if (invoice) await this.invoiceRepo.remove(invoice);
-        return { success: true };
+        return AppDataSource.transaction(async manager => {
+            const invoiceRepo = manager.getRepository(Invoice);
+            const invoice = await invoiceRepo.findOne({ where: { id, shopId } });
+            if (invoice?.referenceType && invoice.referenceId) {
+                throw new Error('Validation: Linked invoice must be deleted from its source document');
+            }
+            if (!invoice) return { success: true };
+
+            await manager.getRepository(InvoiceItem).delete({ invoice: { id } });
+            await invoiceRepo.remove(invoice);
+            return { success: true };
+        });
     }
 
     async getCashFlowSummary(shopId: number | number[], period?: string, from?: string, to?: string) {
@@ -264,12 +331,19 @@ export class FinanceService {
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
             .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
             .getRawOne();
+        const latestTransactionRow = await this.cashTxRepo.createQueryBuilder('t')
+            .select('MAX(t.transaction_date)', 'latestTransactionDate')
+            .where(`${shopCondition} AND t.transaction_date <= :toDate`, {
+                ...shopParams,
+                toDate,
+            })
+            .getRawOne();
 
         const diffDays = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24));
         const isMonthFormat = diffDays > 60;
         const dateFormat = isMonthFormat ? 'YYYY-MM' : 'YYYY-MM-DD';
 
-        const transactionDateBucket = `TO_CHAR(t.transaction_date AT TIME ZONE 'Asia/Ho_Chi_Minh', '${dateFormat}')`;
+        const transactionDateBucket = `TO_CHAR(t.transaction_date, '${dateFormat}')`;
         const dailyFlowRaw = await this.cashTxRepo.createQueryBuilder('t')
             .select(transactionDateBucket, 'date')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
@@ -310,8 +384,11 @@ export class FinanceService {
             netCashFlow,
             balance: netCashFlow,
             cashBalance: Number(cashResult?.cashBalance || 0),
+            latestTransactionDate: normalizeDatabaseBusinessDate(
+                latestTransactionRow?.latestTransactionDate,
+            ),
             period: { name: period || 'custom', from: fromDate, to: toDate },
-            scope: 'SHOP',
+            scope: Array.isArray(shopId) ? 'ALL_SHOPS' : 'SHOP',
             dailyFlow,
         };
     }
@@ -363,16 +440,117 @@ export class FinanceService {
         };
     }
 
-    async getInvoiceReconciliation(shopId: number, from?: string, to?: string) {
-        const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
+    async getInvoiceReconciliation(
+        shopId: number,
+        from?: string,
+        to?: string,
+        scope?: string,
+    ) {
+        const normalizedScope = String(scope || 'PERIOD').toUpperCase();
+        if (!['PERIOD', 'ALL'].includes(normalizedScope)) {
+            throw new Error('Validation: Phạm vi đối chiếu hóa đơn không hợp lệ');
+        }
+        const period = normalizedScope === 'ALL'
+            ? null
+            : resolveCurrentMonthExpensePeriod(from, to);
 
-        const rows = await this.invoiceRepo.createQueryBuilder('i')
+        const totalsQuery = this.invoiceRepo.createQueryBuilder('i')
             .select('i.invoice_type', 'invoiceType')
             .addSelect('COUNT(*)', 'count')
             .addSelect('COALESCE(SUM(i.total_amount), 0)', 'totalValue')
-            .where('i.shop_id = :shopId AND i.invoice_date >= :fromDate AND i.invoice_date <= :toDate', { shopId, fromDate, toDate })
-            .groupBy('i.invoice_type')
-            .getRawMany();
+            .where('i.shop_id = :shopId', { shopId });
+        if (period) {
+            totalsQuery.andWhere(
+                'i.invoice_date >= :fromDate AND i.invoice_date <= :toDate',
+                period,
+            );
+        }
+        const rows = await totalsQuery.groupBy('i.invoice_type').getRawMany();
+
+        const qualityQuery = this.invoiceRepo.createQueryBuilder('i')
+            .leftJoin('i.items', 'item')
+            .select('COUNT(DISTINCT i.id)', 'checkedInvoices')
+            .addSelect('MIN(i.invoice_date)', 'firstInvoiceDate')
+            .addSelect('MAX(i.invoice_date)', 'lastInvoiceDate')
+            .addSelect(
+                'COUNT(DISTINCT CASE WHEN item.id IS NULL THEN i.id END)',
+                'missingItemInvoices',
+            )
+            .addSelect(
+                `COUNT(DISTINCT CASE
+                    WHEN ABS(i.total_amount - (
+                        i.subtotal - COALESCE(i.discount_amount, 0) + i.tax_amount
+                    )) > 0.01
+                    THEN i.id END)`,
+                'headerTotalMismatchInvoices',
+            )
+            .addSelect(
+                `COUNT(DISTINCT CASE
+                    WHEN item.id IS NOT NULL
+                     AND ABS(i.subtotal - (
+                        SELECT COALESCE(SUM(detail.subtotal), 0)
+                        FROM invoice_items detail
+                        WHERE detail.invoice_id = i.id
+                     )) > 0.01
+                    THEN i.id END)`,
+                'headerSubtotalMismatchInvoices',
+            )
+            .addSelect(
+                `COUNT(DISTINCT CASE
+                    WHEN item.id IS NOT NULL
+                     AND i.reference_type = 'SALES_ORDER'
+                     AND EXISTS (
+                        SELECT 1
+                        FROM sales_orders source_order
+                        WHERE source_order.id = i.reference_id
+                          AND source_order.shop_id = i.shop_id
+                          AND ABS(
+                              COALESCE(i.discount_amount, 0)
+                              - source_order.discount_amount
+                          ) > 0.01
+                     )
+                    THEN i.id END)`,
+                'unallocatedDiscountInvoices',
+            )
+            .addSelect(
+                `COUNT(DISTINCT CASE
+                    WHEN item.id IS NOT NULL
+                     AND ABS(i.tax_amount - (
+                        SELECT COALESCE(SUM(detail.tax_amount), 0)
+                        FROM invoice_items detail
+                        WHERE detail.invoice_id = i.id
+                     )) > 0.01
+                    THEN i.id END)`,
+                'headerTaxMismatchInvoices',
+            )
+            .addSelect(
+                `COALESCE(SUM(CASE
+                    WHEN item.id IS NOT NULL AND item.quantity <= 0 THEN 1 ELSE 0 END), 0)`,
+                'invalidLineItems',
+            )
+            .addSelect(
+                `COALESCE(SUM(CASE
+                    WHEN item.id IS NOT NULL
+                     AND ABS(item.subtotal - (item.quantity * item.unit_price)) > 0.01
+                    THEN 1 ELSE 0 END), 0)`,
+                'lineSubtotalMismatchItems',
+            )
+            .addSelect(
+                `COALESCE(SUM(CASE
+                    WHEN item.id IS NOT NULL
+                     AND ABS(item.tax_amount - (item.subtotal * item.tax_rate / 100)) > 0.01
+                    THEN 1 ELSE 0 END), 0)`,
+                'lineTaxMismatchItems',
+            )
+            .where('i.shop_id = :shopId', { shopId });
+        if (period) {
+            qualityQuery.andWhere(
+                'i.invoice_date >= :fromDate AND i.invoice_date <= :toDate',
+                period,
+            );
+        }
+        const qualityRow = await qualityQuery.getRawOne();
+        const quality = normalizeInvoiceDataQuality(qualityRow);
 
         const inRow = rows.find((r) => r.invoiceType === 'IN');
         const outRow = rows.find((r) => r.invoiceType === 'OUT');
@@ -396,10 +574,12 @@ export class FinanceService {
         }
 
         return {
-            from: fromDate,
-            to: toDate,
+            scope: normalizedScope,
+            from: period?.fromDate || quality.firstInvoiceDate,
+            to: period?.toDate || quality.lastInvoiceDate,
             inbound,
             outbound,
+            quality,
             analysis: {
                 inboundVsOutbound: inbound.totalValue <= outbound.totalValue ? 'Đầu vào <= Đầu ra' : 'Đầu vào > Đầu ra',
                 suspiciousPattern,
@@ -409,14 +589,18 @@ export class FinanceService {
     }
 
     // Expenses by category
-    async getExpensesByCategory(shopId: number, from?: string, to?: string) {
+    async getExpensesByCategory(shopId: number | number[], from?: string, to?: string) {
         const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
+        const shopCondition = Array.isArray(shopId)
+            ? 't.shop_id IN (:...shopIds)'
+            : 't.shop_id = :shopId';
+        const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
 
         const rows = await this.cashTxRepo.createQueryBuilder('t')
             .select('t.category', 'category')
             .addSelect('SUM(t.amount)', 'amount')
             .addSelect('COUNT(*)', 'count')
-            .where("t.shop_id = :shopId AND t.type = 'EXPENSE' AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate", { shopId, fromDate, toDate })
+            .where(`${shopCondition} AND t.type = 'EXPENSE' AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
             .groupBy('t.category')
             .orderBy('SUM(t.amount)', 'DESC')
             .getRawMany();
@@ -427,7 +611,7 @@ export class FinanceService {
         // Recent expense transactions
         const [recentItems] = await this.cashTxRepo.findAndCount({
             where: {
-                shopId,
+                shopId: Array.isArray(shopId) ? In(shopId) : shopId,
                 type: 'EXPENSE',
                 transactionDate: Between(fromDate, toDate),
             },
@@ -441,10 +625,17 @@ export class FinanceService {
     // Daily Closings
     async getDailyClosings(shopId: number, page = 1, limit = 20) {
         const [items, total] = await this.closingRepo.findAndCount({ where: { shopId }, skip: (page - 1) * limit, take: limit, order: { closingDate: 'DESC' } });
-        return { items, total, page, limit };
+        return {
+            items,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
     }
     async getDailyClosingByDate(shopId: number, date: string) {
         const { businessDate, fromDate, toDate } = resolveVietnamBusinessDayPeriod(date);
+        const explanationThreshold = await this.getClosingExplanationThreshold(shopId);
         const closing = await this.closingRepo.findOne({
             where: { shopId, closingDate: businessDate as any },
         });
@@ -523,10 +714,11 @@ export class FinanceService {
                 orderCount,
                 transactionCount: Number(summary?.transactionCount || 0),
                 transactions, 
+                explanationThreshold,
                 closed: false 
             };
         }
-        return { ...closing, closed: true };
+        return { ...closing, explanationThreshold, closed: true };
     }
     async createDailyClosing(shopId: number, dto: Partial<DailyClosing>) {
         const { businessDate } = resolveVietnamBusinessDayPeriod(
@@ -541,32 +733,41 @@ export class FinanceService {
             throw new Error('Validation: Closing cash must be a non-negative number');
         }
         const cashDifference = closingCash - Number(current.expectedCash || 0);
-        if (Math.abs(cashDifference) > 50000 && (!dto.notes || dto.notes.trim().length === 0)) {
-            throw new Error('Chênh lệch két vượt quá 50,000đ. Vui lòng nhập lý do giải trình vào phần ghi chú.');
+        const explanationThreshold = Number(current.explanationThreshold);
+        if (Math.abs(cashDifference) > explanationThreshold && (!dto.notes || dto.notes.trim().length === 0)) {
+            throw new Error(`Validation: Chênh lệch két vượt ngưỡng ${explanationThreshold.toLocaleString('vi-VN')}đ. Vui lòng nhập lý do giải trình.`);
         }
 
-        const closing = await this.closingRepo.save(this.closingRepo.create({
-            closingDate: businessDate as any,
-            openingCash: Number(current.openingCash || 0),
-            closingCash,
-            expectedCash: Number(current.expectedCash || 0),
-            cashDifference,
-            totalSales: Number(current.totalSales || 0),
-            totalReturns: Number(current.totalReturns || 0),
-            totalIncome: Number(current.totalIncome || 0),
-            totalExpense: Number(current.totalExpense || 0),
-            orderCount: Number(current.orderCount || 0),
-            notes: dto.notes?.trim(),
-            closedBy: dto.closedBy,
-            closedAt: new Date(),
-            shopId,
-        }));
+        return AppDataSource.transaction(async manager => {
+            const closingRepo = manager.getRepository(DailyClosing);
+            const accountRepo = manager.getRepository(CashAccount);
+            const closing = await closingRepo.save(closingRepo.create({
+                closingDate: businessDate as any,
+                openingCash: Number(current.openingCash || 0),
+                closingCash,
+                expectedCash: Number(current.expectedCash || 0),
+                cashDifference,
+                totalSales: Number(current.totalSales || 0),
+                totalReturns: Number(current.totalReturns || 0),
+                totalIncome: Number(current.totalIncome || 0),
+                totalExpense: Number(current.totalExpense || 0),
+                orderCount: Number(current.orderCount || 0),
+                notes: dto.notes?.trim(),
+                closedBy: dto.closedBy,
+                closedAt: new Date(),
+                shopId,
+            }));
 
-        if (cashDifference !== 0) {
-            const cashAccounts = await this.accountRepo.find({ where: { shopId } });
-            const targetAccount = cashAccounts.find(a => a.accountType === 'CASH') || cashAccounts[0];
-
-            if (targetAccount) {
+            if (cashDifference !== 0) {
+                const targetAccount = await accountRepo.findOne({
+                    where: { shopId, accountType: 'CASH', isActive: true },
+                    lock: { mode: 'pessimistic_write' },
+                });
+                if (!targetAccount) {
+                    throw new Error(
+                        'Validation: Cửa hàng chưa có tài khoản tiền mặt đang hoạt động để ghi nhận chênh lệch chốt ngày',
+                    );
+                }
                 const isSurplus = cashDifference > 0;
                 const adjustAmount = Math.abs(cashDifference);
                 const txCode = (isSurplus ? 'PT-ADJ-' : 'PC-ADJ-') + Date.now().toString().slice(-6);
@@ -580,17 +781,32 @@ export class FinanceService {
                     account: targetAccount,
                     counterparty: 'Hệ thống (Kiểm quỹ)',
                     transactionDate: new Date(),
-                    notes: `Điều chỉnh chênh lệch chốt ca ngày ${businessDate}. Lý do: ${dto.notes || 'Không ghi chú'}`
+                    notes: `Điều chỉnh chênh lệch chốt ca ngày ${businessDate}. Lý do: ${dto.notes || 'Không ghi chú'}`,
+                    referenceType: 'DAILY_CLOSING',
+                    referenceId: closing.id,
                 };
 
-                await this.createCashTransaction(shopId, txDto);
+                await this.createCashTransaction(shopId, txDto, manager);
 
                 targetAccount.balance = Number(targetAccount.balance || 0) + cashDifference;
-                await this.accountRepo.save(targetAccount);
+                await accountRepo.save(targetAccount);
             }
-        }
 
-        return closing;
+            return closing;
+        });
+    }
+
+    private async getClosingExplanationThreshold(shopId: number): Promise<number> {
+        const value = Number(
+            await new SystemService().getSystemConfig(
+                shopId,
+                'DAILY_CLOSING_EXPLANATION_THRESHOLD',
+            ),
+        );
+        if (!Number.isFinite(value) || value < 0) {
+            throw new Error('Cấu hình DAILY_CLOSING_EXPLANATION_THRESHOLD trong DB không hợp lệ');
+        }
+        return value;
     }
 
     // Cash Accounts
@@ -657,13 +873,42 @@ export class FinanceService {
     }
 
     // Invoices
-    async getInvoices(shopId: number, page = 1, limit = 20, type?: string) {
+    async getInvoices(
+        shopId: number,
+        page = 1,
+        limit = 20,
+        type?: string,
+        from?: string,
+        to?: string,
+    ) {
+        const query = normalizeInvoiceListQuery({ page, limit, type, from, to });
         const qb = this.invoiceRepo.createQueryBuilder('i')
             .where('i.shop_id = :shopId', { shopId });
-        if (type) qb.andWhere('i.invoice_type = :type', { type });
+        if (query.type) {
+            qb.andWhere('i.invoice_type = :type', { type: query.type });
+        }
+        if (query.fromDate && query.toDate) {
+            qb.andWhere(
+                'i.invoice_date >= :fromDate AND i.invoice_date <= :toDate',
+                { fromDate: query.fromDate, toDate: query.toDate },
+            );
+        }
         const [items, total] = await qb.orderBy('i.invoice_date', 'DESC')
-            .skip((page - 1) * limit).take(limit).getManyAndCount();
-        return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+            .skip((query.page - 1) * query.limit)
+            .take(query.limit)
+            .getManyAndCount();
+        return {
+            items,
+            total,
+            page: query.page,
+            limit: query.limit,
+            totalPages: Math.ceil(total / query.limit),
+            filters: {
+                type: query.type || null,
+                from: from || null,
+                to: to || null,
+            },
+        };
     }
     async getInvoiceSummary(shopId: number, from?: string, to?: string) {
         const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
@@ -693,15 +938,69 @@ export class FinanceService {
         return invoice;
     }
     async createInvoice(shopId: number, dto: Partial<Invoice> & { type?: string }) {
-        const normalized = normalizeInvoiceInput(dto);
-        const safeDto: any = { ...dto, ...normalized };
-        safeDto.invoiceNumber = String(dto.invoiceNumber || '').trim()
-            || 'HD' + Date.now().toString().slice(-8);
-        delete safeDto.id;
-        delete safeDto.shopId;
-        delete safeDto.createdAt;
-        delete safeDto.type;
-        return this.invoiceRepo.save(this.invoiceRepo.create({ ...safeDto, shopId }));
+        return AppDataSource.transaction(async manager => {
+            if ((dto as any).referenceType != null || (dto as any).referenceId != null) {
+                throw new Error('Validation: Invoice source reference is server-controlled');
+            }
+            const hasItems = Object.prototype.hasOwnProperty.call(dto, 'items');
+            const itemSummary = hasItems
+                ? normalizeInvoiceItems((dto as any).items)
+                : null;
+            if (itemSummary) {
+                await this.validateInvoiceItemProducts(
+                    manager,
+                    shopId,
+                    itemSummary.items.map(item => item.productId),
+                );
+            }
+            const normalized = normalizeInvoiceInput(
+                itemSummary
+                    ? { ...dto, subtotal: itemSummary.subtotal, taxAmount: itemSummary.taxAmount }
+                    : dto,
+            );
+            const safeDto: any = { ...dto, ...normalized };
+            safeDto.invoiceNumber = String(dto.invoiceNumber || '').trim()
+                || 'HD' + Date.now().toString().slice(-8);
+            delete safeDto.id;
+            delete safeDto.shopId;
+            delete safeDto.createdAt;
+            delete safeDto.type;
+            delete safeDto.items;
+            const invoiceRepo = manager.getRepository(Invoice);
+            const invoice = invoiceRepo.create({
+                ...safeDto,
+                shopId,
+            } as Partial<Invoice>) as Invoice;
+            if (itemSummary) {
+                invoice.items = itemSummary.items.map(item => manager.getRepository(InvoiceItem).create({
+                    invoice,
+                    productId: item.productId,
+                    itemName: item.itemName,
+                    unit: item.unit,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    subtotal: item.subtotal,
+                    taxRate: item.taxRate,
+                    taxAmount: item.taxAmount,
+                }));
+            }
+            return invoiceRepo.save(invoice);
+        });
+    }
+
+    private async validateInvoiceItemProducts(
+        manager: EntityManager,
+        shopId: number,
+        productIds: Array<number | null>,
+    ) {
+        const ids = [...new Set(productIds.filter((id): id is number => id != null))];
+        if (ids.length === 0) return;
+        const count = await manager.getRepository(Product).count({
+            where: { id: In(ids), shopId },
+        });
+        if (count !== ids.length) {
+            throw new Error('Validation: Có sản phẩm không thuộc cửa hàng hiện tại');
+        }
     }
 
 
@@ -749,16 +1048,39 @@ export class FinanceService {
     }
 
     // Purchases Without Invoice
-    async getPurchasesWithoutInvoice(shopId: number, page = 1, limit = 20) {
-        const [items, total] = await this.purchaseNoInvRepo.findAndCount({
-            where: { shopId },
-            relations: ['items'],
-            skip: (page - 1) * limit,
-            take: limit,
-            order: { purchaseDate: 'DESC' },
-        });
-        const totalAmount = items.reduce((s, i) => s + Number(i.totalAmount), 0);
-        return { items, total, totalAmount, page, limit, totalPages: Math.ceil(total / limit) };
+    async getPurchasesWithoutInvoice(shopId: number, page = 1, limit = 20, status?: string) {
+        const safePage = Math.max(1, Math.trunc(Number(page) || 1));
+        const safeLimit = Math.min(100, Math.max(1, Math.trunc(Number(limit) || 20)));
+        const normalizedStatus = status?.trim().toUpperCase() || undefined;
+        if (normalizedStatus && !['PENDING', 'APPROVED', 'REJECTED'].includes(normalizedStatus)) {
+            throw new Error('Validation: Trạng thái phê duyệt không hợp lệ');
+        }
+        const qb = this.purchaseNoInvRepo.createQueryBuilder('purchase')
+            .leftJoinAndSelect('purchase.items', 'items')
+            .where('purchase.shopId = :shopId', { shopId });
+        if (normalizedStatus) {
+            qb.andWhere('purchase.approvalStatus = :status', { status: normalizedStatus });
+        }
+        const totalQb = this.purchaseNoInvRepo.createQueryBuilder('purchase_total')
+            .select('COALESCE(SUM(purchase_total.totalAmount), 0)', 'filteredAmountTotal')
+            .where('purchase_total.shopId = :shopId', { shopId });
+        if (normalizedStatus) {
+            totalQb.andWhere('purchase_total.approvalStatus = :status', { status: normalizedStatus });
+        }
+        const totalRow = await totalQb.getRawOne();
+        const [items, total] = await qb
+            .orderBy('purchase.purchaseDate', 'DESC')
+            .skip((safePage - 1) * safeLimit)
+            .take(safeLimit)
+            .getManyAndCount();
+        return {
+            items,
+            total,
+            filteredAmountTotal: Number(totalRow?.filteredAmountTotal || 0),
+            page: safePage,
+            limit: safeLimit,
+            totalPages: Math.ceil(total / safeLimit),
+        };
     }
 
     async createPurchaseWithoutInvoice(shopId: number, dto: Partial<PurchaseWithoutInvoice> & {
@@ -843,7 +1165,7 @@ export class FinanceService {
         }
 
         const systemService = new SystemService();
-        const cashPurchaseLimitConfig = await systemService.getSystemConfig(shopId, 'CASH_PURCHASE_LIMIT', '20000000');
+        const cashPurchaseLimitConfig = await systemService.getSystemConfig(shopId, 'CASH_PURCHASE_LIMIT');
         const cashPurchaseLimit = Number(cashPurchaseLimitConfig);
 
         if (totalAmount >= cashPurchaseLimit && dto.paymentMethod === 'CASH') {

@@ -8,7 +8,7 @@ import { lockTransactionMiddleware } from '../middleware/lock-transaction.middle
 router.use(lockTransactionMiddleware);
 
 // Inventory base routes
-router.get('/inventory/stock', requirePermission('inventory', 'view'), inventoryCtrl.getStock);
+router.get('/inventory/stock', requirePermission('inventory', 'view', { allowAllShops: true }), inventoryCtrl.getStock);
 router.get('/inventory/low-stock', requirePermission('inventory', 'view', { allowAllShops: true }), inventoryCtrl.getLowStock);
 router.get('/inventory/movements', requirePermission('inventory', 'view'), inventoryCtrl.getMovements);
 router.get('/inventory/warehouses', requirePermission('inventory', 'view'), inventoryCtrl.getWarehouses);
@@ -16,8 +16,8 @@ router.post('/inventory/warehouses', requirePermission('inventory', 'edit'), inv
 router.get('/inventory/categories-summary', requirePermission(['inventory', 'dashboard'], 'view', { allowAllShops: true }), inventoryCtrl.getCategoriesSummary);
 router.get('/inventory/abc-analysis', requirePermission(['inventory', 'dashboard'], 'view', { allowAllShops: true }), inventoryCtrl.getAbcAnalysis);
 router.get('/inventory/xnt-report', requirePermission('inventory', 'view'), inventoryCtrl.getXntReport);
-router.get('/inventory/expiring-products', requirePermission('inventory', 'view'), inventoryCtrl.getExpiringProducts);
-router.get('/inventory/slow-moving', requirePermission('inventory', 'view'), inventoryCtrl.getSlowMoving);
+router.get('/inventory/expiring-products', requirePermission('inventory', 'view', { allowAllShops: true }), inventoryCtrl.getExpiringProducts);
+router.get('/inventory/slow-moving', requirePermission('inventory', 'view', { allowAllShops: true }), inventoryCtrl.getSlowMoving);
 
 // Purchase Orders
 router.get('/purchase-orders', requirePermission('inventory', 'view'), inventoryCtrl.getPurchaseOrders);

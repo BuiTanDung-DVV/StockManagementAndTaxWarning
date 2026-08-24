@@ -15,6 +15,7 @@ class ClosingCashAssessment {
 ClosingCashAssessment assessClosingCash({
   required String rawActualCash,
   required double expectedCash,
+  double explanationThreshold = 50000,
 }) {
   final normalized = rawActualCash.trim();
   final parsed = normalized.isEmpty ? null : double.tryParse(normalized);
@@ -24,6 +25,7 @@ ClosingCashAssessment assessClosingCash({
   return ClosingCashAssessment(
     actualCash: actualCash,
     difference: difference,
-    needsExplanation: difference != null && difference.abs() > 50000,
+    needsExplanation:
+        difference != null && difference.abs() > explanationThreshold,
   );
 }

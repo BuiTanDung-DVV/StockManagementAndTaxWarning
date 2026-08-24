@@ -2,7 +2,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  CURRENT_TAX_POLICY,
   TaxValidationError,
   calculateOutstandingTax,
   isValidVietnamTaxCode,
@@ -10,12 +9,6 @@ const {
   requireValidTaxCode,
   validateTaxPeriod,
 } = require('../dist/tax/tax-policy');
-
-test('current policy uses the official 2026 one-billion threshold', () => {
-  assert.equal(CURRENT_TAX_POLICY.fiscalYear, 2026);
-  assert.equal(CURRENT_TAX_POLICY.taxExemptionThreshold, 1_000_000_000);
-  assert.equal(CURRENT_TAX_POLICY.eInvoiceThreshold, 1_000_000_000);
-});
 
 test('negative and invalid monetary values never create negative tax', () => {
   assert.equal(normalizeNonNegative(-1), 0);
@@ -58,10 +51,10 @@ test('outstanding tax is never negative and preserves overpayment separately', (
 });
 
 test('tax period accepts valid months and quarters only', () => {
-  assert.doesNotThrow(() => validateTaxPeriod('12', '2026'));
-  assert.doesNotThrow(() => validateTaxPeriod('Q4', '2026'));
-  assert.throws(() => validateTaxPeriod('13', '2026'), TaxValidationError);
-  assert.throws(() => validateTaxPeriod('Q5', '2026'), TaxValidationError);
-  assert.throws(() => validateTaxPeriod('01', '26'), TaxValidationError);
-  assert.throws(() => validateTaxPeriod('01', '2025'), TaxValidationError);
+  assert.doesNotThrow(() => validateTaxPeriod('12', '2026', 2026));
+  assert.doesNotThrow(() => validateTaxPeriod('Q4', '2026', 2026));
+  assert.throws(() => validateTaxPeriod('13', '2026', 2026), TaxValidationError);
+  assert.throws(() => validateTaxPeriod('Q5', '2026', 2026), TaxValidationError);
+  assert.throws(() => validateTaxPeriod('01', '26', 2026), TaxValidationError);
+  assert.throws(() => validateTaxPeriod('01', '2025', 2026), TaxValidationError);
 });

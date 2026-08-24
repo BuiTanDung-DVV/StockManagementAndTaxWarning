@@ -1350,7 +1350,8 @@ async function seed(
           partner_name: profile.customers[order.customerIndex],
           reference_type: 'SALES_ORDER',
           reference_id: orderId,
-          subtotal: order.subtotal - order.discount,
+          subtotal: order.subtotal,
+          discount_amount: order.discount,
           tax_amount: 0,
           total_amount: order.total,
           payment_method: order.method,
@@ -1502,7 +1503,7 @@ async function seed(
     const insertedInvoices = await bulkInsert(
       runner, 'invoices',
       ['invoice_number', 'shop_id', 'invoice_symbol', 'invoice_type', 'invoice_date',
-        'partner_name', 'reference_type', 'reference_id', 'subtotal', 'tax_amount',
+        'partner_name', 'reference_type', 'reference_id', 'subtotal', 'discount_amount', 'tax_amount',
         'total_amount', 'payment_method', 'payment_status', 'notes', 'created_by', 'created_at'],
       invoiceRows, 'id, reference_id', 400,
     );
@@ -1514,20 +1515,6 @@ async function seed(
       const invoiceId = invoiceIdByOrder.get(orderId);
       if (!invoiceId) continue;
       for (const item of order.items) {
-        const itemIndex = order.items.indexOf(item);
-        const invoiceNetSubtotal = order.subtotal - order.discount;
-        const allocatedBefore = order.items
-          .slice(0, itemIndex)
-          .reduce(
-            (sum, previousItem) =>
-              sum + roundMoney(
-                invoiceNetSubtotal * previousItem.subtotal / order.subtotal,
-              ),
-            0,
-          );
-        const allocatedSubtotal = itemIndex === order.items.length - 1
-          ? invoiceNetSubtotal - allocatedBefore
-          : roundMoney(invoiceNetSubtotal * item.subtotal / order.subtotal);
         invoiceItemRows.push({
           invoice_id: invoiceId,
           product_id: Number(products[item.productIndex].id),
@@ -1535,7 +1522,7 @@ async function seed(
           unit: profile.products[item.productIndex].unit,
           quantity: item.quantity,
           unit_price: item.unitPrice,
-          subtotal: allocatedSubtotal,
+          subtotal: item.subtotal,
           tax_rate: 0,
           tax_amount: 0,
         });
@@ -1871,9 +1858,10 @@ async function seed(
     const insertedPurchaseInvoices = await bulkInsert(
       runner, 'invoices',
       ['invoice_number', 'shop_id', 'invoice_symbol', 'invoice_type', 'invoice_date',
-        'partner_name', 'reference_type', 'reference_id', 'subtotal', 'tax_amount',
+        'partner_name', 'reference_type', 'reference_id', 'subtotal', 'discount_amount', 'tax_amount',
         'total_amount', 'payment_method', 'payment_status', 'notes', 'created_by', 'created_at'],
-      purchaseInvoiceRows, 'id, reference_id', 300,
+      purchaseInvoiceRows.map((invoice) => ({ ...invoice, discount_amount: 0 })),
+      'id, reference_id', 300,
     );
     const purchaseInvoiceItemRows: Row[] = [];
     for (const invoice of insertedPurchaseInvoices) {

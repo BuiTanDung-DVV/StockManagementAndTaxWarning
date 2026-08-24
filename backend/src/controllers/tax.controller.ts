@@ -4,42 +4,28 @@ import { Builder } from 'xml2js';
 import { AppDataSource } from '../config/db.config';
 import { ShopProfile } from '../system/entities';
 import {
-    CURRENT_TAX_POLICY,
     requireValidTaxCode,
     TaxValidationError,
     validateTaxPeriod,
 } from '../tax/tax-policy';
+import {
+    taxPolicyService,
+    TaxPolicyConfigurationError,
+} from '../services/tax-policy.service';
 
 const taxService = new TaxService();
 
 export const getConfig = async (req: Request, res: Response) => {
     try {
         const shopId = (req as any).shopId;
-        const shopRepo = AppDataSource.getRepository(ShopProfile);
-        const shop = await shopRepo.findOne({ where: { shopId } });
-        
+        const config = await taxPolicyService.getShopTaxConfiguration(shopId);
         res.json({
             success: true,
-            data: {
-                thresholds: {
-                    tier1: 250000000,
-                    tier2: 500000000,
-                    tier3: CURRENT_TAX_POLICY.warningRevenueThreshold,
-                    tier4: CURRENT_TAX_POLICY.taxExemptionThreshold,
-                },
-                policy: CURRENT_TAX_POLICY,
-                currentPolicies: {
-                    vatReductionActive: false,
-                    vatReductionScope: 'PRODUCT_LEVEL_NOT_SUPPORTED',
-                },
-                shopConfig: {
-                    businessSector: shop?.businessSector || 'TRADE',
-                    applyVatReduction: false,
-                }
-            }
+            data: config,
         });
     } catch (e: any) {
-        res.status(500).json({ success: false, message: e.message });
+        res.status(e instanceof TaxPolicyConfigurationError ? 503 : 500)
+            .json({ success: false, message: e.message });
     }
 };
 
@@ -67,7 +53,8 @@ export const exportToHTKK = async (req: Request, res: Response) => {
         const shopId = (req as any).shopId;
         const period = req.query.period as string || '01';
         const year = req.query.year as string || new Date().getFullYear().toString();
-        validateTaxPeriod(period, year);
+        const policy = await taxPolicyService.getCurrentPolicy();
+        validateTaxPeriod(period, year, policy.fiscalYear);
 
         const reportData = await taxService.getTaxReportData(shopId, period, year);
         const taxCode = requireValidTaxCode(reportData.taxCode);
@@ -111,7 +98,8 @@ export const getTaxEstimate = async (req: Request, res: Response) => {
         const shopId = (req as any).shopId;
         const period = req.query.period as string || '01';
         const year = req.query.year as string || new Date().getFullYear().toString();
-        validateTaxPeriod(period, year);
+        const policy = await taxPolicyService.getCurrentPolicy();
+        validateTaxPeriod(period, year, policy.fiscalYear);
 
         const reportData = await taxService.getTaxReportData(shopId, period, year);
         res.json({ success: true, data: reportData });
