@@ -122,3 +122,20 @@ tmp*.txt
 # Google OAuth Client Secrets
 google_client_secret_*.json
 client_secret_*.json
+
+# Local test accounts and developer-only credentials
+/TaiKhoanKiemThu.md
+
+# Local assistant/tooling context
+/.cursorrules
+/CLAUDE.md
+/agents/
+
+# One-off OTP inspection scripts (never commit)
+/backend/get_latest_otp.js
+/backend/get_otps.js
+/backend/scratch_otp.js
+
+# Local browser/debug output
+/chrome_error.txt
+/chrome_output.txt
