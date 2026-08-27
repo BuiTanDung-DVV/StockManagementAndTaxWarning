@@ -25,6 +25,10 @@ import {
     calculateRevenueGrowth,
     normalizeSalesStatusFilter,
 } from '../sales/sales-metric.utils';
+import {
+    vietnameseSearchExpression,
+    vietnameseSearchParams,
+} from '../common/vietnamese-search.utils';
 import { assertAllowedUnitPrice } from '../sales/sales-pricing.utils';
 import {
     buildAllocatedMerchandiseRevenueSql,
@@ -93,8 +97,8 @@ export class SalesService {
         }
         if (search?.trim()) {
             qb.andWhere(
-                '(LOWER(o.orderCode) LIKE :search OR LOWER(COALESCE(customer.name, \'\')) LIKE :search OR LOWER(COALESCE(customer.phone, \'\')) LIKE :search)',
-                { search: `%${search.trim().toLowerCase()}%` },
+                `(${vietnameseSearchExpression('o.orderCode')} OR ${vietnameseSearchExpression('customer.name')} OR ${vietnameseSearchExpression('customer.phone')})`,
+                vietnameseSearchParams(search),
             );
         }
 

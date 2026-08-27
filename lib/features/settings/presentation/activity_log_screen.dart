@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/system_provider.dart';
 
 class ActivityLogScreen extends ConsumerStatefulWidget {
@@ -25,10 +26,13 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Nhật ký hoạt động',
           style: GoogleFonts.manrope(

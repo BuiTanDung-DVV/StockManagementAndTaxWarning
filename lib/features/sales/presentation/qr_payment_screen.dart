@@ -9,6 +9,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../../products/providers/product_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../finance/providers/finance_provider.dart';
@@ -225,10 +226,13 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Thanh toán chuyển khoản',
           style: GoogleFonts.manrope(

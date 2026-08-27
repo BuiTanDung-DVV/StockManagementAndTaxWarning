@@ -6,6 +6,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/inventory_provider.dart';
 import 'stock_take_form_screen.dart';
 import 'stock_take_history_screen.dart';
@@ -26,10 +27,13 @@ class StockTakeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Kiểm kê Kho',
           style: GoogleFonts.manrope(

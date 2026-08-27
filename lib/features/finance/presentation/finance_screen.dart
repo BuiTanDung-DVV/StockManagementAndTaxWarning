@@ -8,7 +8,6 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/reporting_period.dart';
-import '../../../core/utils/data_freshness.dart';
 import '../../../core/utils/finance_display.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
@@ -16,7 +15,6 @@ import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/chart_widgets.dart';
-import '../../../core/widgets/data_freshness_banner.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../providers/finance_provider.dart';
 
@@ -171,36 +169,6 @@ class FinanceScreen extends ConsumerWidget {
                   ),
                 ),
                 summaryAsync.when(
-                  data: (data) {
-                    final assessment = assessDataFreshness(
-                      latestDate: data['latestTransactionDate'],
-                      periodFrom: DateTime.parse(from),
-                      periodTo: DateTime.parse(to),
-                      recordCount:
-                          asDouble(data['totalIncome'] ?? data['income']) !=
-                                  0 ||
-                              asDouble(
-                                    data['totalExpense'] ?? data['expense'],
-                                  ) !=
-                                  0
-                          ? 1
-                          : 0,
-                    );
-                    if (!assessment.requiresAttention) {
-                      return const SizedBox.shrink();
-                    }
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: DataFreshnessBanner(
-                        assessment: assessment,
-                        dataLabel: 'thu chi',
-                      ),
-                    );
-                  },
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, _) => const SizedBox.shrink(),
-                ),
-                summaryAsync.when(
                   data: (data) =>
                       _FinanceMetricStrip(data: data, periodLabel: periodLabel),
                   loading: () => const _FinanceMetricLoading(),
@@ -312,7 +280,6 @@ class _FinanceMetricStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 900;
     final balance = asDouble(
       data['cashBalance'] ?? data['currentBalance'] ?? data['balance'],
     );
@@ -327,46 +294,72 @@ class _FinanceMetricStrip extends StatelessWidget {
         ? 'Hiện tại'
         : 'Tại ${DateFormat('dd/MM/yyyy').format(asOf.toLocal())}';
 
-    return AppFillGrid(
-      minItemWidth: compact ? 150 : 190,
-      maxColumns: 4,
-      spacing: compact ? AppSpacing.sm : AppSpacing.md,
-      runSpacing: compact ? AppSpacing.sm : AppSpacing.md,
-      itemHeight: compact ? 96 : 88,
-      children: [
-        AppKpiCard(
-          title: 'Quỹ tiền mặt',
-          value: _currencyFormat.format(balance),
-          color: AppColors.primary,
-          assetPath: AppAssets.cash,
-          badgeText: balanceDateLabel,
-          compact: compact,
-        ),
-        AppKpiCard(
-          title: 'Tổng thu',
-          value: _currencyFormat.format(income),
-          color: AppColors.success,
-          assetPath: AppAssets.revenue,
-          badgeText: periodLabel,
-          compact: compact,
-        ),
-        AppKpiCard(
-          title: 'Tổng chi',
-          value: _currencyFormat.format(expense),
-          color: AppColors.danger,
-          assetPath: AppAssets.orders,
-          badgeText: periodLabel,
-          compact: compact,
-        ),
-        AppKpiCard(
-          title: 'Dòng tiền thuần',
-          value: _currencyFormat.format(net),
-          color: net >= 0 ? AppColors.success : AppColors.danger,
-          assetPath: AppAssets.profit,
-          badgeText: periodLabel,
-          compact: compact,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columnCount = width >= 900
+            ? 4
+            : width >= 520
+            ? 2
+            : 1;
+        final compact = width < 900;
+        final gap = compact ? AppSpacing.sm : AppSpacing.md;
+        final cards = [
+          AppKpiCard(
+            title: 'Quỹ tiền mặt',
+            value: _currencyFormat.format(balance),
+            color: AppColors.primary,
+            assetPath: AppAssets.cash,
+            badgeText: balanceDateLabel,
+            compact: compact,
+            onTap: () => context.push('/transactions'),
+            navigationHint: 'Mở danh sách giao dịch thu chi',
+          ),
+          AppKpiCard(
+            title: 'Tổng thu',
+            value: _currencyFormat.format(income),
+            color: AppColors.success,
+            assetPath: AppAssets.revenue,
+            badgeText: periodLabel,
+            compact: compact,
+            onTap: () => context.push('/transactions'),
+            navigationHint: 'Mở danh sách các khoản thu',
+          ),
+          AppKpiCard(
+            title: 'Tổng chi',
+            value: _currencyFormat.format(expense),
+            color: AppColors.danger,
+            assetPath: AppAssets.orders,
+            badgeText: periodLabel,
+            compact: compact,
+            onTap: () => context.push('/expense-ledger'),
+            navigationHint: 'Mở sổ chi phí sản xuất kinh doanh',
+          ),
+          AppKpiCard(
+            title: 'Dòng tiền thuần',
+            value: _currencyFormat.format(net),
+            color: net >= 0 ? AppColors.success : AppColors.danger,
+            assetPath: AppAssets.profit,
+            badgeText: periodLabel,
+            compact: compact,
+            onTap: () => context.push('/cashflow-forecast'),
+            navigationHint: 'Mở dự báo dòng tiền',
+          ),
+        ];
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: cards.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columnCount,
+            crossAxisSpacing: gap,
+            mainAxisSpacing: gap,
+            mainAxisExtent: compact ? 96 : 88,
+          ),
+          itemBuilder: (context, index) => cards[index],
+        );
+      },
     );
   }
 }

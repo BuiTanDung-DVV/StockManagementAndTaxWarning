@@ -19,6 +19,7 @@ class AppPaginationBar extends StatelessWidget {
   final int totalItems;
   final String itemLabel;
   final ValueChanged<int> onPageChanged;
+  final double trailingSafeSpace;
 
   const AppPaginationBar({
     super.key,
@@ -27,6 +28,7 @@ class AppPaginationBar extends StatelessWidget {
     required this.totalItems,
     required this.itemLabel,
     required this.onPageChanged,
+    this.trailingSafeSpace = 0,
   });
 
   @override
@@ -38,9 +40,11 @@ class AppPaginationBar extends StatelessWidget {
     final canGoNext = safeCurrentPage < safeTotalPages;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+      padding: EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md + trailingSafeSpace,
+        AppSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: colors.card,

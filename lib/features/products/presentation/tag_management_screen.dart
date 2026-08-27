@@ -6,6 +6,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/tag_provider.dart';
 
@@ -259,10 +260,11 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(onPressed: context.pop)
+            : null,
         title: Text(
           'Cấu hình bộ lọc và nhãn',
           style: GoogleFonts.manrope(

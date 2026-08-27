@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/tax_config_provider.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -48,10 +49,13 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
       return Scaffold(
         backgroundColor: c.bg,
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          automaticallyImplyLeading: false,
+          leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+          leading: Navigator.of(context).canPop()
+              ? AppNavigationBackLeading(
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
           title: const Text('Công cụ tính thuế'),
         ),
         body: Center(
@@ -82,10 +86,13 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Công cụ tính thuế HKD ${config.fiscalYear}',
           style: GoogleFonts.manrope(

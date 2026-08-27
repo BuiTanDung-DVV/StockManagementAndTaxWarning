@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/auth_provider.dart';
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
@@ -164,10 +165,11 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(onPressed: context.pop)
+            : null,
       ),
       body: SafeArea(
         child: Center(

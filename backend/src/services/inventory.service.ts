@@ -426,6 +426,7 @@ export class InventoryService {
                 p.id,
                 p.sku,
                 p.name,
+                p.image_url,
                 COALESCE(p.unit, 'Sản phẩm') AS unit,
                 COALESCE(c.name, 'Chưa phân loại') AS category,
                 COALESCE(sold.gross_revenue, 0) - COALESCE(returned.return_revenue, 0)
@@ -447,6 +448,7 @@ export class InventoryService {
             id: Number(row.id),
             sku: row.sku,
             name: row.name,
+            imageUrl: row.image_url || null,
             unit: row.unit,
             category: row.category,
             revenue: Number(row.revenue || 0),

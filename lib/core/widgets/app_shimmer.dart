@@ -114,10 +114,27 @@ class ShimmerListTile extends StatelessWidget {
 /// Shimmer list — multiple ShimmerListTile
 class ShimmerList extends StatelessWidget {
   final int count;
-  const ShimmerList({super.key, this.count = 6});
+  final bool scrollable;
+  final EdgeInsetsGeometry? padding;
+
+  const ShimmerList({
+    super.key,
+    this.count = 6,
+    this.scrollable = false,
+    this.padding,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (scrollable) {
+      return ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: padding,
+        itemCount: count,
+        itemBuilder: (_, _) => const ShimmerListTile(),
+      );
+    }
+
     return Column(
       children: List.generate(count, (_) => const ShimmerListTile()),
     );

@@ -8,6 +8,7 @@ import '../../../core/utils/finance_display.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/responsive_layout.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../domain/closing_cash_assessment.dart';
 import '../providers/finance_provider.dart';
 
@@ -136,10 +137,13 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Kết ca & Khóa sổ',
           style: GoogleFonts.manrope(

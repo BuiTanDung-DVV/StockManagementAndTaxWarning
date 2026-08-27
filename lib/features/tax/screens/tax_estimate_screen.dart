@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/tax_service.dart';
@@ -73,7 +74,16 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
     final config = ref.watch(taxConfigProvider);
     if (!config.isLoaded) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Ước tính & xuất thuế (HTKK)')),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+          leading: Navigator.of(context).canPop()
+              ? AppNavigationBackLeading(
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
+          title: const Text('Ước tính & xuất thuế (HTKK)'),
+        ),
         body: Center(
           child: config.isLoading
               ? const CircularProgressIndicator()
@@ -102,7 +112,16 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
       });
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Ước Tính & Xuất Thuế (HTKK)')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        title: const Text('Ước Tính & Xuất Thuế (HTKK)'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

@@ -2,6 +2,7 @@ export type InventoryAbcSourceRow = {
     id: number;
     sku: string;
     name: string;
+    imageUrl?: string | null;
     unit: string;
     category: string;
     revenue: number;

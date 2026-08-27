@@ -66,3 +66,13 @@ test('reconciles net revenue while keeping the Pareto base non-negative', () => 
   assert.equal(result.items[1].revenue, 0);
   assert.equal(result.grades.reduce((sum, grade) => sum + grade.revenue, 0), 100);
 });
+
+test('preserves product image metadata for inventory presentation', () => {
+  const source = {
+    ...row(1, 100, 10),
+    imageUrl: 'https://res.cloudinary.com/demo/image/upload/product.webp',
+  };
+  const result = classifyInventoryAbc([source]);
+
+  assert.equal(result.items[0].imageUrl, source.imageUrl);
+});

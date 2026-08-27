@@ -59,6 +59,8 @@ class AppKpiCard extends StatelessWidget {
   final List<double>? sparklineData;
   final bool isHero;
   final bool compact;
+  final VoidCallback? onTap;
+  final String? navigationHint;
 
   const AppKpiCard({
     super.key,
@@ -71,6 +73,8 @@ class AppKpiCard extends StatelessWidget {
     this.sparklineData,
     this.isHero = false,
     this.compact = false,
+    this.onTap,
+    this.navigationHint,
   });
 
   @override
@@ -86,7 +90,7 @@ class AppKpiCard extends StatelessWidget {
             semanticLabel: title,
           );
 
-    return Container(
+    final content = Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
       decoration: BoxDecoration(
         color: c.card,
@@ -204,6 +208,24 @@ class AppKpiCard extends StatelessWidget {
             CompactSparkline(values: sparklineData!, color: color, height: 28),
           ],
         ],
+      ),
+    );
+
+    if (onTap == null) return content;
+
+    return Semantics(
+      button: true,
+      label: '$title: $value',
+      hint: navigationHint ?? 'Mở nội dung liên quan',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: content,
+        ),
       ),
     );
   }

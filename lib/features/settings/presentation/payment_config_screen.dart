@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/system_provider.dart';
 
 class PaymentConfigScreen extends ConsumerStatefulWidget {
@@ -108,10 +109,13 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
           ),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
       ),
       body: shopAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

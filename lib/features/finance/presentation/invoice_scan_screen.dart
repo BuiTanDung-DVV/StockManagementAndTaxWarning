@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -12,7 +13,17 @@ class InvoiceScanScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: c.bg,
-      appBar: AppBar(title: const Text('Quét Hóa Đơn'), centerTitle: true),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        title: const Text('Quét Hóa Đơn'),
+        centerTitle: true,
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

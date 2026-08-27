@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/assets/app_assets.dart';
 import '../../core/constants/app_strings.dart';
@@ -15,7 +16,6 @@ enum MainShellNavigationMode { bottomBar, rail, sidebar }
 
 abstract final class _ShellPalette {
   static const navy = Color(0xFF102A43);
-  static const navyRaised = Color(0xFF173B5E);
   static const cyan = Color(0xFF38BDF8);
   static const text = Color(0xFFF4F8FC);
   static const muted = Color(0xFFAAC0D4);
@@ -69,10 +69,59 @@ bool shouldShowShellUtilityHeader(String location) {
 
 bool shouldShowShopPaymentQr({required bool isAllShops}) => !isAllShops;
 
-class MainShell extends ConsumerWidget {
+double desktopSidebarWidth(bool collapsed) => collapsed ? 72 : 232;
+
+List<Map<String, dynamic>> shellSelectableShops(ShopState state) => state
+    .userShops
+    .where(
+      (shop) =>
+          shop['status'] == 'ACTIVE' &&
+          shop['isActive'] != false &&
+          parseShopRecordId(shop['shopId']) != null,
+    )
+    .toList(growable: false);
+
+bool shellCanSwitchShops(ShopState state) =>
+    shellSelectableShops(state).length > 1;
+
+String shellShopContextLabel(ShopState state) =>
+    shellCanSwitchShops(state) || state.isAllShops
+    ? 'PHẠM VI ĐANG XEM'
+    : 'CỬA HÀNG';
+
+class MainShell extends ConsumerStatefulWidget {
   final Widget child;
 
   const MainShell({super.key, required this.child});
+
+  @override
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  static const _sidebarCollapsedKey = 'main_sidebar_collapsed_v1';
+  bool _sidebarCollapsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSidebarState();
+  }
+
+  Future<void> _restoreSidebarState() async {
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _sidebarCollapsed = preferences.getBool(_sidebarCollapsedKey) ?? false;
+    });
+  }
+
+  Future<void> _toggleSidebar() async {
+    final next = !_sidebarCollapsed;
+    setState(() => _sidebarCollapsed = next);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_sidebarCollapsedKey, next);
+  }
 
   int _currentIndex(BuildContext context, List<_NavDef> visibleTabs) {
     final location = GoRouterState.of(context).uri.toString();
@@ -83,7 +132,7 @@ class MainShell extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final shop = ref.watch(shopProvider);
     final tabs = <_NavDef>[
@@ -171,17 +220,15 @@ class MainShell extends ConsumerWidget {
                   if (showUtilityHeader)
                     _ShellUtilityHeader(
                       compact: mode == MainShellNavigationMode.bottomBar,
-                      shopName: shop.currentShopName,
+                      shop: shop,
                       showAiRestore: showAi && !aiLauncherVisible,
                       showShopQr: shouldShowShopPaymentQr(
                         isAllShops: shop.isAllShops,
                       ),
                       onSearch: () async {
-                        final route = await showSearch<String>(
-                          context: context,
-                          delegate: GlobalSearchDelegate(
-                            api: ref.read(apiClientProvider),
-                          ),
+                        final route = await showGlobalSearchPanel(
+                          context,
+                          api: ref.read(apiClientProvider),
                         );
                         if (route != null &&
                             route.isNotEmpty &&
@@ -190,6 +237,8 @@ class MainShell extends ConsumerWidget {
                         }
                       },
                       onNotifications: () => context.push('/notifications'),
+                      onShopSelected: (shopId) =>
+                          ref.read(shopProvider.notifier).switchShop(shopId),
                       onShopQr: () => showShopPaymentQrDialog(
                         context,
                         canManage:
@@ -203,7 +252,7 @@ class MainShell extends ConsumerWidget {
                         ref.read(aiAssistantOpenProvider.notifier).open();
                       },
                     ),
-                  Expanded(child: child),
+                  Expanded(child: widget.child),
                 ],
               ),
               if (showAi)
@@ -229,7 +278,8 @@ class MainShell extends ConsumerWidget {
                 _DesktopSidebar(
                   tabs: tabs,
                   currentIndex: currentIndex,
-                  shopName: shop.currentShopName,
+                  collapsed: _sidebarCollapsed,
+                  onToggleCollapsed: _toggleSidebar,
                 ),
                 VerticalDivider(width: 1, color: colors.divider),
                 Expanded(child: page),
@@ -266,21 +316,23 @@ class MainShell extends ConsumerWidget {
 
 class _ShellUtilityHeader extends StatelessWidget {
   final bool compact;
-  final String? shopName;
+  final ShopState shop;
   final bool showAiRestore;
   final bool showShopQr;
   final VoidCallback onSearch;
   final VoidCallback onNotifications;
+  final ValueChanged<int> onShopSelected;
   final VoidCallback onShopQr;
   final VoidCallback onRestoreAi;
 
   const _ShellUtilityHeader({
     required this.compact,
-    required this.shopName,
+    required this.shop,
     required this.showAiRestore,
     required this.showShopQr,
     required this.onSearch,
     required this.onNotifications,
+    required this.onShopSelected,
     required this.onShopQr,
     required this.onRestoreAi,
   });
@@ -288,9 +340,89 @@ class _ShellUtilityHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final resolvedShop = shopName?.trim().isNotEmpty == true
-        ? shopName!
+    final resolvedShop = shop.currentShopName?.trim().isNotEmpty == true
+        ? shop.currentShopName!
         : 'Cửa hàng';
+    final selectableShops = shellSelectableShops(shop);
+    final canSwitchShop = selectableShops.length > 1;
+
+    Widget shopSummary() => Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!compact)
+          Text(
+            shellShopContextLabel(shop),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                compact ? 'SmartStock · $resolvedShop' : resolvedShop,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (canSwitchShop) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: colors.textSecondary,
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+
+    final shopIdentity = canSwitchShop
+        ? Semantics(
+            button: true,
+            label: 'Chuyển cửa hàng. Đang xem $resolvedShop',
+            child: PopupMenuButton<int>(
+              tooltip: 'Chuyển cửa hàng',
+              onSelected: onShopSelected,
+              position: PopupMenuPosition.under,
+              itemBuilder: (context) => [
+                for (final item in selectableShops)
+                  PopupMenuItem<int>(
+                    value: parseShopRecordId(item['shopId']),
+                    child: _ShopMenuItem(
+                      name: item['shopName']?.toString() ?? 'Cửa hàng',
+                      selected:
+                          !shop.isAllShops &&
+                          parseShopRecordId(item['shopId']) ==
+                              shop.currentShopId,
+                    ),
+                  ),
+                const PopupMenuDivider(),
+                PopupMenuItem<int>(
+                  value: -1,
+                  child: _ShopMenuItem(
+                    name: 'Tất cả cửa hàng',
+                    selected: shop.isAllShops,
+                  ),
+                ),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: shopSummary(),
+              ),
+            ),
+          )
+        : shopSummary();
 
     return Material(
       color: colors.surface,
@@ -328,30 +460,9 @@ class _ShellUtilityHeader extends StatelessWidget {
               const SizedBox(width: 11),
             ],
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!compact)
-                    Text(
-                      'CỬA HÀNG ĐANG CHỌN',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colors.textMuted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  Text(
-                    compact ? 'SmartStock · $resolvedShop' : resolvedShop,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: shopIdentity,
               ),
             ),
             if (compact) ...[
@@ -435,6 +546,41 @@ class _ShellUtilityHeader extends StatelessWidget {
   }
 }
 
+class _ShopMenuItem extends StatelessWidget {
+  final String name;
+  final bool selected;
+
+  const _ShopMenuItem({required this.name, required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ),
+        if (selected) ...[
+          const SizedBox(width: AppSpacing.md),
+          Icon(
+            Icons.check_rounded,
+            size: 18,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _HeaderAssetButton extends StatelessWidget {
   final String assetPath;
   final String semanticLabel;
@@ -489,12 +635,14 @@ class _HeaderAssetButton extends StatelessWidget {
 class _DesktopSidebar extends StatelessWidget {
   final List<_NavDef> tabs;
   final int currentIndex;
-  final String? shopName;
+  final bool collapsed;
+  final VoidCallback onToggleCollapsed;
 
   const _DesktopSidebar({
     required this.tabs,
     required this.currentIndex,
-    required this.shopName,
+    required this.collapsed,
+    required this.onToggleCollapsed,
   });
 
   @override
@@ -503,35 +651,29 @@ class _DesktopSidebar extends StatelessWidget {
       color: _ShellPalette.navy,
       child: SafeArea(
         right: false,
-        child: SizedBox(
-          width: 252,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          width: desktopSidebarWidth(collapsed),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 18, 18),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const AppAssetIcon(
-                        assetPath: AppAssets.appIcon,
-                        size: 30,
-                        semanticLabel: 'SmartStock',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+              SizedBox(
+                height: 72,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: collapsed ? 15 : 16,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: collapsed
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.start,
+                    children: [
+                      const _SidebarLogo(),
+                      if (!collapsed) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
                             'SmartStock',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -542,94 +684,70 @@ class _DesktopSidebar extends StatelessWidget {
                                   letterSpacing: -0.35,
                                 ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            shopName?.trim().isNotEmpty == true
-                                ? shopName!
-                                : 'Bán hàng, Kho & Cảnh báo thuế',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: _ShellPalette.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-                child: Text(
-                  'ĐIỀU HƯỚNG',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: _ShellPalette.muted,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.1,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
+              const Divider(height: 1, color: Colors.white12),
+              if (!collapsed)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+                  child: Text(
+                    'CHỨC NĂNG CHÍNH',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: _ShellPalette.muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ),
               Expanded(
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.fromLTRB(
+                    collapsed ? 8 : 10,
+                    collapsed ? 14 : 0,
+                    collapsed ? 8 : 10,
+                    12,
+                  ),
                   itemCount: tabs.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 6),
+                  separatorBuilder: (_, _) => const SizedBox(height: 4),
                   itemBuilder: (context, index) => _SidebarNavItem(
                     definition: tabs[index],
                     selected: index == currentIndex,
+                    collapsed: collapsed,
                   ),
                 ),
               ),
-              Container(
-                margin: const EdgeInsets.fromLTRB(12, 8, 12, 14),
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                decoration: BoxDecoration(
-                  color: _ShellPalette.navyRaised,
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                  border: Border.all(color: Colors.white12),
+              const Divider(height: 1, color: Colors.white12),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  collapsed ? 8 : 10,
+                  8,
+                  collapsed ? 8 : 10,
+                  12,
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      children: [
-                        const AppAssetIcon(
-                          assetPath: AppAssets.help,
-                          size: 19,
-                          color: _ShellPalette.cyan,
-                          semanticLabel: 'Trung tâm trợ giúp',
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Trung tâm trợ giúp',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  color: _ShellPalette.text,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Quy trình bán hàng, kho và thuế',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _ShellPalette.muted,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextButton(
+                    _SidebarUtilityItem(
+                      label: 'Trung tâm trợ giúp',
+                      assetPath: AppAssets.help,
+                      collapsed: collapsed,
                       onPressed: () => context.push('/settings/ai-knowledge'),
-                      style: TextButton.styleFrom(
-                        alignment: Alignment.centerLeft,
-                        foregroundColor: _ShellPalette.cyan,
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(44, 36),
-                      ),
-                      child: const Text('Quản lý nguồn hướng dẫn'),
+                    ),
+                    const SizedBox(height: 4),
+                    _SidebarUtilityItem(
+                      label: collapsed ? 'Mở rộng' : 'Thu gọn',
+                      tooltip: collapsed
+                          ? 'Mở rộng thanh điều hướng'
+                          : 'Thu gọn thanh điều hướng',
+                      assetPath: collapsed
+                          ? AppAssets.expand
+                          : AppAssets.collapse,
+                      collapsed: collapsed,
+                      onPressed: onToggleCollapsed,
                     ),
                   ],
                 ),
@@ -642,15 +760,103 @@ class _DesktopSidebar extends StatelessWidget {
   }
 }
 
-class _SidebarNavItem extends StatelessWidget {
-  final _NavDef definition;
-  final bool selected;
-
-  const _SidebarNavItem({required this.definition, required this.selected});
+class _SidebarLogo extends StatelessWidget {
+  const _SidebarLogo();
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
+    return Container(
+      width: 38,
+      height: 38,
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const AppAssetIcon(
+        assetPath: AppAssets.appIcon,
+        size: 28,
+        semanticLabel: 'SmartStock',
+      ),
+    );
+  }
+}
+
+class _SidebarUtilityItem extends StatelessWidget {
+  final String label;
+  final String? tooltip;
+  final String assetPath;
+  final bool collapsed;
+  final VoidCallback onPressed;
+
+  const _SidebarUtilityItem({
+    required this.label,
+    this.tooltip,
+    required this.assetPath,
+    required this.collapsed,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final item = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        child: SizedBox(
+          height: 44,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: collapsed ? 14 : 12),
+            child: Row(
+              mainAxisAlignment: collapsed
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
+              children: [
+                AppAssetIcon(
+                  assetPath: assetPath,
+                  size: 19,
+                  color: _ShellPalette.muted,
+                  semanticLabel: label,
+                ),
+                if (!collapsed) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: _ShellPalette.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return collapsed ? Tooltip(message: tooltip ?? label, child: item) : item;
+  }
+}
+
+class _SidebarNavItem extends StatelessWidget {
+  final _NavDef definition;
+  final bool selected;
+  final bool collapsed;
+
+  const _SidebarNavItem({
+    required this.definition,
+    required this.selected,
+    required this.collapsed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final item = Semantics(
       button: true,
       selected: selected,
       label: 'Điều hướng đến ${definition.label}',
@@ -659,15 +865,21 @@ class _SidebarNavItem extends StatelessWidget {
         child: InkWell(
           onTap: () => context.go(definition.route),
           child: Container(
-            constraints: const BoxConstraints(minHeight: 46),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            constraints: const BoxConstraints(minHeight: 44),
+            padding: EdgeInsets.symmetric(
+              horizontal: collapsed ? 14 : 12,
+              vertical: 10,
+            ),
             decoration: BoxDecoration(
               color: selected
-                  ? Colors.white.withValues(alpha: 0.12)
+                  ? Colors.white.withValues(alpha: 0.10)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(AppRadius.control),
-              border: Border.all(
-                color: selected ? Colors.white12 : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border(
+                left: BorderSide(
+                  color: selected ? _ShellPalette.cyan : Colors.transparent,
+                  width: 3,
+                ),
               ),
             ),
             alignment: Alignment.centerLeft,
@@ -679,26 +891,32 @@ class _SidebarNavItem extends StatelessWidget {
                   color: selected ? _ShellPalette.cyan : _ShellPalette.muted,
                   semanticLabel: definition.label,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    definition.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: selected
-                          ? _ShellPalette.text
-                          : _ShellPalette.muted,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                if (!collapsed) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      definition.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: selected
+                            ? _ShellPalette.text
+                            : _ShellPalette.muted,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
         ),
       ),
     );
+
+    return collapsed ? Tooltip(message: definition.label, child: item) : item;
   }
 }
 

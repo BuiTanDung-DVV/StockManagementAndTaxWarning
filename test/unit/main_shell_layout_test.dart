@@ -1,7 +1,50 @@
 import 'package:flutter_app/features/shell/main_shell.dart';
+import 'package:flutter_app/features/settings/providers/shop_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('shop switcher appears only when at least two shops are available', () {
+    final oneShop = ShopState(
+      isLoading: false,
+      userShops: const [
+        {
+          'shopId': 1,
+          'shopName': 'Cửa hàng A',
+          'status': 'ACTIVE',
+          'isActive': true,
+        },
+      ],
+    );
+    final twoShops = oneShop.copyWith(
+      userShops: const [
+        {
+          'shopId': 1,
+          'shopName': 'Cửa hàng A',
+          'status': 'ACTIVE',
+          'isActive': true,
+        },
+        {
+          'shopId': 2,
+          'shopName': 'Cửa hàng B',
+          'status': 'ACTIVE',
+          'isActive': true,
+        },
+        {
+          'shopId': 3,
+          'shopName': 'Cửa hàng ngừng hoạt động',
+          'status': 'INACTIVE',
+          'isActive': false,
+        },
+      ],
+    );
+
+    expect(shellCanSwitchShops(oneShop), isFalse);
+    expect(shellShopContextLabel(oneShop), 'CỬA HÀNG');
+    expect(shellCanSwitchShops(twoShops), isTrue);
+    expect(shellSelectableShops(twoShops), hasLength(2));
+    expect(shellShopContextLabel(twoShops), 'PHẠM VI ĐANG XEM');
+  });
+
   test('uses bottom navigation on compact viewports', () {
     expect(navigationModeForWidth(390), MainShellNavigationMode.bottomBar);
     expect(navigationModeForWidth(799), MainShellNavigationMode.bottomBar);
@@ -15,6 +58,11 @@ void main() {
   test('uses sidebar on expanded viewports', () {
     expect(navigationModeForWidth(1100), MainShellNavigationMode.sidebar);
     expect(navigationModeForWidth(1440), MainShellNavigationMode.sidebar);
+  });
+
+  test('desktop sidebar exposes expanded and collapsed widths', () {
+    expect(desktopSidebarWidth(false), 232);
+    expect(desktopSidebarWidth(true), 72);
   });
 
   test('keeps two-item aggregate navigation intentionally compact', () {

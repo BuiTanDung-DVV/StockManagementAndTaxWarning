@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -29,7 +30,16 @@ class TaxSupportScreen extends ConsumerWidget {
     }
     if (referenceAsync.hasError) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Hỗ trợ Thuế')),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+          leading: Navigator.of(context).canPop()
+              ? AppNavigationBackLeading(
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
+          title: const Text('Hỗ trợ Thuế'),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -44,7 +54,16 @@ class TaxSupportScreen extends ConsumerWidget {
     final links = referenceAsync.requireValue.supportLinks;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Hỗ trợ Thuế')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        title: const Text('Hỗ trợ Thuế'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

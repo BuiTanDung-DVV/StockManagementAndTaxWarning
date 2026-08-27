@@ -60,6 +60,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   final TextEditingController _queryController = TextEditingController();
   Offset? _normalizedLauncherPosition;
   bool _isDraggingLauncher = false;
+  bool _isPanelExpanded = false;
   final List<_AssistantMessage> _messages = const [
     _AssistantMessage(
       fromUser: false,
@@ -87,6 +88,10 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   }
 
   void _close() => ref.read(aiAssistantOpenProvider.notifier).close();
+
+  void _togglePanelExpanded() {
+    setState(() => _isPanelExpanded = !_isPanelExpanded);
+  }
 
   Future<void> _restoreLauncherPosition() async {
     final preferences = await SharedPreferences.getInstance();
@@ -243,6 +248,14 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
           560.0,
           math.max(0.0, constraints.maxHeight - desktopPanelTop - 16),
         );
+        final expandedPanelWidth = math.min(
+          720.0,
+          math.max(408.0, constraints.maxWidth - 32),
+        );
+        final expandedPanelHeight = math.max(
+          0.0,
+          constraints.maxHeight - desktopPanelTop - 16,
+        );
 
         return IgnorePointer(
           ignoring: !isOpen && !widget.showLauncher,
@@ -267,17 +280,24 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                               context.push('/settings/ai-knowledge');
                             },
                             onSend: _handleSend,
+                            expanded: true,
+                            showExpandAction: false,
+                            onToggleExpanded: _togglePanelExpanded,
                           ),
                         ),
                       ),
                     ),
                   )
                 else
-                  Positioned(
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
                     right: 16,
                     bottom: 16,
-                    width: 408,
-                    height: desktopPanelHeight,
+                    width: _isPanelExpanded ? expandedPanelWidth : 408,
+                    height: _isPanelExpanded
+                        ? expandedPanelHeight
+                        : desktopPanelHeight,
                     child: _AssistantPanel(
                       messages: _messages,
                       quickQuestions: _quickQuestions,
@@ -288,6 +308,9 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                         context.push('/settings/ai-knowledge');
                       },
                       onSend: _handleSend,
+                      expanded: _isPanelExpanded,
+                      showExpandAction: true,
+                      onToggleExpanded: _togglePanelExpanded,
                     ),
                   ),
               if (!isOpen && widget.showLauncher && launcherVisible)
@@ -333,6 +356,9 @@ class _AssistantPanel extends StatelessWidget {
   final VoidCallback onClose;
   final VoidCallback onManageSources;
   final ValueChanged<String> onSend;
+  final bool expanded;
+  final bool showExpandAction;
+  final VoidCallback onToggleExpanded;
 
   const _AssistantPanel({
     required this.messages,
@@ -341,6 +367,9 @@ class _AssistantPanel extends StatelessWidget {
     required this.onClose,
     required this.onManageSources,
     required this.onSend,
+    required this.expanded,
+    required this.showExpandAction,
+    required this.onToggleExpanded,
   });
 
   @override
@@ -359,39 +388,12 @@ class _AssistantPanel extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-              child: Row(
-                children: [
-                  const AppAssetIcon(
-                    assetPath: AppAssets.aiMascot,
-                    size: 30,
-                    semanticLabel: 'Trợ giúp nghiệp vụ',
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Trợ giúp nghiệp vụ',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text(
-                          'Ưu tiên nguồn tài liệu đang bật',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: colors.textMuted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: onManageSources,
-                    child: const Text('Nguồn'),
-                  ),
-                  TextButton(onPressed: onClose, child: const Text('Đóng')),
-                ],
-              ),
+            _AssistantPanelHeader(
+              expanded: expanded,
+              showExpandAction: showExpandAction,
+              onToggleExpanded: onToggleExpanded,
+              onManageSources: onManageSources,
+              onClose: onClose,
             ),
             Divider(height: 1, color: colors.divider),
             Expanded(
@@ -416,21 +418,26 @@ class _AssistantPanel extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    for (final question in quickQuestions)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: OutlinedButton(
-                          onPressed: () => onSend(question),
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final question in quickQuestions)
+                          OutlinedButton(
+                            onPressed: () => onSend(question),
+                            style: OutlinedButton.styleFrom(
+                              alignment: Alignment.centerLeft,
+                              backgroundColor: colors.cardAlt,
+                              side: BorderSide(color: colors.divider),
+                            ),
+                            child: Text(
+                              question,
+                              maxLines: expanded ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          child: Text(
-                            question,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -467,6 +474,145 @@ class _AssistantPanel extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AssistantPanelHeader extends StatelessWidget {
+  final bool expanded;
+  final bool showExpandAction;
+  final VoidCallback onToggleExpanded;
+  final VoidCallback onManageSources;
+  final VoidCallback onClose;
+
+  const _AssistantPanelHeader({
+    required this.expanded,
+    required this.showExpandAction,
+    required this.onToggleExpanded,
+    required this.onManageSources,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.09),
+            colors.surface,
+          ],
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 540;
+          return SizedBox(
+            height: compact ? 72 : 82,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: colors.divider),
+                    ),
+                    child: const AppAssetIcon(
+                      assetPath: AppAssets.aiMascot,
+                      size: 34,
+                      semanticLabel: 'Trợ giúp nghiệp vụ',
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Trợ giúp nghiệp vụ',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          compact
+                              ? 'Dữ liệu cửa hàng & tài liệu'
+                              : '● Sẵn sàng · ưu tiên nguồn đang bật',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: compact
+                                    ? colors.textMuted
+                                    : AppColors.success,
+                                fontWeight: compact
+                                    ? FontWeight.w400
+                                    : FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (showExpandAction)
+                    Tooltip(
+                      message: expanded
+                          ? 'Thu gọn bảng trợ giúp'
+                          : 'Mở rộng bảng trợ giúp',
+                      child: TextButton(
+                        onPressed: onToggleExpanded,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppAssetIcon(
+                              assetPath: expanded
+                                  ? AppAssets.collapse
+                                  : AppAssets.expand,
+                              size: 17,
+                              semanticLabel: expanded
+                                  ? 'Thu gọn bảng trợ giúp'
+                                  : 'Mở rộng bảng trợ giúp',
+                            ),
+                            const SizedBox(width: 4),
+                            Text(expanded ? 'Thu gọn' : 'Mở rộng'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (compact)
+                    IconButton(
+                      tooltip: 'Nguồn dữ liệu',
+                      onPressed: onManageSources,
+                      visualDensity: VisualDensity.compact,
+                      icon: const AppAssetIcon(
+                        assetPath: AppAssets.book,
+                        size: 19,
+                        semanticLabel: 'Nguồn dữ liệu',
+                      ),
+                    )
+                  else
+                    TextButton(
+                      onPressed: onManageSources,
+                      child: const Text('Nguồn dữ liệu'),
+                    ),
+                  TextButton(onPressed: onClose, child: const Text('Đóng')),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

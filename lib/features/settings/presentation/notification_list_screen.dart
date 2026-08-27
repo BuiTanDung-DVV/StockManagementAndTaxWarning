@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../providers/notification_provider.dart';
+import '../../dashboard/presentation/widgets/dashboard_widgets.dart';
 
 class NotificationListScreen extends ConsumerStatefulWidget {
-  const NotificationListScreen({super.key});
+  final String? initialFilter;
+
+  const NotificationListScreen({super.key, this.initialFilter});
   @override
   ConsumerState<NotificationListScreen> createState() =>
       _NotificationListScreenState();
@@ -16,21 +20,31 @@ class _NotificationListScreenState
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => ref.read(notificationProvider.notifier).loadNotifications(),
-    );
+    if (widget.initialFilter != 'actionable') {
+      Future.microtask(
+        () => ref.read(notificationProvider.notifier).loadNotifications(),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final notif = ref.watch(notificationProvider);
+    final actionable = widget.initialFilter == 'actionable';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thông báo'),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        title: Text(actionable ? 'Trung tâm cần xử lý' : 'Thông báo'),
         actions: [
-          if (notif.items.any((n) => n['isRead'] != true))
+          if (!actionable && notif.items.any((n) => n['isRead'] != true))
             TextButton(
               onPressed: () =>
                   ref.read(notificationProvider.notifier).markAllRead(),
@@ -38,7 +52,12 @@ class _NotificationListScreenState
             ),
         ],
       ),
-      body: notif.isLoading && notif.items.isEmpty
+      body: actionable
+          ? const SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: DashboardPriorityList(showViewAll: false),
+            )
+          : notif.isLoading && notif.items.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : notif.errorMessage != null && notif.items.isEmpty
           ? Center(

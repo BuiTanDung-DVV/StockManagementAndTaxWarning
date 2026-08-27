@@ -2,6 +2,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
@@ -327,6 +328,13 @@ class _PurchaseNoInvoiceScreenState
         length: 2,
         child: Scaffold(
           appBar: AppBar(
+            automaticallyImplyLeading: false,
+            leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+            leading: Navigator.of(context).canPop()
+                ? AppNavigationBackLeading(
+                    onPressed: () => Navigator.of(context).pop(),
+                  )
+                : null,
             title: const Text('Mua hàng không hóa đơn'),
             actions: appBarActions(),
             bottom: const TabBar(
@@ -357,6 +365,13 @@ class _PurchaseNoInvoiceScreenState
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: const Text('Mua hàng không hóa đơn'),
         actions: appBarActions(),
       ),

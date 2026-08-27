@@ -10,10 +10,13 @@ import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/finance_provider.dart';
 
 class TaxObligationScreen extends ConsumerWidget {
-  const TaxObligationScreen({super.key});
+  final String? initialStatus;
+
+  const TaxObligationScreen({super.key, this.initialStatus});
 
   String _fmt(num v) => NumberFormat.currency(
     locale: 'vi_VN',
@@ -31,10 +34,13 @@ class TaxObligationScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Theo dõi Nghĩa vụ thuế',
           style: GoogleFonts.manrope(
@@ -62,7 +68,20 @@ class TaxObligationScreen extends ConsumerWidget {
           child: Text('Lỗi: $e', style: TextStyle(color: AppColors.danger)),
         ),
         data: (data) {
-          final items = (data['items'] as List?) ?? [];
+          final allItems = (data['items'] as List?) ?? [];
+          final items = initialStatus == 'pending'
+              ? allItems
+                    .where(
+                      (item) =>
+                          item is Map &&
+                          !const {
+                            'done',
+                            'paid',
+                            'cancelled',
+                          }.contains(item['status']?.toString().toLowerCase()),
+                    )
+                    .toList()
+              : allItems;
           final totalOwed = asNum(data['totalOwed']);
 
           if (items.isEmpty) {

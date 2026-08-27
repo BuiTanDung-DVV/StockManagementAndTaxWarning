@@ -2,23 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/cloudinary_image.dart';
 import '../../../core/utils/reporting_period.dart';
-import '../../../core/utils/data_freshness.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
-import '../../../core/widgets/data_freshness_banner.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/inventory_provider.dart';
 
 class InventoryScreen extends ConsumerWidget {
-  const InventoryScreen({super.key});
+  final String? initialIssue;
+
+  const InventoryScreen({super.key, this.initialIssue});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,7 +34,6 @@ class InventoryScreen extends ConsumerWidget {
     final slowMovingAsync = ref.watch(slowMovingProvider);
     final categoriesAsync = ref.watch(inventoryCategoriesSummaryProvider);
     final abcPeriod = comparisonReportingDates('year', DateTime.now());
-    final currentPeriod = currentMonthReportingPeriod(DateTime.now());
     final abcAsync = ref.watch(
       inventoryAbcProvider((
         from: abcPeriod.currentFrom,
@@ -130,28 +131,6 @@ class InventoryScreen extends ConsumerWidget {
                     action: headerActions(compact: compactLayout),
                     compactAction: headerActions(compact: true),
                   ),
-                  stockPageAsync.when(
-                    data: (data) {
-                      final assessment = assessDataFreshness(
-                        latestDate: data['latestMovementDate'],
-                        periodFrom: DateTime.parse(currentPeriod.from),
-                        periodTo: DateTime.parse(currentPeriod.to),
-                        recordCount: 0,
-                      );
-                      if (!assessment.requiresAttention) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                        child: DataFreshnessBanner(
-                          assessment: assessment,
-                          dataLabel: 'biến động kho',
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, _) => const SizedBox.shrink(),
-                  ),
                   _InventoryMetricStrip(
                     stock: stockAsync,
                     totalProducts: stockPageAsync.when(
@@ -193,6 +172,7 @@ class InventoryScreen extends ConsumerWidget {
                     lowStock: lowStockAsync,
                     expiring: expiringAsync,
                     slowMoving: slowMovingAsync,
+                    initialIssue: initialIssue,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _InventoryAbcPanel(
@@ -261,13 +241,13 @@ class _InventoryAbcPanel extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Phân tích ABC theo doanh thu hàng hóa',
+                        'Phân nhóm hàng theo mức đóng góp doanh thu',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
-                        'Tính trên doanh thu thuần chưa VAT sau chiết khấu và hàng trả; dùng để cân đối tồn và kế hoạch bán.',
+                        'A: hàng chủ lực · B: hàng ổn định · C: hàng bổ trợ. Dùng để ưu tiên tồn kho và kế hoạch bán.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colors.textSecondary,
                         ),
@@ -312,7 +292,7 @@ class _InventoryAbcPanel extends StatelessWidget {
             error: (_, _) => const Padding(
               padding: EdgeInsets.all(AppSpacing.md),
               child: AppInlineError(
-                message: 'Không thể tải phân tích ABC tồn kho.',
+                message: 'Không thể tải phân nhóm hàng theo doanh thu.',
               ),
             ),
             data: (data) {
@@ -341,7 +321,7 @@ class _InventoryAbcPanel extends StatelessWidget {
                   visual: AppEmptyVisual.inventory,
                   message: 'Chưa có doanh thu sản phẩm trong kỳ',
                   subtitle:
-                      'Phân nhóm ABC sẽ xuất hiện khi có đơn bán không bị hủy.',
+                      'Phân nhóm hàng sẽ xuất hiện khi có đơn bán không bị hủy.',
                 );
               }
 
@@ -483,8 +463,8 @@ class _InventoryAbcReconciliation extends StatelessWidget {
           ),
           Text(
             hasAdjustment
-                ? 'Cơ sở ABC: ${money.format(classificationRevenue)} · $exceptionSkuCount SKU trả vượt bán'
-                : 'Cơ sở ABC đã khớp doanh thu thuần',
+                ? 'Doanh thu dùng để phân nhóm: ${money.format(classificationRevenue)} · $exceptionSkuCount mã hàng trả vượt bán'
+                : 'Số liệu phân nhóm đã khớp doanh thu thuần',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: hasAdjustment ? AppColors.warning : colors.textSecondary,
               fontWeight: FontWeight.w600,
@@ -518,6 +498,11 @@ class _InventoryAbcGradeCard extends StatelessWidget {
       symbol: '₫',
       decimalDigits: 0,
     ).format(stockValue);
+    final gradeName = switch (grade) {
+      'A' => 'Hàng chủ lực',
+      'B' => 'Hàng ổn định',
+      _ => 'Hàng bổ trợ',
+    };
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -548,7 +533,7 @@ class _InventoryAbcGradeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$skuCount SKU · ${(revenueShare * 100).toStringAsFixed(1)}% doanh thu',
+                  'Nhóm $grade · $gradeName',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -556,7 +541,7 @@ class _InventoryAbcGradeCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Giá trị tồn: $money',
+                  '$skuCount sản phẩm · ${(revenueShare * 100).toStringAsFixed(1)}% doanh thu · Tồn $money',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(
@@ -590,6 +575,7 @@ class _InventoryAbcProductRow extends StatelessWidget {
     final currentStock = _inventoryAbcNumber(item['currentStock']);
     final quantitySold = _inventoryAbcNumber(item['quantitySold']);
     final unit = item['unit']?.toString() ?? 'sản phẩm';
+    final imageUrl = item['imageUrl']?.toString().trim() ?? '';
     final progress = maximumRevenue <= 0 ? 0.0 : revenue / maximumRevenue;
     final money = NumberFormat.currency(
       locale: 'vi_VN',
@@ -609,17 +595,27 @@ class _InventoryAbcProductRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              grade,
-              style: TextStyle(color: color, fontWeight: FontWeight.w800),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: imageUrl.isEmpty
+                  ? _InventoryAbcImageFallback(grade: grade, color: color)
+                  : CachedNetworkImage(
+                      imageUrl: optimizedCloudinaryImageUrl(
+                        imageUrl,
+                        width: 160,
+                        height: 160,
+                        crop: 'fill',
+                      ),
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) => Container(color: colors.surface),
+                      errorWidget: (_, _, _) => _InventoryAbcImageFallback(
+                        grade: grade,
+                        color: color,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -664,8 +660,8 @@ class _InventoryAbcProductRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   compact
-                      ? 'Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit'
-                      : '${item['sku'] ?? ''} · ${item['category'] ?? 'Chưa phân loại'} · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit',
+                      ? 'Nhóm $grade · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit'
+                      : 'Nhóm $grade · ${item['sku'] ?? ''} · ${item['category'] ?? 'Chưa phân loại'} · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(
@@ -676,6 +672,26 @@ class _InventoryAbcProductRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _InventoryAbcImageFallback extends StatelessWidget {
+  final String grade;
+  final Color color;
+
+  const _InventoryAbcImageFallback({required this.grade, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: color.withValues(alpha: 0.12),
+      child: Center(
+        child: Text(
+          grade,
+          style: TextStyle(color: color, fontWeight: FontWeight.w800),
+        ),
       ),
     );
   }
@@ -743,6 +759,8 @@ int inventoryQuickActionColumnCount(double width, int actionCount) {
   if (width >= 480) return 2;
   return 1;
 }
+
+bool inventoryIssuePanelsStackVertically(double width) => width < 1120;
 
 class _InventoryQuickAction extends StatelessWidget {
   final String label;
@@ -831,6 +849,7 @@ class _InventoryMetricStrip extends StatelessWidget {
               ),
         context: 'Trong kho hiện tại',
         assetPath: AppAssets.inventory,
+        route: '/products',
       ),
       _InventoryMetric(
         label: 'Dưới định mức',
@@ -840,6 +859,7 @@ class _InventoryMetricStrip extends StatelessWidget {
           error: (_, _) => 'Chưa tải',
         ),
         context: 'Cần kiểm tra nhập hàng',
+        route: '/purchase-orders',
       ),
       _InventoryMetric(
         label: 'Sắp/quá hạn',
@@ -849,6 +869,7 @@ class _InventoryMetricStrip extends StatelessWidget {
           error: (_, _) => 'Chưa tải',
         ),
         context: 'Cần xử lý trước hạn',
+        route: '/products',
       ),
       _InventoryMetric(
         label: 'Giá trị tồn kho',
@@ -861,6 +882,7 @@ class _InventoryMetricStrip extends StatelessWidget {
         context: isAllShops
             ? '$activeShopCount cửa hàng · theo giá vốn'
             : '${warehouses?.asData?.value.length ?? 0} kho · theo giá vốn',
+        route: '/xnt-report',
       ),
     ];
 
@@ -923,12 +945,8 @@ String inventoryLowStockStatus(dynamic item) {
   final quantity = inventoryIssueQuantity(item);
   final unit =
       item['product']?['unit']?.toString() ?? item['unit']?.toString() ?? '';
-  final warehouseCount = int.tryParse(
-    item['warehouseCount']?.toString() ?? '',
-  );
-  final warehouseLabel = warehouseCount == null
-      ? ''
-      : ' · $warehouseCount kho';
+  final warehouseCount = int.tryParse(item['warehouseCount']?.toString() ?? '');
+  final warehouseLabel = warehouseCount == null ? '' : ' · $warehouseCount kho';
   return 'Tổng tồn $quantity${unit.isEmpty ? '' : ' $unit'}$warehouseLabel';
 }
 
@@ -1005,58 +1023,64 @@ class _InventoryMetricCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: metric.route == null ? null : () => context.push(metric.route!),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (metric.assetPath != null) ...[
-                AppAssetIcon(
-                  assetPath: metric.assetPath!,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                  semanticLabel: metric.label,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-              ],
-              Expanded(
-                child: Text(
-                  metric.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.textSecondary,
+              Row(
+                children: [
+                  if (metric.assetPath != null) ...[
+                    AppAssetIcon(
+                      assetPath: metric.assetPath!,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                      semanticLabel: metric.label,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                  ],
+                  Expanded(
+                    child: Text(
+                      metric.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                metric.value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.tabularStyle(
+                  context,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
                 ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                metric.context,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            metric.value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTheme.tabularStyle(
-              context,
-              fontSize: 19,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            metric.context,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1071,52 +1095,58 @@ class _InventoryMetricRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          if (metric.assetPath != null) ...[
-            AppAssetIcon(
-              assetPath: metric.assetPath!,
-              size: 18,
-              color: Theme.of(context).colorScheme.primary,
-              semanticLabel: metric.label,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  metric.label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: metric.route == null ? null : () => context.push(metric.route!),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              if (metric.assetPath != null) ...[
+                AppAssetIcon(
+                  assetPath: metric.assetPath!,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                  semanticLabel: metric.label,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  metric.context,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
-                ),
+                const SizedBox(width: AppSpacing.sm),
               ],
-            ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      metric.label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      metric.context,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                metric.value,
+                style: AppTheme.tabularStyle(
+                  context,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            metric.value,
-            style: AppTheme.tabularStyle(
-              context,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1126,11 +1156,13 @@ class _InventoryActionWorkspace extends StatelessWidget {
   final AsyncValue<List<dynamic>> lowStock;
   final AsyncValue<List<dynamic>> expiring;
   final AsyncValue<List<dynamic>> slowMoving;
+  final String? initialIssue;
 
   const _InventoryActionWorkspace({
     required this.lowStock,
     required this.expiring,
     required this.slowMoving,
+    this.initialIssue,
   });
 
   @override
@@ -1178,6 +1210,37 @@ class _InventoryActionWorkspace extends StatelessWidget {
               inventoryExpiringStatus(item, DateTime.now()),
         );
 
+        final selectedPanel = switch (initialIssue) {
+          'low-stock' => lowPanel,
+          'expired' || 'expiring' => expiringPanel,
+          _ => null,
+        };
+        if (selectedPanel != null) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
+                  border: Border.all(
+                    color: AppColors.info.withValues(alpha: 0.28),
+                  ),
+                ),
+                child: const Text(
+                  'Danh sách đã được mở theo cảnh báo từ Việc cần làm.',
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              selectedPanel,
+            ],
+          );
+        }
+
         if (constraints.maxWidth < 760) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1191,33 +1254,30 @@ class _InventoryActionWorkspace extends StatelessWidget {
           );
         }
 
-        if (constraints.maxWidth < 1120) {
+        if (inventoryIssuePanelsStackVertically(constraints.maxWidth)) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: lowPanel),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(child: expiringPanel),
-                ],
-              ),
+              lowPanel,
+              const SizedBox(height: AppSpacing.md),
+              expiringPanel,
               const SizedBox(height: AppSpacing.md),
               slowPanel,
             ],
           );
         }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: lowPanel),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(child: expiringPanel),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(child: slowPanel),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: lowPanel),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: expiringPanel),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: slowPanel),
+            ],
+          ),
         );
       },
     );
@@ -1703,11 +1763,13 @@ class _InventoryMetric {
   final String value;
   final String context;
   final String? assetPath;
+  final String? route;
 
   const _InventoryMetric({
     required this.label,
     required this.value,
     required this.context,
     this.assetPath,
+    this.route,
   });
 }

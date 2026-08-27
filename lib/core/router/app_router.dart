@@ -252,10 +252,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/', builder: (_, _) => const DashboardScreen()),
           // Sales
           GoRoute(path: '/sales', builder: (_, _) => const SalesListScreen()),
-          GoRoute(
-            path: '/sales/new',
-            builder: (_, _) => const PosScreen(),
-          ),
+          GoRoute(path: '/sales/new', builder: (_, _) => const PosScreen()),
           GoRoute(path: '/pos', redirect: (_, _) => '/sales/new'),
           GoRoute(
             path: '/sales/:id',
@@ -270,7 +267,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/customer-debts',
-            builder: (_, _) => const CustomerDebtScreen(),
+            builder: (_, state) => CustomerDebtScreen(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           // Products
           GoRoute(
@@ -329,7 +328,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Inventory
           GoRoute(
             path: '/inventory',
-            builder: (_, _) => const InventoryScreen(),
+            builder: (_, state) => InventoryScreen(
+              initialIssue: state.uri.queryParameters['issue'],
+            ),
           ),
           GoRoute(
             path: '/stock-take',
@@ -393,7 +394,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/tax-obligations',
-            builder: (_, _) => const TaxObligationScreen(),
+            builder: (_, state) => TaxObligationScreen(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/salary-ledger',
@@ -441,7 +444,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/notifications',
-            builder: (_, _) => const NotificationListScreen(),
+            builder: (_, state) => NotificationListScreen(
+              initialFilter: state.uri.queryParameters['filter'],
+            ),
           ),
           GoRoute(
             path: '/staff',

@@ -66,6 +66,7 @@ const agricultureSlugs = new Set([
     'hat-giong-lua-xac-nhan-10kg',
     'hat-giong-rau-cai-100g',
     'khay-uom-105-lo',
+    'keo-cat-canh',
     'luoi-che-nang-2m-x-50m',
     'phan-bon-la-vi-luong-500ml',
     'phan-dap-18-46-0-50kg',
@@ -79,6 +80,7 @@ const agricultureSlugs = new Set([
     'thuoc-tru-co-chon-loc-500ml',
     'thuoc-tru-sau-sinh-hoc-500ml',
     'trau-hun-20l',
+    'gang-tay-lam-vuon',
     'voi-nong-nghiep-25kg',
     'xo-dua-da-xu-ly-20l',
 ]);
@@ -192,7 +194,7 @@ async function upload(
     return result.secure_url;
 }
 
-async function uploadAll(): Promise<Map<string, string>> {
+async function uploadAll(onlyMissingProducts = false): Promise<Map<string, string>> {
     cloudinary.config({
         cloud_name: config.cloudinaryCloudName,
         api_key: config.cloudinaryApiKey,
@@ -205,15 +207,32 @@ async function uploadAll(): Promise<Map<string, string>> {
         file: string;
         publicId: string;
     }> = [];
+    const missingProductKeys = new Set<string>();
+    if (onlyMissingProducts) {
+        const missingProducts = await AppDataSource.query(
+            `SELECT shop_id, trim(split_part(name, chr(183), 1)) AS family
+             FROM public.products
+             WHERE shop_id = ANY($1) AND image_url IS NULL`,
+            [shops.map((shop) => shop.profileId)],
+        );
+        for (const product of missingProducts) {
+            missingProductKeys.add(
+                `product:${product.shop_id}:${slugify(String(product.family))}`,
+            );
+        }
+    }
     for (const shop of shops) {
         for (const productSlug of shop.productSlugs) {
+            const key = `product:${shop.profileId}:${productSlug}`;
+            if (onlyMissingProducts && !missingProductKeys.has(key)) continue;
             tasks.push({
-                key: `product:${shop.profileId}:${productSlug}`,
+                key,
                 file: path.join(mediaRoot, 'products', `${productSlug}.webp`),
                 publicId: `smartstock/shops/${shop.profileId}/products/test-seed/${productSlug}`,
             });
         }
 
+        if (onlyMissingProducts) continue;
         const items = [
             ['logo', 'brand', `logo-${shop.slug}.webp`, 'branding/test-logo'],
             ['qr', 'brand', `qr-${shop.slug}.webp`, 'payment-qr/test-seed'],
@@ -248,7 +267,10 @@ async function uploadAll(): Promise<Map<string, string>> {
     return urls;
 }
 
-async function updateDatabase(urls: Map<string, string>): Promise<void> {
+async function updateDatabase(
+    urls: Map<string, string>,
+    onlyMissingProducts = false,
+): Promise<void> {
     await AppDataSource.transaction(async (manager) => {
         const products = await manager.query(
             `SELECT id, shop_id, trim(split_part(name, chr(183), 1)) AS family
@@ -260,19 +282,23 @@ async function updateDatabase(urls: Map<string, string>): Promise<void> {
         for (const product of products) {
             const slug = slugify(String(product.family));
             const url = urls.get(`product:${product.shop_id}:${slug}`);
-            if (!url) {
+            if (!url && !onlyMissingProducts) {
                 throw new Error(`Không có ảnh cho sản phẩm ${product.id}: ${product.family}`);
             }
+            if (!url) continue;
             productUpdates.push({ id: Number(product.id), url });
         }
-        await manager.query(
-            `UPDATE public.products AS product
-             SET image_url = media.url, updated_at = NOW()
-             FROM jsonb_to_recordset($1::jsonb) AS media(id int, url text)
-             WHERE product.id = media.id`,
-            [JSON.stringify(productUpdates)],
-        );
+        if (productUpdates.length) {
+            await manager.query(
+                `UPDATE public.products AS product
+                 SET image_url = media.url, updated_at = NOW()
+                 FROM jsonb_to_recordset($1::jsonb) AS media(id int, url text)
+                 WHERE product.id = media.id`,
+                [JSON.stringify(productUpdates)],
+            );
+        }
 
+        if (onlyMissingProducts) return;
         for (const shop of shops) {
             const logo = urls.get(`logo:${shop.profileId}`);
             const qr = urls.get(`qr:${shop.profileId}`);
@@ -374,10 +400,11 @@ export async function seedTestMedia(): Promise<Record<string, unknown>[]> {
         throw new Error('Thiếu cấu hình Cloudinary');
     }
 
-    const urls = await uploadAll();
+    const onlyMissingProducts = process.argv.includes('--only-missing-products');
+    const urls = await uploadAll(onlyMissingProducts);
     console.log(`Đã tải ${urls.size} tài nguyên lên Cloudinary`);
 
-    await updateDatabase(urls);
+    await updateDatabase(urls, onlyMissingProducts);
     const result = await validateResult();
     console.table(result);
     return result;

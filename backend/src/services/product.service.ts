@@ -12,6 +12,10 @@ import {
     normalizeProductInput,
     normalizeUnitConversionInput,
 } from '../product/product-input.utils';
+import {
+    vietnameseSearchExpression,
+    vietnameseSearchParams,
+} from '../common/vietnamese-search.utils';
 
 export class ProductService {
     private productRepo = AppDataSource.getRepository(Product);
@@ -35,16 +39,24 @@ export class ProductService {
             .leftJoinAndSelect('costItems.costType', 'costType')
             .where('p.shopId = :shopId AND p.isActive = :isActive', { shopId, isActive: true });
 
-        if (search) {
+        if (search?.trim()) {
+            const searchParams = vietnameseSearchParams(search);
             qb.andWhere(new Brackets(sub => {
-                sub.where('p.name ILIKE :search', { search: `%${search}%` })
-                   .orWhere('p.sku ILIKE :search', { search: `%${search}%` })
-                   .orWhere('p.barcode ILIKE :search', { search: `%${search}%` });
-            }));
+                sub.where(vietnameseSearchExpression('p.name'))
+                   .orWhere(vietnameseSearchExpression('p.sku'))
+                   .orWhere(vietnameseSearchExpression('p.barcode'));
+            }), searchParams);
         }
 
-        if (tag) {
-            qb.andWhere('p.tags ILIKE :tag', { tag: `%${tag}%` });
+        if (tag?.trim()) {
+            qb.andWhere(
+                `EXISTS (
+                    SELECT 1
+                    FROM unnest(string_to_array(COALESCE(p.tags, ''), ',')) AS tag_value(value)
+                    WHERE LOWER(BTRIM(tag_value.value)) = LOWER(:tag)
+                )`,
+                { tag: tag.trim() },
+            );
         }
 
         const [items, total] = await qb.skip((page - 1) * limit)
