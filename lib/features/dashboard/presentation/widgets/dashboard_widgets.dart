@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/assets/app_assets.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_animations.dart';
+import '../../../../core/widgets/app_shimmer.dart';
 import '../../../../core/widgets/chart_widgets.dart';
 import '../../../../core/utils/excel_export_service.dart';
 import '../../../finance/providers/finance_provider.dart';
@@ -18,6 +19,7 @@ import '../../../settings/providers/tax_config_provider.dart';
 import '../../../sales/providers/sales_provider.dart';
 import '../../../inventory/providers/inventory_provider.dart';
 import '../../../customers/providers/customer_provider.dart';
+import '../../providers/dashboard_action_provider.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -400,10 +402,11 @@ class TimeFilterBar extends StatelessWidget {
         spacing: 2,
         runSpacing: 2,
         children: [
-          _buildBtn(context, 'week', 'Tuần này', theme, c),
-          _buildBtn(context, 'month', 'Tháng này', theme, c),
-          _buildBtn(context, '6_months', '6 tháng', theme, c),
-          _buildBtn(context, 'year', 'Năm nay', theme, c),
+          _buildBtn(context, 'day', 'Ngày', theme, c),
+          _buildBtn(context, 'week', 'Tuần', theme, c),
+          _buildBtn(context, 'month', 'Tháng', theme, c),
+          _buildBtn(context, 'quarter', 'Quý', theme, c),
+          _buildBtn(context, 'year', 'Năm', theme, c),
         ],
       ),
     );
@@ -417,21 +420,31 @@ class TimeFilterBar extends StatelessWidget {
     AppThemeColors c,
   ) {
     final active = currentFilter == val;
-    return GestureDetector(
-      onTap: () => onChanged(val),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? c.card : Colors.transparent,
+    return Semantics(
+      button: true,
+      selected: active,
+      label: 'Lọc theo $label',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(4),
+        child: InkWell(
+          onTap: active ? null : () => onChanged(val),
           borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-            color: active ? c.textPrimary : c.textSecondary,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: active ? c.card : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                color: active ? c.textPrimary : c.textSecondary,
+              ),
+            ),
           ),
         ),
       ),
@@ -3072,7 +3085,14 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
 }
 
 class DashboardPriorityList extends ConsumerStatefulWidget {
-  const DashboardPriorityList({super.key});
+  final bool fixedHeight;
+  final bool showViewAll;
+
+  const DashboardPriorityList({
+    super.key,
+    this.fixedHeight = false,
+    this.showViewAll = true,
+  });
 
   @override
   ConsumerState<DashboardPriorityList> createState() =>
@@ -3091,187 +3111,209 @@ class _DashboardPriorityListState extends ConsumerState<DashboardPriorityList> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final shopState = ref.watch(shopProvider);
-    final entries = <Widget>[];
-
-    if (shopState.isOwner || shopState.hasPermission('finance')) {
-      final taxConfig = ref.watch(taxConfigProvider);
-      if (!taxConfig.isLoaded) {
-        entries.add(
-          _PriorityRow(
-            number: entries.length + 1,
-            title: 'Kiểm tra nghĩa vụ thuế',
-            detail: taxConfig.isLoading
-                ? 'Đang tải cấu hình từ DB'
-                : 'Cấu hình thuế chưa hợp lệ',
-            status: taxConfig.isLoading ? 'Đang tải' : 'Kiểm tra',
-            statusColor: taxConfig.isLoading
-                ? colors.textMuted
-                : AppColors.warning,
-            onTap: () => context.push('/tax-calculator'),
-          ),
-        );
-      } else {
-        final today = DateTime.now();
-        final salesAsync = ref.watch(
-          salesSummaryProvider((
-            from: '${today.year}-01-01',
-            to: today.toIso8601String().split('T').first,
-          )),
-        );
-        final thresholds = taxConfig.thresholds!;
-        entries.add(
-          salesAsync.when(
-            loading: () => _PriorityRow(
-              number: entries.length + 1,
-              title: 'Kiểm tra nghĩa vụ thuế',
-              detail: 'Đang tải doanh thu năm',
-              status: 'Đang tải',
-              statusColor: colors.textMuted,
-              onTap: () => context.push('/tax-calculator'),
-            ),
-            error: (_, _) => _PriorityRow(
-              number: entries.length + 1,
-              title: 'Kiểm tra nghĩa vụ thuế',
-              detail: 'Chưa tải được doanh thu năm',
-              status: 'Kiểm tra',
-              statusColor: AppColors.warning,
-              onTap: () => context.push('/tax-calculator'),
-            ),
-            data: (data) {
-              final revenue =
-                  num.tryParse(
-                    data['totalRevenue']?.toString() ?? '0',
-                  )?.toDouble() ??
-                  0.0;
-              return _PriorityRow(
-                number: entries.length + 1,
-                title: 'Thuế hộ kinh doanh ${taxConfig.fiscalYear}',
-                detail: thresholds.getTierLabel(revenue),
-                status: 'Chi tiết',
-                statusColor: thresholds.getColor(revenue),
-                onTap: () => context.push('/tax-calculator'),
-              );
-            },
-          ),
-        );
-      }
-    }
-
-    if (shopState.isOwner || shopState.hasPermission('inventory')) {
-      entries.add(
-        ref
-            .watch(lowStockProvider)
-            .when(
-              loading: () => _PriorityRow(
-                number: entries.length + 1,
-                title: 'Tồn kho cần xử lý',
-                detail: 'Đang tải dữ liệu',
-                status: 'Đang tải',
-                statusColor: colors.textMuted,
-                onTap: () => context.push('/inventory'),
-              ),
-              error: (_, _) => _PriorityRow(
-                number: entries.length + 1,
-                title: 'Tồn kho cần xử lý',
-                detail: 'Chưa tải được dữ liệu',
-                status: 'Kiểm tra',
-                statusColor: AppColors.warning,
-                onTap: () => context.push('/inventory'),
-              ),
-              data: (items) => _PriorityRow(
-                number: entries.length + 1,
-                title: items.isEmpty
-                    ? 'Tồn kho trong định mức'
-                    : '${items.length} sản phẩm dưới định mức tồn tổng',
-                detail: items.isEmpty
-                    ? 'Chưa có sản phẩm cần nhập thêm'
-                    : 'Kiểm tra và đề xuất nhập hàng',
-                status: items.isEmpty ? 'Ổn định' : 'Cần xử lý',
-                statusColor: items.isEmpty
-                    ? AppColors.success
-                    : AppColors.danger,
-                onTap: () => context.push('/inventory'),
-              ),
-            ),
-      );
-    }
-
-    if (shopState.isOwner || shopState.hasPermission('customers')) {
-      entries.add(
-        ref
-            .watch(overdueDebtsProvider)
-            .when(
-              loading: () => _PriorityRow(
-                number: entries.length + 1,
-                title: 'Công nợ khách hàng',
-                detail: 'Đang tải dữ liệu',
-                status: 'Đang tải',
-                statusColor: colors.textMuted,
-                onTap: () => context.push('/customer-debts'),
-              ),
-              error: (_, _) => _PriorityRow(
-                number: entries.length + 1,
-                title: 'Công nợ khách hàng',
-                detail: 'Chưa tải được dữ liệu',
-                status: 'Kiểm tra',
-                statusColor: AppColors.warning,
-                onTap: () => context.push('/customer-debts'),
-              ),
-              data: (items) => _PriorityRow(
-                number: entries.length + 1,
-                title: items.isEmpty
-                    ? 'Không có nợ quá hạn'
-                    : '${items.length} khoản nợ quá hạn',
-                detail: items.isEmpty
-                    ? 'Công nợ đang trong hạn'
-                    : 'Mở sổ nợ để theo dõi và thu nợ',
-                status: items.isEmpty ? 'Ổn định' : 'Quá hạn',
-                statusColor: items.isEmpty
-                    ? AppColors.success
-                    : AppColors.danger,
-                onTap: () => context.push('/customer-debts'),
-              ),
-            ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border.all(color: colors.divider),
-        borderRadius: BorderRadius.circular(AppRadius.card),
+    final actionAsync = ref.watch(dashboardActionProvider);
+    final content = actionAsync.when(
+      loading: () => const _ActionCenterSkeleton(),
+      error: (error, _) => _ActionCenterLoadError(
+        onRetry: () => ref.invalidate(dashboardActionProvider),
       ),
-      child: Column(
+      data: (data) => _ActionCenterContent(
+        data: data,
+        controller: _priorityController,
+        fixedHeight: widget.fixedHeight,
+      ),
+    );
+
+    return SizedBox(
+      height: widget.fixedHeight ? 440 : null,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border.all(color: colors.divider),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Việc cần làm',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      if (widget.showViewAll)
+                        TextButton(
+                          onPressed: () =>
+                              context.push('/notifications?filter=actionable'),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(48, 44),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          child: const Text('Xem tất cả'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    'Các việc cần chú ý trước khi xem báo cáo chi tiết.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Divider(height: 1, color: colors.divider),
+            if (widget.fixedHeight) Expanded(child: content) else content,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionCenterLoadError extends StatelessWidget {
+  const _ActionCenterLoadError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Chưa tải được danh sách công việc',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Bạn vẫn có thể xem số liệu và thử tải lại sau.',
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton(onPressed: onRetry, child: const Text('Thử lại')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionCenterContent extends StatelessWidget {
+  final DashboardActionData data;
+  final ScrollController controller;
+  final bool fixedHeight;
+
+  const _ActionCenterContent({
+    required this.data,
+    required this.controller,
+    required this.fixedHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final actionRows = <Widget>[
+      if (data.items.isEmpty)
+        _NoUrgentActions(hasVerifiedSummary: data.healthySummary.isNotEmpty)
+      else
+        for (var index = 0; index < data.items.length; index++)
+          _PriorityRow(number: index + 1, item: data.items[index]),
+    ];
+    final healthy = _HealthySummary(items: data.healthySummary);
+
+    if (!fixedHeight) {
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+          for (var index = 0; index < actionRows.length; index++) ...[
+            if (index > 0) Divider(height: 1, color: colors.divider),
+            actionRows[index],
+          ],
+          healthy,
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Scrollbar(
+            controller: controller,
+            thumbVisibility: data.items.length > 3,
+            child: ListView.separated(
+              controller: controller,
+              padding: EdgeInsets.zero,
+              itemCount: actionRows.length,
+              separatorBuilder: (_, _) =>
+                  Divider(height: 1, color: colors.divider),
+              itemBuilder: (_, index) => actionRows[index],
+            ),
+          ),
+        ),
+        healthy,
+      ],
+    );
+  }
+}
+
+class _NoUrgentActions extends StatelessWidget {
+  final bool hasVerifiedSummary;
+
+  const _NoUrgentActions({required this.hasVerifiedSummary});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle_outline, color: AppColors.success),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Việc cần làm',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => context.push('/notifications'),
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(44, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-                      child: const Text('Xem tất cả'),
-                    ),
-                  ],
+                Text(
+                  hasVerifiedSummary
+                      ? 'Không có việc cần xử lý ngay'
+                      : 'Không có dữ liệu theo quyền hiện tại',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  'Các việc cần chú ý trước khi xem báo cáo chi tiết.',
+                  hasVerifiedSummary
+                      ? 'Các trạng thái đã xác minh được tổng hợp bên dưới.'
+                      : 'Action Center chỉ hiển thị nhóm dữ liệu bạn được phép xem.',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
@@ -3279,35 +3321,86 @@ class _DashboardPriorityListState extends ConsumerState<DashboardPriorityList> {
               ],
             ),
           ),
-          Divider(height: 1, color: colors.divider),
-          if (entries.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Text(
-                'Không có mục cần xử lý theo quyền hiện tại.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
-              ),
-            )
-          else
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 344),
-              child: Scrollbar(
-                controller: _priorityController,
-                thumbVisibility: entries.length > 3,
-                child: ListView.separated(
-                  controller: _priorityController,
-                  shrinkWrap: true,
-                  padding: EdgeInsets.zero,
-                  itemCount: entries.length,
-                  separatorBuilder: (_, _) =>
-                      Divider(height: 1, color: colors.divider),
-                  itemBuilder: (context, index) => entries[index],
-                ),
-              ),
-            ),
         ],
+      ),
+    );
+  }
+}
+
+class _HealthySummary extends StatelessWidget {
+  final List<DashboardActionItem> items;
+
+  const _HealthySummary({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    final colors = AppThemeColors.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.success.withValues(alpha: 0.055),
+        border: Border(top: BorderSide(color: colors.divider)),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.verified_outlined,
+            size: 20,
+            color: AppColors.success,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Đang ổn định',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  items.map((item) => item.title).join(' · '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionCenterSkeleton extends StatelessWidget {
+  const _ActionCenterSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppShimmer(
+      child: Column(
+        children: List.generate(
+          3,
+          (_) => const Padding(
+            padding: EdgeInsets.all(AppSpacing.md),
+            child: ShimmerBox(
+              width: double.infinity,
+              height: 54,
+              radius: AppRadius.control,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -3315,105 +3408,106 @@ class _DashboardPriorityListState extends ConsumerState<DashboardPriorityList> {
 
 class _PriorityRow extends StatelessWidget {
   final int number;
-  final String title;
-  final String detail;
-  final String status;
-  final Color statusColor;
-  final VoidCallback onTap;
+  final DashboardActionItem item;
 
-  const _PriorityRow({
-    required this.number,
-    required this.title,
-    required this.detail,
-    required this.status,
-    required this.statusColor,
-    required this.onTap,
-  });
+  const _PriorityRow({required this.number, required this.item});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final statusColor = switch (item.severity) {
+      DashboardActionSeverity.critical => AppColors.danger,
+      DashboardActionSeverity.warning => AppColors.warning,
+      DashboardActionSeverity.info => AppColors.info,
+      DashboardActionSeverity.healthy => AppColors.success,
+    };
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            color: statusColor.withValues(alpha: 0.045),
-            border: Border(left: BorderSide(color: statusColor, width: 3)),
-          ),
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$number',
-                  style: AppTheme.tabularStyle(
-                    context,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
+    return Semantics(
+      button: true,
+      label: '${item.badge}: ${item.title}. ${item.detail}',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push(item.destination),
+          mouseCursor: SystemMouseCursors.click,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 76),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.045),
+              border: Border(left: BorderSide(color: statusColor, width: 3)),
+            ),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
                   ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colors.textPrimary,
-                      ),
+                  child: Text(
+                    '$number',
+                    style: AppTheme.tabularStyle(
+                      context,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      detail,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.textMuted,
-                        height: 1.4,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.detail,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.textMuted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: AppSpacing.xxs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.24),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
-                  vertical: AppSpacing.xxs,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.control),
-                  border: Border.all(
-                    color: statusColor.withValues(alpha: 0.24),
+                  ),
+                  child: Text(
+                    item.badge,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-                child: Text(
-                  status,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

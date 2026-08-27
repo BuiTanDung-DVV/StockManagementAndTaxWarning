@@ -8,8 +8,8 @@ type DbValue = string | number | boolean | Date | null;
 type Row = Record<string, DbValue>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const END_DATE = new Date('2026-07-28T17:30:00+07:00');
-const START_DATE = new Date('2023-07-29T08:00:00+07:00');
+const END_DATE = new Date('2026-08-27T17:30:00+07:00');
+const START_DATE = new Date('2023-08-28T08:00:00+07:00');
 type ProfileKey = 'construction' | 'agriculture';
 
 type ProductDefinition = {
@@ -35,17 +35,28 @@ type StoreProfile = {
   suppliers: string[];
 };
 
-const commonRetailCustomers = [
-  'Nguyễn Minh Anh', 'Trần Quốc Bảo', 'Lê Thanh Bình', 'Phạm Ngọc Châu',
-  'Hoàng Văn Dũng', 'Võ Mỹ Duyên', 'Đặng Đức Huy', 'Bùi Gia Hưng',
-  'Đỗ Thùy Linh', 'Hồ Nhật Minh', 'Ngô Kim Ngân', 'Dương Hoài Nam',
-  'Lý Khánh Phương', 'Mai Quang Phúc', 'Trịnh Bảo Trâm', 'Tạ Minh Tuấn',
+const constructionRetailCustomers = [
+  'Nguyễn Văn Hùng · Nhà ở Tân Phú', 'Trần Minh Khôi · Công trình Bình Tân',
+  'Lê Hoàng Nam · Thợ hồ Quận 12', 'Phạm Quốc Việt · Sửa nhà Gò Vấp',
+  'Võ Thanh Tùng · Công trình Thủ Đức', 'Đặng Gia Bảo · Nhà phố Hóc Môn',
+  'Bùi Đức Thành · Thầu xây tô', 'Đỗ Minh Trí · Thi công điện nước',
+  'Hồ Quang Phúc · Nội thất căn hộ', 'Ngô Thành Luân · Đội ốp lát',
+  'Dương Anh Khoa · Sửa chữa dân dụng', 'Mai Tuấn Kiệt · Nhà trọ Bình Chánh',
+];
+
+const agricultureRetailCustomers = [
+  'Nguyễn Thị Hạnh · Vườn rau Củ Chi', 'Trần Văn Lợi · Ruộng lúa Đức Hòa',
+  'Lê Minh Tâm · Vườn mai Hóc Môn', 'Phạm Thị Ngọc · Trại cây giống',
+  'Võ Văn Sang · Vườn cây ăn trái', 'Đặng Quốc Thái · Trang trại dưa lưới',
+  'Bùi Thanh Bình · Đại lý vật tư xã', 'Đỗ Thị Lan · Vườn hoa kiểng',
+  'Hồ Văn Phát · Tổ trồng rau sạch', 'Ngô Minh Đức · Nông hộ trồng bắp',
+  'Dương Thị Mai · Vườn ươm cây', 'Tạ Quốc Cường · Trang trại tổng hợp',
 ];
 
 const STORE_PROFILES: Record<ProfileKey, StoreProfile> = {
   construction: {
     key: 'construction',
-    datasetVersion: 'STORE_HISTORY_3Y_CONSTRUCTION_V1',
+    datasetVersion: 'STORE_HISTORY_3Y_CONSTRUCTION_V2',
     skuPrefix: 'VL',
     description: 'Vật liệu xây dựng, điện nước, đồ gia dụng và thiết bị phòng tắm',
     peakMonths: [1, 2, 10, 11],
@@ -86,7 +97,7 @@ const STORE_PROFILES: Record<ProfileKey, StoreProfile> = {
       { name: 'Khóa cửa tay gạt', category: 'Đồ gia dụng', unit: 'Bộ', cost: 285000, sell: 395000, minStock: 15, maxOrderQty: 3 },
     ],
     customers: [
-      ...commonRetailCustomers,
+      ...constructionRetailCustomers,
       'Công ty Xây dựng An Phát', 'Đội thầu Minh Tâm', 'Nội thất Gia Hưng',
       'Cửa hàng Điện nước Phú Thành', 'Công ty Kiến trúc Nam Việt',
       'Đội xây dựng Hòa Bình', 'Nhà thầu Thành Công', 'Xưởng nội thất Mộc Việt',
@@ -99,7 +110,7 @@ const STORE_PROFILES: Record<ProfileKey, StoreProfile> = {
   },
   agriculture: {
     key: 'agriculture',
-    datasetVersion: 'STORE_HISTORY_3Y_AGRICULTURE_V1',
+    datasetVersion: 'STORE_HISTORY_3Y_AGRICULTURE_V2',
     skuPrefix: 'NN',
     description: 'Phân bón, hạt giống, bảo vệ thực vật và vật tư nông nghiệp',
     peakMonths: [0, 1, 4, 5, 8, 9],
@@ -138,7 +149,7 @@ const STORE_PROFILES: Record<ProfileKey, StoreProfile> = {
       { name: 'Găng tay làm vườn', category: 'Vật tư nông nghiệp', unit: 'Đôi', cost: 18000, sell: 32000, minStock: 40, maxOrderQty: 6 },
     ],
     customers: [
-      ...commonRetailCustomers,
+      ...agricultureRetailCustomers,
       'Hợp tác xã Nông nghiệp Bình Minh', 'Trang trại Rau sạch An Nhiên',
       'Tổ hợp tác Lúa giống Hòa Phát', 'Nhà vườn Cây ăn trái Thành Công',
       'Đại lý Nông nghiệp Phú Điền', 'Trang trại Hoa màu Tân Lập',
@@ -151,59 +162,6 @@ const STORE_PROFILES: Record<ProfileKey, StoreProfile> = {
     ],
   },
 };
-
-function expandCatalog(
-  baseProducts: ProductDefinition[],
-  productLines: string[],
-  targetCount: number,
-): ProductDefinition[] {
-  const priceFactors = [0.9, 0.95, 1, 1.04, 1.08, 1.12, 1.17, 1.22, 1.28];
-  const expanded: ProductDefinition[] = [];
-  for (const base of baseProducts) {
-    for (let index = 0; index < productLines.length; index += 1) {
-      const factor = priceFactors[index % priceFactors.length];
-      expanded.push({
-        ...base,
-        name: `${base.name} · ${productLines[index]}`,
-        cost: roundMoney(base.cost * factor),
-        sell: roundMoney(base.sell * factor),
-        minStock: Math.max(2, Math.round(base.minStock / 3)),
-      });
-    }
-  }
-  return expanded.slice(0, targetCount);
-}
-
-STORE_PROFILES.construction.products = expandCatalog(
-  STORE_PROFILES.construction.products,
-  [
-    'Kiến Việt Tiêu chuẩn',
-    'An Gia Phổ thông',
-    'Minh Long Bền chắc',
-    'Phú Khang Công trình',
-    'Tân Việt Chuyên dụng',
-    'Thành Đạt Cao cấp',
-    'Nam Việt Tiết kiệm',
-    'Hoàng Nam Premium',
-  ],
-  250,
-);
-
-STORE_PROFILES.agriculture.products = expandCatalog(
-  STORE_PROFILES.agriculture.products,
-  [
-    'Mùa Vàng Tiêu chuẩn',
-    'Đại Nông Phổ thông',
-    'Việt Nông Chuyên canh',
-    'Phú Điền Tiết kiệm',
-    'Nông Xanh Sinh học',
-    'An Nhiên Cao cấp',
-    'Bình Minh Nhà vườn',
-    'Tân Lập Trang trại',
-    'Hòa Phát Chuyên dụng',
-  ],
-  250,
-);
 
 function parseNumberArg(name: string): number | undefined {
   const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`));
@@ -234,6 +192,8 @@ function createRandom(seed: number): () => number {
 }
 
 function roundMoney(value: number): number {
+  if (value < 10_000) return Math.round(value / 50) * 50;
+  if (value < 100_000) return Math.round(value / 500) * 500;
   return Math.round(value / 1000) * 1000;
 }
 
@@ -385,6 +345,7 @@ async function ensureValidationSchema(runner: QueryRunner): Promise<void> {
 async function validateGeneratedData(
   runner: QueryRunner,
   shopId: number,
+  expectedProductCount: number,
 ): Promise<void> {
   const rows = await runner.query(`
     SELECT
@@ -559,10 +520,10 @@ async function validateGeneratedData(
     ['invoiceCount', Number(result.invoiceCount) > 0 ? 0 : 1],
     ['receivableCount', Number(result.receivableCount) > 0 ? 0 : 1],
     ['knowledgeCount', Number(result.knowledgeCount) >= 3 ? 0 : 1],
-    ['productCount', Math.abs(Number(result.productCount) - 250)],
+    ['productCount', Math.abs(Number(result.productCount) - expectedProductCount)],
     ['tagCount', Number(result.tagCount) >= 8 ? 0 : 1],
-    ['batchCount', Math.abs(Number(result.batchCount) - 250)],
-    ['lotCount', Math.abs(Number(result.lotCount) - 250)],
+    ['batchCount', Math.abs(Number(result.batchCount) - expectedProductCount)],
+    ['lotCount', Math.abs(Number(result.lotCount) - expectedProductCount)],
     ['stockTakeCount', Math.abs(Number(result.stockTakeCount) - 12)],
     ['forecastCount', Math.abs(Number(result.forecastCount) - 90)],
     ['purchaseWithoutInvoiceCount', Number(result.purchaseWithoutInvoiceCount) >= 7 ? 0 : 1],
@@ -768,6 +729,21 @@ async function seed(
     );
     if (!shops.length) throw new Error(`Không tìm thấy cửa hàng id=${shopId}`);
 
+    const existingProductMedia = await runner.query(
+      `SELECT
+         TRIM(SPLIT_PART(name, CHR(183), 1)) AS family,
+         MAX(image_url) FILTER (WHERE image_url IS NOT NULL) AS image_url
+       FROM products
+       WHERE shop_id = $1
+       GROUP BY TRIM(SPLIT_PART(name, CHR(183), 1))`,
+      [shopId],
+    );
+    const imageUrlByFamily = new Map<string, string>(
+      existingProductMedia
+        .filter((row: { image_url?: string | null }) => row.image_url)
+        .map((row: { family: string; image_url: string }) => [row.family, row.image_url]),
+    );
+
     const existingMarker = await runner.query(
       "SELECT id FROM activity_logs WHERE shop_id = $1 AND entity_type = 'DATASET' AND entity_name = $2 LIMIT 1",
       [shopId, profile.datasetVersion],
@@ -792,7 +768,7 @@ async function seed(
     const categoryNames = [...new Set(profile.products.map((product) => product.category))];
     const categoryRows = categoryNames
       .map((name) => ({
-        name: `${name} · ${key}`,
+        name,
         shop_id: shopId,
         description: `Danh mục ${profile.description.toLocaleLowerCase('vi-VN')}`,
         is_active: true,
@@ -839,6 +815,7 @@ async function seed(
       sku: `${profile.skuPrefix}-${key}-${String(index + 1).padStart(3, '0')}`,
       shop_id: shopId,
       name: definition.name,
+      image_url: imageUrlByFamily.get(definition.name) ?? null,
       category_id: categoryIdByName.get(definition.category)!,
       unit: definition.unit,
       cost_price: roundMoney(definition.cost * 1.07),
@@ -850,9 +827,13 @@ async function seed(
       description: `Sản phẩm thuộc nhóm ${definition.category.toLocaleLowerCase('vi-VN')}`,
       tags: [
         definition.category,
-        index < 40 ? 'Bán chạy' : 'Hàng cần theo dõi',
+        index < Math.ceil(profile.products.length * 0.25)
+          ? 'Bán chạy'
+          : index >= Math.floor(profile.products.length * 0.75)
+            ? 'Hàng cần theo dõi'
+            : null,
         profile.key === 'agriculture' ? 'Theo mùa vụ' : 'Hàng công trình',
-      ].join(','),
+      ].filter(Boolean).join(','),
       is_active: true,
       created_at: START_DATE,
       updated_at: END_DATE,
@@ -860,7 +841,7 @@ async function seed(
     const products = await bulkInsert(
       runner,
       'products',
-      ['sku', 'shop_id', 'name', 'category_id', 'unit', 'cost_price', 'selling_price',
+      ['sku', 'shop_id', 'name', 'image_url', 'category_id', 'unit', 'cost_price', 'selling_price',
         'wholesale_price', 'wholesale_min_qty', 'tax_rate', 'min_stock', 'description',
         'tags', 'is_active', 'created_at', 'updated_at'],
       productRows,
@@ -870,13 +851,20 @@ async function seed(
       runner,
       'cost_types',
       ['name', 'shop_id', 'description', 'is_active', 'sort_order', 'created_at'],
-      [
-        ['Vận chuyển', 'Chi phí đưa hàng về kho'],
-        ['Bốc xếp', 'Chi phí bốc xếp và sắp kho'],
-        ['Bảo quản', 'Chi phí lưu kho và bảo quản'],
-        ['Hao hụt định mức', 'Hao hụt hợp lý theo nhóm hàng'],
-      ].map(([name, description], index) => ({
-        name: `${name} · ${key}`,
+      (profile.key === 'construction'
+        ? [
+          ['Vận chuyển vật liệu', 'Chi phí đưa vật liệu và thiết bị về kho'],
+          ['Bốc xếp công trình', 'Chi phí bốc xếp vật liệu nặng và hàng công trình'],
+          ['Bảo quản kho VLXD', 'Chi phí che chắn và bảo quản vật liệu, nội thất'],
+          ['Hao hụt vật liệu', 'Hao hụt hợp lý theo đặc tính vật liệu xây dựng'],
+        ]
+        : [
+          ['Vận chuyển vật tư nông nghiệp', 'Chi phí đưa phân bón và vật tư về kho'],
+          ['Bốc xếp phân bón', 'Chi phí bốc xếp phân bón và hàng bao'],
+          ['Bảo quản vật tư nông nghiệp', 'Chi phí bảo quản hạt giống và thuốc đúng điều kiện'],
+          ['Hao hụt vật tư nông nghiệp', 'Hao hụt hợp lý theo nhóm vật tư nông nghiệp'],
+        ]).map(([name, description], index) => ({
+        name,
         shop_id: shopId,
         description,
         is_active: true,
@@ -2574,7 +2562,7 @@ async function seed(
       200,
     );
 
-    await validateGeneratedData(runner, shopId);
+    await validateGeneratedData(runner, shopId, profile.products.length);
 
     if (commitChanges) {
       await runner.commitTransaction();

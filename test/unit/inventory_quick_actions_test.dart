@@ -27,6 +27,12 @@ void main() {
     expect(inventoryQuickActionColumnCount(390, 4), 1);
   });
 
+  test('inventory issue panels stack before columns become unbalanced', () {
+    expect(inventoryIssuePanelsStackVertically(1024), isTrue);
+    expect(inventoryIssuePanelsStackVertically(1119), isTrue);
+    expect(inventoryIssuePanelsStackVertically(1120), isFalse);
+  });
+
   test('inventory KPI uses server total instead of first page length', () {
     expect(
       inventoryProductTotal({

@@ -19,6 +19,18 @@ import '../providers/notification_provider.dart';
 import '../providers/shop_provider.dart';
 import '../providers/system_provider.dart';
 
+bool settingsShouldLoadShopProfile(ShopState state) =>
+    !state.isAllShops && state.currentShopId != null;
+
+int settingsActiveShopCount(ShopState state) => state.userShops
+    .where((shop) => shop['status'] == 'ACTIVE' && shop['isActive'] != false)
+    .length;
+
+String settingsAllShopsSummary(ShopState state) {
+  final count = settingsActiveShopCount(state);
+  return 'Đang xem dữ liệu tổng hợp của $count cửa hàng.';
+}
+
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -40,8 +52,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final shopAsync = ref.watch(shopProfileProvider);
     final shopState = ref.watch(shopProvider);
+    final AsyncValue<Map<String, dynamic>>? shopAsync =
+        settingsShouldLoadShopProfile(shopState)
+        ? ref.watch(shopProfileProvider)
+        : null;
     final auth = ref.watch(authProvider);
     final notifications = ref.watch(notificationProvider);
     final brandColor = ref.watch(brandColorProvider);
@@ -574,7 +589,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class _SettingsProfileCard extends StatelessWidget {
-  final AsyncValue<Map<String, dynamic>> shopAsync;
+  final AsyncValue<Map<String, dynamic>>? shopAsync;
   final Map<String, dynamic>? user;
   final ShopState shopState;
   final VoidCallback onOpenProfile;
@@ -596,8 +611,92 @@ class _SettingsProfileCard extends StatelessWidget {
         ? 'Người dùng SmartStock'
         : fullName;
 
+    if (shopState.isAllShops || shopAsync == null) {
+      return AppCardContainer(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final details = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  settingsAllShopsSummary(shopState),
+                  style: TextStyle(color: colors.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Chọn một cửa hàng để xem và chỉnh sửa cấu hình riêng.',
+                  style: TextStyle(color: colors.textMuted, fontSize: 11),
+                ),
+              ],
+            );
+            final actions = Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                TextButton(
+                  onPressed: onOpenProfile,
+                  child: const Text('Xem hồ sơ'),
+                ),
+                if (onSwitchShop != null)
+                  FilledButton.tonal(
+                    onPressed: onSwitchShop,
+                    child: const Text('Chọn cửa hàng'),
+                  ),
+              ],
+            );
+
+            if (constraints.maxWidth < 640) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const AppAssetIcon(
+                        assetPath: AppAssets.appIcon,
+                        size: 44,
+                        semanticLabel: 'SmartStock',
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(child: details),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  actions,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                const AppAssetIcon(
+                  assetPath: AppAssets.appIcon,
+                  size: 48,
+                  semanticLabel: 'SmartStock',
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: details),
+                const SizedBox(width: AppSpacing.md),
+                actions,
+              ],
+            );
+          },
+        ),
+      );
+    }
+
     return AppCardContainer(
-      child: shopAsync.when(
+      child: shopAsync!.when(
         data: (shop) => LayoutBuilder(
           builder: (context, constraints) {
             final shopName =

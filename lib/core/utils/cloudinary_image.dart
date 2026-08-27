@@ -14,7 +14,10 @@ String optimizedCloudinaryImageUrl(
   final safeWidth = width.clamp(32, 2000);
   final safeHeight = height?.clamp(32, 2000);
   final transformations = <String>[
-    'f_auto',
+    // Flutter web's CanvasKit renderer can fail silently when Cloudinary's
+    // `f_auto` negotiates a browser-specific format. WebP keeps the CDN
+    // payload compact while remaining consistently decodable by Flutter.
+    'f_webp',
     'q_auto:good',
     'w_$safeWidth',
     if (safeHeight != null) 'h_$safeHeight',

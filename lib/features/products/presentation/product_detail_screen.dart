@@ -12,6 +12,7 @@ import '../../inventory/providers/inventory_provider.dart';
 import '../../../core/utils/type_parser.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import 'product_form_screen.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -56,10 +57,13 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Chi Tiết Sản Phẩm',
           style: GoogleFonts.manrope(

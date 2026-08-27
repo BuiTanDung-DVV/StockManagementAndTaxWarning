@@ -25,16 +25,19 @@ class DataFreshnessBanner extends StatelessWidget {
         : DateFormat('dd/MM/yyyy').format(assessment.latestDate!);
     final missingPeriod = assessment.state == DataFreshnessState.missingPeriod;
     final unavailable = assessment.state == DataFreshnessState.unavailable;
+    final missingDaysLabel = assessment.daysBehind == 1
+        ? '1 ngày cuối kỳ'
+        : '${assessment.daysBehind} ngày cuối kỳ';
     final title = unavailable
-        ? 'Chưa xác định được độ mới dữ liệu $dataLabel'
+        ? 'Chưa thể kiểm tra tình trạng $dataLabel'
         : missingPeriod
-        ? 'Chưa có dữ liệu $dataLabel trong kỳ đang xem'
-        : 'Dữ liệu $dataLabel chưa cập nhật đến cuối kỳ';
+        ? 'Chưa có số liệu $dataLabel trong kỳ đã chọn'
+        : 'Số liệu $dataLabel tạm tính đến $latestLabel';
     final detail = unavailable
-        ? 'Backend chưa trả ngày phát sinh gần nhất từ DB. Không nên coi KPI bằng 0 là kết quả đã xác minh.'
-        : 'Phát sinh gần nhất trong DB: $latestLabel'
-              '${assessment.daysBehind > 0 ? ' · cách cuối kỳ ${assessment.daysBehind} ngày' : ''}. '
-              '${missingPeriod ? 'KPI bằng 0 có thể do chưa có dữ liệu mới.' : 'Các ngày còn thiếu chưa được tính vào KPI.'}';
+        ? 'Bạn vẫn có thể xem số liệu hiện có. Hãy tải lại trước khi chốt báo cáo.'
+        : missingPeriod
+        ? 'Nếu kỳ này không phát sinh hoạt động, bạn không cần xử lý. Nếu có, hãy ghi nhận trước khi chốt báo cáo.'
+        : 'Hãy kiểm tra $missingDaysLabel trước khi chốt báo cáo.';
 
     return Container(
       width: double.infinity,
@@ -56,7 +59,7 @@ class DataFreshnessBanner extends StatelessWidget {
               assetPath: AppAssets.storage,
               size: 20,
               color: AppColors.warning,
-              semanticLabel: 'Cảnh báo độ mới dữ liệu',
+              semanticLabel: 'Thông tin cần kiểm tra',
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

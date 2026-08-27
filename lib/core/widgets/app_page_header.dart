@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
+import 'app_navigation_back_button.dart';
+
+const _primaryShellRoutes = {
+  '/',
+  '/sales',
+  '/inventory',
+  '/finance',
+  '/settings',
+};
+
+bool shouldShowPageBackButton({
+  required String location,
+  required bool canPop,
+}) => canPop && !_primaryShellRoutes.contains(location);
 
 class AppPageHeader extends StatelessWidget {
   final String title;
@@ -11,6 +26,7 @@ class AppPageHeader extends StatelessWidget {
   final bool dense;
   final TextStyle? titleStyle;
   final TextStyle? subtitleStyle;
+  final bool? showBackButton;
 
   const AppPageHeader({
     super.key,
@@ -22,14 +38,22 @@ class AppPageHeader extends StatelessWidget {
     this.dense = false,
     this.titleStyle,
     this.subtitleStyle,
+    this.showBackButton,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final location = GoRouterState.of(context).uri.path;
+    final resolvedShowBack =
+        showBackButton ??
+        shouldShowPageBackButton(
+          location: location,
+          canPop: Navigator.of(context).canPop(),
+        );
 
-    final heading = Column(
+    final headingContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (breadcrumbs != null && breadcrumbs!.isNotEmpty) ...[
@@ -72,6 +96,16 @@ class AppPageHeader extends StatelessWidget {
                 ),
           ),
         ],
+      ],
+    );
+    final heading = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (resolvedShowBack) ...[
+          AppNavigationBackButton(onPressed: context.pop),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        Expanded(child: headingContent),
       ],
     );
 

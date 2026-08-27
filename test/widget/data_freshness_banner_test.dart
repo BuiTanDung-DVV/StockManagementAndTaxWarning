@@ -5,7 +5,9 @@ import 'package:flutter_app/core/widgets/data_freshness_banner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('cảnh báo độ mới dữ liệu vừa màn hình mobile 390px', (tester) async {
+  testWidgets('cảnh báo độ mới dữ liệu vừa màn hình mobile 390px', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -30,7 +32,9 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('Chưa xác định'), findsOneWidget);
+    expect(find.textContaining('Chưa thể kiểm tra'), findsOneWidget);
+    expect(find.textContaining('Backend'), findsNothing);
+    expect(find.textContaining('DB'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

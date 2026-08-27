@@ -60,6 +60,36 @@ void main() {
     expect(tester.getSize(panelMaterial).height, lessThanOrEqualTo(560));
   });
 
+  testWidgets('desktop assistant panel can expand and collapse', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildHost(size: const Size(1280, 900)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.bySemanticsLabel('Hỏi AI. Có thể kéo để đổi vị trí.'),
+    );
+    await tester.pumpAndSettle();
+
+    final panel = find.text('Trợ giúp nghiệp vụ');
+    final panelMaterial = find
+        .ancestor(of: panel, matching: find.byType(Material))
+        .first;
+    final compactSize = tester.getSize(panelMaterial);
+
+    await tester.tap(find.byTooltip('Mở rộng bảng trợ giúp'));
+    await tester.pumpAndSettle();
+    final expandedSize = tester.getSize(panelMaterial);
+
+    expect(expandedSize.width, greaterThan(compactSize.width));
+    expect(expandedSize.height, greaterThanOrEqualTo(compactSize.height));
+    expect(find.byTooltip('Thu gọn bảng trợ giúp'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Thu gọn bảng trợ giúp'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(panelMaterial), compactSize);
+  });
+
   testWidgets('desktop AI launcher stays compact to avoid covering reports', (
     tester,
   ) async {

@@ -8,6 +8,7 @@ import '../../settings/providers/tax_config_provider.dart';
 import '../../tax/services/tax_service.dart';
 import '../providers/finance_provider.dart';
 import '../providers/tax_reference_provider.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -31,10 +32,13 @@ class TaxDeclarationScreen extends ConsumerWidget {
     if (!config.isLoaded) {
       return Scaffold(
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          automaticallyImplyLeading: false,
+          leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+          leading: Navigator.of(context).canPop()
+              ? AppNavigationBackLeading(
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
           title: const Text('Kê khai thuế'),
         ),
         body: Center(
@@ -83,10 +87,13 @@ class TaxDeclarationScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: const Text('Kê khai thuế'),
         actions: [featureGuideButton(context, 'tax_declaration')],
       ),

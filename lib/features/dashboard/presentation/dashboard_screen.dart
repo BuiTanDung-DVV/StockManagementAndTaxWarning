@@ -8,19 +8,20 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
-import '../../../core/utils/data_freshness.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
+import '../../../core/widgets/ai_assistant_widget.dart';
 import '../../../core/widgets/chart_widgets.dart';
-import '../../../core/widgets/data_freshness_banner.dart';
+import '../../../core/widgets/reporting_period_control.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/presentation/widgets/join_shop_dialog.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../sales/providers/sales_provider.dart';
 import '../../settings/providers/shop_provider.dart';
+import '../providers/dashboard_action_provider.dart';
 import 'widgets/dashboard_widgets.dart';
 
 final _currencyFormat = NumberFormat.currency(
@@ -28,16 +29,6 @@ final _currencyFormat = NumberFormat.currency(
   symbol: '₫',
   decimalDigits: 0,
 );
-
-class _DashboardTimeFilter extends Notifier<String> {
-  @override
-  String build() => 'month';
-
-  void update(String value) => state = value;
-}
-
-final _dashboardTimeFilterProvider =
-    NotifierProvider<_DashboardTimeFilter, String>(_DashboardTimeFilter.new);
 
 bool dashboardUsesCompactLayout(double width) =>
     width < AppBreakpoints.compactNavigation;
@@ -55,6 +46,12 @@ bool dashboardCanViewRecentOrders(ShopState shopState) =>
     !shopState.isAllShops &&
     (shopState.isOwner || shopState.hasPermission('sales'));
 
+bool dashboardHasSalesActivity({
+  required num revenue,
+  required num grossProfit,
+  required num orderCount,
+}) => revenue != 0 || grossProfit != 0 || orderCount != 0;
+
 ({bool sales, bool finance, bool inventory}) dashboardRefreshPlan({
   required bool hasSalesInsights,
   required bool hasFinance,
@@ -70,6 +67,34 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _showAllMobileMetrics = false;
+  late ReportingPeriodSelection _periodSelection;
+
+  @override
+  void initState() {
+    super.initState();
+    _periodSelection = ReportingPeriodSelection(
+      periodType: ReportingPeriodType.month,
+      anchorDate: DateTime.now(),
+      comparisonType: ReportingComparisonType.previousPeriod,
+    );
+  }
+
+  Future<void> _openPeriodEditor(ReportingPeriodSelection selection) async {
+    final launcherWasVisible = ref.read(aiAssistantLauncherVisibleProvider);
+    if (launcherWasVisible) {
+      ref.read(aiAssistantLauncherVisibleProvider.notifier).hide();
+    }
+    final updated = await showReportingPeriodEditor(
+      context,
+      selection: selection,
+      today: DateTime.now(),
+    );
+    if (launcherWasVisible) {
+      ref.read(aiAssistantLauncherVisibleProvider.notifier).show();
+    }
+    if (updated == null || !mounted) return;
+    setState(() => _periodSelection = updated);
+  }
 
   void _showJoinShopDialog(BuildContext context) {
     showDialog(context: context, builder: (_) => const JoinShopDialog());
@@ -87,9 +112,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final compactLayout = dashboardUsesCompactLayout(
       MediaQuery.sizeOf(context).width,
     );
-    final filter = ref.watch(_dashboardTimeFilterProvider);
+    final periodSelection = _periodSelection;
     final today = DateTime.now();
-    final periods = _resolvePeriods(filter, today);
+    final periods = _resolvePeriods(periodSelection, today);
 
     final salesAsync = hasSalesInsights && shopState.userShops.isNotEmpty
         ? ref.watch(
@@ -216,6 +241,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ref.invalidate(recentTransactionsProvider);
             }
             if (refreshPlan.inventory) ref.invalidate(lowStockProvider);
+            ref.invalidate(dashboardActionProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -230,7 +256,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ? 'Tổng quan tất cả cửa hàng'
                         : 'Tình hình cửa hàng',
                     subtitle:
-                        '${shopState.currentShopName ?? 'Cửa hàng'} • ${periods.currentLabel} • đối chiếu đến ${DateFormat('dd/MM/yyyy').format(today)}',
+                        'Số liệu đến ${DateFormat('dd/MM/yyyy').format(periods.currentToDate)}',
                     dense: true,
                     titleStyle: GoogleFonts.manrope(
                       fontSize: 26,
@@ -248,6 +274,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     action: headerActions(compact: compactLayout),
                     compactAction: headerActions(compact: true),
                   ),
+                  ReportingPeriodControl(
+                    selection: periodSelection,
+                    currentLabel: periods.currentLabel,
+                    comparisonLabel: periods.previousLabel,
+                    onQuickPeriodChanged: (value) => setState(
+                      () => _periodSelection = _periodSelection.copyWith(
+                        periodType: value,
+                        anchorDate: DateTime.now(),
+                      ),
+                    ),
+                    onOpenEditor: () => _openPeriodEditor(periodSelection),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
                   if (shopState.isAllShops) ...[
                     _AllShopsNotice(
                       shopCount: shopState.userShops
@@ -261,33 +300,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
-                  if (salesAsync != null)
-                    salesAsync.when(
-                      data: (data) {
-                        final assessment = assessDataFreshness(
-                          latestDate: data['latestOrderDate'],
-                          periodFrom: DateTime.parse(periods.currentFrom),
-                          periodTo: DateTime.parse(periods.currentTo),
-                          recordCount:
-                              int.tryParse(
-                                (data['orderCount'] ?? 0).toString(),
-                              ) ??
-                              0,
-                        );
-                        if (!assessment.requiresAttention) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                          child: DataFreshnessBanner(
-                            assessment: assessment,
-                            dataLabel: 'bán hàng',
-                          ),
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
                   if (salesAsync != null)
                     salesAsync.when(
                       data: (salesData) {
@@ -342,12 +354,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     previousTopProducts: previousTopProductsAsync,
                     currentLabel: periods.currentLabel,
                     previousLabel: periods.previousLabel,
-                    filter: filter,
-                    onFilterChanged: (value) => ref
-                        .read(_dashboardTimeFilterProvider.notifier)
-                        .update(value),
                   ),
-                  const SizedBox(height: AppSpacing.xl),
+                  SizedBox(height: compactLayout ? 112 : 96),
                 ],
               ),
             ),
@@ -395,6 +403,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               .toString(),
         ) ??
         0;
+    final numericOrderCount = num.tryParse(orderCount.toString()) ?? 0;
+    final hasSalesActivity = dashboardHasSalesActivity(
+      revenue: revenue,
+      grossProfit: profit,
+      orderCount: numericOrderCount,
+    );
+    final salesContext = hasSalesActivity
+        ? periodLabel
+        : 'Chưa phát sinh · $periodLabel';
     final cashBalance = cashAvailable
         ? num.tryParse(cashData['cashBalance']?.toString() ?? '0')
         : null;
@@ -403,20 +420,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       _DashboardMetric(
         label: 'Doanh thu thuần',
         value: _currencyFormat.format(revenue),
-        context: periodLabel,
+        context: salesContext,
         assetPath: AppAssets.revenue,
-        color: AppColors.success,
-        comparison: _growthLabel(revenue, previousRevenue, previousPeriodLabel),
+        color: hasSalesActivity
+            ? AppColors.success
+            : Theme.of(context).colorScheme.primary,
+        comparison: hasSalesActivity
+            ? _growthComparison(revenue, previousRevenue, previousPeriodLabel)
+            : null,
         comparisonPositive: revenue >= previousRevenue,
+        route: '/sales',
       ),
       _DashboardMetric(
         label: 'Lợi nhuận gộp',
         value: _currencyFormat.format(profit),
-        context: periodLabel,
+        context: salesContext,
         assetPath: AppAssets.profit,
         color: profit < 0 ? AppColors.danger : AppColors.success,
-        comparison: _growthLabel(profit, previousProfit, previousPeriodLabel),
+        comparison: hasSalesActivity
+            ? _growthComparison(profit, previousProfit, previousPeriodLabel)
+            : null,
         comparisonPositive: profit >= previousProfit,
+        route: '/profit-loss',
       ),
       _DashboardMetric(
         label: 'Số dư quỹ',
@@ -426,28 +451,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         context: 'Tại ${DateFormat('dd/MM/yyyy').format(asOf)}',
         assetPath: AppAssets.cash,
         color: Theme.of(context).colorScheme.primary,
+        route: '/transactions',
       ),
       _DashboardMetric(
         label: 'Đơn hàng',
         value: '$orderCount',
-        context: periodLabel,
+        context: salesContext,
         assetPath: AppAssets.orders,
         color: Theme.of(context).colorScheme.primary,
-        comparison: _growthLabel(
-          num.tryParse(orderCount.toString()) ?? 0,
-          previousOrderCount,
-          previousPeriodLabel,
-        ),
-        comparisonPositive:
-            (num.tryParse(orderCount.toString()) ?? 0) >= previousOrderCount,
+        comparison: hasSalesActivity
+            ? _growthComparison(
+                numericOrderCount,
+                previousOrderCount,
+                previousPeriodLabel,
+              )
+            : null,
+        comparisonPositive: numericOrderCount >= previousOrderCount,
+        route: '/sales',
       ),
     ];
   }
 
-  String? _growthLabel(num current, num previous, String previousLabel) {
+  _MetricComparison? _growthComparison(
+    num current,
+    num previous,
+    String previousLabel,
+  ) {
     if (previous <= 0) return null;
     final change = ((current - previous) / previous) * 100;
-    return '${change >= 0 ? '▲' : '▼'} ${NumberFormat('0.0', 'vi_VN').format(change.abs())}% so với $previousLabel';
+    final direction = change >= 0 ? 'Tăng' : 'Giảm';
+    final symbol = change >= 0 ? '▲' : '▼';
+    final formattedChange = NumberFormat('0.0', 'vi_VN').format(change.abs());
+    return _MetricComparison(
+      label: '$symbol $formattedChange% so với kỳ trước',
+      semanticLabel: '$direction $formattedChange% so với kỳ $previousLabel',
+    );
   }
 }
 
@@ -757,8 +795,6 @@ class _DashboardWorkspace extends StatelessWidget {
   final AsyncValue<List<dynamic>>? previousTopProducts;
   final String currentLabel;
   final String previousLabel;
-  final String filter;
-  final ValueChanged<String> onFilterChanged;
 
   const _DashboardWorkspace({
     required this.currentSales,
@@ -768,8 +804,6 @@ class _DashboardWorkspace extends StatelessWidget {
     required this.previousTopProducts,
     required this.currentLabel,
     required this.previousLabel,
-    required this.filter,
-    required this.onFilterChanged,
   });
 
   @override
@@ -779,8 +813,6 @@ class _DashboardWorkspace extends StatelessWidget {
       comparisonSales: comparisonSales,
       currentLabel: currentLabel,
       previousLabel: previousLabel,
-      filter: filter,
-      onFilterChanged: onFilterChanged,
     );
     final priorities = const DashboardPriorityList();
     Widget productPanel(List<dynamic> items) {
@@ -874,7 +906,10 @@ class _DashboardWorkspace extends StatelessWidget {
               children: [
                 Expanded(flex: 3, child: chart),
                 const SizedBox(width: AppSpacing.lg),
-                const SizedBox(width: 330, child: DashboardPriorityList()),
+                const SizedBox(
+                  width: 360,
+                  child: DashboardPriorityList(fixedHeight: true),
+                ),
               ],
             ),
             products,
@@ -1456,16 +1491,12 @@ class _DashboardChart extends StatelessWidget {
   final AsyncValue<Map<String, dynamic>>? comparisonSales;
   final String currentLabel;
   final String previousLabel;
-  final String filter;
-  final ValueChanged<String> onFilterChanged;
 
   const _DashboardChart({
     required this.currentSales,
     required this.comparisonSales,
     required this.currentLabel,
     required this.previousLabel,
-    required this.filter,
-    required this.onFilterChanged,
   });
 
   @override
@@ -1485,7 +1516,6 @@ class _DashboardChart extends StatelessWidget {
           (previous['daily'] as List?) ?? const [],
           currentLabel,
           previousLabel,
-          filterWidget: TimeFilterBar(filter, onFilterChanged),
         ),
         loading: () => const _ChartSkeleton(),
         error: (_, _) =>
@@ -1608,75 +1638,91 @@ class _MetricCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Container(
-      color: emphasized ? metric.color.withValues(alpha: 0.055) : null,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Material(
+      color: emphasized
+          ? metric.color.withValues(alpha: 0.055)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: metric.route == null ? null : () => context.push(metric.route!),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppAssetIcon(
-                assetPath: metric.assetPath,
-                size: 16,
-                color: metric.color,
-                semanticLabel: metric.label,
+              Row(
+                children: [
+                  AppAssetIcon(
+                    assetPath: metric.assetPath,
+                    size: 16,
+                    color: metric.color,
+                    semanticLabel: metric.label,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      metric.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: emphasized
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: AppSpacing.xs),
-              Expanded(
+              const SizedBox(height: AppSpacing.xs),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
                 child: Text(
-                  metric.label,
+                  metric.value,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
+                  style: GoogleFonts.manrope(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.35,
+                    color: emphasized ? metric.color : colors.textPrimary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
+              const SizedBox(height: 2),
+              Text(
+                metric.context,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+              ),
+              if (metric.comparison != null) ...[
+                const SizedBox(height: 3),
+                Tooltip(
+                  message: metric.comparison!.semanticLabel,
+                  child: Semantics(
+                    label: metric.comparison!.semanticLabel,
+                    excludeSemantics: true,
+                    child: Text(
+                      metric.comparison!.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: metric.comparisonPositive
+                            ? AppColors.success
+                            : AppColors.danger,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              metric.value,
-              maxLines: 1,
-              style: GoogleFonts.manrope(
-                fontSize: 19,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.35,
-                color: emphasized ? metric.color : colors.textPrimary,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            metric.context,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
-          ),
-          if (metric.comparison != null) ...[
-            const SizedBox(height: 3),
-            Text(
-              metric.comparison!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: metric.comparisonPositive
-                    ? AppColors.success
-                    : AppColors.danger,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -1692,78 +1738,95 @@ class _MetricRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: emphasized ? metric.color.withValues(alpha: 0.055) : null,
-        border: emphasized
-            ? Border(left: BorderSide(color: metric.color, width: 3))
-            : null,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          AppAssetIcon(
-            assetPath: metric.assetPath,
-            size: 19,
-            color: metric.color,
-            semanticLabel: metric.label,
+    return Material(
+      color: emphasized
+          ? metric.color.withValues(alpha: 0.055)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: metric.route == null ? null : () => context.push(metric.route!),
+        child: Container(
+          decoration: BoxDecoration(
+            border: emphasized
+                ? Border(left: BorderSide(color: metric.color, width: 3))
+                : null,
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  metric.label,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colors.textSecondary,
-                    fontWeight: emphasized ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  metric.context,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
-                ),
-                if (metric.comparison != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    metric.comparison!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: metric.comparisonPositive
-                          ? AppColors.success
-                          : AppColors.danger,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Text(
-              metric.value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: GoogleFonts.manrope(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-                color: emphasized ? metric.color : colors.textPrimary,
-                fontFeatures: const [FontFeature.tabularFigures()],
+          child: Row(
+            children: [
+              AppAssetIcon(
+                assetPath: metric.assetPath,
+                size: 19,
+                color: metric.color,
+                semanticLabel: metric.label,
               ),
-            ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      metric.label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colors.textSecondary,
+                        fontWeight: emphasized
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      metric.context,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+                    ),
+                    if (metric.comparison != null) ...[
+                      const SizedBox(height: 2),
+                      Tooltip(
+                        message: metric.comparison!.semanticLabel,
+                        child: Semantics(
+                          label: metric.comparison!.semanticLabel,
+                          excludeSemantics: true,
+                          child: Text(
+                            metric.comparison!.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: metric.comparisonPositive
+                                      ? AppColors.success
+                                      : AppColors.danger,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(
+                child: Text(
+                  metric.value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: GoogleFonts.manrope(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    color: emphasized ? metric.color : colors.textPrimary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -1809,8 +1872,9 @@ class _DashboardMetric {
   final String context;
   final String assetPath;
   final Color color;
-  final String? comparison;
+  final _MetricComparison? comparison;
   final bool comparisonPositive;
+  final String? route;
 
   const _DashboardMetric({
     required this.label,
@@ -1820,7 +1884,15 @@ class _DashboardMetric {
     required this.color,
     this.comparison,
     this.comparisonPositive = true,
+    this.route,
   });
+}
+
+class _MetricComparison {
+  final String label;
+  final String semanticLabel;
+
+  const _MetricComparison({required this.label, required this.semanticLabel});
 }
 
 class _DashboardPeriods {
@@ -1830,6 +1902,7 @@ class _DashboardPeriods {
   final String previousTo;
   final String currentLabel;
   final String previousLabel;
+  final DateTime currentToDate;
 
   const _DashboardPeriods({
     required this.currentFrom,
@@ -1838,54 +1911,25 @@ class _DashboardPeriods {
     required this.previousTo,
     required this.currentLabel,
     required this.previousLabel,
+    required this.currentToDate,
   });
 }
 
-_DashboardPeriods _resolvePeriods(String filter, DateTime today) {
-  final dates = comparisonReportingDates(filter, today);
-  final currentFrom = DateTime.parse(dates.currentFrom);
-  final currentTo = DateTime.parse(dates.currentTo);
-  final previousFrom = DateTime.parse(dates.previousFrom);
-  final previousTo = DateTime.parse(dates.previousTo);
-  if (filter == 'week') {
-    return _DashboardPeriods(
-      currentFrom: dates.currentFrom,
-      currentTo: dates.currentTo,
-      previousFrom: dates.previousFrom,
-      previousTo: dates.previousTo,
-      currentLabel: reportingRangeLabel(currentFrom, currentTo),
-      previousLabel: reportingRangeLabel(previousFrom, previousTo),
-    );
-  }
-
-  if (filter == '6_months') {
-    return _DashboardPeriods(
-      currentFrom: dates.currentFrom,
-      currentTo: dates.currentTo,
-      previousFrom: dates.previousFrom,
-      previousTo: dates.previousTo,
-      currentLabel: reportingRangeLabel(currentFrom, currentTo),
-      previousLabel: reportingRangeLabel(previousFrom, previousTo),
-    );
-  }
-
-  if (filter == 'year') {
-    return _DashboardPeriods(
-      currentFrom: dates.currentFrom,
-      currentTo: dates.currentTo,
-      previousFrom: dates.previousFrom,
-      previousTo: dates.previousTo,
-      currentLabel: reportingRangeLabel(currentFrom, currentTo),
-      previousLabel: reportingRangeLabel(previousFrom, previousTo),
-    );
-  }
-
+_DashboardPeriods _resolvePeriods(
+  ReportingPeriodSelection selection,
+  DateTime today,
+) {
+  final dates = resolveReportingPeriods(selection, today: today);
   return _DashboardPeriods(
-    currentFrom: dates.currentFrom,
-    currentTo: dates.currentTo,
-    previousFrom: dates.previousFrom,
-    previousTo: dates.previousTo,
-    currentLabel: reportingRangeLabel(currentFrom, currentTo),
-    previousLabel: reportingRangeLabel(previousFrom, previousTo),
+    currentFrom: dates.currentFrom.toIso8601String().split('T').first,
+    currentTo: dates.currentTo.toIso8601String().split('T').first,
+    previousFrom: dates.comparisonFrom.toIso8601String().split('T').first,
+    previousTo: dates.comparisonTo.toIso8601String().split('T').first,
+    currentLabel: reportingRangeLabel(dates.currentFrom, dates.currentTo),
+    previousLabel: reportingRangeLabel(
+      dates.comparisonFrom,
+      dates.comparisonTo,
+    ),
+    currentToDate: dates.currentTo,
   );
 }

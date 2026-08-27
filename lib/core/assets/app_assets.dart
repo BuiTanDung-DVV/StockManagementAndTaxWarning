@@ -37,6 +37,8 @@ abstract final class AppAssets {
   static const String storage = 'assets/icon/storage_icon.svg';
   static const String book = 'assets/icon/book_icon.svg';
   static const String externalLink = 'assets/icon/external_link_icon.svg';
+  static const String expand = 'assets/icon/expand_icon.svg';
+  static const String collapse = 'assets/icon/collapse_icon.svg';
 }
 
 class AppAssetIcon extends StatelessWidget {

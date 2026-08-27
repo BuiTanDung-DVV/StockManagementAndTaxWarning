@@ -340,9 +340,16 @@ class _LoginForm extends StatelessWidget {
               onSubmitted: (_) => onLogin(),
               decoration: InputDecoration(
                 labelText: 'Mật khẩu',
-                suffixIcon: TextButton(
+                suffixIcon: IconButton(
+                  tooltip: obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                   onPressed: onTogglePassword,
-                  child: Text(obscurePassword ? 'Hiện' : 'Ẩn'),
+                  icon: Icon(
+                    obscurePassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                    color: colors.textSecondary,
+                    size: 20,
+                  ),
                 ),
               ),
             ),

@@ -7,6 +7,17 @@ import 'package:flutter_app/features/dashboard/presentation/widgets/dashboard_wi
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('dashboard treats an empty sales period as no activity', () {
+    expect(
+      dashboardHasSalesActivity(revenue: 0, grossProfit: 0, orderCount: 0),
+      isFalse,
+    );
+    expect(
+      dashboardHasSalesActivity(revenue: 1, grossProfit: 0, orderCount: 0),
+      isTrue,
+    );
+  });
+
   test('dashboard month labels continue through the current year', () {
     final current = List.generate(
       7,
@@ -198,14 +209,15 @@ void main() {
       ),
     );
 
-    expect(find.text('Tuần này'), findsOneWidget);
-    expect(find.text('Tháng này'), findsOneWidget);
-    expect(find.text('6 tháng'), findsOneWidget);
-    expect(find.text('Năm nay'), findsOneWidget);
+    expect(find.text('Ngày'), findsOneWidget);
+    expect(find.text('Tuần'), findsOneWidget);
+    expect(find.text('Tháng'), findsOneWidget);
+    expect(find.text('Quý'), findsOneWidget);
+    expect(find.text('Năm'), findsOneWidget);
 
-    await tester.tap(find.text('6 tháng'));
+    await tester.tap(find.text('Quý'));
     await tester.pumpAndSettle();
-    expect(selected, '6_months');
+    expect(selected, 'quarter');
     expect(tester.takeException(), isNull);
   });
 

@@ -80,4 +80,81 @@ void main() {
       '27/07–02/08',
     );
   });
+
+  test('quarter selection uses elapsed days and previous quarter', () {
+    final result = resolveReportingPeriods(
+      ReportingPeriodSelection(
+        periodType: ReportingPeriodType.quarter,
+        anchorDate: DateTime(2026, 8, 26),
+        comparisonType: ReportingComparisonType.previousPeriod,
+      ),
+      today: DateTime(2026, 8, 26),
+    );
+
+    expect(result.currentFrom, DateTime(2026, 7, 1));
+    expect(result.currentTo, DateTime(2026, 8, 26));
+    expect(result.comparisonFrom, DateTime(2026, 4, 1));
+    expect(result.comparisonTo, DateTime(2026, 5, 26));
+  });
+
+  test('same period last year keeps like-for-like boundaries', () {
+    final result = resolveReportingPeriods(
+      ReportingPeriodSelection(
+        periodType: ReportingPeriodType.month,
+        anchorDate: DateTime(2026, 8, 26),
+        comparisonType: ReportingComparisonType.samePeriodLastYear,
+      ),
+      today: DateTime(2026, 8, 26),
+    );
+
+    expect(result.currentFrom, DateTime(2026, 8, 1));
+    expect(result.currentTo, DateTime(2026, 8, 26));
+    expect(result.comparisonFrom, DateTime(2025, 8, 1));
+    expect(result.comparisonTo, DateTime(2025, 8, 26));
+  });
+
+  test('custom comparison accepts an explicit date range', () {
+    final result = resolveReportingPeriods(
+      ReportingPeriodSelection(
+        periodType: ReportingPeriodType.day,
+        anchorDate: DateTime(2026, 8, 26),
+        comparisonType: ReportingComparisonType.custom,
+        customComparisonFrom: DateTime(2026, 7, 10),
+        customComparisonTo: DateTime(2026, 7, 16),
+      ),
+      today: DateTime(2026, 8, 26),
+    );
+
+    expect(result.currentFrom, DateTime(2026, 8, 26));
+    expect(result.currentTo, DateTime(2026, 8, 26));
+    expect(result.comparisonFrom, DateTime(2026, 7, 10));
+    expect(result.comparisonTo, DateTime(2026, 7, 16));
+  });
+
+  test('custom comparison editor starts with the complete previous period', () {
+    final initial = reportingInitialCustomComparison(
+      ReportingPeriodSelection(
+        periodType: ReportingPeriodType.month,
+        anchorDate: DateTime(2026, 8, 26),
+        comparisonType: ReportingComparisonType.previousPeriod,
+      ),
+      today: DateTime(2026, 8, 26),
+    );
+
+    expect(initial.from, DateTime(2026, 7, 1));
+    expect(initial.to, DateTime(2026, 7, 26));
+  });
+
+  test('selection labels distinguish the current operational period', () {
+    final selection = ReportingPeriodSelection(
+      periodType: ReportingPeriodType.quarter,
+      anchorDate: DateTime(2026, 8, 1),
+      comparisonType: ReportingComparisonType.previousPeriod,
+    );
+
+    expect(
+      reportingPeriodSelectionLabel(selection, DateTime(2026, 8, 26)),
+      'Quý này',
+    );
+  });
 }

@@ -6,6 +6,7 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/supplier_provider.dart';
 import 'supplier_form_screen.dart';
 import 'package:bot_toast/bot_toast.dart';
@@ -49,10 +50,13 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Chi Tiết Nhà Cung Cấp',
           style: GoogleFonts.manrope(

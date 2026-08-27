@@ -29,6 +29,10 @@ import {
     NormalizedReceivableListQuery,
 } from '../customer/receivable-list-query.utils';
 import { vietnamDateKey } from '../finance/finance-period.utils';
+import {
+    vietnameseSearchExpression,
+    vietnameseSearchParams,
+} from '../common/vietnamese-search.utils';
 
 export class CustomerService {
     private customerRepo = AppDataSource.getRepository(Customer);
@@ -42,8 +46,11 @@ export class CustomerService {
     async findAll(shopId: number, page = 1, limit = 20, search?: string) {
         const qb = this.customerRepo.createQueryBuilder('c')
             .where('c.shopId = :shopId AND c.isActive = :isActive', { shopId, isActive: true });
-        if (search) {
-            qb.andWhere('(c.name LIKE :s OR c.phone LIKE :s OR c.code LIKE :s)', { s: `%${search}%` });
+        if (search?.trim()) {
+            qb.andWhere(
+                `(${vietnameseSearchExpression('c.name')} OR ${vietnameseSearchExpression('c.phone')} OR ${vietnameseSearchExpression('c.code')})`,
+                vietnameseSearchParams(search),
+            );
         }
         const [items, total] = await qb.skip((page - 1) * limit).take(limit).orderBy('c.createdAt', 'DESC').getManyAndCount();
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };

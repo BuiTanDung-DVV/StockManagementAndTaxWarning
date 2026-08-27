@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 process.env.CLOUDINARY_CLOUD_NAME = 'demo';
 
@@ -27,6 +29,17 @@ test('product input only returns explicitly editable fields', () => {
     currentStock: 15,
     tags: ['Bán chạy'],
   });
+});
+
+test('product tag filter matches a complete tag instead of a substring', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'services', 'product.service.ts'),
+    'utf8',
+  );
+
+  assert.match(source, /unnest\(string_to_array\(COALESCE\(p\.tags, ''\), ','\)\)/);
+  assert.match(source, /LOWER\(BTRIM\(tag_value\.value\)\) = LOWER\(:tag\)/);
+  assert.doesNotMatch(source, /p\.tags ILIKE :tag/);
 });
 
 test('product input rejects system and cross-shop fields', () => {

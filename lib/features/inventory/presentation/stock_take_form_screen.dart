@@ -7,6 +7,7 @@ import '../providers/inventory_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 
 class _StkItem {
   int? productId;
@@ -172,10 +173,13 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Phiếu Kiểm Kê Kho',
           style: GoogleFonts.manrope(

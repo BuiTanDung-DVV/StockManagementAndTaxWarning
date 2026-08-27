@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/finance_display.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/finance_provider.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -50,10 +52,11 @@ class TransactionDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: context.canPop() ? 60 : null,
+        leading: context.canPop()
+            ? AppNavigationBackLeading(onPressed: context.pop)
+            : null,
         title: Text(
           'Chi Tiết Giao Dịch',
           style: GoogleFonts.manrope(

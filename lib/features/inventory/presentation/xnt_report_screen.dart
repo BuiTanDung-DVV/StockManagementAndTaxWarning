@@ -6,6 +6,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/inventory_provider.dart';
 
 final _xntQuantityFormat = NumberFormat.decimalPattern('vi_VN');
@@ -48,10 +49,13 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Báo cáo XNT Kho',
           style: GoogleFonts.manrope(

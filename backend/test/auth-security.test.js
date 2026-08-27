@@ -79,6 +79,40 @@ test('Google authentication payload requires a realistic ID token', () => {
   }).success, false);
 });
 
+test('password recovery does not create or send OTP for an unknown Gmail', async () => {
+  const service = new AuthService();
+  let databaseQueried = false;
+  let emailSent = false;
+  const originalQuery = AppDataSource.query;
+
+  service.findUserByIdentifier = async () => null;
+  service.emailService = {
+    async sendOtp() {
+      emailSent = true;
+      return true;
+    },
+  };
+  AppDataSource.query = async () => {
+    databaseQueried = true;
+    throw new Error('OTP storage must not be accessed');
+  };
+
+  try {
+    const result = await service.forgotPassword({
+      identifier: 'unknown.user@gmail.com',
+    });
+    assert.deepEqual(result, {
+      success: true,
+      message: 'Nếu Gmail tồn tại, mã OTP sẽ được gửi',
+    });
+  } finally {
+    AppDataSource.query = originalQuery;
+  }
+
+  assert.equal(databaseQueried, false);
+  assert.equal(emailSent, false);
+});
+
 test('profile updates cannot replace the verified Gmail identity', () => {
   assert.equal(updateProfileSchema.safeParse({
     fullName: 'Nguyen Van A',

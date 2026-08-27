@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/sales_provider.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -26,10 +27,13 @@ class OrderDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Text(
           'Chi Tiết Đơn Hàng',
           style: GoogleFonts.manrope(

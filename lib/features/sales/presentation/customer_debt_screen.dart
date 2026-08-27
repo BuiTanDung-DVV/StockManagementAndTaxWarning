@@ -109,7 +109,9 @@ String customerDebtDueLabel(Map<String, dynamic> debt) {
 }
 
 class CustomerDebtScreen extends ConsumerStatefulWidget {
-  const CustomerDebtScreen({super.key});
+  final String? initialStatus;
+
+  const CustomerDebtScreen({super.key, this.initialStatus});
 
   @override
   ConsumerState<CustomerDebtScreen> createState() => _CustomerDebtScreenState();
@@ -142,6 +144,9 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialStatus?.toUpperCase() == 'OVERDUE') {
+      _status = 'OVERDUE';
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadDebts());
   }
 

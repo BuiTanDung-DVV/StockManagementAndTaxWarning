@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
+import '../../../core/widgets/app_navigation_back_button.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../settings/providers/shop_provider.dart';
 
@@ -488,10 +489,11 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
       child: Scaffold(
         backgroundColor: c.bg,
         appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-            onPressed: () => context.pop(),
-          ),
+          automaticallyImplyLeading: false,
+          leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+          leading: Navigator.of(context).canPop()
+              ? AppNavigationBackLeading(onPressed: context.pop)
+              : null,
           title: Text(
             'Quản lý nhân viên',
             style: GoogleFonts.manrope(
@@ -1139,10 +1141,11 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: false,
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(onPressed: context.pop)
+            : null,
         title: Text(
           'Quản lý vai trò',
           style: GoogleFonts.manrope(
