@@ -2,6 +2,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/tax_config_provider.dart';
@@ -44,11 +45,70 @@ class TaxDeclarationScreen extends ConsumerWidget {
         body: Center(
           child: config.isLoading
               ? const CircularProgressIndicator()
-              : Padding(
+              : SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
-                  child: Text(
-                    config.errorMessage ?? 'Không thể tải cấu hình thuế từ DB.',
-                    textAlign: TextAlign.center,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: c.card,
+                        borderRadius: BorderRadius.circular(AppRadius.card),
+                        border: Border.all(color: c.divider),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: const Icon(
+                              Icons.receipt_long_outlined,
+                              color: AppColors.warning,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Cần hoàn tất cấu hình thuế',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Thông tin chính sách thuế của cửa hàng chưa đầy đủ nên chưa thể lập tờ khai. Bạn có thể mở phần cấu hình để bổ sung hoặc thử tải lại.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: c.textSecondary),
+                          ),
+                          const SizedBox(height: 20),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: () => ref
+                                    .read(taxConfigProvider.notifier)
+                                    .refresh(),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Thử tải lại'),
+                              ),
+                              FilledButton.icon(
+                                onPressed: () => context.push('/tax-config'),
+                                icon: const Icon(Icons.settings_outlined),
+                                label: const Text('Mở cấu hình thuế'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
         ),
@@ -371,10 +431,8 @@ class TaxDeclarationScreen extends ConsumerWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () => _showSubmitDialog(
-                                  context,
-                                  f.name,
-                                ),
+                                onPressed: () =>
+                                    _showSubmitDialog(context, f.name),
                                 icon: const Icon(Icons.cloud_upload, size: 16),
                                 label: const Text(
                                   'Nộp tờ khai',

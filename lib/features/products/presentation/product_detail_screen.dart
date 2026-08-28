@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/cloudinary_image.dart';
+import '../../../core/widgets/product_network_image.dart';
 import '../providers/product_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../../core/utils/type_parser.dart';
@@ -165,24 +164,15 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(21),
-                      child: imageUrl.isEmpty
-                          ? _ProductImageFallback(
-                              color: theme.colorScheme.primary,
-                            )
-                          : CachedNetworkImage(
-                              imageUrl: optimizedCloudinaryImageUrl(
-                                imageUrl,
-                                width: 480,
-                                height: 480,
-                                crop: 'fill',
-                              ),
-                              fit: BoxFit.cover,
-                              placeholder: (_, _) =>
-                                  Container(color: c.surface),
-                              errorWidget: (_, _, _) => _ProductImageFallback(
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
+                      child: ProductNetworkImage(
+                        imageUrl: imageUrl,
+                        width: 132,
+                        height: 132,
+                        semanticLabel: 'Ảnh sản phẩm $name',
+                        fallback: _ProductImageFallback(
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
