@@ -6,6 +6,9 @@ import {
     TaxPolicyConfigurationError,
 } from '../services/tax-policy.service';
 
+const taxConfigurationMessage =
+    'Chức năng thuế chưa sẵn sàng. Vui lòng hoàn tất cấu hình thuế hoặc thử lại sau.';
+
 export const getTaxConfig = async (req: Request, res: Response) => {
     try {
         const shopId = (req as any).shopId;
@@ -17,7 +20,9 @@ export const getTaxConfig = async (req: Request, res: Response) => {
         const status = error instanceof TaxPolicyConfigurationError ? 503 : 500;
         res.status(status).json({
             success: false,
-            message: error instanceof Error ? error.message : 'Không thể tải cấu hình thuế',
+            message: error instanceof TaxPolicyConfigurationError
+                ? taxConfigurationMessage
+                : 'Không thể tải cấu hình thuế. Vui lòng thử lại.',
         });
     }
 };

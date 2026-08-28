@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/cloudinary_image.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/responsive_layout.dart';
+import '../../../core/widgets/product_network_image.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/inventory_provider.dart';
 
@@ -600,22 +599,16 @@ class _InventoryAbcProductRow extends StatelessWidget {
             child: SizedBox(
               width: 44,
               height: 44,
-              child: imageUrl.isEmpty
-                  ? _InventoryAbcImageFallback(grade: grade, color: color)
-                  : CachedNetworkImage(
-                      imageUrl: optimizedCloudinaryImageUrl(
-                        imageUrl,
-                        width: 160,
-                        height: 160,
-                        crop: 'fill',
-                      ),
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) => Container(color: colors.surface),
-                      errorWidget: (_, _, _) => _InventoryAbcImageFallback(
-                        grade: grade,
-                        color: color,
-                      ),
-                    ),
+              child: ProductNetworkImage(
+                imageUrl: imageUrl,
+                width: 44,
+                height: 44,
+                semanticLabel: 'Ảnh sản phẩm ${item['name'] ?? 'chưa có tên'}',
+                fallback: _InventoryAbcImageFallback(
+                  grade: grade,
+                  color: color,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

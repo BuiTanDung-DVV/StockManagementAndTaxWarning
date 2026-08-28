@@ -8,12 +8,16 @@ type DbValue = string | number | boolean | Date | null;
 type Row = Record<string, DbValue>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const END_DATE = new Date('2026-08-27T17:30:00+07:00');
+const END_DATE = new Date('2026-08-28T17:30:00+07:00');
 const START_DATE = new Date('2023-08-28T08:00:00+07:00');
+const DATA_SCALE = 5;
+const PURCHASE_CYCLES_PER_MONTH = 5;
+const STOCK_TAKE_COUNT = 60;
 type ProfileKey = 'construction' | 'agriculture';
 
 type ProductDefinition = {
   name: string;
+  imageFamily?: string;
   category: string;
   unit: string;
   cost: number;
@@ -21,6 +25,91 @@ type ProductDefinition = {
   minStock: number;
   maxOrderQty: number;
 };
+
+const PRODUCT_VARIANTS: Record<ProfileKey, string[]> = {
+  construction: [
+    'Kiến Tạo Tiêu chuẩn',
+    'An Gia Phổ thông',
+    'Minh Long Bền chắc',
+    'Phú Khang Công trình',
+    'Tân Việt Chuyên dụng',
+  ],
+  agriculture: [
+    'Đại Nông Phổ thông',
+    'Việt Nông Mùa vụ',
+    'Sinh Học Xanh',
+    'Phú Nông Chuyên dụng',
+    'An Phát Nhà vườn',
+  ],
+};
+
+const CUSTOMER_CONTEXTS: Record<ProfileKey, string[]> = {
+  construction: [
+    'Nhà phố Tân Phú',
+    'Công trình Bình Tân',
+    'Đội thi công Thủ Đức',
+    'Công trình Hóc Môn',
+    'Nội thất Gò Vấp',
+  ],
+  agriculture: [
+    'Vườn Củ Chi',
+    'Nông hộ Đức Hòa',
+    'Trang trại Hóc Môn',
+    'Nhà vườn Bình Chánh',
+    'Đại lý vật tư Long An',
+  ],
+};
+
+const SUPPLIER_REGIONS = [
+  'Kho TP.HCM',
+  'Kho Bình Dương',
+  'Kho Đồng Nai',
+  'Kho Long An',
+  'Kênh dự án miền Nam',
+];
+
+function expandStoreProfile(base: StoreProfile): StoreProfile {
+  const variants = PRODUCT_VARIANTS[base.key];
+  if (variants.length !== DATA_SCALE) {
+    throw new Error(`Hồ sơ ${base.key} phải có đúng ${DATA_SCALE} biến thể sản phẩm`);
+  }
+  const multipliers = [0.94, 1, 1.06, 1.12, 1.18];
+  const products = base.products.flatMap((product) =>
+    variants.map((variant, index) => ({
+      ...product,
+      name: `${product.name} · ${variant}`,
+      imageFamily: product.name,
+      cost: roundMoney(product.cost * multipliers[index]),
+      sell: roundMoney(product.sell * multipliers[index]),
+      minStock: Math.max(
+        1,
+        Math.round(product.minStock * (0.82 + index * 0.09)),
+      ),
+      maxOrderQty: Math.max(
+        1,
+        Math.round(product.maxOrderQty * (0.9 + index * 0.05)),
+      ),
+    })),
+  );
+  const customers = base.customers.flatMap((name) => {
+    const displayName = name.split(' · ')[0].trim();
+    return CUSTOMER_CONTEXTS[base.key].map(
+      (context) => `${displayName} · ${context}`,
+    );
+  });
+  const suppliers = base.suppliers.flatMap((name) =>
+    SUPPLIER_REGIONS.map((region) => `${name} · ${region}`),
+  );
+  return {
+    ...base,
+    datasetVersion: `${base.datasetVersion}_DENSE_V3`,
+    openingCash: base.openingCash * DATA_SCALE,
+    openingBank: base.openingBank * DATA_SCALE,
+    products,
+    customers,
+    suppliers,
+  };
+}
 
 type StoreProfile = {
   key: ProfileKey;
@@ -457,6 +546,16 @@ async function validateGeneratedData(
       (SELECT COUNT(*)::int FROM receivables WHERE shop_id = $1) AS "receivableCount",
       (SELECT COUNT(*)::int FROM ai_knowledge_documents WHERE shop_id = $1) AS "knowledgeCount",
       (SELECT COUNT(*)::int FROM products WHERE shop_id = $1) AS "productCount",
+      (
+        SELECT COUNT(*)::int FROM products
+        WHERE shop_id = $1 AND COALESCE(TRIM(image_url), '') = ''
+      ) AS "productsWithoutImage",
+      (SELECT COUNT(*)::int FROM invoice_scans WHERE shop_id = $1) AS "invoiceScanCount",
+      (SELECT COUNT(*)::int FROM debt_evidences WHERE shop_id = $1) AS "debtEvidenceCount",
+      (
+        SELECT COUNT(*)::int FROM cash_transactions
+        WHERE shop_id = $1 AND COALESCE(TRIM(receipt_image_url), '') != ''
+      ) AS "receiptImageCount",
       (SELECT COUNT(*)::int FROM tags WHERE shop_id = $1) AS "tagCount",
       (SELECT COUNT(*)::int FROM product_batches WHERE shop_id = $1) AS "batchCount",
       (SELECT COUNT(*)::int FROM inventory_lots WHERE shop_id = $1) AS "lotCount",
@@ -515,16 +614,17 @@ async function validateGeneratedData(
     ['invalidCashBalances', Number(result.invalidCashBalances)],
     ['missingSalesDays', Number(result.missingSalesDays)],
     ['closingCount', Math.abs(Number(result.closingCount) - expectedDays)],
-    ['purchaseCount', Math.abs(Number(result.purchaseCount) - 37)],
+    ['purchaseCount', Math.abs(Number(result.purchaseCount) - 37 * PURCHASE_CYCLES_PER_MONTH)],
     ['returnCount', Number(result.returnCount) > 0 ? 0 : 1],
     ['invoiceCount', Number(result.invoiceCount) > 0 ? 0 : 1],
     ['receivableCount', Number(result.receivableCount) > 0 ? 0 : 1],
     ['knowledgeCount', Number(result.knowledgeCount) >= 3 ? 0 : 1],
     ['productCount', Math.abs(Number(result.productCount) - expectedProductCount)],
+    ['productsWithoutImage', Number(result.productsWithoutImage)],
     ['tagCount', Number(result.tagCount) >= 8 ? 0 : 1],
     ['batchCount', Math.abs(Number(result.batchCount) - expectedProductCount)],
     ['lotCount', Math.abs(Number(result.lotCount) - expectedProductCount)],
-    ['stockTakeCount', Math.abs(Number(result.stockTakeCount) - 12)],
+    ['stockTakeCount', Math.abs(Number(result.stockTakeCount) - STOCK_TAKE_COUNT)],
     ['forecastCount', Math.abs(Number(result.forecastCount) - 90)],
     ['purchaseWithoutInvoiceCount', Number(result.purchaseWithoutInvoiceCount) >= 7 ? 0 : 1],
     ['activityLogCount', Number(result.activityLogCount) >= 50 ? 0 : 1],
@@ -704,7 +804,10 @@ function printPlan(shopId?: number, profile?: StoreProfile): void {
     `- Quy mô dự kiến: ${profile?.products.length ?? 0} sản phẩm, ` +
     `${profile?.customers.length ?? 0} khách hàng, ${profile?.suppliers.length ?? 0} nhà cung cấp`,
   );
-  console.log('- Khoảng 7.000–8.000 đơn bán, 37 kỳ nhập hàng và 1.096 lần chốt quỹ');
+  console.log(
+    `- Khoảng 35.000–42.000 đơn bán, ${37 * PURCHASE_CYCLES_PER_MONTH} kỳ nhập hàng ` +
+    `và ${STOCK_TAKE_COUNT} lần kiểm kê`,
+  );
   console.log('- Mặc định không ghi database. Dùng --apply sau khi đã kiểm tra đúng shop-id.');
 }
 
@@ -743,6 +846,22 @@ async function seed(
         .filter((row: { image_url?: string | null }) => row.image_url)
         .map((row: { family: string; image_url: string }) => [row.family, row.image_url]),
     );
+    const existingMedia = await runner.query(
+      `SELECT
+         ARRAY_REMOVE(ARRAY_AGG(DISTINCT c.avatar_url), NULL) AS customer_avatars,
+         ARRAY_REMOVE(ARRAY_AGG(DISTINCT c.identity_image_url), NULL) AS customer_identities,
+         (SELECT ARRAY_REMOVE(ARRAY_AGG(DISTINCT receipt_image_url), NULL)
+            FROM cash_transactions WHERE shop_id = $1) AS receipt_images,
+         (SELECT ARRAY_REMOVE(ARRAY_AGG(DISTINCT image_url), NULL)
+            FROM invoices WHERE shop_id = $1) AS invoice_images
+       FROM customers c
+       WHERE c.shop_id = $1`,
+      [shopId],
+    );
+    const customerAvatarUrls = (existingMedia[0]?.customer_avatars ?? []) as string[];
+    const customerIdentityUrls = (existingMedia[0]?.customer_identities ?? []) as string[];
+    const receiptImageUrls = (existingMedia[0]?.receipt_images ?? []) as string[];
+    const invoiceImageUrls = (existingMedia[0]?.invoice_images ?? []) as string[];
 
     const existingMarker = await runner.query(
       "SELECT id FROM activity_logs WHERE shop_id = $1 AND entity_type = 'DATASET' AND entity_name = $2 LIMIT 1",
@@ -815,7 +934,7 @@ async function seed(
       sku: `${profile.skuPrefix}-${key}-${String(index + 1).padStart(3, '0')}`,
       shop_id: shopId,
       name: definition.name,
-      image_url: imageUrlByFamily.get(definition.name) ?? null,
+      image_url: imageUrlByFamily.get(definition.imageFamily ?? definition.name) ?? null,
       category_id: categoryIdByName.get(definition.category)!,
       unit: definition.unit,
       cost_price: roundMoney(definition.cost * 1.07),
@@ -958,6 +1077,12 @@ async function seed(
       name,
       phone: `090${String(shopId % 100).padStart(2, '0')}${String(index + 1).padStart(5, '0')}`,
       address: `${12 + index} Đường số ${1 + (index % 12)}, TP. Hồ Chí Minh`,
+      avatar_url: customerAvatarUrls.length
+        ? customerAvatarUrls[index % customerAvatarUrls.length]
+        : null,
+      identity_image_url: customerIdentityUrls.length && index % 4 === 0
+        ? customerIdentityUrls[index % customerIdentityUrls.length]
+        : null,
       customer_type: index >= 16 ? 'WHOLESALE' : index % 7 === 0 ? 'VIP' : 'RETAIL',
       credit_limit: index >= 16 ? 120000000 : 25000000,
       balance: 0,
@@ -969,7 +1094,8 @@ async function seed(
     const customers = await bulkInsert(
       runner,
       'customers',
-      ['code', 'shop_id', 'name', 'phone', 'address', 'customer_type', 'credit_limit',
+      ['code', 'shop_id', 'name', 'phone', 'address', 'avatar_url', 'identity_image_url',
+        'customer_type', 'credit_limit',
         'balance', 'notes', 'is_active', 'created_at', 'updated_at'],
       customerRows,
       'id, code',
@@ -1046,11 +1172,11 @@ async function seed(
       const seasonal = profile.peakMonths.includes(day.getMonth()) ? 1 : 0;
       const operatingYear = Math.min(Math.floor(dayIndex / 365), 2);
       const orderCount =
-        4 +
-        operatingYear +
-        (weekend ? 2 : 0) +
-        seasonal +
-        Math.floor(random() * 3);
+        26 +
+        operatingYear * 3 +
+        (weekend ? 4 : 0) +
+        seasonal * 3 +
+        Math.floor(random() * 6);
 
       for (let orderIndex = 0; orderIndex < orderCount; orderIndex += 1) {
         const code = `SO${key}${String(dayIndex).padStart(4, '0')}${String(orderIndex).padStart(2, '0')}`;
@@ -1344,6 +1470,9 @@ async function seed(
           total_amount: order.total,
           payment_method: order.method,
           payment_status: order.initialPaid + order.debtPaid >= order.total ? 'PAID' : 'PARTIAL',
+          image_url: invoiceImageUrls.length
+            ? invoiceImageUrls[orderId % invoiceImageUrls.length]
+            : null,
           notes: 'Hóa đơn bán hàng',
           created_by: ownerId,
           created_at: order.date,
@@ -1366,7 +1495,7 @@ async function seed(
         !order.cancelled &&
         order.initialPaid >= order.total &&
         addDays(order.date, 10) <= END_DATE &&
-        random() < 0.012
+        random() < 0.014
       ) {
         selectedReturns.push({
           orderId,
@@ -1492,9 +1621,71 @@ async function seed(
       runner, 'invoices',
       ['invoice_number', 'shop_id', 'invoice_symbol', 'invoice_type', 'invoice_date',
         'partner_name', 'reference_type', 'reference_id', 'subtotal', 'discount_amount', 'tax_amount',
-        'total_amount', 'payment_method', 'payment_status', 'notes', 'created_by', 'created_at'],
+        'total_amount', 'payment_method', 'payment_status', 'image_url', 'notes', 'created_by',
+        'created_at'],
       invoiceRows, 'id, reference_id', 400,
     );
+
+    if (invoiceImageUrls.length) {
+      await bulkInsert(
+        runner,
+        'invoice_scans',
+        ['scan_code', 'shop_id', 'image_url', 'image_thumbnail_url', 'invoice_type', 'status',
+          'ocr_raw_text', 'ocr_parsed_data', 'confirmed_data', 'confidence_score', 'total_amount',
+          'reference_type', 'reference_id', 'ocr_engine', 'scanned_by', 'scanned_at',
+          'confirmed_at', 'notes'],
+        insertedInvoices
+          .filter((_, index) => index % 30 === 0)
+          .map((invoice, index) => ({
+            scan_code: `SC${key}${String(index + 1).padStart(6, '0')}`,
+            shop_id: shopId,
+            image_url: invoiceImageUrls[index % invoiceImageUrls.length],
+            image_thumbnail_url: invoiceImageUrls[index % invoiceImageUrls.length],
+            invoice_type: 'SALE',
+            status: 'CONFIRMED',
+            ocr_raw_text: 'Hóa đơn bán hàng đã được đối soát',
+            ocr_parsed_data: JSON.stringify({ source: 'test-dataset', verified: true }),
+            confirmed_data: JSON.stringify({ invoiceId: Number(invoice.id) }),
+            confidence_score: 0.96,
+            total_amount: null,
+            reference_type: 'INVOICE',
+            reference_id: Number(invoice.id),
+            ocr_engine: 'TEST_DATASET',
+            scanned_by: ownerId,
+            scanned_at: END_DATE,
+            confirmed_at: END_DATE,
+            notes: 'Ảnh hóa đơn tái sử dụng từ bộ dữ liệu kiểm thử trước',
+          })),
+        '',
+        300,
+      );
+    }
+
+    if (receiptImageUrls.length) {
+      await bulkInsert(
+        runner,
+        'debt_evidences',
+        ['receivable_id', 'shop_id', 'type', 'file_url', 'file_name', 'file_size',
+          'description', 'uploaded_by', 'uploaded_at'],
+        insertedReceivables
+          .filter((_, index) => index % 25 === 0)
+          .map((receivable, index) => ({
+            receivable_id: Number(receivable.id),
+            shop_id: shopId,
+            type: 'PAYMENT_RECEIPT',
+            file_url: receiptImageUrls[index % receiptImageUrls.length],
+            file_name: `bien-nhan-cong-no-${index + 1}.webp`,
+            file_size: null,
+            description: 'Biên nhận thanh toán công nợ mẫu',
+            uploaded_by: ownerId,
+            uploaded_at: receivable.updated_at
+              ? new Date(String(receivable.updated_at))
+              : END_DATE,
+          })),
+        '',
+        300,
+      );
+    }
 
     const invoiceIdByOrder = new Map(insertedInvoices.map((invoice) => [Number(invoice.reference_id), Number(invoice.id)]));
     const invoiceItemRows: Row[] = [];
@@ -1547,9 +1738,16 @@ async function seed(
     const purchaseWithoutInvoiceCodes = new Set<string>();
     let purchaseSequence = 1;
     for (const [keyMonth, soldQuantities] of [...monthlySold.entries()].sort()) {
-      const purchaseDate = keyMonth === monthKey(START_DATE)
-        ? atLocalTime(START_DATE, 7, 30)
-        : new Date(`${keyMonth}-02T07:30:00+07:00`);
+      for (
+        let cycleIndex = 0;
+        cycleIndex < PURCHASE_CYCLES_PER_MONTH;
+        cycleIndex += 1
+      ) {
+        const purchaseDate = keyMonth === monthKey(START_DATE)
+          ? atLocalTime(addDays(START_DATE, cycleIndex), 7, 30)
+          : new Date(
+              `${keyMonth}-${String(2 + cycleIndex * 6).padStart(2, '0')}T07:30:00+07:00`,
+            );
       const purchaseYear = Math.min(
         Math.max(
           Math.floor((purchaseDate.getTime() - START_DATE.getTime()) / (365 * DAY_MS)),
@@ -1561,17 +1759,17 @@ async function seed(
       const code = `P3${key}${String(purchaseNumber).padStart(4, '0')}`;
       const isWithoutInvoice = purchaseNumber % 5 === 0;
       if (isWithoutInvoice) purchaseWithoutInvoiceCodes.add(code);
-      const items = soldQuantities.map((sold, index) => ({
-        product_id: Number(products[index].id),
-        quantity:
-          sold +
-          (purchaseSequence === 2
-            ? profile.products[index].minStock * 2
-            : 0),
-        unit_price: roundMoney(
-          profile.products[index].cost * (1 + purchaseYear * 0.035),
-        ),
-      }));
+        const items = soldQuantities.map((sold, index) => ({
+          product_id: Number(products[index].id),
+          quantity:
+            Math.ceil(sold / PURCHASE_CYCLES_PER_MONTH) +
+            (purchaseNumber === 1
+              ? profile.products[index].minStock * 2
+              : 0),
+          unit_price: roundMoney(
+            profile.products[index].cost * (1 + purchaseYear * 0.035),
+          ),
+        }));
       const total = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
       const initialPaid = roundMoney(total * 0.82);
       const outstanding = total - initialPaid;
@@ -1652,6 +1850,7 @@ async function seed(
           created_by: ownerId,
           created_at: debtPaymentDate,
         });
+      }
       }
     }
 
@@ -1919,11 +2118,18 @@ async function seed(
         created_at: expense.date,
       });
     }
+    if (receiptImageUrls.length) {
+      cashRows.forEach((transaction, index) => {
+        if (index % 6 === 0) {
+          transaction.receipt_image_url = receiptImageUrls[index % receiptImageUrls.length];
+        }
+      });
+    }
     await bulkInsert(
       runner, 'cash_transactions',
       ['transaction_code', 'shop_id', 'type', 'category', 'amount', 'payment_method',
         'account_id', 'counterparty', 'reference_type', 'reference_id', 'transaction_date',
-        'notes', 'created_by', 'created_at'],
+        'notes', 'receipt_image_url', 'created_by', 'created_at'],
       cashRows, '', 500,
     );
     await bulkInsert(
@@ -2120,6 +2326,68 @@ async function seed(
       GROUP BY p.id
     `, [shopId, warehouseId, END_DATE, `${profile.skuPrefix}-${key}-%`]);
 
+    const stockBeforeAdjustments = await runner.query(`
+      SELECT p.id AS product_id, p.min_stock, s.quantity
+      FROM products p
+      JOIN inventory_stocks s
+        ON s.product_id = p.id
+        AND s.shop_id = p.shop_id
+      WHERE p.shop_id = $1
+      ORDER BY p.id
+    `, [shopId]);
+    const stockAdjustmentRows: Row[] = [];
+    for (let index = 0; index < stockBeforeAdjustments.length; index += 1) {
+      const stock = stockBeforeAdjustments[index];
+      const currentQuantity = Number(stock.quantity);
+      const minStock = Number(stock.min_stock);
+      const targetQuantity = index % 31 === 0
+        ? 0
+        : index % 9 === 0
+          ? Math.max(Math.floor(minStock * 0.55), 1)
+          : currentQuantity;
+      const adjustment = Math.max(currentQuantity - targetQuantity, 0);
+      if (adjustment <= 0) continue;
+      stockAdjustmentRows.push({
+        product_id: Number(stock.product_id),
+        shop_id: shopId,
+        warehouse_id: warehouseId,
+        movement_type: 'OUT',
+        quantity: adjustment,
+        reference_type: 'STOCK_ADJUSTMENT',
+        reference_id: null,
+        notes: index % 31 === 0
+          ? 'Điều chỉnh hết tồn do hư hỏng hoặc thanh lý cuối kỳ'
+          : 'Điều chỉnh tồn thấp để lập kế hoạch nhập hàng',
+        created_by: ownerId,
+        created_at: END_DATE,
+      });
+    }
+    await bulkInsert(
+      runner,
+      'inventory_movements',
+      ['product_id', 'shop_id', 'warehouse_id', 'movement_type', 'quantity',
+        'reference_type', 'reference_id', 'notes', 'created_by', 'created_at'],
+      stockAdjustmentRows,
+      '',
+      300,
+    );
+    await runner.query(`
+      UPDATE inventory_stocks stock
+      SET quantity = movement.quantity, updated_at = $3
+      FROM (
+        SELECT product_id,
+          COALESCE(SUM(
+            CASE WHEN movement_type IN ('IN', 'RETURN') THEN quantity ELSE -quantity END
+          ), 0) AS quantity
+        FROM inventory_movements
+        WHERE shop_id = $1 AND warehouse_id = $2
+        GROUP BY product_id
+      ) movement
+      WHERE stock.product_id = movement.product_id
+        AND stock.shop_id = $1
+        AND stock.warehouse_id = $2
+    `, [shopId, warehouseId, END_DATE]);
+
     const stockSnapshot = await runner.query(`
       SELECT
         p.id AS product_id,
@@ -2139,8 +2407,16 @@ async function seed(
         /Xi măng|Sơn|Bột trét|Keo dán|Chống thấm/i.test(definition.name);
       const nearExpiry = tracksExpiry &&
         (profile.key === 'agriculture' ? index < 18 : index < 8);
+      const expired = tracksExpiry && index % 23 === 0;
       const expiryDate = tracksExpiry
-        ? addDays(END_DATE, nearExpiry ? 10 + index : 180 + (index % 240))
+        ? addDays(
+            END_DATE,
+            expired
+              ? -(3 + (index % 17))
+              : nearExpiry
+                ? 10 + index
+                : 180 + (index % 240),
+          )
         : null;
       batchRows.push({
         product_id: Number(stockSnapshot[index].product_id),
@@ -2193,8 +2469,11 @@ async function seed(
 
     const stockTakeRows: Row[] = [];
     const stockTakeDates: Date[] = [];
-    for (let index = 0; index < 12; index += 1) {
-      const stockTakeDate = addDays(START_DATE, 89 + index * 91);
+    for (let index = 0; index < STOCK_TAKE_COUNT; index += 1) {
+      const stockTakeDate = addDays(
+        START_DATE,
+        Math.min(17 + index * 18, Math.floor((END_DATE.getTime() - START_DATE.getTime()) / DAY_MS)),
+      );
       stockTakeDates.push(stockTakeDate);
       stockTakeRows.push({
         stock_take_code: `KK${key}${String(index + 1).padStart(3, '0')}`,
@@ -2220,7 +2499,7 @@ async function seed(
     const stockTakeItemRows: Row[] = [];
     for (let index = 0; index < insertedStockTakes.length; index += 1) {
       const selectedProductIds = products
-        .filter((_, productIndex) => productIndex % 12 === index)
+        .filter((_, productIndex) => productIndex % STOCK_TAKE_COUNT === index)
         .slice(0, 24)
         .map((product) => Number(product.id));
       const historicalStocks = await runner.query(`
@@ -2589,7 +2868,9 @@ async function seed(
 async function main(): Promise<void> {
   const shopId = parseNumberArg('shop-id');
   const profileKey = parseProfileArg();
-  const profile = profileKey ? STORE_PROFILES[profileKey] : undefined;
+  const profile = profileKey
+    ? expandStoreProfile(STORE_PROFILES[profileKey])
+    : undefined;
   printPlan(shopId, profile);
   const shouldApply = hasFlag('apply');
   const shouldValidate = hasFlag('validate-write');

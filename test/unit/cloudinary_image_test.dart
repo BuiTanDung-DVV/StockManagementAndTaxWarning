@@ -2,7 +2,7 @@ import 'package:flutter_app/core/utils/cloudinary_image.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('adds bounded automatic Cloudinary delivery optimization', () {
+  test('adds bounded WebP Cloudinary delivery optimization', () {
     const original =
         'https://res.cloudinary.com/demo/image/upload/v1/smartstock/product.jpg';
 
@@ -14,7 +14,7 @@ void main() {
         crop: 'fill',
       ),
       'https://res.cloudinary.com/demo/image/upload/'
-      'f_auto,q_auto:good,w_240,h_240,c_fill/'
+      'f_webp,q_auto:good,w_240,h_240,c_fill/'
       'v1/smartstock/product.jpg',
     );
   });

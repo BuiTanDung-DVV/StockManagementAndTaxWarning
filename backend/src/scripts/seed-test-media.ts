@@ -202,6 +202,38 @@ async function uploadAll(onlyMissingProducts = false): Promise<Map<string, strin
         secure: true,
     });
 
+    const urls = new Map<string, string>();
+    const existingProducts = await AppDataSource.query(
+        `SELECT shop_id, trim(split_part(name, chr(183), 1)) AS family, image_url
+         FROM public.products
+         WHERE shop_id = ANY($1) AND image_url IS NOT NULL`,
+        [shops.map((shop) => shop.profileId)],
+    );
+    for (const product of existingProducts) {
+        urls.set(
+            `product:${product.shop_id}:${slugify(String(product.family))}`,
+            String(product.image_url),
+        );
+    }
+    const existingBranding = await AppDataSource.query(
+        `SELECT profile.id AS shop_id, profile.logo_url, profile.qr_payment_url,
+                (SELECT users.avatar_url
+                   FROM public.shop_members member
+                   JOIN public.users users ON users.id = member.user_id
+                  WHERE member.shop_id = profile.id
+                    AND member.is_active = TRUE
+                    AND users.avatar_url IS NOT NULL
+                  ORDER BY member.id LIMIT 1) AS avatar_url
+         FROM public.shop_profiles profile
+         WHERE profile.id = ANY($1)`,
+        [shops.map((shop) => shop.profileId)],
+    );
+    for (const media of existingBranding) {
+        if (media.logo_url) urls.set(`logo:${media.shop_id}`, String(media.logo_url));
+        if (media.qr_payment_url) urls.set(`qr:${media.shop_id}`, String(media.qr_payment_url));
+        if (media.avatar_url) urls.set(`avatar:${media.shop_id}`, String(media.avatar_url));
+    }
+
     const tasks: Array<{
         key: string;
         file: string;
@@ -224,6 +256,7 @@ async function uploadAll(onlyMissingProducts = false): Promise<Map<string, strin
     for (const shop of shops) {
         for (const productSlug of shop.productSlugs) {
             const key = `product:${shop.profileId}:${productSlug}`;
+            if (urls.has(key)) continue;
             if (onlyMissingProducts && !missingProductKeys.has(key)) continue;
             tasks.push({
                 key,
@@ -242,15 +275,16 @@ async function uploadAll(onlyMissingProducts = false): Promise<Map<string, strin
             ['identity', 'documents', `identity-${shop.slug}.webp`, 'documents/test-identity'],
         ] as const;
         for (const [kind, folder, fileName, publicPath] of items) {
+            const key = `${kind}:${shop.profileId}`;
+            if (urls.has(key)) continue;
             tasks.push({
-                key: `${kind}:${shop.profileId}`,
+                key,
                 file: path.join(mediaRoot, folder, fileName),
                 publicId: `smartstock/shops/${shop.profileId}/${publicPath}`,
             });
         }
     }
 
-    const urls = new Map<string, string>();
     const concurrency = 12;
     for (let offset = 0; offset < tasks.length; offset += concurrency) {
         const batch = tasks.slice(offset, offset + concurrency);
@@ -327,6 +361,99 @@ async function updateDatabase(
                 [invoice, shop.profileId],
             );
             await manager.query(
+                `UPDATE public.debt_payment_history
+                 SET evidence_url = $1
+                 WHERE shop_id = $2`,
+                [receipt, shop.profileId],
+            );
+            await manager.query(
+                `INSERT INTO public.invoice_scans (
+                    scan_code, shop_id, image_url, image_thumbnail_url,
+                    invoice_type, status, ocr_raw_text, ocr_parsed_data,
+                    confirmed_data, confidence_score, total_amount,
+                    reference_type, reference_id, ocr_engine, scanned_by,
+                    scanned_at, confirmed_at, notes
+                 )
+                 SELECT
+                    CONCAT('SC', $2::text, LPAD((invoice_row.id % 100000)::text, 6, '0')),
+                    $2::int, $1, $1,
+                    CASE WHEN invoice_row.invoice_type = 'IN' THEN 'PURCHASE' ELSE 'SALE' END,
+                    'CONFIRMED',
+                    CONCAT('Hóa đơn ', invoice_row.invoice_number, ' - ', invoice_row.partner_name),
+                    jsonb_build_object(
+                        'invoiceNumber', invoice_row.invoice_number,
+                        'partnerName', invoice_row.partner_name,
+                        'totalAmount', invoice_row.total_amount
+                    )::text,
+                    jsonb_build_object(
+                        'invoiceNumber', invoice_row.invoice_number,
+                        'partnerName', invoice_row.partner_name,
+                        'totalAmount', invoice_row.total_amount
+                    )::text,
+                    94,
+                    invoice_row.total_amount,
+                    invoice_row.reference_type,
+                    invoice_row.reference_id,
+                    'TEST_VERIFIED',
+                    (
+                        SELECT member.user_id
+                        FROM public.shop_members member
+                        WHERE member.shop_id = $2::int
+                          AND member.member_type = 'OWNER'
+                          AND member.is_active = TRUE
+                        ORDER BY member.id
+                        LIMIT 1
+                    ),
+                    invoice_row.created_at,
+                    invoice_row.created_at,
+                    'Ảnh hóa đơn mẫu đã được người dùng xác nhận'
+                 FROM public.invoices invoice_row
+                 WHERE invoice_row.shop_id = $2::int
+                   AND invoice_row.id % 30 = 0
+                 ON CONFLICT (scan_code) DO UPDATE SET
+                    image_url = EXCLUDED.image_url,
+                    image_thumbnail_url = EXCLUDED.image_thumbnail_url,
+                    confirmed_data = EXCLUDED.confirmed_data,
+                    total_amount = EXCLUDED.total_amount,
+                    notes = EXCLUDED.notes`,
+                [invoice, shop.profileId],
+            );
+            await manager.query(
+                `INSERT INTO public.debt_evidences (
+                    receivable_id, shop_id, payable_id, type, file_url,
+                    file_name, file_size, description, uploaded_by, uploaded_at
+                 )
+                 SELECT
+                    receivable.id,
+                    $2::int,
+                    NULL,
+                    'DOCUMENT',
+                    $1::varchar(1000),
+                    'doi-chieu-cong-no.webp',
+                    NULL,
+                    'Biên nhận đối chiếu công nợ với khách hàng',
+                    (
+                        SELECT member.user_id
+                        FROM public.shop_members member
+                        WHERE member.shop_id = $2::int
+                          AND member.member_type = 'OWNER'
+                          AND member.is_active = TRUE
+                        ORDER BY member.id
+                        LIMIT 1
+                    ),
+                    receivable.updated_at
+                 FROM public.receivables receivable
+                 WHERE receivable.shop_id = $2::int
+                   AND receivable.id % 25 = 0
+                   AND NOT EXISTS (
+                       SELECT 1
+                       FROM public.debt_evidences evidence
+                       WHERE evidence.receivable_id = receivable.id
+                         AND evidence.file_url = $1::varchar(1000)
+                   )`,
+                [receipt, shop.profileId],
+            );
+            await manager.query(
                 `UPDATE public.customers
                  SET avatar_url = $1, identity_image_url = $2, updated_at = NOW()
                  WHERE shop_id = $3`,
@@ -379,9 +506,67 @@ async function validateResult(): Promise<Record<string, unknown>[]> {
         SELECT 'customer_identity', count(*)::int, count(identity_image_url)::int
         FROM public.customers
         UNION ALL
+        SELECT 'invoice_scans', count(*)::int, count(image_url)::int
+        FROM public.invoice_scans
+        UNION ALL
+        SELECT 'debt_evidences', count(*)::int, count(file_url)::int
+        FROM public.debt_evidences
+        UNION ALL
         SELECT 'user_avatars', count(*)::int, count(avatar_url)::int
         FROM public.users
     `);
+}
+
+async function reusePublishedMedia(): Promise<Map<string, string>> {
+    const products = await AppDataSource.query(
+        `SELECT shop_id, trim(split_part(name, chr(183), 1)) AS family, image_url
+         FROM public.products
+         WHERE shop_id = ANY($1) AND image_url IS NOT NULL`,
+        [shops.map((shop) => shop.profileId)],
+    );
+    const firstUrl = products.find(
+        (product: { image_url?: string | null }) => product.image_url,
+    )?.image_url;
+    const cloudName = String(firstUrl ?? '').match(/res\.cloudinary\.com\/([^/]+)/)?.[1];
+    if (!cloudName) {
+        throw new Error('Không xác định được kho ảnh Cloudinary từ ảnh sản phẩm hiện có');
+    }
+
+    const baseUrl = `https://res.cloudinary.com/${cloudName}/image/upload`;
+    const urls = new Map<string, string>();
+    for (const product of products) {
+        urls.set(
+            `product:${product.shop_id}:${slugify(String(product.family))}`,
+            String(product.image_url),
+        );
+    }
+    for (const shop of shops) {
+        urls.set(
+            `logo:${shop.profileId}`,
+            `${baseUrl}/smartstock/shops/${shop.profileId}/branding/test-logo.webp`,
+        );
+        urls.set(
+            `qr:${shop.profileId}`,
+            `${baseUrl}/smartstock/shops/${shop.profileId}/payment-qr/test-seed.webp`,
+        );
+        urls.set(
+            `avatar:${shop.profileId}`,
+            `${baseUrl}/smartstock/shops/${shop.profileId}/avatars/test-seed.webp`,
+        );
+        urls.set(
+            `receipt:${shop.profileId}`,
+            `${baseUrl}/smartstock/shops/${shop.profileId}/documents/test-receipt.webp`,
+        );
+        urls.set(
+            `invoice:${shop.profileId}`,
+            `${baseUrl}/smartstock/shops/${shop.profileId}/documents/test-invoice.webp`,
+        );
+        urls.set(
+            `identity:${shop.profileId}`,
+            `${baseUrl}/smartstock/shops/${shop.profileId}/documents/test-identity.webp`,
+        );
+    }
+    return urls;
 }
 
 export async function seedTestMedia(): Promise<Record<string, unknown>[]> {
@@ -392,17 +577,28 @@ export async function seedTestMedia(): Promise<Record<string, unknown>[]> {
     const backupFile = await createBackup();
     console.log(`Đã sao lưu URL hiện tại: ${path.relative(process.cwd(), backupFile)}`);
 
+    const hasCloudinaryCredentials = Boolean(
+        config.cloudinaryCloudName &&
+        config.cloudinaryApiKey &&
+        config.cloudinaryApiSecret,
+    );
     if (
         !config.cloudinaryCloudName ||
         !config.cloudinaryApiKey ||
         !config.cloudinaryApiSecret
     ) {
-        throw new Error('Thiếu cấu hình Cloudinary');
+        console.log('Không có khóa Cloudinary local; tái sử dụng tài nguyên đã công bố trước đó.');
     }
 
     const onlyMissingProducts = process.argv.includes('--only-missing-products');
-    const urls = await uploadAll(onlyMissingProducts);
-    console.log(`Đã tải ${urls.size} tài nguyên lên Cloudinary`);
+    const urls = hasCloudinaryCredentials
+        ? await uploadAll(onlyMissingProducts)
+        : await reusePublishedMedia();
+    console.log(
+        hasCloudinaryCredentials
+            ? `Đã tải hoặc tái sử dụng ${urls.size} tài nguyên Cloudinary`
+            : `Đã tái sử dụng ${urls.size} URL Cloudinary`,
+    );
 
     await updateDatabase(urls, onlyMissingProducts);
     const result = await validateResult();
@@ -413,7 +609,7 @@ export async function seedTestMedia(): Promise<Record<string, unknown>[]> {
 if (require.main === module) {
     seedTestMedia()
         .catch((error) => {
-            console.error(error instanceof Error ? error.message : error);
+            console.error(error instanceof Error ? (error.stack ?? error.message) : error);
             process.exitCode = 1;
         })
         .finally(async () => {

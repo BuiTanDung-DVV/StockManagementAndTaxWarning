@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/widgets/app_shimmer.dart';
@@ -15,7 +14,7 @@ import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_badge.dart';
 import '../../../core/utils/type_parser.dart';
-import '../../../core/utils/cloudinary_image.dart';
+import '../../../core/widgets/product_network_image.dart';
 import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -438,37 +437,16 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                               child: ClipRRect(
                                                 borderRadius:
                                                     BorderRadius.circular(15),
-                                                child: imageUrl.isNotEmpty
-                                                    ? CachedNetworkImage(
-                                                        imageUrl:
-                                                            optimizedCloudinaryImageUrl(
-                                                              imageUrl,
-                                                              width: 240,
-                                                              height: 240,
-                                                              crop: 'fill',
-                                                            ),
-                                                        width: 70,
-                                                        height: 70,
-                                                        fit: BoxFit.cover,
-                                                        placeholder:
-                                                            (context, url) =>
-                                                                Container(
-                                                                  color:
-                                                                      c.surface,
-                                                                ),
-                                                        errorWidget:
-                                                            (
-                                                              context,
-                                                              url,
-                                                              error,
-                                                            ) =>
-                                                                _buildImageFallback(
-                                                                  theme,
-                                                                ),
-                                                      )
-                                                    : _buildImageFallback(
-                                                        theme,
-                                                      ),
+                                                child: ProductNetworkImage(
+                                                  imageUrl: imageUrl,
+                                                  width: 70,
+                                                  height: 70,
+                                                  semanticLabel:
+                                                      'Ảnh sản phẩm ${p['name'] ?? ''}',
+                                                  fallback: _buildImageFallback(
+                                                    theme,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                             const SizedBox(width: 14),

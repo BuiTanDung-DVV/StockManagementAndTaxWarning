@@ -1,12 +1,11 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../assets/app_assets.dart';
 import '../network/api_client.dart';
 import '../theme/app_theme.dart';
-import '../utils/cloudinary_image.dart';
+import 'product_network_image.dart';
 
 Future<String?> showGlobalSearchPanel(
   BuildContext context, {
@@ -348,18 +347,12 @@ class _SearchResultVisual extends StatelessWidget {
     if (result.imageUrl == null || result.imageUrl!.isEmpty) return fallback;
     return ClipRRect(
       borderRadius: BorderRadius.circular(11),
-      child: CachedNetworkImage(
-        imageUrl: optimizedCloudinaryImageUrl(
-          result.imageUrl!,
-          width: 160,
-          height: 160,
-          crop: 'fill',
-        ),
+      child: ProductNetworkImage(
+        imageUrl: result.imageUrl!,
         width: 44,
         height: 44,
-        fit: BoxFit.cover,
-        placeholder: (_, _) => fallback,
-        errorWidget: (_, _, _) => fallback,
+        semanticLabel: 'Ảnh ${result.title}',
+        fallback: fallback,
       ),
     );
   }
