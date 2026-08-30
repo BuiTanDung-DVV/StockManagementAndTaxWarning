@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/finance_display.dart';
@@ -26,6 +25,8 @@ class TransactionDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
+    final navigator = Navigator.of(context);
+    final canNavigateBack = navigator.canPop();
 
     final isIncome =
         transaction['type'] == 'INCOME' || transaction['type'] == 'income';
@@ -53,9 +54,9 @@ class TransactionDetailScreen extends ConsumerWidget {
       backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: context.canPop() ? 60 : null,
-        leading: context.canPop()
-            ? AppNavigationBackLeading(onPressed: context.pop)
+        leadingWidth: canNavigateBack ? 60 : null,
+        leading: canNavigateBack
+            ? AppNavigationBackLeading(onPressed: navigator.pop)
             : null,
         title: Text(
           'Chi Tiết Giao Dịch',
