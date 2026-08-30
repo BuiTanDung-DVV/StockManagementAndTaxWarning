@@ -1,0 +1,12 @@
+{
+  "extends": "./backend/tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "outDir": "./.vercel-dist",
+    "rootDir": "."
+  },
+  "include": [
+    "api/**/*.ts",
+    "backend/src/**/*.ts"
+  ]
+}
