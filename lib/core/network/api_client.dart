@@ -48,6 +48,7 @@ class ApiClient {
   String? _shopId;
   Future<bool>? _refreshFuture;
   final AuthTokenStorage _tokenStorage;
+  void Function()? onSessionExpired;
 
   ApiClient({AuthTokenStorage? tokenStorage})
     : _tokenStorage = tokenStorage ?? SecureAuthTokenStorage() {
@@ -90,6 +91,7 @@ class ApiClient {
               return handler.resolve(retryRes);
             }
             await clearToken();
+            onSessionExpired?.call();
           }
 
           // Global Error Formatting
@@ -328,7 +330,10 @@ class ApiClient {
       return Map<String, dynamic>.from(_extract(response) as Map);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
-      throw ApiException('Không thể tải ảnh lên máy chủ', e.response?.statusCode);
+      throw ApiException(
+        'Không thể tải ảnh lên máy chủ',
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -336,7 +341,12 @@ class ApiClient {
     final prefs = await SharedPreferences.getInstance();
     _shopId = prefs.getString('shop_id');
     if (kIsWeb) {
-      await _refreshOnce();
+      // main() already restores the web session before ProviderScope starts.
+      // Avoid rotating the same refresh token again when AuthNotifier.init()
+      // runs immediately afterwards.
+      if (_token == null || _token!.isEmpty) {
+        await _refreshOnce();
+      }
       return;
     }
 

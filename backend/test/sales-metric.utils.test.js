@@ -83,7 +83,7 @@ test('sales list query uses TypeORM entity property paths', () => {
   assert.match(source, /\.orderBy\('o\.orderDate', 'DESC'\)/);
   assert.match(source, /\.addOrderBy\('o\.id', 'DESC'\)/);
   assert.doesNotMatch(source, /\.orderBy\('o\.createdAt', 'DESC'\)/);
-  assert.match(source, /LOWER\(o\.orderCode\)/);
+  assert.match(source, /vietnameseSearchExpression\('o\.orderCode'\)/);
 });
 
 test('sales detail loads the same customer relation as the sales list', () => {

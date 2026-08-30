@@ -47,6 +47,10 @@ function cookieOptions() {
     httpOnly: true,
     secure: production,
     sameSite: production ? 'none' as const : 'lax' as const,
+    // Keep the refresh cookie available when the Flutter web app is served
+    // from another trusted site (for example localhost -> Vercel API).
+    // Modern browsers otherwise treat it as a blocked third-party cookie.
+    partitioned: production,
     path: REFRESH_COOKIE_PATH,
     maxAge: config.refreshTokenExpiresInDays * 24 * 60 * 60 * 1000,
   };

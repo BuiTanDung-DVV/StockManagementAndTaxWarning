@@ -24,7 +24,14 @@ final _currency = NumberFormat.currency(
 );
 
 class TransactionHistoryScreen extends ConsumerStatefulWidget {
-  const TransactionHistoryScreen({super.key});
+  final String? initialType;
+  final String? initialCategory;
+
+  const TransactionHistoryScreen({
+    super.key,
+    this.initialType,
+    this.initialCategory,
+  });
 
   @override
   ConsumerState<TransactionHistoryScreen> createState() =>
@@ -34,7 +41,15 @@ class TransactionHistoryScreen extends ConsumerStatefulWidget {
 class _TransactionHistoryScreenState
     extends ConsumerState<TransactionHistoryScreen> {
   int _page = 1;
-  String? _type;
+  late String? _type;
+  late String? _category;
+
+  @override
+  void initState() {
+    super.initState();
+    _type = widget.initialType;
+    _category = widget.initialCategory;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +63,7 @@ class _TransactionHistoryScreenState
       page: _page,
       limit: 20,
       type: _type,
-      category: null as String?,
+      category: _category,
       from: period.from,
       to: period.to,
     );
@@ -90,14 +105,18 @@ class _TransactionHistoryScreenState
                 transactions.when(
                   loading: () => _TransactionPanel(
                     type: _type,
+                    category: _category,
                     periodLabel: periodLabel,
                     onTypeChanged: _changeType,
+                    onCategoryCleared: _clearCategory,
                     child: const _TransactionLoading(),
                   ),
                   error: (_, _) => _TransactionPanel(
                     type: _type,
+                    category: _category,
                     periodLabel: periodLabel,
                     onTypeChanged: _changeType,
+                    onCategoryCleared: _clearCategory,
                     child: AppInlineError(
                       message: 'Không thể tải danh sách giao dịch.',
                       onRetry: () =>
@@ -127,10 +146,12 @@ class _TransactionHistoryScreenState
 
                     return _TransactionPanel(
                       type: _type,
+                      category: _category,
                       periodLabel: periodLabel,
                       total: total,
                       filteredAmount: _type == null ? null : filteredAmount,
                       onTypeChanged: _changeType,
+                      onCategoryCleared: _clearCategory,
                       child: items.isEmpty
                           ? const Padding(
                               padding: EdgeInsets.symmetric(vertical: 54),
@@ -191,6 +212,14 @@ class _TransactionHistoryScreenState
     });
   }
 
+  void _clearCategory() {
+    if (_category == null) return;
+    setState(() {
+      _category = null;
+      _page = 1;
+    });
+  }
+
   void _goBack() {
     if (context.canPop()) context.pop();
   }
@@ -198,16 +227,20 @@ class _TransactionHistoryScreenState
 
 class _TransactionPanel extends StatelessWidget {
   final String? type;
+  final String? category;
   final String periodLabel;
   final int? total;
   final double? filteredAmount;
   final ValueChanged<String?> onTypeChanged;
+  final VoidCallback onCategoryCleared;
   final Widget child;
 
   const _TransactionPanel({
     required this.type,
+    required this.category,
     required this.periodLabel,
     required this.onTypeChanged,
+    required this.onCategoryCleared,
     required this.child,
     this.total,
     this.filteredAmount,
@@ -231,9 +264,11 @@ class _TransactionPanel extends StatelessWidget {
                 );
                 final summary = _FilterSummary(
                   type: type,
+                  category: category,
                   total: total,
                   amount: filteredAmount,
                   periodLabel: periodLabel,
+                  onCategoryCleared: onCategoryCleared,
                 );
                 if (constraints.maxWidth < 720) {
                   return Column(
@@ -261,15 +296,19 @@ class _TransactionPanel extends StatelessWidget {
 
 class _FilterSummary extends StatelessWidget {
   final String? type;
+  final String? category;
   final int? total;
   final double? amount;
   final String periodLabel;
+  final VoidCallback onCategoryCleared;
 
   const _FilterSummary({
     required this.type,
+    required this.category,
     required this.total,
     required this.amount,
     required this.periodLabel,
+    required this.onCategoryCleared,
   });
 
   @override
@@ -329,6 +368,15 @@ class _FilterSummary extends StatelessWidget {
             color: colors.textSecondary,
           ),
         ),
+        if (category != null && category!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          InputChip(
+            label: Text('Nhóm: ${financeCategoryLabel(category)}'),
+            onDeleted: onCategoryCleared,
+            deleteIcon: const Icon(Icons.close_rounded, size: 16),
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
       ],
     );
   }

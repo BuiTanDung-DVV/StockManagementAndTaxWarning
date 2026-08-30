@@ -170,35 +170,24 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         featureGuideButton(context, 'sales_list'),
-        if (compact && canCreateTransaction)
-          Tooltip(
-            message: 'Ghi nhận bán hàng',
-            child: FloatingActionButton.small(
-              heroTag: 'sales-open-pos-action-compact',
-              elevation: 0,
-              onPressed: () => context.push('/sales/new'),
-              child: const AppAssetIcon(
-                assetPath: AppAssets.orders,
-                size: 18,
-                color: Colors.white,
-                semanticLabel: 'Ghi nhận bán hàng',
-              ),
-            ),
-          ),
+        if (canCreateTransaction)
+          compact
+              ? AppPrimaryHeaderAction(
+                  label: 'Ghi nhận bán hàng',
+                  assetPath: AppAssets.orders,
+                  heroTag: 'sales-open-pos-action-compact',
+                  onPressed: () => context.push('/sales/new'),
+                )
+              : AppPrimaryPageAction(
+                  label: 'Ghi nhận bán hàng',
+                  assetPath: AppAssets.orders,
+                  onPressed: () => context.push('/sales/new'),
+                ),
       ],
     );
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: compactLayout || !canCreateTransaction
-          ? null
-          : AppPrimaryFloatingAction(
-              label: 'Ghi nhận bán hàng',
-              assetPath: AppAssets.orders,
-              heroTag: 'sales-open-pos-action',
-              onPressed: () => context.push('/sales/new'),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(

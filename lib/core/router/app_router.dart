@@ -408,7 +408,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/transactions',
-            builder: (_, _) => const TransactionHistoryScreen(),
+            builder: (_, state) => TransactionHistoryScreen(
+              initialType: state.uri.queryParameters['type'],
+              initialCategory: state.uri.queryParameters['category'],
+            ),
           ),
           GoRoute(
             path: '/transactions/detail',

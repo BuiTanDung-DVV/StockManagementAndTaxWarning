@@ -194,35 +194,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         featureGuideButton(context, 'dashboard'),
-        if (compact && canSell)
-          Tooltip(
-            message: 'Ghi nhận bán hàng',
-            child: FloatingActionButton.small(
-              heroTag: 'dashboard-sale-action-compact',
-              elevation: 0,
-              onPressed: () => context.push('/sales/new'),
-              child: const AppAssetIcon(
-                assetPath: AppAssets.orders,
-                size: 18,
-                color: Colors.white,
-                semanticLabel: 'Ghi nhận bán hàng',
-              ),
-            ),
-          ),
+        if (canSell)
+          compact
+              ? AppPrimaryHeaderAction(
+                  label: 'Ghi nhận bán hàng',
+                  assetPath: AppAssets.orders,
+                  heroTag: 'dashboard-sale-action-compact',
+                  onPressed: () => context.push('/sales/new'),
+                )
+              : AppPrimaryPageAction(
+                  label: 'Ghi nhận bán hàng',
+                  assetPath: AppAssets.orders,
+                  onPressed: () => context.push('/sales/new'),
+                ),
       ],
     );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: canSell && !compactLayout
-          ? AppPrimaryFloatingAction(
-              label: 'Ghi nhận bán hàng',
-              assetPath: AppAssets.orders,
-              heroTag: 'dashboard-sale-action',
-              onPressed: () => context.push('/sales/new'),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(

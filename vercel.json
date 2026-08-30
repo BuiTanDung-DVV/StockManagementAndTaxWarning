@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "bash build_vercel.sh",
   "outputDirectory": "build/web",
-  "installCommand": "echo 'Skipping default install'",
+  "installCommand": "npm install --prefix backend",
   "headers": [
     {
       "source": "/(.*\\.js)",

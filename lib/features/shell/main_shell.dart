@@ -209,6 +209,9 @@ class _MainShellState extends ConsumerState<MainShell> {
           viewportWidth: constraints.maxWidth,
         );
         final aiLauncherVisible = ref.watch(aiAssistantLauncherVisibleProvider);
+        final showAiHeaderAction =
+            showAi &&
+            (mode != MainShellNavigationMode.bottomBar || !aiLauncherVisible);
 
         final page = ColoredBox(
           color: colors.bg,
@@ -221,7 +224,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                     _ShellUtilityHeader(
                       compact: mode == MainShellNavigationMode.bottomBar,
                       shop: shop,
-                      showAiRestore: showAi && !aiLauncherVisible,
+                      showAiRestore: showAiHeaderAction,
                       showShopQr: shouldShowShopPaymentQr(
                         isAllShops: shop.isAllShops,
                       ),
@@ -258,6 +261,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               if (showAi)
                 Positioned.fill(
                   child: AiAssistantWidget(
+                    showLauncher: mode == MainShellNavigationMode.bottomBar,
                     topSafeInset: showUtilityHeader
                         ? mode == MainShellNavigationMode.bottomBar
                               ? 60

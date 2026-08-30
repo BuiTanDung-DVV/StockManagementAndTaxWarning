@@ -10,6 +10,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/password_visibility_button.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -551,7 +552,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                   _confirmPasswordFocus.requestFocus(),
                               suffixIcon: _buildPasswordVisibilityButton(
                                 obscure: _obscure,
-                                colors: c,
                                 onPressed: () =>
                                     setState(() => _obscure = !_obscure),
                               ),
@@ -576,7 +576,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                               },
                               suffixIcon: _buildPasswordVisibilityButton(
                                 obscure: _obscureConfirm,
-                                colors: c,
                                 onPressed: () => setState(
                                   () => _obscureConfirm = !_obscureConfirm,
                                 ),
@@ -684,25 +683,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   Widget _buildPasswordVisibilityButton({
     required bool obscure,
-    required AppThemeColors colors,
     required VoidCallback onPressed,
   }) {
-    return IconButton(
-      tooltip: obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
-      onPressed: onPressed,
-      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-      padding: EdgeInsets.zero,
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        foregroundColor: colors.textSecondary,
-        side: BorderSide.none,
-        shape: const CircleBorder(),
-      ),
-      icon: Icon(
-        obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-        size: 20,
-      ),
-    );
+    return PasswordVisibilityButton(obscureText: obscure, onPressed: onPressed);
   }
 
   Widget _buildGlowingField({

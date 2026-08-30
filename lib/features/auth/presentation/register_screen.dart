@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/password_visibility_button.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
 import 'widgets/google_sign_in_button.dart';
@@ -319,14 +320,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         theme: theme,
                         obscureText: _obscure,
                         onChanged: (_) => _onFieldChanged(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                            color: c.textMuted,
-                            size: 20,
-                          ),
+                        suffixIcon: PasswordVisibilityButton(
+                          obscureText: _obscure,
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
@@ -343,14 +338,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         theme: theme,
                         obscureText: _obscureConfirm,
                         onChanged: (_) => _onFieldChanged(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirm
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                            color: c.textMuted,
-                            size: 20,
-                          ),
+                        suffixIcon: PasswordVisibilityButton(
+                          obscureText: _obscureConfirm,
                           onPressed: () => setState(
                             () => _obscureConfirm = !_obscureConfirm,
                           ),

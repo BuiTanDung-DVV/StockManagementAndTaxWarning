@@ -17,6 +17,11 @@ bool shouldShowPageBackButton({
   required bool canPop,
 }) => canPop && !_primaryShellRoutes.contains(location);
 
+String _currentRouterPath(BuildContext context) {
+  final router = GoRouter.maybeOf(context);
+  return router?.routerDelegate.currentConfiguration.uri.path ?? '';
+}
+
 class AppPageHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -45,7 +50,7 @@ class AppPageHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final textTheme = Theme.of(context).textTheme;
-    final location = GoRouterState.of(context).uri.path;
+    final location = _currentRouterPath(context);
     final resolvedShowBack =
         showBackButton ??
         shouldShowPageBackButton(

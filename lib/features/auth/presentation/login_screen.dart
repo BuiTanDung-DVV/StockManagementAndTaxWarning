@@ -6,6 +6,7 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/app_version_widget.dart';
+import '../../../core/widgets/password_visibility_button.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
 import 'widgets/google_sign_in_button.dart';
@@ -340,16 +341,9 @@ class _LoginForm extends StatelessWidget {
               onSubmitted: (_) => onLogin(),
               decoration: InputDecoration(
                 labelText: 'Mật khẩu',
-                suffixIcon: IconButton(
-                  tooltip: obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                suffixIcon: PasswordVisibilityButton(
+                  obscureText: obscurePassword,
                   onPressed: onTogglePassword,
-                  icon: Icon(
-                    obscurePassword
-                        ? Icons.visibility_off_rounded
-                        : Icons.visibility_rounded,
-                    color: colors.textSecondary,
-                    size: 20,
-                  ),
                 ),
               ),
             ),

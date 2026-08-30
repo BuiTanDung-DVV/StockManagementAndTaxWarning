@@ -78,6 +78,20 @@ class AppAssetIcon extends StatelessWidget {
             color: color,
             colorBlendMode: color == null ? null : BlendMode.srcIn,
             semanticLabel: semanticLabel,
+            // Không để lỗi tải ảnh biến logo thành một ô trắng. Điều này đặc
+            // biệt quan trọng trên Web khi CDN/service worker còn giữ bản
+            // asset cũ hoặc ảnh cửa hàng chưa có.
+            errorBuilder: (context, error, stackTrace) {
+              final fallbackColor =
+                  color ?? Theme.of(context).colorScheme.primary;
+              final isMascot = assetPath == AppAssets.aiMascot;
+              return Icon(
+                isMascot ? Icons.smart_toy_rounded : Icons.inventory_2_rounded,
+                size: size * 0.78,
+                color: fallbackColor,
+                semanticLabel: semanticLabel,
+              );
+            },
           );
 
     return SizedBox.square(dimension: size, child: icon);

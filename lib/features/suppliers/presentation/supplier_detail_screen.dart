@@ -73,6 +73,12 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
             onPressed: () => _confirmDelete(context, ref),
           ),
           featureGuideButton(context, 'supplier_detail'),
+          if (!compactLayout && detailAsync.hasValue)
+            AppPrimaryPageAction(
+              label: 'Chỉnh sửa',
+              assetPath: AppAssets.edit,
+              onPressed: openEdit,
+            ),
           if (compactLayout && detailAsync.hasValue)
             AppPrimaryHeaderAction(
               label: 'Chỉnh sửa',
@@ -235,23 +241,6 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
           );
         },
       ),
-      floatingActionButton: detailAsync.hasValue && !compactLayout
-          ? FloatingActionButton.extended(
-              onPressed: openEdit,
-              icon: const AppAssetIcon(
-                assetPath: AppAssets.edit,
-                size: 19,
-                color: Colors.white,
-                semanticLabel: 'Chỉnh sửa',
-              ),
-              label: const Text(
-                'Chỉnh sửa',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-            )
-          : null,
     );
   }
 

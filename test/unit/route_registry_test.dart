@@ -23,7 +23,8 @@ void main() {
       for (final match in matches) {
         final target = match.group(1)!;
         if (target.contains(r'$')) continue;
-        if (!registeredRoutes.contains(target)) {
+        final targetPath = Uri.parse(target).path;
+        if (!registeredRoutes.contains(targetPath)) {
           undefinedTargets.add(target);
         }
       }

@@ -175,6 +175,7 @@ class MiniAreaChart extends StatelessWidget {
   final Color color1;
   final Color color2;
   final List<String>? xLabels;
+  final bool isCurved;
 
   const MiniAreaChart({
     super.key,
@@ -185,6 +186,7 @@ class MiniAreaChart extends StatelessWidget {
     this.color1 = AppColors.success,
     this.color2 = AppColors.danger,
     this.xLabels,
+    this.isCurved = true,
   });
 
   @override
@@ -346,7 +348,7 @@ class MiniAreaChart extends StatelessWidget {
                   lineBarsData: [
                     LineChartBarData(
                       spots: spots1,
-                      isCurved: true,
+                      isCurved: isCurved,
                       color: color1,
                       barWidth: 2,
                       isStrokeCapRound: true,
@@ -358,7 +360,7 @@ class MiniAreaChart extends StatelessWidget {
                     ),
                     LineChartBarData(
                       spots: spots2,
-                      isCurved: true,
+                      isCurved: isCurved,
                       color: color2,
                       barWidth: 2,
                       isStrokeCapRound: true,

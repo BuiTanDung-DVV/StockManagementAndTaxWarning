@@ -49,14 +49,14 @@ bool productListUsesCompactLayout(double width) =>
     width < AppBreakpoints.compactNavigation;
 
 class _ProductTagBar extends StatelessWidget {
-  final bool compact;
   final List<Widget> children;
 
-  const _ProductTagBar({required this.compact, required this.children});
+  const _ProductTagBar({required this.children});
 
   @override
   Widget build(BuildContext context) {
     if (children.isEmpty) return const SizedBox.shrink();
+    final colors = AppThemeColors.of(context);
 
     final spacedChildren = <Widget>[
       for (var index = 0; index < children.length; index++) ...[
@@ -65,21 +65,35 @@ class _ProductTagBar extends StatelessWidget {
       ],
     ];
 
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.sm),
-      child: compact
-          ? SizedBox(
-              height: 38,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(children: spacedChildren),
-              ),
-            )
-          : Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: children,
+    return Container(
+      height: 48,
+      margin: const EdgeInsets.only(top: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(color: colors.divider),
+        borderRadius: BorderRadius.circular(AppRadius.control),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Lọc nhanh',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w700,
             ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Container(width: 1, height: 24, color: colors.divider),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: spacedChildren),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -167,35 +181,23 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
               semanticLabel: 'Cấu hình bộ lọc và nhãn',
             ),
           ),
-        if (compact)
-          Tooltip(
-            message: 'Thêm sản phẩm',
-            child: FloatingActionButton.small(
-              heroTag: 'products-add-action-compact',
-              elevation: 0,
-              onPressed: () => context.push('/products/form'),
-              child: const AppAssetIcon(
+        compact
+            ? AppPrimaryHeaderAction(
+                label: 'Thêm sản phẩm',
                 assetPath: AppAssets.add,
-                size: 18,
-                color: Colors.white,
-                semanticLabel: 'Thêm sản phẩm',
+                heroTag: 'products-add-action-compact',
+                onPressed: () => context.push('/products/form'),
+              )
+            : AppPrimaryPageAction(
+                label: 'Thêm sản phẩm',
+                assetPath: AppAssets.add,
+                onPressed: () => context.push('/products/form'),
               ),
-            ),
-          ),
       ],
     );
 
     return Scaffold(
       backgroundColor: c.bg,
-      floatingActionButton: compactLayout
-          ? null
-          : AppPrimaryFloatingAction(
-              label: 'Thêm sản phẩm',
-              assetPath: AppAssets.add,
-              heroTag: 'products-add-action',
-              onPressed: () => context.push('/products/form'),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
         child: AppResponsiveContent(
@@ -236,7 +238,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           .toList();
                       if (visibleTags.isEmpty) return const SizedBox.shrink();
                       return _ProductTagBar(
-                        compact: compactLayout,
                         children: [
                           for (final t in visibleTags)
                             Builder(
@@ -328,11 +329,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                             child: ListView.separated(
                               controller: _listScrollController,
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: EdgeInsets.fromLTRB(
+                              padding: const EdgeInsets.fromLTRB(
                                 0,
                                 AppSpacing.sm,
                                 0,
-                                compactLayout ? AppSpacing.xl : 112,
+                                AppSpacing.lg,
                               ),
                               itemCount: items.length,
                               separatorBuilder: (_, _) =>
@@ -537,6 +538,14 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                                 width: AppSpacing.xs,
                                               ),
                                               priceLabel,
+                                              const SizedBox(
+                                                width: AppSpacing.sm,
+                                              ),
+                                              Icon(
+                                                Icons.chevron_right_rounded,
+                                                color: c.textMuted,
+                                                size: 22,
+                                              ),
                                             ],
                                           ],
                                         ),
@@ -554,7 +563,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           totalItems: totalItems,
                           itemLabel: 'sản phẩm',
                           onPageChanged: _changePage,
-                          trailingSafeSpace: compactLayout ? 0 : 184,
+                          trailingSafeSpace: 0,
                         ),
                       ],
                     );
