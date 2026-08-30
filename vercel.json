@@ -25,6 +25,36 @@
   ],
   "rewrites": [
     {
+      "source": "/api/:match*",
+      "has": [
+        {
+          "type": "host",
+          "value": "smartstock-tax.vercel.app"
+        }
+      ],
+      "destination": "https://stock-management-and-tax-warning.vercel.app/api/:match*"
+    },
+    {
+      "source": "/api/:match*",
+      "has": [
+        {
+          "type": "host",
+          "value": "smartstock-app.vercel.app"
+        }
+      ],
+      "destination": "https://stock-management-and-tax-warning.vercel.app/api/:match*"
+    },
+    {
+      "source": "/api/:match*",
+      "has": [
+        {
+          "type": "host",
+          "value": "sales-stock-tax.vercel.app"
+        }
+      ],
+      "destination": "https://stock-management-and-tax-warning.vercel.app/api/:match*"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index.ts"
     },
