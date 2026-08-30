@@ -515,8 +515,13 @@ class _TransactionRow extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () =>
-                  context.push('/transactions/detail', extra: transaction),
+              onTap: () {
+                final rawId = transaction['id'];
+                final id = rawId is int
+                    ? rawId
+                    : int.tryParse(rawId?.toString() ?? '');
+                if (id != null) context.push('/transactions/$id');
+              },
               child: Container(
                 constraints: BoxConstraints(minHeight: compact ? 82 : 68),
                 padding: EdgeInsets.symmetric(

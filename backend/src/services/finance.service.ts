@@ -127,6 +127,23 @@ export class FinanceService {
             filteredAmountTotal: Number(totalRow?.filteredAmountTotal || 0),
         };
     }
+
+    async getCashTransaction(shopId: number | number[], id: number) {
+        if (!Number.isInteger(id) || id <= 0) {
+            throw new Error('Cash transaction not found');
+        }
+        const shopCondition = Array.isArray(shopId)
+            ? 't.shop_id IN (:...shopIds)'
+            : 't.shop_id = :shopId';
+        const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
+        const transaction = await this.cashTxRepo.createQueryBuilder('t')
+            .where('t.id = :id', { id })
+            .andWhere(shopCondition, shopParams)
+            .getOne();
+        if (!transaction) throw new Error('Cash transaction not found');
+        return transaction;
+    }
+
     async createCashTransaction(shopId: number, dto: Partial<CashTransaction>, manager?: EntityManager) {
         const repo = manager ? manager.getRepository(CashTransaction) : this.cashTxRepo;
         const normalized = normalizeCashTransactionInput(dto as any);

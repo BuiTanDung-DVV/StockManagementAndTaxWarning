@@ -38,6 +38,8 @@ class FinanceRepository {
   Future<Map<String, dynamic>> createTransaction(
     Map<String, dynamic> dto,
   ) async => await _api.post('/cash-transactions', data: dto);
+  Future<Map<String, dynamic>> findTransaction(int id) async =>
+      Map<String, dynamic>.from(await _api.get('/cash-transactions/$id'));
   Future<Map<String, dynamic>> updateTransaction(
     int id,
     Map<String, dynamic> dto,
@@ -137,10 +139,7 @@ class FinanceRepository {
       throw ApiException('Dữ liệu phân loại chi phí không đầy đủ');
     }
     final invalidCategory = (data['categories'] as List).any(
-      (item) =>
-          item is! Map ||
-          item['amount'] is! num ||
-          item['count'] is! num,
+      (item) => item is! Map || item['amount'] is! num || item['count'] is! num,
     );
     if (invalidCategory) {
       throw ApiException('Dữ liệu phân loại chi phí không đầy đủ');
@@ -216,18 +215,18 @@ class FinanceRepository {
     );
   }
 
-  Future<Map<String, dynamic>> getInvoiceSummary(
-    String from,
-    String to,
-  ) async {
+  Future<Map<String, dynamic>> getInvoiceSummary(String from, String to) async {
     final data = await _api.get(
       '/invoices/summary',
       params: {'from': from, 'to': to},
     );
     if (data is! Map ||
-        const ['vatIn', 'vatOut', 'vatOwed', 'vatCredit'].any(
-          (field) => data[field] is! num,
-        )) {
+        const [
+          'vatIn',
+          'vatOut',
+          'vatOwed',
+          'vatCredit',
+        ].any((field) => data[field] is! num)) {
       throw ApiException('Dữ liệu tổng hợp hóa đơn không đầy đủ');
     }
     return Map<String, dynamic>.from(data);
@@ -331,6 +330,11 @@ final transactionsProvider =
             from: args.from,
             to: args.to,
           );
+    });
+
+final transactionDetailProvider =
+    FutureProvider.family<Map<String, dynamic>, int>((ref, id) {
+      return ref.watch(financeRepoProvider).findTransaction(id);
     });
 
 final cashSummaryProvider =

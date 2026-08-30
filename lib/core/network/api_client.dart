@@ -20,6 +20,16 @@ class ApiException implements Exception {
 class ApiClient {
   static String get baseUrl {
     const envUrl = String.fromEnvironment('API_URL');
+    if (kIsWeb) {
+      final pageUri = Uri.base;
+      final isLocalPage =
+          pageUri.host == 'localhost' ||
+          pageUri.host == '127.0.0.1' ||
+          pageUri.host == '0.0.0.0';
+      if (!isLocalPage && pageUri.hasScheme && pageUri.host.isNotEmpty) {
+        return '${pageUri.origin}/api/';
+      }
+    }
     if (envUrl.isNotEmpty) {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         if (envUrl.contains('localhost')) {
@@ -47,6 +57,7 @@ class ApiClient {
   String? _refreshToken;
   String? _shopId;
   Future<bool>? _refreshFuture;
+  bool _sessionRestoreCompleted = false;
   final AuthTokenStorage _tokenStorage;
   void Function()? onSessionExpired;
 
@@ -235,6 +246,7 @@ class ApiClient {
 
   void setToken(String? token) => _token = token;
   String? get token => _token;
+  bool get sessionRestoreCompleted => _sessionRestoreCompleted;
   void setShopId(String? shopId) {
     _shopId = shopId;
     SharedPreferences.getInstance().then((prefs) {
@@ -338,34 +350,37 @@ class ApiClient {
   }
 
   Future<void> loadToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    _shopId = prefs.getString('shop_id');
-    if (kIsWeb) {
-      // main() already restores the web session before ProviderScope starts.
-      // Avoid rotating the same refresh token again when AuthNotifier.init()
-      // runs immediately afterwards.
-      if (_token == null || _token!.isEmpty) {
-        await _refreshOnce();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _shopId = prefs.getString('shop_id');
+      if (kIsWeb) {
+        // main() restores the HttpOnly-cookie session before ProviderScope.
+        // Avoid rotating the same refresh token again in AuthNotifier.init().
+        if (_token == null || _token!.isEmpty) {
+          await _refreshOnce();
+        }
+        return;
       }
-      return;
-    }
 
-    _token = await _tokenStorage.read('auth_token');
-    _refreshToken = await _tokenStorage.read('refresh_token');
+      _token = await _tokenStorage.read('auth_token');
+      _refreshToken = await _tokenStorage.read('refresh_token');
 
-    // One-time migration from legacy SharedPreferences storage.
-    final legacyAccess = prefs.getString('auth_token');
-    final legacyRefresh = prefs.getString('refresh_token');
-    if (_token == null && legacyAccess != null) {
-      await _tokenStorage.write('auth_token', legacyAccess);
-      _token = legacyAccess;
+      // One-time migration from legacy SharedPreferences storage.
+      final legacyAccess = prefs.getString('auth_token');
+      final legacyRefresh = prefs.getString('refresh_token');
+      if (_token == null && legacyAccess != null) {
+        await _tokenStorage.write('auth_token', legacyAccess);
+        _token = legacyAccess;
+      }
+      if (_refreshToken == null && legacyRefresh != null) {
+        await _tokenStorage.write('refresh_token', legacyRefresh);
+        _refreshToken = legacyRefresh;
+      }
+      await prefs.remove('auth_token');
+      await prefs.remove('refresh_token');
+    } finally {
+      _sessionRestoreCompleted = true;
     }
-    if (_refreshToken == null && legacyRefresh != null) {
-      await _tokenStorage.write('refresh_token', legacyRefresh);
-      _refreshToken = legacyRefresh;
-    }
-    await prefs.remove('auth_token');
-    await prefs.remove('refresh_token');
   }
 
   Future<void> saveToken(String token, [String? refreshToken]) async {

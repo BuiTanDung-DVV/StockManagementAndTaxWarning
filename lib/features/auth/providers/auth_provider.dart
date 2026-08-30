@@ -76,7 +76,7 @@ class AuthNotifier extends Notifier<AuthState> {
       Future.microtask(() => init());
       return AuthState(isLoggedIn: true, token: api.token);
     }
-    return const AuthState();
+    return AuthState(isLoading: !api.sessionRestoreCompleted);
   }
 
   ApiClient get _api => ref.read(apiClientProvider);

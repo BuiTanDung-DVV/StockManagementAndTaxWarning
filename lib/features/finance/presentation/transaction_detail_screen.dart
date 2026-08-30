@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/finance_display.dart';
@@ -17,16 +18,104 @@ final _currFmt = NumberFormat.currency(
 );
 
 class TransactionDetailScreen extends ConsumerWidget {
+  final int id;
+
+  const TransactionDetailScreen({super.key, required this.id});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (id <= 0) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: AppNavigationBackLeading(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/transactions'),
+          ),
+          title: const Text('Chi tiết giao dịch'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.link_off_rounded, size: 42),
+                const SizedBox(height: 12),
+                const Text(
+                  'Đường dẫn giao dịch không hợp lệ.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: () => context.go('/transactions'),
+                  child: const Text('Về danh sách giao dịch'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final transactionAsync = ref.watch(transactionDetailProvider(id));
+    return transactionAsync.when(
+      data: (transaction) => _TransactionDetailView(
+        key: ValueKey('transaction-detail-$id'),
+        transaction: transaction,
+      ),
+      loading: () => Scaffold(
+        appBar: AppBar(
+          leading: AppNavigationBackLeading(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/transactions'),
+          ),
+          title: const Text('Chi tiết giao dịch'),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, _) => Scaffold(
+        appBar: AppBar(
+          leading: AppNavigationBackLeading(
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/transactions'),
+          ),
+          title: const Text('Chi tiết giao dịch'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.receipt_long_outlined, size: 42),
+                const SizedBox(height: 12),
+                const Text(
+                  'Không thể tải giao dịch này.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () =>
+                      ref.invalidate(transactionDetailProvider(id)),
+                  child: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TransactionDetailView extends ConsumerWidget {
   final Map<dynamic, dynamic> transaction;
 
-  const TransactionDetailScreen({super.key, required this.transaction});
+  const _TransactionDetailView({super.key, required this.transaction});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final navigator = Navigator.of(context);
-    final canNavigateBack = navigator.canPop();
 
     final isIncome =
         transaction['type'] == 'INCOME' || transaction['type'] == 'income';
@@ -54,10 +143,11 @@ class TransactionDetailScreen extends ConsumerWidget {
       backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: canNavigateBack ? 60 : null,
-        leading: canNavigateBack
-            ? AppNavigationBackLeading(onPressed: navigator.pop)
-            : null,
+        leadingWidth: 60,
+        leading: AppNavigationBackLeading(
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/transactions'),
+        ),
         title: Text(
           'Chi Tiết Giao Dịch',
           style: GoogleFonts.manrope(

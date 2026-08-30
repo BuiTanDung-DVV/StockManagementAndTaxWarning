@@ -154,7 +154,13 @@ class _MainShellState extends ConsumerState<MainShell> {
           assetPath: AppAssets.inventory,
           label: AppStrings.navInventory,
           route: '/inventory',
-          prefixes: const ['/inventory', '/purchase-orders', '/stock', '/xnt'],
+          prefixes: const [
+            '/inventory',
+            '/products',
+            '/purchase-orders',
+            '/stock',
+            '/xnt',
+          ],
         ),
       if (!shop.isAllShops && shop.hasPermission('finance'))
         _NavDef(
@@ -208,10 +214,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           location: location,
           viewportWidth: constraints.maxWidth,
         );
-        final aiLauncherVisible = ref.watch(aiAssistantLauncherVisibleProvider);
-        final showAiHeaderAction =
-            showAi &&
-            (mode != MainShellNavigationMode.bottomBar || !aiLauncherVisible);
+        final showAiHeaderAction = showAi;
 
         final page = ColoredBox(
           color: colors.bg,
@@ -261,7 +264,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               if (showAi)
                 Positioned.fill(
                   child: AiAssistantWidget(
-                    showLauncher: mode == MainShellNavigationMode.bottomBar,
+                    showLauncher: false,
                     topSafeInset: showUtilityHeader
                         ? mode == MainShellNavigationMode.bottomBar
                               ? 60

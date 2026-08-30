@@ -27,6 +27,21 @@ export const getCashTransactions = async (req: Request, res: Response) => {
         res.status(invalidPeriod ? 400 : 500).json({ success: false, message: e.message });
     }
 };
+export const getCashTransaction = async (req: Request, res: Response) => {
+    try {
+        res.json({
+            success: true,
+            data: await financeService.getCashTransaction(getShopId(req), +req.params.id),
+        });
+    }
+    catch (e: any) {
+        const notFound = e.message === 'Cash transaction not found';
+        res.status(notFound ? 404 : 500).json({
+            success: false,
+            message: notFound ? 'Không tìm thấy giao dịch' : 'Không thể tải giao dịch',
+        });
+    }
+};
 export const createCashTransaction = async (req: Request, res: Response) => {
     try { 
         req.body.createdBy = (req as any).user?.sub;

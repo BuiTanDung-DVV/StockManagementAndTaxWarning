@@ -23,6 +23,27 @@ Widget _buildHost({Size size = const Size(390, 700)}) {
   );
 }
 
+Widget _buildHeaderOnlyHost({Size size = const Size(390, 700)}) {
+  return ProviderScope(
+    child: MaterialApp(
+      theme: AppTheme.lightTheme(AppColors.primary),
+      home: Scaffold(
+        body: MediaQuery(
+          data: MediaQueryData(size: size),
+          child: SizedBox(
+            width: size.width,
+            height: size.height,
+            child: const AiAssistantWidget(
+              topSafeInset: 56,
+              showLauncher: false,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -40,6 +61,15 @@ void main() {
 
     expect(find.text('Trợ giúp nghiệp vụ'), findsOneWidget);
     expect(launcher, findsNothing);
+  });
+
+  testWidgets('header-only mode does not overlay a floating launcher', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildHeaderOnlyHost());
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('ai-assistant-launcher')), findsNothing);
   });
 
   testWidgets('desktop assistant panel is capped at 560 logical pixels', (

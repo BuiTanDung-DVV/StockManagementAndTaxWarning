@@ -345,14 +345,18 @@ class _SearchResultVisual extends StatelessWidget {
       ),
     );
     if (result.imageUrl == null || result.imageUrl!.isEmpty) return fallback;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(11),
-      child: ProductNetworkImage(
-        imageUrl: result.imageUrl!,
-        width: 44,
-        height: 44,
-        semanticLabel: 'Ảnh ${result.title}',
-        fallback: fallback,
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: ProductNetworkImage(
+          imageUrl: result.imageUrl!,
+          width: 44,
+          height: 44,
+          semanticLabel: 'Ảnh ${result.title}',
+          fallback: fallback,
+        ),
       ),
     );
   }

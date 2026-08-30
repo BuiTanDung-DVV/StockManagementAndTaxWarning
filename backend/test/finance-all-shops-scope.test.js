@@ -26,6 +26,14 @@ test('finance transaction and expense APIs use the selected multi-shop scope', (
     /getCashTransactions\(\s*shopId: number \| number\[\]/,
   );
   assert.match(
+    controllerSource,
+    /getCashTransaction\(getShopId\(req\)/,
+  );
+  assert.match(
+    serviceSource,
+    /getCashTransaction\(shopId: number \| number\[\], id: number\)/,
+  );
+  assert.match(
     serviceSource,
     /getExpensesByCategory\(shopId: number \| number\[\]/,
   );

@@ -19,6 +19,7 @@ router.get('/cash-transactions/summary', requirePermission(['finance', 'dashboar
 router.get('/cash-transactions/profit-loss', requirePermission('finance', 'view'), financeCtrl.getProfitLoss);
 router.get('/cash-transactions/invoice-reconciliation', requirePermission('finance', 'view'), financeCtrl.getInvoiceReconciliation);
 router.get('/cash-transactions/expenses-by-category', requirePermission('finance', 'view'), financeCtrl.getExpensesByCategory);
+router.get('/cash-transactions/:id', requirePermission('finance', 'view'), financeCtrl.getCashTransaction);
 
 // Daily Closings
 router.get('/daily-closings', requirePermission('finance', 'view'), financeCtrl.getDailyClosings);
