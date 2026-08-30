@@ -87,9 +87,34 @@ class _ProductTagBar extends StatelessWidget {
           Container(width: 1, height: 24, color: colors.divider),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: spacedChildren),
+            child: Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(right: 28),
+                  child: Row(children: spacedChildren),
+                ),
+                IgnorePointer(
+                  child: Container(
+                    width: 30,
+                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          colors.surface.withValues(alpha: 0),
+                          colors.surface,
+                        ],
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: colors.textMuted,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -170,17 +195,39 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       runSpacing: AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        featureGuideButton(context, 'product_list'),
-        if (authState.isShopOwner)
-          IconButton(
-            tooltip: 'Cấu hình bộ lọc và nhãn',
-            onPressed: () => context.push('/products/tags'),
-            icon: const AppAssetIcon(
-              assetPath: AppAssets.settings,
-              size: 20,
-              semanticLabel: 'Cấu hình bộ lọc và nhãn',
+        if (compact)
+          PopupMenuButton<String>(
+            tooltip: 'Tác vụ khác',
+            icon: const Icon(Icons.more_horiz_rounded),
+            onSelected: (value) {
+              if (value == 'guide') {
+                showFeatureGuide(context, 'product_list');
+              } else if (value == 'tags') {
+                context.push('/products/tags');
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'guide', child: Text('Hướng dẫn')),
+              if (authState.isShopOwner)
+                const PopupMenuItem(
+                  value: 'tags',
+                  child: Text('Cấu hình bộ lọc và nhãn'),
+                ),
+            ],
+          )
+        else ...[
+          featureGuideButton(context, 'product_list'),
+          if (authState.isShopOwner)
+            IconButton(
+              tooltip: 'Cấu hình bộ lọc và nhãn',
+              onPressed: () => context.push('/products/tags'),
+              icon: const AppAssetIcon(
+                assetPath: AppAssets.settings,
+                size: 20,
+                semanticLabel: 'Cấu hình bộ lọc và nhãn',
+              ),
             ),
-          ),
+        ],
         compact
             ? AppPrimaryHeaderAction(
                 label: 'Thêm sản phẩm',

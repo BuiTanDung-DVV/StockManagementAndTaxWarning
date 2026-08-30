@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import { AppDataSource } from '../config/db.config';
 import { Invoice, InvoiceItem } from '../system/entities';
-import { Product } from '../product/entities';
 import { SalesOrder } from '../sales/entities';
 import { FinanceService } from '../services/finance.service';
 import { SalesService } from '../services/sales.service';

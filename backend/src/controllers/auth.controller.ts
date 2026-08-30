@@ -41,29 +41,47 @@ function isWebClient(req: Request): boolean {
   return req.get('x-client-platform') === 'web';
 }
 
-function cookieOptions() {
+function requestOrigin(req: Request): URL | null {
+  const rawOrigin = req.get('origin');
+  if (!rawOrigin) return null;
+  try {
+    return new URL(rawOrigin);
+  } catch {
+    return null;
+  }
+}
+
+export function isSameOriginRequest(req: Request): boolean {
+  const origin = requestOrigin(req);
+  if (!origin) return true;
+  const forwardedHost = req.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const requestHost = forwardedHost || req.get('host');
+  return Boolean(requestHost && origin.host === requestHost);
+}
+
+export function refreshCookieOptions(req: Request) {
   const production = process.env.NODE_ENV === 'production';
+  const sameOrigin = isSameOriginRequest(req);
   return {
     httpOnly: true,
     secure: production,
-    sameSite: production ? 'none' as const : 'lax' as const,
-    // Keep the refresh cookie available when the Flutter web app is served
-    // from another trusted site (for example localhost -> Vercel API).
-    // Modern browsers otherwise treat it as a blocked third-party cookie.
-    partitioned: production,
+    sameSite: production && !sameOrigin ? 'none' as const : 'lax' as const,
+    // CHIPS is only needed when a trusted web client calls the API across
+    // origins. Same-origin production uses a regular first-party cookie.
+    partitioned: production && !sameOrigin,
     path: REFRESH_COOKIE_PATH,
     maxAge: config.refreshTokenExpiresInDays * 24 * 60 * 60 * 1000,
   };
 }
 
-function clearRefreshCookie(res: Response): void {
-  const { maxAge: _maxAge, ...options } = cookieOptions();
+function clearRefreshCookie(req: Request, res: Response): void {
+  const { maxAge: _maxAge, ...options } = refreshCookieOptions(req);
   res.clearCookie(REFRESH_COOKIE, options);
 }
 
 function sendAuth(req: Request, res: Response, result: Record<string, any>, message: string) {
   if (isWebClient(req)) {
-    res.cookie(REFRESH_COOKIE, result.refresh_token, cookieOptions());
+    res.cookie(REFRESH_COOKIE, result.refresh_token, refreshCookieOptions(req));
     const { refresh_token: _hidden, ...safeResult } = result;
     return res.json({ success: true, data: safeResult, message });
   }
@@ -135,7 +153,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     const token = body.refresh_token || readCookie(req, REFRESH_COOKIE);
     const result = await authService.refreshToken(token || '');
     if (isWebClient(req)) {
-      res.cookie(REFRESH_COOKIE, result.refresh_token, cookieOptions());
+      res.cookie(REFRESH_COOKIE, result.refresh_token, refreshCookieOptions(req));
       return res.json({
         success: true,
         data: { access_token: result.access_token },
@@ -152,7 +170,7 @@ export const logout = async (req: Request, res: Response) => {
   try {
     const body = parseBody(refreshTokenSchema, req.body || {});
     await authService.logout(body.refresh_token || readCookie(req, REFRESH_COOKIE));
-    clearRefreshCookie(res);
+    clearRefreshCookie(req, res);
     res.json({ success: true, data: { loggedOut: true }, message: 'Đăng xuất thành công' });
   } catch (error) {
     handleError(res, error);

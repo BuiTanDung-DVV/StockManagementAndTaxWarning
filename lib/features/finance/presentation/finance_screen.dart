@@ -964,10 +964,10 @@ class _DesktopTransactionRow extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.push(
-            '/transactions/detail',
-            extra: Map<dynamic, dynamic>.from(transaction),
-          ),
+          onTap: () {
+            final id = int.tryParse(transaction['id']?.toString() ?? '');
+            if (id != null) context.push('/transactions/$id');
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
@@ -1059,10 +1059,10 @@ class _MobileTransactionRow extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.push(
-            '/transactions/detail',
-            extra: Map<dynamic, dynamic>.from(transaction),
-          ),
+          onTap: () {
+            final id = int.tryParse(transaction['id']?.toString() ?? '');
+            if (id != null) context.push('/transactions/$id');
+          },
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(

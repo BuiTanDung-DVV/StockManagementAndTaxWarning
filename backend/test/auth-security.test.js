@@ -17,19 +17,47 @@ const { User } = require('../dist/auth/entities');
 const { AppDataSource } = require('../dist/config/db.config');
 const { config } = require('../dist/config/env.config');
 const { AuthService } = require('../dist/services/auth.service');
+const {
+  refreshCookieOptions,
+} = require('../dist/controllers/auth.controller');
 
 const validPassword = `DummyTestPass_${Date.now()}@123`;
 
-test('web refresh cookie supports trusted cross-site Flutter clients', () => {
-  const controller = fs.readFileSync(
-    path.join(__dirname, '..', 'src', 'controllers', 'auth.controller.ts'),
-    'utf8',
-  );
+test('web refresh cookie is first-party for same-origin production', () => {
+  const previous = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    const options = refreshCookieOptions({
+      get: (name) => ({
+        origin: 'https://smartstock-tax.vercel.app',
+        host: 'smartstock-tax.vercel.app',
+      })[name.toLowerCase()],
+    });
+    assert.equal(options.httpOnly, true);
+    assert.equal(options.secure, true);
+    assert.equal(options.sameSite, 'lax');
+    assert.equal(options.partitioned, false);
+    assert.equal(options.path, '/api/auth');
+  } finally {
+    process.env.NODE_ENV = previous;
+  }
+});
 
-  assert.match(controller, /httpOnly:\s*true/);
-  assert.match(controller, /secure:\s*production/);
-  assert.match(controller, /sameSite:\s*production\s*\?\s*'none'/);
-  assert.match(controller, /partitioned:\s*production/);
+test('web refresh cookie supports trusted cross-origin production clients', () => {
+  const previous = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    const options = refreshCookieOptions({
+      get: (name) => ({
+        origin: 'https://preview.example.com',
+        host: 'api.example.com',
+      })[name.toLowerCase()],
+    });
+    assert.equal(options.sameSite, 'none');
+    assert.equal(options.partitioned, true);
+  } finally {
+    process.env.NODE_ENV = previous;
+  }
 });
 
 test('registration normalizes a verified Gmail-shaped identifier', () => {

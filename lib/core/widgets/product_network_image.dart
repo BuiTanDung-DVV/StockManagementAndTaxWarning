@@ -34,21 +34,25 @@ class ProductNetworkImage extends StatelessWidget {
       crop: 'fill',
     );
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        fallback,
-        Image.network(
-          optimizedUrl,
-          width: width,
-          height: height,
-          fit: fit,
-          semanticLabel: semanticLabel,
-          gaplessPlayback: true,
-          webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-          errorBuilder: (_, _, _) => fallback,
-        ),
-      ],
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          fallback,
+          Image.network(
+            optimizedUrl,
+            width: width,
+            height: height,
+            fit: fit,
+            semanticLabel: semanticLabel,
+            gaplessPlayback: true,
+            webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+            errorBuilder: (_, _, _) => fallback,
+          ),
+        ],
+      ),
     );
   }
 }

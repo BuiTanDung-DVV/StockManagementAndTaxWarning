@@ -50,4 +50,26 @@ void main() {
     expect(find.byKey(const Key('product-image-placeholder')), findsOneWidget);
     expect(find.byType(Image), findsOneWidget);
   });
+
+  testWidgets('keeps its requested size without a constrained parent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Center(
+          child: ProductNetworkImage(
+            imageUrl: 'https://example.com/product.webp',
+            width: 44,
+            height: 44,
+            fallback: ColoredBox(color: Colors.grey),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSize(find.byType(ProductNetworkImage)),
+      const Size(44, 44),
+    );
+  });
 }

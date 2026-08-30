@@ -90,6 +90,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPending = shopState.isPending;
       final isRejected = shopState.isRejected;
 
+      if (authState.isLoading) return null;
+
       final isLoginRoute =
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
@@ -414,9 +416,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path: '/transactions/detail',
+            path: '/transactions/:id',
             builder: (_, state) => TransactionDetailScreen(
-              transaction: state.extra as Map<dynamic, dynamic>? ?? {},
+              id: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
             ),
           ),
           GoRoute(
