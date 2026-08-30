@@ -29,7 +29,6 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final compactLayout = MediaQuery.sizeOf(context).width < 720;
     final listAsync = ref.watch(
       supplierListProvider((
         page: _page,
@@ -39,15 +38,6 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: compactLayout
-          ? null
-          : AppPrimaryFloatingAction(
-              label: 'Thêm nhà cung cấp',
-              assetPath: AppAssets.add,
-              heroTag: 'suppliers-add-action',
-              onPressed: () => context.push('/suppliers/form'),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: AppResponsiveContent(
         maxWidth: 1320,
         verticalPadding: AppSpacing.lg,
@@ -59,7 +49,18 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
               subtitle:
                   'Quản lý đối tác, thông tin thuế và điều khoản thanh toán.',
               dense: true,
-              action: featureGuideButton(context, 'supplier_list'),
+              action: Wrap(
+                spacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  featureGuideButton(context, 'supplier_list'),
+                  AppPrimaryPageAction(
+                    label: 'Thêm nhà cung cấp',
+                    assetPath: AppAssets.add,
+                    onPressed: () => context.push('/suppliers/form'),
+                  ),
+                ],
+              ),
               compactAction: Wrap(
                 spacing: AppSpacing.xs,
                 crossAxisAlignment: WrapCrossAlignment.center,

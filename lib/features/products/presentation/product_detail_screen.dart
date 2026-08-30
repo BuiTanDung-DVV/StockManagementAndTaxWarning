@@ -74,6 +74,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         centerTitle: true,
         actions: [
           featureGuideButton(context, 'product_detail'),
+          if (!compactLayout && detailAsync.hasValue)
+            AppPrimaryPageAction(
+              label: 'Chỉnh sửa',
+              assetPath: AppAssets.edit,
+              onPressed: openEdit,
+            ),
           if (compactLayout && detailAsync.hasValue)
             AppPrimaryHeaderAction(
               label: 'Chỉnh sửa',
@@ -405,23 +411,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           );
         },
       ),
-      floatingActionButton: detailAsync.hasValue && !compactLayout
-          ? FloatingActionButton.extended(
-              onPressed: openEdit,
-              icon: const AppAssetIcon(
-                assetPath: AppAssets.edit,
-                size: 19,
-                color: Colors.white,
-                semanticLabel: 'Chỉnh sửa',
-              ),
-              label: const Text(
-                'Chỉnh sửa',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
-            )
-          : null,
     );
   }
 

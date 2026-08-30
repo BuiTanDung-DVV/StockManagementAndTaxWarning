@@ -72,15 +72,6 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
 
     return Scaffold(
       backgroundColor: c.bg,
-      floatingActionButton: compactLayout || !canEdit
-          ? null
-          : AppPrimaryFloatingAction(
-              label: 'Thêm hóa đơn',
-              assetPath: AppAssets.add,
-              heroTag: 'invoice-add-action',
-              onPressed: () => _showAddDialog(context, ref),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -92,6 +83,12 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
         title: const Text('Hóa đơn'),
         actions: [
           featureGuideButton(context, 'invoices'),
+          if (!compactLayout && canEdit)
+            AppPrimaryPageAction(
+              label: 'Thêm hóa đơn',
+              assetPath: AppAssets.add,
+              onPressed: () => _showAddDialog(context, ref),
+            ),
           if (compactLayout && canEdit)
             AppPrimaryHeaderAction(
               label: 'Thêm hóa đơn',

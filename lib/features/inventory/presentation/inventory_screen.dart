@@ -72,35 +72,24 @@ class InventoryScreen extends ConsumerWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         featureGuideButton(context, 'inventory'),
-        if (compact && actionLabel != null)
-          Tooltip(
-            message: actionLabel,
-            child: FloatingActionButton.small(
-              heroTag: 'inventory-primary-action-compact',
-              elevation: 0,
-              onPressed: () => context.push(actionRoute!),
-              child: AppAssetIcon(
-                assetPath: actionAsset!,
-                size: 18,
-                color: Colors.white,
-                semanticLabel: actionLabel,
-              ),
-            ),
-          ),
+        if (actionLabel != null)
+          compact
+              ? AppPrimaryHeaderAction(
+                  label: actionLabel,
+                  assetPath: actionAsset!,
+                  heroTag: 'inventory-primary-action-compact',
+                  onPressed: () => context.push(actionRoute!),
+                )
+              : AppPrimaryPageAction(
+                  label: actionLabel,
+                  assetPath: actionAsset!,
+                  onPressed: () => context.push(actionRoute!),
+                ),
       ],
     );
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: compactLayout || actionLabel == null
-          ? null
-          : AppPrimaryFloatingAction(
-              label: actionLabel,
-              assetPath: actionAsset!,
-              heroTag: 'inventory-primary-action',
-              onPressed: () => context.push(actionRoute!),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
@@ -582,89 +571,111 @@ class _InventoryAbcProductRow extends StatelessWidget {
       decimalDigits: 0,
     ).format(revenue);
     final compact = MediaQuery.sizeOf(context).width < 680;
+    final productId = inventoryIssueProductId(item);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
+    return Semantics(
+      button: productId != null,
+      label: productId == null
+          ? null
+          : 'Xem chi tiết ${item['name'] ?? 'sản phẩm'}',
+      child: Material(
         color: colors.cardAlt.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(AppRadius.control),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: ProductNetworkImage(
-                imageUrl: imageUrl,
-                width: 44,
-                height: 44,
-                semanticLabel: 'Ảnh sản phẩm ${item['name'] ?? 'chưa có tên'}',
-                fallback: _InventoryAbcImageFallback(
-                  grade: grade,
-                  color: color,
-                ),
-              ),
+        child: InkWell(
+          onTap: productId == null
+              ? null
+              : () => context.push('/products/$productId'),
+          borderRadius: BorderRadius.circular(AppRadius.control),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item['name']?.toString() ?? 'Sản phẩm chưa có tên',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      money,
-                      style: AppTheme.tabularStyle(
-                        context,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress.clamp(0, 1),
-                    minHeight: 7,
-                    backgroundColor: colors.surface,
-                    valueColor: AlwaysStoppedAnimation(color),
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: ProductNetworkImage(
+                      imageUrl: imageUrl,
+                      width: 44,
+                      height: 44,
+                      semanticLabel:
+                          'Ảnh sản phẩm ${item['name'] ?? 'chưa có tên'}',
+                      fallback: _InventoryAbcImageFallback(
+                        grade: grade,
+                        color: color,
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  compact
-                      ? 'Nhóm $grade · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit'
-                      : 'Nhóm $grade · ${item['sku'] ?? ''} · ${item['category'] ?? 'Chưa phân loại'} · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item['name']?.toString() ??
+                                  'Sản phẩm chưa có tên',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            money,
+                            style: AppTheme.tabularStyle(
+                              context,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: progress.clamp(0, 1),
+                          minHeight: 7,
+                          backgroundColor: colors.surface,
+                          valueColor: AlwaysStoppedAnimation(color),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        compact
+                            ? 'Nhóm $grade · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit'
+                            : 'Nhóm $grade · ${item['sku'] ?? ''} · ${item['category'] ?? 'Chưa phân loại'} · Đã bán ${quantitySold.toStringAsFixed(quantitySold % 1 == 0 ? 0 : 1)} $unit · Tồn ${currentStock.toStringAsFixed(currentStock % 1 == 0 ? 0 : 1)} $unit',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                if (productId != null) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: colors.textMuted,
+                  ),
+                ],
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -852,7 +863,7 @@ class _InventoryMetricStrip extends StatelessWidget {
           error: (_, _) => 'Chưa tải',
         ),
         context: 'Cần kiểm tra nhập hàng',
-        route: '/purchase-orders',
+        route: '/inventory?issue=low-stock',
       ),
       _InventoryMetric(
         label: 'Sắp/quá hạn',
@@ -862,7 +873,7 @@ class _InventoryMetricStrip extends StatelessWidget {
           error: (_, _) => 'Chưa tải',
         ),
         context: 'Cần xử lý trước hạn',
-        route: '/products',
+        route: '/inventory?issue=expiring',
       ),
       _InventoryMetric(
         label: 'Giá trị tồn kho',
@@ -924,6 +935,12 @@ String inventoryIssueProductName(dynamic item) {
       item['productName']?.toString() ??
       item['name']?.toString() ??
       'Sản phẩm chưa có tên';
+}
+
+int? inventoryIssueProductId(dynamic item) {
+  if (item is! Map) return null;
+  final raw = item['product']?['id'] ?? item['productId'] ?? item['product_id'];
+  return raw is int ? raw : int.tryParse(raw?.toString() ?? '');
 }
 
 num inventoryIssueQuantity(dynamic item) {
@@ -1167,11 +1184,15 @@ class _InventoryActionWorkspace extends StatelessWidget {
           emptyMessage: 'Không có sản phẩm dưới định mức.',
           asyncValue: lowStock,
           statusBuilder: inventoryLowStockStatus,
+          viewAllRoute: '/inventory?issue=low-stock',
+          accentColor: AppColors.warning,
         );
         final slowPanel = _InventoryIssuePanel(
           title: 'Tồn chậm giữ vốn',
           emptyMessage: 'Không có sản phẩm chậm luân chuyển.',
           asyncValue: slowMoving,
+          viewAllRoute: '/inventory?issue=slow-moving',
+          accentColor: AppColors.warning,
           summaryBuilder: (items) {
             final totals = inventorySlowMovingTotals(items);
             return '${totals.skuCount} SKU · ${_compactInventoryMoney(totals.totalValue)} theo giá vốn';
@@ -1201,11 +1222,14 @@ class _InventoryActionWorkspace extends StatelessWidget {
           asyncValue: expiring,
           statusBuilder: (item) =>
               inventoryExpiringStatus(item, DateTime.now()),
+          viewAllRoute: '/inventory?issue=expiring',
+          accentColor: AppColors.danger,
         );
 
         final selectedPanel = switch (initialIssue) {
           'low-stock' => lowPanel,
           'expired' || 'expiring' => expiringPanel,
+          'slow-moving' => slowPanel,
           _ => null,
         };
         if (selectedPanel != null) {
@@ -1247,30 +1271,20 @@ class _InventoryActionWorkspace extends StatelessWidget {
           );
         }
 
-        if (inventoryIssuePanelsStackVertically(constraints.maxWidth)) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              lowPanel,
-              const SizedBox(height: AppSpacing.md),
-              expiringPanel,
-              const SizedBox(height: AppSpacing.md),
-              slowPanel,
-            ],
-          );
-        }
-
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: lowPanel),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: expiringPanel),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: slowPanel),
-            ],
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: lowPanel),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: expiringPanel),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            slowPanel,
+          ],
         );
       },
     );
@@ -1283,12 +1297,16 @@ class _InventoryIssuePanel extends StatelessWidget {
   final AsyncValue<List<dynamic>> asyncValue;
   final String Function(dynamic item) statusBuilder;
   final String Function(List<dynamic> items)? summaryBuilder;
+  final String viewAllRoute;
+  final Color accentColor;
 
   const _InventoryIssuePanel({
     required this.title,
     required this.emptyMessage,
     required this.asyncValue,
     required this.statusBuilder,
+    required this.viewAllRoute,
+    required this.accentColor,
     this.summaryBuilder,
   });
 
@@ -1305,13 +1323,33 @@ class _InventoryIssuePanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          Container(
+            decoration: BoxDecoration(
+              border: Border(left: BorderSide(color: accentColor, width: 3)),
+            ),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.xs,
+              AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => context.push(viewAllRoute),
+                  iconAlignment: IconAlignment.end,
+                  icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                  label: const Text('Xem tất cả'),
+                ),
+              ],
             ),
           ),
           Divider(height: 1, color: colors.divider),
@@ -1336,11 +1374,22 @@ class _InventoryIssuePanel extends StatelessWidget {
               if (items.isEmpty) {
                 return Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(
-                    emptyMessage,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colors.textSecondary,
-                    ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: AppColors.success,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          emptyMessage,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: colors.textSecondary),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }
@@ -1378,6 +1427,7 @@ class _InventoryIssuePanel extends StatelessWidget {
                       index: index + 1,
                       item: items[index],
                       status: statusBuilder(items[index]),
+                      accentColor: accentColor,
                     ),
                   ],
                 ],
@@ -1394,80 +1444,100 @@ class _InventoryIssueRow extends StatelessWidget {
   final int index;
   final dynamic item;
   final String status;
+  final Color accentColor;
 
   const _InventoryIssueRow({
     required this.index,
     required this.item,
     required this.status,
+    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final name = inventoryIssueProductName(item);
-
     final compact = MediaQuery.sizeOf(context).width < 680;
+    final productId = inventoryIssueProductId(item);
 
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            child: Text(
-              '$index',
-              style: AppTheme.tabularStyle(
-                context,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: colors.textMuted,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(
+    return Semantics(
+      button: productId != null,
+      label: productId == null ? null : 'Xem chi tiết $name',
+      child: InkWell(
+        onTap: productId == null
+            ? null
+            : () => context.push('/products/$productId'),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '$index',
+                  style: AppTheme.tabularStyle(
                     context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textMuted,
+                  ),
                 ),
-                if (compact) ...[
-                  const SizedBox(height: 4),
-                  Text(
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (compact) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        status,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: accentColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (!compact) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
                     status,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: AppColors.danger,
+                      color: accentColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
-          if (!compact) ...[
-            const SizedBox(width: AppSpacing.sm),
-            Flexible(
-              child: Text(
-                status,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.danger,
-                  fontWeight: FontWeight.w600,
                 ),
-              ),
-            ),
-          ],
-        ],
+              ],
+              if (productId != null) ...[
+                const SizedBox(width: AppSpacing.xs),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: colors.textMuted,
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -37,7 +37,6 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final compactLayout = MediaQuery.sizeOf(context).width < 720;
     final listAsync = ref.watch(
       customerListProvider((
         page: _page,
@@ -47,15 +46,6 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
     return Scaffold(
       backgroundColor: colors.bg,
-      floatingActionButton: compactLayout
-          ? null
-          : AppPrimaryFloatingAction(
-              label: 'Thêm khách hàng',
-              assetPath: AppAssets.add,
-              heroTag: 'customers-add-action',
-              onPressed: () => context.push('/customers/form'),
-            ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: AppResponsiveContent(
         maxWidth: 1320,
         verticalPadding: AppSpacing.lg,
@@ -67,7 +57,18 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               subtitle:
                   'Tra cứu thông tin liên hệ, nhóm khách và công nợ phát sinh.',
               dense: true,
-              action: featureGuideButton(context, 'customer_list'),
+              action: Wrap(
+                spacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  featureGuideButton(context, 'customer_list'),
+                  AppPrimaryPageAction(
+                    label: 'Thêm khách hàng',
+                    assetPath: AppAssets.add,
+                    onPressed: () => context.push('/customers/form'),
+                  ),
+                ],
+              ),
               compactAction: Wrap(
                 spacing: AppSpacing.xs,
                 crossAxisAlignment: WrapCrossAlignment.center,

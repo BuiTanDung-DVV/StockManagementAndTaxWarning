@@ -59,6 +59,19 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
     final api = ref.watch(apiClientProvider);
+    void handleSessionExpired() {
+      Future.microtask(() async {
+        if (!state.isLoggedIn) return;
+        await logout();
+      });
+    }
+
+    api.onSessionExpired = handleSessionExpired;
+    ref.onDispose(() {
+      if (identical(api.onSessionExpired, handleSessionExpired)) {
+        api.onSessionExpired = null;
+      }
+    });
     if (api.token != null && api.token!.isNotEmpty) {
       Future.microtask(() => init());
       return AuthState(isLoggedIn: true, token: api.token);

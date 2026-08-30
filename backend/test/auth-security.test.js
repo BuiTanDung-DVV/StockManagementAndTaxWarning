@@ -20,6 +20,18 @@ const { AuthService } = require('../dist/services/auth.service');
 
 const validPassword = `DummyTestPass_${Date.now()}@123`;
 
+test('web refresh cookie supports trusted cross-site Flutter clients', () => {
+  const controller = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'controllers', 'auth.controller.ts'),
+    'utf8',
+  );
+
+  assert.match(controller, /httpOnly:\s*true/);
+  assert.match(controller, /secure:\s*production/);
+  assert.match(controller, /sameSite:\s*production\s*\?\s*'none'/);
+  assert.match(controller, /partitioned:\s*production/);
+});
+
 test('registration normalizes a verified Gmail-shaped identifier', () => {
   const result = registerSchema.parse({
     username: '  User.Name@GMAIL.COM ',

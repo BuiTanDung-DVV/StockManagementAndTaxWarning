@@ -116,7 +116,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   }
 
   Offset _resolveLauncherPosition(Rect bounds) {
-    final normalized = _normalizedLauncherPosition ?? const Offset(0, 0.5);
+    final normalized = _normalizedLauncherPosition ?? const Offset(0.86, 0.52);
     return Offset(
       bounds.left + (bounds.width * normalized.dx),
       bounds.top + (bounds.height * normalized.dy),
@@ -229,9 +229,13 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
           margin,
           constraints.maxWidth - launcherSize.width - margin,
         );
+        final bottomActionSafeInset = isMobile ? 92.0 : 104.0;
         final maximumTop = math.max(
           minimumTop,
-          constraints.maxHeight - launcherSize.height - margin,
+          constraints.maxHeight -
+              launcherSize.height -
+              margin -
+              bottomActionSafeInset,
         );
         final launcherBounds = Rect.fromLTRB(
           margin,
