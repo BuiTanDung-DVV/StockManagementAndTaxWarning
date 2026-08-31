@@ -212,7 +212,7 @@ class FinanceScreen extends ConsumerWidget {
                       AppPrimaryPageAction(
                         label: 'Lịch sử giao dịch',
                         assetPath: AppAssets.cash,
-                        onPressed: () => context.push('/transactions'),
+                        onPressed: () => context.go('/transactions'),
                       ),
                     ],
                   ),
@@ -225,7 +225,7 @@ class FinanceScreen extends ConsumerWidget {
                         label: 'Lịch sử giao dịch',
                         assetPath: AppAssets.cash,
                         heroTag: 'finance-transaction-action-compact',
-                        onPressed: () => context.push('/transactions'),
+                        onPressed: () => context.go('/transactions'),
                       ),
                     ],
                   ),
@@ -304,7 +304,7 @@ class FinanceScreen extends ConsumerWidget {
                 _SectionLead(
                   title: 'Giao dịch gần đây',
                   trailing: TextButton(
-                    onPressed: () => context.push('/transactions'),
+                    onPressed: () => context.go('/transactions'),
                     child: const Text('Xem tất cả'),
                   ),
                 ),
@@ -379,7 +379,7 @@ class _FinanceMetricStrip extends StatelessWidget {
             assetPath: AppAssets.revenue,
             badgeText: periodLabel,
             compact: compact,
-            onTap: () => context.push('/transactions?type=INCOME'),
+            onTap: () => context.go('/transactions?type=INCOME'),
             navigationHint: 'Mở danh sách các khoản thu',
           ),
           AppKpiCard(
@@ -389,7 +389,7 @@ class _FinanceMetricStrip extends StatelessWidget {
             assetPath: AppAssets.orders,
             badgeText: periodLabel,
             compact: compact,
-            onTap: () => context.push('/transactions?type=EXPENSE'),
+            onTap: () => context.go('/transactions?type=EXPENSE'),
             navigationHint: 'Mở danh sách các khoản chi',
           ),
           AppKpiCard(
@@ -399,7 +399,7 @@ class _FinanceMetricStrip extends StatelessWidget {
             assetPath: AppAssets.profit,
             badgeText: periodLabel,
             compact: compact,
-            onTap: () => context.push('/transactions'),
+            onTap: () => context.go('/transactions'),
             navigationHint: 'Mở các giao dịch tạo nên dòng tiền thuần',
           ),
         ];
@@ -525,15 +525,29 @@ class _ExpenseCategoryPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final compact = MediaQuery.sizeOf(context).width < 600;
-    final chartHeight = compact ? 250.0 : 300.0;
     final emptyHeight = compact ? 96.0 : 108.0;
-    final categories =
+    final allCategories =
         ((data['categories'] as List?) ?? (data['items'] as List?) ?? const [])
             .whereType<Map>()
-            .take(6)
             .toList();
     final total = asDouble(data['total']);
-    final maximum = categories.fold<double>(0, (current, item) {
+    Map? procurement;
+    final operatingCategories = <Map>[];
+    for (final category in allCategories) {
+      if (category['category']?.toString().toUpperCase() == 'PURCHASE') {
+        procurement = category;
+      } else {
+        operatingCategories.add(category);
+      }
+    }
+    final visibleOperatingCategories = operatingCategories.take(6).toList();
+    final operatingTotal = operatingCategories.fold<double>(0, (sum, item) {
+      return sum + asDouble(item['total'] ?? item['amount'] ?? item['value']);
+    });
+    final operatingMaximum = visibleOperatingCategories.fold<double>(0, (
+      current,
+      item,
+    ) {
       final value = asDouble(item['total'] ?? item['amount'] ?? item['value']);
       return value > current ? value : current;
     });
@@ -544,11 +558,11 @@ class _ExpenseCategoryPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionLead(
-            title: 'Nhóm tiền chi lớn',
-            subtitle: '$periodLabel · Tỷ trọng trong tổng tiền chi.',
+            title: 'Cơ cấu tiền chi',
+            subtitle: '$periodLabel · Tách tiền nhập hàng và chi phí vận hành.',
           ),
           const SizedBox(height: AppSpacing.lg),
-          if (categories.isEmpty)
+          if (allCategories.isEmpty)
             SizedBox(
               height: emptyHeight,
               child: Column(
@@ -566,36 +580,159 @@ class _ExpenseCategoryPanel extends StatelessWidget {
                 ],
               ),
             )
-          else
-            SizedBox(
-              height: chartHeight,
-              child: Column(
+          else ...[
+            if (procurement != null)
+              _ProcurementExpenseSummary(
+                value: asDouble(
+                  procurement['total'] ??
+                      procurement['amount'] ??
+                      procurement['value'],
+                ),
+                total: total,
+              ),
+            if (procurement != null && visibleOperatingCategories.isNotEmpty)
+              const SizedBox(height: AppSpacing.lg),
+            if (visibleOperatingCategories.isNotEmpty) ...[
+              Row(
                 children: [
-                  for (var index = 0; index < categories.length; index++) ...[
-                    _ExpenseCategoryRow(
-                      category:
-                          categories[index]['category']?.toString() ??
-                          categories[index]['name']?.toString() ??
-                          '',
-                      name: financeCategoryLabel(
-                        categories[index]['category']?.toString() ??
-                            categories[index]['name']?.toString(),
+                  Expanded(
+                    child: Text(
+                      'Chi phí vận hành',
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
                       ),
-                      value: asDouble(
-                        categories[index]['total'] ??
-                            categories[index]['amount'] ??
-                            categories[index]['value'],
-                      ),
-                      maximum: maximum,
-                      total: total,
                     ),
-                    if (index < categories.length - 1)
-                      const SizedBox(height: AppSpacing.sm),
-                  ],
+                  ),
+                  Text(
+                    _currencyFormat.format(operatingTotal),
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: AppSpacing.sm),
+              for (
+                var index = 0;
+                index < visibleOperatingCategories.length;
+                index++
+              ) ...[
+                _ExpenseCategoryRow(
+                  category:
+                      visibleOperatingCategories[index]['category']
+                          ?.toString() ??
+                      visibleOperatingCategories[index]['name']?.toString() ??
+                      '',
+                  name: financeCategoryLabel(
+                    visibleOperatingCategories[index]['category']?.toString() ??
+                        visibleOperatingCategories[index]['name']?.toString(),
+                  ),
+                  value: asDouble(
+                    visibleOperatingCategories[index]['total'] ??
+                        visibleOperatingCategories[index]['amount'] ??
+                        visibleOperatingCategories[index]['value'],
+                  ),
+                  maximum: operatingMaximum,
+                  total: operatingTotal,
+                  color: AppColors.primary,
+                  shareContext: 'chi phí vận hành',
+                ),
+                if (index < visibleOperatingCategories.length - 1)
+                  const SizedBox(height: AppSpacing.sm),
+              ],
+            ],
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _ProcurementExpenseSummary extends StatelessWidget {
+  final double value;
+  final double total;
+
+  const _ProcurementExpenseSummary({required this.value, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final share = total <= 0 ? 0.0 : value / total * 100;
+    return Semantics(
+      button: true,
+      label:
+          'Tiền nhập hàng, ${_currencyFormat.format(value)}, ${share.toStringAsFixed(1)} phần trăm tổng tiền chi',
+      hint: 'Mở danh sách giao dịch nhập hàng',
+      child: Material(
+        color: AppColors.info.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () =>
+              context.go('/transactions?type=EXPENSE&category=PURCHASE'),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.info,
+                    size: 21,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tiền nhập hàng',
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        '${share.toStringAsFixed(1)}% tổng tiền chi',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  _currencyFormat.format(value),
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: colors.textMuted,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -607,6 +744,8 @@ class _ExpenseCategoryRow extends StatelessWidget {
   final double value;
   final double maximum;
   final double total;
+  final Color color;
+  final String shareContext;
 
   const _ExpenseCategoryRow({
     required this.category,
@@ -614,6 +753,8 @@ class _ExpenseCategoryRow extends StatelessWidget {
     required this.value,
     required this.maximum,
     required this.total,
+    this.color = AppColors.danger,
+    this.shareContext = 'tổng tiền chi',
   });
 
   @override
@@ -624,15 +765,15 @@ class _ExpenseCategoryRow extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: '$name, ${share.toStringAsFixed(1)} phần trăm tổng tiền chi',
+      label: '$name, ${share.toStringAsFixed(1)} phần trăm $shareContext',
       hint: 'Mở danh sách giao dịch thuộc nhóm này',
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: category.isEmpty
-              ? () => context.push('/transactions?type=EXPENSE')
-              : () => context.push(
+              ? () => context.go('/transactions?type=EXPENSE')
+              : () => context.go(
                   Uri(
                     path: '/transactions',
                     queryParameters: {'type': 'EXPENSE', 'category': category},
@@ -679,7 +820,7 @@ class _ExpenseCategoryRow extends StatelessWidget {
                   minHeight: 5,
                   borderRadius: BorderRadius.circular(3),
                   backgroundColor: colors.divider,
-                  valueColor: const AlwaysStoppedAnimation(AppColors.danger),
+                  valueColor: AlwaysStoppedAnimation(color),
                 ),
               ],
             ),
@@ -966,7 +1107,9 @@ class _DesktopTransactionRow extends StatelessWidget {
         child: InkWell(
           onTap: () {
             final id = int.tryParse(transaction['id']?.toString() ?? '');
-            if (id != null) context.push('/transactions/$id');
+            if (id != null) {
+              context.go('/transactions/$id?from=finance');
+            }
           },
           child: Container(
             padding: const EdgeInsets.symmetric(
@@ -1061,7 +1204,9 @@ class _MobileTransactionRow extends StatelessWidget {
         child: InkWell(
           onTap: () {
             final id = int.tryParse(transaction['id']?.toString() ?? '');
-            if (id != null) context.push('/transactions/$id');
+            if (id != null) {
+              context.go('/transactions/$id?from=finance');
+            }
           },
           child: Container(
             padding: const EdgeInsets.all(AppSpacing.md),

@@ -45,12 +45,7 @@ export class TvplSearchService {
             href = `https://thuvienphapluat.vn${href.startsWith('/') ? '' : '/'}${href}`;
           }
 
-          results.push({
-            title,
-            url: href,
-            status: 'Còn hiệu lực',
-            effectiveDate: 'Mới cập nhật',
-          });
+          results.push({ title, url: href });
         }
       }
 

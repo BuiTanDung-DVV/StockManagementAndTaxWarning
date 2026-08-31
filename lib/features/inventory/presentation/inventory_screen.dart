@@ -584,7 +584,9 @@ class _InventoryAbcProductRow extends StatelessWidget {
         child: InkWell(
           onTap: productId == null
               ? null
-              : () => context.push('/products/$productId'),
+              : () => context.go(
+                  '/products/$productId?from=inventory',
+                ),
           borderRadius: BorderRadius.circular(AppRadius.control),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -1036,7 +1038,7 @@ class _InventoryMetricCell extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: metric.route == null ? null : () => context.push(metric.route!),
+        onTap: metric.route == null ? null : () => context.go(metric.route!),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
@@ -1108,7 +1110,7 @@ class _InventoryMetricRow extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: metric.route == null ? null : () => context.push(metric.route!),
+        onTap: metric.route == null ? null : () => context.go(metric.route!),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
@@ -1466,7 +1468,7 @@ class _InventoryIssueRow extends StatelessWidget {
       child: InkWell(
         onTap: productId == null
             ? null
-            : () => context.push('/products/$productId'),
+            : () => context.go('/products/$productId?from=inventory'),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(

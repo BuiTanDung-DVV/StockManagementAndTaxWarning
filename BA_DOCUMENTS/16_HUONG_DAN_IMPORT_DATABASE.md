@@ -255,3 +255,31 @@ bảng kê mua hàng chưa hóa đơn, nghĩa vụ thuế, nhật ký và kiến
 Không tự tạo ảnh quét hóa đơn hoặc chứng từ công nợ giả. Hai nhóm này chỉ được ghi
 khi người dùng tải lên tệp có thật. Kết quả số lượng và nguồn dữ liệu production
 được ghi tại `17_BAO_CAO_NGUON_DU_LIEU_PRODUCTION.md`.
+
+## 11. Audit và sửa tăng dần riêng cho shop test 34/35
+
+Bộ lệnh dưới đây chỉ cho phép `shop_id=34` và `shop_id=35`; đây là `shop_id`,
+không phải `user_id`. Audit không ghi database và nên được chạy trước để lưu
+snapshot baseline:
+
+Các lệnh được chạy từ thư mục `backend/`.
+
+```powershell
+npm run build
+node dist/scripts/audit-test-shop-data.js --shop-ids=34,35 --as-of=2026-08-31 --format=json --output=..\BA_DOCUMENTS\test-shop-audit-baseline-2026-08-31.json
+```
+
+Repair mặc định là dry-run. Chỉ sau khi xem baseline và xác nhận từng thay đổi
+mới dùng `--apply`; không dùng chế độ thay thế toàn bộ:
+
+```powershell
+node dist/scripts/repair-test-shop-data.js --shop-ids=34,35
+node dist/scripts/repair-test-shop-data.js --shop-ids=34,35 --apply --confirm=REPAIR-34,35
+node dist/scripts/audit-test-shop-data.js --shop-ids=34,35 --as-of=2026-08-31 --format=json --output=..\BA_DOCUMENTS\test-shop-audit-after-2026-08-31.json
+```
+
+Repair chỉ bổ sung dòng hóa đơn hoặc đồng bộ header khi có liên kết chứng từ và
+công thức xác định chắc chắn. Bản ghi chưa đủ căn cứ được giữ nguyên và đưa vào
+report. Mỗi shop được xử lý trong transaction riêng và có một dòng
+`DATA_QUALITY_REPAIR` trong `activity_logs`; không tạo thêm ảnh hóa đơn hoặc
+chứng từ công nợ giả.

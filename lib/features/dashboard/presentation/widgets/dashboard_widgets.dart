@@ -3428,7 +3428,7 @@ class _PriorityRow extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.push(item.destination),
+          onTap: () => context.go(item.destination),
           mouseCursor: SystemMouseCursors.click,
           child: Container(
             constraints: const BoxConstraints(minHeight: 76),

@@ -1632,7 +1632,7 @@ class _MetricCell extends StatelessWidget {
           ? metric.color.withValues(alpha: 0.055)
           : Colors.transparent,
       child: InkWell(
-        onTap: metric.route == null ? null : () => context.push(metric.route!),
+        onTap: metric.route == null ? null : () => context.go(metric.route!),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
@@ -1732,7 +1732,7 @@ class _MetricRow extends StatelessWidget {
           ? metric.color.withValues(alpha: 0.055)
           : Colors.transparent,
       child: InkWell(
-        onTap: metric.route == null ? null : () => context.push(metric.route!),
+        onTap: metric.route == null ? null : () => context.go(metric.route!),
         child: Container(
           decoration: BoxDecoration(
             border: emphasized

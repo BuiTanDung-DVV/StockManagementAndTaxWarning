@@ -65,7 +65,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
     _AssistantMessage(
       fromUser: false,
       text:
-          'Chào bạn! Tôi có thể tra cứu dữ liệu bán hàng, tồn kho, công nợ và các tài liệu đang bật của cửa hàng.',
+          'Chào bạn! Tôi có thể tra cứu dữ liệu cửa hàng. Với câu hỏi pháp luật hoặc thuế, tôi sẽ tìm tài liệu mới nhất và hiển thị nguồn để bạn kiểm tra.',
     ),
   ].toList();
 
@@ -170,14 +170,27 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
         data = response;
       }
 
+      final payload = data['data'] is Map<String, dynamic>
+          ? data['data'] as Map<String, dynamic>
+          : data;
       final answer =
-          data['answer']?.toString() ??
-          data['data']?['answer']?.toString() ??
+          payload['answer']?.toString() ??
           'Trợ lý AI đã ghi nhận thông tin.';
-      final provider =
-          data['provider']?.toString() ??
-          data['data']?['provider']?.toString() ??
-          'AI Assistant';
+      final provider = payload['provider']?.toString() ?? 'AI Assistant';
+      final sources = payload['sources'] is List
+          ? (payload['sources'] as List)
+                .whereType<Map>()
+                .map(
+                  (item) => _LegalSource.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .where((item) => item.url.isNotEmpty && item.title.isNotEmpty)
+                .toList(growable: false)
+          : const <_LegalSource>[];
+      final searchedAt = DateTime.tryParse(
+        payload['searchedAt']?.toString() ?? '',
+      );
 
       setState(() {
         if (_messages.isNotEmpty &&
@@ -185,7 +198,13 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
           _messages.removeLast();
         }
         _messages.add(
-          _AssistantMessage(fromUser: false, text: answer, source: provider),
+          _AssistantMessage(
+            fromUser: false,
+            text: answer,
+            source: provider,
+            sources: sources,
+            searchedAt: searchedAt,
+          ),
         );
       });
     } catch (error) {
@@ -702,13 +721,25 @@ class _MessageBlock extends ConsumerWidget {
                 ),
               if (!message.fromUser) ...[
                 const SizedBox(height: 8),
-                _buildLegalDocumentCitations(
-                  context,
-                  ref,
-                  message.text,
-                  primary,
-                  colors,
-                ),
+                if (message.sources.isNotEmpty)
+                  _buildStructuredSources(context, message.sources, primary)
+                else
+                  _buildLegalDocumentCitations(
+                    context,
+                    ref,
+                    message.text,
+                    primary,
+                    colors,
+                  ),
+                if (message.searchedAt != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Đã tra cứu nguồn lúc ${_formatSearchedAt(message.searchedAt!)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
               ],
               const SizedBox(height: 8),
               Row(
@@ -755,6 +786,97 @@ class _MessageBlock extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _formatSearchedAt(DateTime value) {
+    final local = value.toLocal();
+    String twoDigits(int number) => number.toString().padLeft(2, '0');
+    return '${twoDigits(local.hour)}:${twoDigits(local.minute)} '
+        '${twoDigits(local.day)}/${twoDigits(local.month)}/${local.year}';
+  }
+
+  Widget _buildStructuredSources(
+    BuildContext context,
+    List<_LegalSource> sources,
+    Color primary,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 12),
+        Text(
+          'Nguồn đã kiểm tra (${sources.length})',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        ...sources.map(
+          (source) => Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Material(
+              color: primary.withValues(alpha: 0.04),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: primary.withValues(alpha: 0.16)),
+              ),
+              child: InkWell(
+                key: ValueKey('ai-source-${source.url}'),
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _openSource(source.url),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppAssetIcon(
+                        assetPath: AppAssets.book,
+                        size: 17,
+                        color: primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              source.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${source.sourceLabel} · ${source.domain}',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: primary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(Icons.open_in_new, size: 16, color: primary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Text(
+          'Kiểm tra ngày hiệu lực và tình trạng văn bản tại trang nguồn trước khi áp dụng.',
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openSource(String value) async {
+    final uri = Uri.tryParse(value);
+    if (uri != null && uri.scheme == 'https' && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Widget _buildLegalDocumentCitations(
@@ -1060,10 +1182,37 @@ class _AssistantMessage {
   final bool fromUser;
   final String text;
   final String? source;
+  final List<_LegalSource> sources;
+  final DateTime? searchedAt;
 
   const _AssistantMessage({
     required this.fromUser,
     required this.text,
     this.source,
+    this.sources = const [],
+    this.searchedAt,
   });
+}
+
+class _LegalSource {
+  final String title;
+  final String url;
+  final String domain;
+  final String sourceLabel;
+
+  const _LegalSource({
+    required this.title,
+    required this.url,
+    required this.domain,
+    required this.sourceLabel,
+  });
+
+  factory _LegalSource.fromJson(Map<String, dynamic> json) {
+    return _LegalSource(
+      title: json['title']?.toString() ?? '',
+      url: json['url']?.toString() ?? '',
+      domain: json['domain']?.toString() ?? '',
+      sourceLabel: json['sourceLabel']?.toString() ?? 'Nguồn tham khảo',
+    );
+  }
 }

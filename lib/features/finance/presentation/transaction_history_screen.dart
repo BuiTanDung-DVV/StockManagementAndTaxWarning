@@ -78,10 +78,8 @@ class _TransactionHistoryScreenState
       backgroundColor: colors.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: context.canPop() ? 60 : null,
-        leading: context.canPop()
-            ? AppNavigationBackLeading(onPressed: _goBack)
-            : null,
+        leadingWidth: 60,
+        leading: AppNavigationBackLeading(onPressed: _goBack),
         title: const Text('Giao dịch'),
         actions: [featureGuideButton(context, 'transaction_history')],
       ),
@@ -221,7 +219,7 @@ class _TransactionHistoryScreenState
   }
 
   void _goBack() {
-    if (context.canPop()) context.pop();
+    context.canPop() ? context.pop() : context.go('/finance');
   }
 }
 
@@ -520,7 +518,9 @@ class _TransactionRow extends StatelessWidget {
                 final id = rawId is int
                     ? rawId
                     : int.tryParse(rawId?.toString() ?? '');
-                if (id != null) context.push('/transactions/$id');
+                if (id != null) {
+                  context.go('/transactions/$id?from=transactions');
+                }
               },
               child: Container(
                 constraints: BoxConstraints(minHeight: compact ? 82 : 68),
