@@ -19,8 +19,13 @@ final _currFmt = NumberFormat.currency(
 
 class TransactionDetailScreen extends ConsumerWidget {
   final int id;
+  final String returnRoute;
 
-  const TransactionDetailScreen({super.key, required this.id});
+  const TransactionDetailScreen({
+    super.key,
+    required this.id,
+    this.returnRoute = '/transactions',
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +34,7 @@ class TransactionDetailScreen extends ConsumerWidget {
         appBar: AppBar(
           leading: AppNavigationBackLeading(
             onPressed: () =>
-                context.canPop() ? context.pop() : context.go('/transactions'),
+                context.canPop() ? context.pop() : context.go(returnRoute),
           ),
           title: const Text('Chi tiết giao dịch'),
         ),
@@ -47,7 +52,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
-                  onPressed: () => context.go('/transactions'),
+                  onPressed: () => context.go(returnRoute),
                   child: const Text('Về danh sách giao dịch'),
                 ),
               ],
@@ -61,12 +66,13 @@ class TransactionDetailScreen extends ConsumerWidget {
       data: (transaction) => _TransactionDetailView(
         key: ValueKey('transaction-detail-$id'),
         transaction: transaction,
+        returnRoute: returnRoute,
       ),
       loading: () => Scaffold(
         appBar: AppBar(
           leading: AppNavigationBackLeading(
             onPressed: () =>
-                context.canPop() ? context.pop() : context.go('/transactions'),
+                context.canPop() ? context.pop() : context.go(returnRoute),
           ),
           title: const Text('Chi tiết giao dịch'),
         ),
@@ -76,7 +82,7 @@ class TransactionDetailScreen extends ConsumerWidget {
         appBar: AppBar(
           leading: AppNavigationBackLeading(
             onPressed: () =>
-                context.canPop() ? context.pop() : context.go('/transactions'),
+                context.canPop() ? context.pop() : context.go(returnRoute),
           ),
           title: const Text('Chi tiết giao dịch'),
         ),
@@ -109,8 +115,13 @@ class TransactionDetailScreen extends ConsumerWidget {
 
 class _TransactionDetailView extends ConsumerWidget {
   final Map<dynamic, dynamic> transaction;
+  final String returnRoute;
 
-  const _TransactionDetailView({super.key, required this.transaction});
+  const _TransactionDetailView({
+    super.key,
+    required this.transaction,
+    required this.returnRoute,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -146,7 +157,7 @@ class _TransactionDetailView extends ConsumerWidget {
         leadingWidth: 60,
         leading: AppNavigationBackLeading(
           onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/transactions'),
+              context.canPop() ? context.pop() : context.go(returnRoute),
         ),
         title: Text(
           'Chi Tiết Giao Dịch',

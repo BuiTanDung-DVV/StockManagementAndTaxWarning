@@ -239,10 +239,10 @@ class _MainShellState extends ConsumerState<MainShell> {
                         if (route != null &&
                             route.isNotEmpty &&
                             context.mounted) {
-                          context.push(route);
+                          context.go(route);
                         }
                       },
-                      onNotifications: () => context.push('/notifications'),
+                      onNotifications: () => context.go('/notifications'),
                       onShopSelected: (shopId) =>
                           ref.read(shopProvider.notifier).switchShop(shopId),
                       onShopQr: () => showShopPaymentQrDialog(

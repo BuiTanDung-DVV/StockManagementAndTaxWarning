@@ -460,7 +460,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                             ? rawId
                                             : int.tryParse('${rawId ?? ''}');
                                         if (id != null) {
-                                          context.push('/products/$id');
+                                          context.go(
+                                            '/products/$id?from=products',
+                                          );
                                         }
                                       },
                                       child: Padding(

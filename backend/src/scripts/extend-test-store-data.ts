@@ -4,6 +4,7 @@ import { Invoice, InvoiceItem } from '../system/entities';
 import { SalesOrder } from '../sales/entities';
 import { FinanceService } from '../services/finance.service';
 import { SalesService } from '../services/sales.service';
+import { parseTestShopIds } from '../quality/test-shop-data.utils';
 
 type SeedProduct = {
     id: number;
@@ -41,6 +42,7 @@ const addDays = (date: Date, days: number): Date =>
     new Date(date.getTime() + days * 86400000);
 
 const roundMoney = (value: number): number => Math.round(value / 1000) * 1000;
+const runId = argument('run-id') || `extend-test-data-${new Date().toISOString().replace(/[-:.TZ]/g, '')}`;
 
 async function createInvoiceForOrder(
     shopId: number,
@@ -82,7 +84,7 @@ async function createInvoiceForOrder(
             paymentStatus: Number(order.paidAmount) >= Number(order.totalAmount)
                 ? 'PAID'
                 : 'PARTIAL',
-            notes: 'Hóa đơn dữ liệu kiểm thử cập nhật đến hiện tại',
+            notes: 'Hóa đơn bán hàng',
             createdBy: ownerId,
         });
         const savedInvoice = await invoiceRepo.save(invoice);
@@ -287,7 +289,7 @@ async function seedShop(
                     discountAmount,
                     settleInFull: true,
                     paymentMethod: paymentMethods[(dayIndex + orderIndex) % 3],
-                    notes: 'Dữ liệu kiểm thử cập nhật đến hiện tại',
+                    notes: 'Bán hàng tại cửa hàng',
                     createdBy: ownerId,
                 });
                 orderId = Number(created.id);
@@ -342,7 +344,7 @@ async function seedShop(
                 referenceType: 'DATASET_EXTENSION',
                 referenceId: Number(key.replaceAll('-', '')),
                 transactionDate: day,
-                notes: `Dữ liệu kiểm thử ngày ${key}`,
+                notes: `Chi phí vận hành ngày ${key}`,
                 createdBy: ownerId,
             });
             result.createdExpenses += 1;
@@ -353,21 +355,36 @@ async function seedShop(
             await financeService.createDailyClosing(shopId, {
                 closingDate: key as any,
                 closingCash: Number(closing.expectedCash || 0),
-                notes: 'Chốt ngày tự động cho dữ liệu kiểm thử',
+                notes: 'Chốt quỹ cuối ngày',
                 closedBy: ownerId,
             });
             result.createdClosings += 1;
         }
     }
     await alignSeededBusinessDates(shopId);
+    await AppDataSource.query(`
+        INSERT INTO activity_logs (
+            user_id, shop_id, action, entity_type, entity_id, entity_name,
+            old_value, new_value, description, ip_address, created_at
+        ) VALUES ($1, $2, 'IMPORT', 'DATASET_EXTENSION', NULL, $3, NULL, $4, $5, NULL, NOW())
+    `, [
+        ownerId,
+        shopId,
+        runId,
+        JSON.stringify({
+            version: 'TEST_SHOP_DATA_QUALITY_V1',
+            runId,
+            from: dateKey(from),
+            to: dateKey(to),
+            counts: result,
+        }),
+        'Ghi nhận nguồn dữ liệu bổ sung trong metadata; không hiển thị marker kỹ thuật trên chứng từ.',
+    ]);
     return result;
 }
 
 async function main(): Promise<void> {
-    const shopIds = (argument('shop-ids') || '')
-        .split(',')
-        .map((value) => Number(value.trim()))
-        .filter((value) => Number.isSafeInteger(value) && value > 0);
+    const shopIds = parseTestShopIds(argument('shop-ids'));
     const from = parseDate(argument('from'), '--from');
     const to = parseDate(argument('to'), '--to');
     const ordersPerDay = Number(argument('orders-per-day') || 3);

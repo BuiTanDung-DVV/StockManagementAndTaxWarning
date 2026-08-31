@@ -172,9 +172,13 @@ test('AI legal context contains no hardcoded document fallback', () => {
     'utf8',
   );
 
-  assert.doesNotMatch(aiService, /tvplSearchService|THAM KHẢO VĂN BẢN/);
+  assert.match(aiService, /generateWithGoogleSearch/);
+  assert.match(aiService, /vbpl\.vn/);
+  assert.match(aiService, /insufficient_sources/);
   assert.doesNotMatch(tvplService, /getDefaultTvplTaxResults/);
   assert.doesNotMatch(tvplService, /88\/2021\/TT-BTC|123\/2020\/NĐ-CP|38\/2019\/QH14/);
+  assert.doesNotMatch(tvplService, /status: 'Còn hiệu lực'/);
+  assert.doesNotMatch(tvplService, /effectiveDate: 'Mới cập nhật'/);
 });
 
 test('core frontend reports invalid API contracts instead of fake empty data', () => {

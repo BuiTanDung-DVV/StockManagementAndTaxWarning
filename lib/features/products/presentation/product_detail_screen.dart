@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
@@ -22,7 +23,13 @@ final _currFmt = NumberFormat.currency(
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final int id;
-  const ProductDetailScreen({super.key, required this.id});
+  final String returnRoute;
+
+  const ProductDetailScreen({
+    super.key,
+    required this.id,
+    this.returnRoute = '/products',
+  });
 
   @override
   ConsumerState<ProductDetailScreen> createState() =>
@@ -57,12 +64,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leadingWidth: 60,
+        leading: AppNavigationBackLeading(
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.go(widget.returnRoute),
+        ),
         title: Text(
           'Chi Tiết Sản Phẩm',
           style: GoogleFonts.manrope(
@@ -92,7 +99,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       ),
       body: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
+        error: (_, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -101,7 +108,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
                 const SizedBox(height: 12),
                 Text(
-                  'Không tải được dữ liệu sản phẩm\n$e',
+                  'Không thể tải thông tin sản phẩm.\n'
+                  'Sản phẩm có thể đã bị xóa hoặc bạn không có quyền xem.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     color: AppColors.danger,
@@ -119,6 +127,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => context.go(widget.returnRoute),
+                  child: const Text('Quay lại danh sách'),
                 ),
               ],
             ),

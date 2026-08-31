@@ -3,12 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { QueryRunner } from 'typeorm';
 import { AppDataSource } from '../config/db.config';
+import { buildPurchasePaymentSchedule } from '../finance/purchase-payment-schedule.utils';
 
 type DbValue = string | number | boolean | Date | null;
 type Row = Record<string, DbValue>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const END_DATE = new Date('2026-08-28T17:30:00+07:00');
+const END_DATE = new Date('2026-08-31T17:30:00+07:00');
 const START_DATE = new Date('2023-08-28T08:00:00+07:00');
 const DATA_SCALE = 5;
 const PURCHASE_CYCLES_PER_MONTH = 5;
@@ -821,6 +822,7 @@ async function seed(
   const runner = AppDataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
+  await runner.query("SET LOCAL statement_timeout = '10min'");
 
   try {
     if (!commitChanges) {
@@ -1646,7 +1648,7 @@ async function seed(
             ocr_raw_text: 'Hóa đơn bán hàng đã được đối soát',
             ocr_parsed_data: JSON.stringify({ source: 'test-dataset', verified: true }),
             confirmed_data: JSON.stringify({ invoiceId: Number(invoice.id) }),
-            confidence_score: 0.96,
+            confidence_score: 96,
             total_amount: null,
             reference_type: 'INVOICE',
             reference_id: Number(invoice.id),
@@ -1734,6 +1736,10 @@ async function seed(
     const purchaseRows: Row[] = [];
     const purchaseItemsByCode = new Map<string, Row[]>();
     const payableByCode = new Map<string, Row>();
+    const payablePaymentSchedules = new Map<
+      string,
+      ReturnType<typeof buildPurchasePaymentSchedule>
+    >();
     const purchasePaymentMethods = new Map<string, string>();
     const purchaseWithoutInvoiceCodes = new Set<string>();
     let purchaseSequence = 1;
@@ -1776,6 +1782,13 @@ async function seed(
       const debtPaymentDate = addDays(purchaseDate, 25);
       const debtPaid =
         debtPaymentDate < END_DATE && random() < 0.92 ? outstanding : 0;
+      const debtPaymentSchedule = buildPurchasePaymentSchedule(
+        debtPaymentDate,
+        debtPaid,
+        END_DATE,
+        roundMoney,
+      );
+      payablePaymentSchedules.set(code, debtPaymentSchedule);
       const finalPaid = initialPaid + debtPaid;
       const purchasePaymentMethod = random() < 0.32 ? 'CASH' : 'TRANSFER';
       purchasePaymentMethods.set(code, purchasePaymentMethod);
@@ -1811,33 +1824,23 @@ async function seed(
             : 'UNPAID',
         notes: `Phải trả từ ${code}`,
         created_at: purchaseDate,
-        updated_at: debtPaid > 0 ? debtPaymentDate : purchaseDate,
+        updated_at: debtPaymentSchedule.length > 0
+          ? debtPaymentSchedule[debtPaymentSchedule.length - 1].date
+          : purchaseDate,
       });
-      cashRows.push({
-        transaction_code: `T3${key}${String(sequence++).padStart(7, '0')}`,
-        shop_id: shopId,
-        type: 'EXPENSE',
-        category: 'PURCHASE',
-        amount: initialPaid,
-        payment_method: purchasePaymentMethod,
-        account_id: purchasePaymentMethod === 'CASH'
-          ? cashAccountId
-          : bankAccountId,
-        counterparty: profile.suppliers[(purchaseSequence - 2) % suppliers.length],
-        reference_type: 'PURCHASE_ORDER',
-        reference_id: null,
-        transaction_date: dateOnly(purchaseDate),
-        notes: `Thanh toán nhập hàng ${code}`,
-        created_by: ownerId,
-        created_at: purchaseDate,
-      });
-      if (debtPaid > 0) {
+      const initialPaymentSchedule = buildPurchasePaymentSchedule(
+        purchaseDate,
+        initialPaid,
+        END_DATE,
+        roundMoney,
+      );
+      initialPaymentSchedule.forEach((payment, index) => {
         cashRows.push({
           transaction_code: `T3${key}${String(sequence++).padStart(7, '0')}`,
           shop_id: shopId,
           type: 'EXPENSE',
           category: 'PURCHASE',
-          amount: debtPaid,
+          amount: payment.amount,
           payment_method: purchasePaymentMethod,
           account_id: purchasePaymentMethod === 'CASH'
             ? cashAccountId
@@ -1845,12 +1848,36 @@ async function seed(
           counterparty: profile.suppliers[(purchaseSequence - 2) % suppliers.length],
           reference_type: 'PURCHASE_ORDER',
           reference_id: null,
-          transaction_date: dateOnly(debtPaymentDate),
-          notes: `Thanh toán công nợ nhập hàng ${code}`,
+          transaction_date: dateOnly(payment.date),
+          notes: initialPaymentSchedule.length === 1
+            ? `Thanh toán nhập hàng ${code}`
+            : `Thanh toán đợt ${index + 1}/${initialPaymentSchedule.length} nhập hàng ${code}`,
           created_by: ownerId,
-          created_at: debtPaymentDate,
+          created_at: payment.date,
         });
-      }
+      });
+      debtPaymentSchedule.forEach((payment, index) => {
+        cashRows.push({
+          transaction_code: `T3${key}${String(sequence++).padStart(7, '0')}`,
+          shop_id: shopId,
+          type: 'EXPENSE',
+          category: 'PURCHASE',
+          amount: payment.amount,
+          payment_method: purchasePaymentMethod,
+          account_id: purchasePaymentMethod === 'CASH'
+            ? cashAccountId
+            : bankAccountId,
+          counterparty: profile.suppliers[(purchaseSequence - 2) % suppliers.length],
+          reference_type: 'PURCHASE_ORDER',
+          reference_id: null,
+          transaction_date: dateOnly(payment.date),
+          notes: debtPaymentSchedule.length === 1
+            ? `Thanh toán công nợ nhập hàng ${code}`
+            : `Thanh toán công nợ đợt ${index + 1}/${debtPaymentSchedule.length} nhập hàng ${code}`,
+          created_by: ownerId,
+          created_at: payment.date,
+        });
+      });
       }
     }
 
@@ -2019,21 +2046,22 @@ async function seed(
         'status', 'notes', 'created_at', 'updated_at'],
       payableRows, 'id, purchase_order_id, paid_amount, updated_at', 300,
     );
-    const payableHistoryRows = insertedPayables
-      .filter((payable) => Number(payable.paid_amount) > 0)
-      .map((payable) => ({
-        payable_id: Number(payable.id),
-        shop_id: shopId,
-        amount: Number(payable.paid_amount),
-        payment_method:
-          purchasePaymentMethods.get(
-            purchaseCodeById.get(Number(payable.purchase_order_id)) ?? '',
-          ) ?? 'TRANSFER',
-        payment_date: payable.updated_at as Date,
-        notes: 'Thanh toán công nợ nhà cung cấp',
-        recorded_by: ownerId,
-        created_at: payable.updated_at as Date,
-      }));
+    const payableHistoryRows = insertedPayables.flatMap((payable) => {
+      const code = purchaseCodeById.get(Number(payable.purchase_order_id)) ?? '';
+      const schedule = payablePaymentSchedules.get(code) ?? [];
+      return schedule.map((payment, index) => ({
+          payable_id: Number(payable.id),
+          shop_id: shopId,
+          amount: payment.amount,
+          payment_method: purchasePaymentMethods.get(code) ?? 'TRANSFER',
+          payment_date: payment.date,
+          notes: schedule.length === 1
+            ? 'Thanh toán công nợ nhà cung cấp'
+            : `Thanh toán công nợ nhà cung cấp đợt ${index + 1}/${schedule.length}`,
+          recorded_by: ownerId,
+          created_at: payment.date,
+        }));
+    });
     await bulkInsert(
       runner,
       'debt_payment_history',

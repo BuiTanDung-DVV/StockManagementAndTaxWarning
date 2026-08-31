@@ -3,8 +3,13 @@ import { AppDataSource } from '../config/db.config';
 import { config } from '../config/env.config';
 import { AiKnowledgeDocument } from '../system/entities';
 import { vietnamDateKey } from '../finance/finance-period.utils';
+import {
+  isLegalDocumentQuestion,
+  LegalSourceCitation,
+} from '../ai/legal-grounding.utils';
 
 import { SalesService } from './sales.service';
+import { legalGroundingService } from './legal-grounding.service';
 
 export interface ChatMessage {
   role: 'user' | 'model' | 'assistant';
@@ -21,6 +26,14 @@ export interface CreateKnowledgeDto {
   category: string;
   content: string;
   isActive?: boolean;
+}
+
+export interface AiAdvisorResult {
+  answer: string;
+  provider: string;
+  groundingStatus: 'not_required' | 'grounded' | 'insufficient_sources';
+  searchedAt?: string;
+  sources: LegalSourceCitation[];
 }
 
 export class AiService {
@@ -177,18 +190,22 @@ ${docsText}
   /**
    * Đặt câu hỏi và nhận câu trả lời 100% từ Google Gemini API
    */
-  async askAdvisor(shopId: number, dto: ChatRequestDto): Promise<{ answer: string; provider: string }> {
+  async askAdvisor(shopId: number, dto: ChatRequestDto): Promise<AiAdvisorResult> {
     const storeContext = await this.getStoreContext(shopId);
     const knowledgeContext = await this.getKnowledgeContext(shopId);
+    const requiresLegalSources = isLegalDocumentQuestion(dto.question);
+    const searchedAt = requiresLegalSources ? new Date().toISOString() : undefined;
 
     const systemPrompt = `Bạn là Trợ lý AI thông minh chuyên tư vấn Quản lý Bán hàng, Tồn kho, Tài chính và Nghĩa vụ Thuế cho Hộ kinh doanh tại Việt Nam.
 
 Hướng dẫn trả lời:
 1. Trả lời tự nhiên, thông minh, đúng trọng tâm cho MỌI câu hỏi của chủ cửa hàng (từ bán hàng, xuất nhập kho, quản lý nợ, tài chính đến quy định pháp luật).
-2. Với câu hỏi vận hành, chỉ dùng dữ liệu cửa hàng được cung cấp. Với câu hỏi pháp luật/thuế, chỉ kết luận khi có tài liệu DB hoặc kết quả tra cứu kèm nguồn; nếu thiếu nguồn phải nói rõ chưa đủ căn cứ xác minh.
-3. Chỉ nêu nguồn hoặc đường dẫn đã có nguyên văn trong kho tài liệu DB bên dưới. Tuyệt đối không tự tạo tên văn bản, trạng thái hiệu lực hoặc URL.
-4. Lồng ghép tự nhiên thông tin tình hình thực tế của Cửa hàng để đưa ra lời khuyên thực tế nhất.
-5. Trình bày tiếng Việt thân thiện, rõ ràng dạng Markdown.
+2. Với câu hỏi vận hành, chỉ dùng dữ liệu cửa hàng được cung cấp. Với câu hỏi pháp luật/thuế, bắt buộc tra cứu web ở thời điểm trả lời và chỉ kết luận từ nguồn được tìm thấy.
+3. Với pháp luật/thuế, ưu tiên theo thứ tự: vbpl.vn; vanban.chinhphu.vn và website cơ quan nhà nước; sau đó mới đến thuvienphapluat.vn. Không dùng báo chí, blog, diễn đàn hoặc nguồn thương mại khác.
+4. Không tự tạo tên văn bản, số hiệu, URL, ngày hiệu lực hoặc trạng thái hiệu lực. Nếu nguồn không xác nhận trạng thái hiệu lực thì phải ghi rõ "cần kiểm tra hiệu lực tại nguồn".
+5. Mỗi kết luận pháp lý phải chỉ ra nguồn hỗ trợ ngay trong nội dung bằng ký hiệu [Nguồn]. Nếu nguồn mâu thuẫn hoặc không đủ rõ, không được suy đoán.
+6. Lồng ghép tự nhiên thông tin tình hình thực tế của Cửa hàng để đưa ra lời khuyên thực tế nhất.
+7. Trình bày tiếng Việt thân thiện, rõ ràng dạng Markdown.
 
 --- THÔNG TIN CỬA HÀNG & THAM KHẢO ---
 ${storeContext}
@@ -204,33 +221,70 @@ ${knowledgeContext}
     }
 
     const genAI = new GoogleGenerativeAI(key);
-    // Tất cả mô hình theo thứ tự ưu tiên (Gemini Flash Lite 500 RPD -> Flash -> Gemma 14.4K RPD):
-    const modelCandidates = [
-      'gemini-3.5-flash-lite',
-      'gemini-3.1-flash-lite',
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
-      'gemini-3-flash',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemma-4-31b',
-      'gemma-4-26b',
-      'gemini-1.5-flash-latest',
-    ];
+    const modelCandidates = requiresLegalSources
+      ? ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-2.5-flash']
+      : [
+        'gemini-3.5-flash-lite',
+        'gemini-3.1-flash-lite',
+        'gemini-3.6-flash',
+        'gemini-3.5-flash',
+        'gemini-3-flash',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemma-4-31b',
+        'gemma-4-26b',
+        'gemini-1.5-flash-latest',
+      ];
 
     let lastError: any;
     for (const modelName of modelCandidates) {
       try {
-        const model = genAI.getGenerativeModel({ model: modelName });
         const historyPrompt = dto.history && dto.history.length > 0
           ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
           : '';
 
+        const legalSearchInstruction = requiresLegalSources
+          ? `--- YÊU CẦU TRA CỨU BẮT BUỘC ---
+Thời điểm tra cứu: ${searchedAt}.
+Hãy tìm tài liệu mới nhất có liên quan, ưu tiên truy vấn trong các miền: vbpl.vn, vanban.chinhphu.vn, chinhphu.vn, mof.gov.vn, gdt.gov.vn, moj.gov.vn, quochoi.vn; chỉ dùng thuvienphapluat.vn khi cần nguồn bổ sung.
+Không trả lời từ trí nhớ nếu chưa thực hiện tìm kiếm web trong lượt này.
+----------------------------------`
+          : '';
+
         const fullPrompt = `${systemPrompt}
+
+${legalSearchInstruction}
 
 ${historyPrompt ? `--- LỊCH SỬ TRÒ CHUYỆN ---:\n${historyPrompt}\n---------------------------\n` : ''}
 Người dùng hỏi: ${dto.question}`;
 
+        if (requiresLegalSources) {
+          const grounded = await legalGroundingService.generateWithGoogleSearch(
+            key,
+            modelName,
+            fullPrompt,
+          );
+          const sources = await legalGroundingService.extractTrustedSources(grounded.chunks);
+          if (sources.length === 0) {
+            return {
+              answer: 'Mình chưa tìm được tài liệu đủ tin cậy từ cơ quan nhà nước hoặc Thư Viện Pháp Luật trong lần tra cứu này, nên chưa thể đưa ra kết luận pháp lý. Bạn có thể nêu rõ loại thuế, loại hóa đơn hoặc số hiệu văn bản cần kiểm tra.',
+              provider: `Google Gemini (${modelName})`,
+              groundingStatus: 'insufficient_sources',
+              searchedAt,
+              sources: [],
+            };
+          }
+
+          return {
+            answer: grounded.answer,
+            provider: `Google Gemini (${modelName})`,
+            groundingStatus: 'grounded',
+            searchedAt,
+            sources,
+          };
+        }
+
+        const model = genAI.getGenerativeModel({ model: modelName });
         const result = await model.generateContent(fullPrompt);
         const responseText = result.response.text();
 
@@ -238,6 +292,8 @@ Người dùng hỏi: ${dto.question}`;
           return {
             answer: responseText,
             provider: `Google Gemini (${modelName})`,
+            groundingStatus: 'not_required',
+            sources: [],
           };
         }
       } catch (err: any) {

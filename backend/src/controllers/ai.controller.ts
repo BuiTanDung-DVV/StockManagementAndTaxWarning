@@ -20,8 +20,31 @@ export const chatWithAdvisor = async (req: Request, res: Response): Promise<void
       res.status(400).json({ success: false, message: 'Câu hỏi không được để trống' });
       return;
     }
+    if (question.trim().length > 1500) {
+      res.status(400).json({ success: false, message: 'Câu hỏi không được vượt quá 1.500 ký tự' });
+      return;
+    }
+    if (history !== undefined && !Array.isArray(history)) {
+      res.status(400).json({ success: false, message: 'Lịch sử trò chuyện không hợp lệ' });
+      return;
+    }
+    if (Array.isArray(history) && (
+      history.length > 12
+      || history.some(item => (
+        !item
+        || !['user', 'model', 'assistant'].includes(item.role)
+        || typeof item.content !== 'string'
+        || item.content.length > 2000
+      ))
+    )) {
+      res.status(400).json({ success: false, message: 'Lịch sử trò chuyện không hợp lệ hoặc quá dài' });
+      return;
+    }
 
-    const result = await aiService.askAdvisor(shopId, { question, history });
+    const result = await aiService.askAdvisor(shopId, {
+      question: question.trim(),
+      history,
+    });
     res.json({
       success: true,
       data: result,
