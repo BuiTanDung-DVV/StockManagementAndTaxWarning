@@ -312,13 +312,54 @@ class ApiClient {
     }
   }
 
-  Future<dynamic> delete(String path) async {
+  Future<dynamic> delete(String path, {dynamic data}) async {
     try {
-      final res = await _dio.delete(_cleanPath(path));
+      final res = await _dio.delete(_cleanPath(path), data: data);
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
       throw ApiException(e.message ?? 'Lỗi không xác định');
+    }
+  }
+
+  Future<Uint8List> postForBytes(String path, {dynamic data}) async {
+    try {
+      final res = await _dio.post<List<int>>(
+        _cleanPath(path),
+        data: data,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(res.data ?? const []);
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error!;
+      throw ApiException(
+        'Không thể tải bản sao dữ liệu',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> postGzip(
+    String path,
+    Uint8List bytes,
+    String password,
+  ) async {
+    try {
+      final res = await _dio.post(
+        _cleanPath(path),
+        data: bytes,
+        options: Options(
+          contentType: 'application/gzip',
+          headers: {'x-backup-password': password},
+        ),
+      );
+      return Map<String, dynamic>.from(_extract(res) as Map);
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error!;
+      throw ApiException(
+        'Không thể kiểm tra bản sao dữ liệu',
+        e.response?.statusCode,
+      );
     }
   }
 

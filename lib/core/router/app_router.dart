@@ -34,6 +34,8 @@ import '../../features/finance/presentation/debt_aging_screen.dart';
 import '../../features/finance/presentation/supplier_payables_aging_screen.dart';
 import '../../features/finance/presentation/invoice_list_screen.dart';
 import '../../features/finance/presentation/purchase_no_invoice_screen.dart';
+import '../../features/finance/presentation/invoice_scan_screen.dart';
+import '../../features/finance/presentation/invoice_scan_detail_screen.dart';
 import '../../features/inventory/presentation/xnt_report_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/settings/presentation/activity_log_screen.dart';
@@ -52,6 +54,10 @@ import '../../features/settings/presentation/profile_screen.dart';
 import '../../features/settings/presentation/shop_profile_screen.dart';
 import '../../features/settings/presentation/change_password_screen.dart';
 import '../../features/settings/presentation/ai_knowledge_management_screen.dart';
+import '../../features/settings/presentation/product_category_management_screen.dart';
+import '../../features/settings/presentation/receipt_template_screen.dart';
+import '../../features/settings/presentation/shipping_carrier_screen.dart';
+import '../../features/settings/presentation/backup_restore_screen.dart';
 import '../../features/tax/screens/tax_estimate_screen.dart';
 import '../../features/products/presentation/product_form_screen.dart';
 import '../../features/customers/presentation/customer_form_screen.dart';
@@ -160,6 +166,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path.startsWith('/supplier-payables-aging') ||
             path.startsWith('/invoices') ||
             path.startsWith('/purchases-no-invoice') ||
+            path.startsWith('/invoice-scans') ||
             path.startsWith('/tax-calculator') ||
             path.startsWith('/expense-ledger') ||
             path.startsWith('/tax-obligations') ||
@@ -173,7 +180,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           return shopState.hasPermission('sales');
         }
 
-        if (path.startsWith('/products')) {
+        if (path.startsWith('/products') ||
+            path.startsWith('/settings/product-categories')) {
           return shopState.hasPermission('products');
         }
 
@@ -195,8 +203,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         if (path.startsWith('/shop-profile') ||
             path.startsWith('/payment-config') ||
-            path.startsWith('/tax-config')) {
+            path.startsWith('/tax-config') ||
+            path.startsWith('/settings/receipt-template') ||
+            path.startsWith('/settings/shipping-carriers')) {
           return shopState.hasPermission('settings');
+        }
+
+        if (path.startsWith('/settings/backup-restore')) {
+          return false; // Chỉ chủ cửa hàng được sao lưu hoặc khôi phục.
         }
 
         if (path.startsWith('/staff') ||
@@ -391,6 +405,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, _) => const PurchaseNoInvoiceScreen(),
           ),
           GoRoute(
+            path: '/invoice-scans',
+            builder: (_, _) => const InvoiceScanScreen(),
+          ),
+          GoRoute(
+            path: '/invoice-scans/:id',
+            builder: (_, state) => InvoiceScanDetailScreen(
+              id: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
+            ),
+          ),
+          GoRoute(
             path: '/tax-calculator',
             builder: (_, _) => const TaxCalculatorScreen(),
           ),
@@ -437,6 +461,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings/ai-knowledge',
             builder: (_, _) => const AiKnowledgeManagementScreen(),
+          ),
+          GoRoute(
+            path: '/settings/product-categories',
+            builder: (_, _) => const ProductCategoryManagementScreen(),
+          ),
+          GoRoute(
+            path: '/settings/receipt-template',
+            builder: (_, _) => const ReceiptTemplateScreen(),
+          ),
+          GoRoute(
+            path: '/settings/shipping-carriers',
+            builder: (_, _) => const ShippingCarrierScreen(),
+          ),
+          GoRoute(
+            path: '/settings/backup-restore',
+            builder: (_, _) => const BackupRestoreScreen(),
           ),
           GoRoute(
             path: '/activity-logs',

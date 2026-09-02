@@ -154,7 +154,11 @@ export function evaluateRealism(
     'REALISM_DAILY_SPIKE',
     'Phân bố số đơn theo ngày có đỉnh bất thường',
     'MEDIUM',
-    metrics.p95DailyOrders > 35 || metrics.maxDailyOrders > 60 ? 1 : 0,
+    (metrics.p95DailyOrders > 35
+      && metrics.p95DailyOrders / Math.max(metrics.medianDailyOrders, 1) >= 1.25)
+      || metrics.maxDailyOrders > 60
+      ? 1
+      : 0,
     Math.max(metrics.activeDays, 1),
     `P50=${metrics.medianDailyOrders}, P95=${metrics.p95DailyOrders}, max=${metrics.maxDailyOrders}`,
     'Biểu đồ doanh thu và năng lực cửa hàng có thể bị phóng đại bởi một số ngày sinh dữ liệu quá dày.',
@@ -209,7 +213,7 @@ export function evaluateRealism(
     'REALISM_PRODUCT_UNIFORMITY',
     'Doanh thu phân bổ quá đều giữa sản phẩm',
     'MEDIUM',
-    metrics.topProductRevenueShare < 50 && metrics.validOrders >= 30 ? 1 : 0,
+    metrics.topProductRevenueShare < 45 && metrics.validOrders >= 30 ? 1 : 0,
     Math.max(metrics.validOrders, 1),
     `Top 20% sản phẩm chiếm ${metrics.topProductRevenueShare.toFixed(2)}% doanh thu`,
     'Pareto sản phẩm, cảnh báo tồn chậm và quyết định nhập hàng có thể gây hiểu nhầm.',

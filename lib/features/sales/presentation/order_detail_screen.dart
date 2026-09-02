@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/sales_provider.dart';
+import '../../settings/providers/system_provider.dart';
+import '../services/receipt_pdf_service.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -47,10 +50,23 @@ class OrderDetailScreen extends ConsumerWidget {
           featureGuideButton(context, 'order_detail'),
           IconButton(
             icon: const Icon(Icons.print_rounded, size: 20),
-            onPressed: () {
-              ToastService.showSuccess(
-                'Phiếu tính tiền bán lẻ - Không thay thế hóa đơn tài chính (GTGT) theo NĐ 123.',
-              );
+            onPressed: () async {
+              try {
+                final values = await Future.wait([
+                  ref.read(salesDetailProvider(id).future),
+                  ref.read(shopProfileProvider.future),
+                ]);
+                final bytes = await ReceiptPdfService.build(
+                  order: Map<String, dynamic>.from(values[0]),
+                  profile: Map<String, dynamic>.from(values[1]),
+                );
+                await Printing.layoutPdf(
+                  onLayout: (_) async => bytes,
+                  name: 'phieu-ban-hang-$id.pdf',
+                );
+              } catch (error) {
+                ToastService.showError('Chưa thể tạo phiếu in: $error');
+              }
             },
             tooltip: 'In phiếu tính tiền',
           ),
@@ -639,6 +655,21 @@ class OrderDetailScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (order['shippingCarrierId'] != null ||
+                            order['shippingCarrier'] != null) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _showDeliveryDialog(context, ref, id, order),
+                              icon: const Icon(Icons.local_shipping_outlined),
+                              label: Text(
+                                'Giao hàng · ${_deliveryLabel(order['deliveryStatus']?.toString())}',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                         if (!isFullyPaid)
                           SizedBox(
                             width: double.infinity,
@@ -685,7 +716,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                   ref,
                                   id,
                                   items,
-                                  paidAmount,
+                                  Map<String, dynamic>.from(order),
                                 ),
                                 icon: const Icon(
                                   Icons.assignment_return_rounded,
@@ -756,6 +787,100 @@ class OrderDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  static String _deliveryLabel(String? status) => switch (status) {
+    'PENDING' => 'Chờ lấy hàng',
+    'IN_TRANSIT' => 'Đang giao',
+    'DELIVERED' => 'Đã giao',
+    'CANCELLED' => 'Đã hủy giao',
+    'RETURNED' => 'Đã hoàn về',
+    _ => 'Chưa cập nhật',
+  };
+
+  Future<void> _showDeliveryDialog(
+    BuildContext context,
+    WidgetRef ref,
+    int orderId,
+    Map<String, dynamic> order,
+  ) async {
+    String status = order['deliveryStatus']?.toString() ?? 'PENDING';
+    final allowedStatuses = switch (status) {
+      'PENDING' => const ['PENDING', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+      'IN_TRANSIT' => const ['IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+      'DELIVERED' => const ['DELIVERED', 'RETURNED'],
+      'CANCELLED' => const ['CANCELLED'],
+      'RETURNED' => const ['RETURNED'],
+      _ => const ['PENDING'],
+    };
+    final tracking = TextEditingController(
+      text: order['trackingCode']?.toString() ?? '',
+    );
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
+          title: const Text('Cập nhật giao hàng'),
+          content: SizedBox(
+            width: 460,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: tracking,
+                  maxLength: 100,
+                  decoration: const InputDecoration(labelText: 'Mã vận đơn'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: status,
+                  decoration: const InputDecoration(labelText: 'Trạng thái'),
+                  items: allowedStatuses
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(_deliveryLabel(value)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setDialogState(() => status = value ?? status),
+                ),
+                if (status == 'DELIVERED' &&
+                    order['shippingFeePayer'] == 'SHOP') ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Khi xác nhận đã giao, phí vận chuyển do cửa hàng chịu sẽ được ghi chi phí một lần.',
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Lưu'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (saved == true) {
+      try {
+        await ref.read(salesRepoProvider).update(orderId, {
+          'trackingCode': tracking.text.trim(),
+          'deliveryStatus': status,
+        });
+        ref.invalidate(salesDetailProvider(orderId));
+      } catch (error) {
+        ToastService.showError(error.toString());
+      }
+    }
+    tracking.dispose();
   }
 }
 
@@ -1029,11 +1154,32 @@ void _showReturnDialog(
   WidgetRef ref,
   int orderId,
   List? items,
-  double maxRefund,
+  Map<String, dynamic> order,
 ) {
   final c = AppThemeColors.of(context);
   final theme = Theme.of(context);
-  final amountCtrl = TextEditingController(text: maxRefund.toStringAsFixed(0));
+  final paidAmount =
+      double.tryParse(order['paidAmount']?.toString() ?? '0') ?? 0;
+  final subtotal = double.tryParse(order['subtotal']?.toString() ?? '0') ?? 0;
+  final discount =
+      double.tryParse(order['discountAmount']?.toString() ?? '0') ?? 0;
+  final taxAmount = double.tryParse(order['taxAmount']?.toString() ?? '0') ?? 0;
+  final merchandiseTotal = subtotal - discount + taxAmount;
+  final shippingFee =
+      double.tryParse(order['shippingFee']?.toString() ?? '0') ?? 0;
+  final shippingTaxRate =
+      double.tryParse(order['shippingTaxRate']?.toString() ?? '0') ?? 0;
+  final customerShippingCharge = order['shippingFeePayer'] == 'CUSTOMER'
+      ? shippingFee * (1 + shippingTaxRate / 100)
+      : 0.0;
+  var refundShippingFee = false;
+  double selectedRefund() => paidAmount.clamp(
+    0,
+    merchandiseTotal + (refundShippingFee ? customerShippingCharge : 0),
+  );
+  final amountCtrl = TextEditingController(
+    text: selectedRefund().toStringAsFixed(0),
+  );
   final reasonCtrl = TextEditingController();
   String? errorMessage;
 
@@ -1077,7 +1223,7 @@ void _showReturnDialog(
             ),
             const SizedBox(height: 2),
             Text(
-              'Hạn mức hoàn trả tối đa: ${_currFmt.format(maxRefund)}',
+              'Tiền hoàn theo lựa chọn: ${_currFmt.format(selectedRefund())}',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: c.textSecondary,
@@ -1120,6 +1266,23 @@ void _showReturnDialog(
               ),
             ),
             const SizedBox(height: 16),
+            if (customerShippingCharge > 0) ...[
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: refundShippingFee,
+                title: const Text('Hoàn phí giao hàng'),
+                subtitle: Text(
+                  '${_currFmt.format(customerShippingCharge)} · Chỉ hoàn khi bạn chủ động chọn',
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    refundShippingFee = value;
+                    amountCtrl.text = selectedRefund().toStringAsFixed(0);
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
             if (errorMessage != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
@@ -1203,10 +1366,11 @@ void _showReturnDialog(
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       final amount = double.tryParse(amountCtrl.text) ?? 0;
-                      if (amount < 0 || amount > maxRefund) {
+                      final expectedRefund = selectedRefund();
+                      if ((amount - expectedRefund).abs() > 0.01) {
                         setState(
                           () => errorMessage =
-                              'Số tiền hoàn phải hợp lệ (0 - ${_currFmt.format(maxRefund)})',
+                              'Số tiền hoàn chưa khớp với lựa chọn phí giao hàng',
                         );
                         return;
                       }
@@ -1239,6 +1403,7 @@ void _showReturnDialog(
                             .read(salesRepoProvider)
                             .createReturn(orderId, {
                               'refundAmount': amount,
+                              'refundShippingFee': refundShippingFee,
                               'reason': reasonCtrl.text.trim(),
                               'items': returnItems,
                             });

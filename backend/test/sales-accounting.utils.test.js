@@ -92,7 +92,9 @@ test('full return uses server prices and reverses every accounting component', (
 
   assert.match(source, /unitPrice: Number\(soldItem\.unitPrice \|\| 0\)/);
   assert.match(source, /subtotal: Number\(soldItem\.subtotal \|\| 0\)/);
-  assert.match(source, /Full return must refund the full amount paid/);
+  assert.match(source, /refundShippingFee === true/);
+  assert.match(source, /Refund amount does not match the selected shipping-fee option/);
+  assert.match(source, /accountCode: '3388'/);
   assert.match(source, /accountCode: '3331'/);
   assert.match(source, /accountCode: '131'/);
   assert.match(source, /paymentLedgerAccountCode\(refund\.method\)/);

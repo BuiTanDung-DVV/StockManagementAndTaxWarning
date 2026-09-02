@@ -1,9 +1,24 @@
 import { GroundingChunk } from '@google/generative-ai';
 import {
   classifyLegalSource,
+  LegalClaimEvidence,
   LegalSourceCitation,
   rankAndDedupeLegalSources,
 } from '../ai/legal-grounding.utils';
+
+interface GroundingSupport {
+  segment?: {
+    text?: string;
+    startIndex?: number;
+    endIndex?: number;
+  };
+  groundingChunkIndices?: number[];
+}
+
+export interface TrustedLegalGrounding {
+  sources: LegalSourceCitation[];
+  claims: LegalClaimEvidence[];
+}
 
 const GOOGLE_GROUNDING_DOMAINS = [
   'vertexaisearch.cloud.google.com',
@@ -26,7 +41,11 @@ export class LegalGroundingService {
     apiKey: string,
     modelName: string,
     prompt: string,
-  ): Promise<{ answer: string; chunks: GroundingChunk[] }> {
+  ): Promise<{
+    answer: string;
+    chunks: GroundingChunk[];
+    supports: GroundingSupport[];
+  }> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
     try {
@@ -50,7 +69,10 @@ export class LegalGroundingService {
         error?: { message?: string };
         candidates?: Array<{
           content?: { parts?: Array<{ text?: string }> };
-          groundingMetadata?: { groundingChunks?: GroundingChunk[] };
+          groundingMetadata?: {
+            groundingChunks?: GroundingChunk[];
+            groundingSupports?: GroundingSupport[];
+          };
         }>;
       };
       if (!response.ok) {
@@ -67,6 +89,7 @@ export class LegalGroundingService {
       return {
         answer,
         chunks: candidate?.groundingMetadata?.groundingChunks || [],
+        supports: candidate?.groundingMetadata?.groundingSupports || [],
       };
     } finally {
       clearTimeout(timeout);
@@ -74,7 +97,14 @@ export class LegalGroundingService {
   }
 
   async extractTrustedSources(chunks: GroundingChunk[] | undefined): Promise<LegalSourceCitation[]> {
-    if (!chunks?.length) return [];
+    return (await this.extractTrustedGrounding(chunks, [])).sources;
+  }
+
+  async extractTrustedGrounding(
+    chunks: GroundingChunk[] | undefined,
+    supports: GroundingSupport[] | undefined,
+  ): Promise<TrustedLegalGrounding> {
+    if (!chunks?.length) return { sources: [], claims: [] };
 
     const resolved = await Promise.all(chunks.map(async chunk => {
       const title = chunk.web?.title?.trim();
@@ -89,9 +119,27 @@ export class LegalGroundingService {
       return resolvedUrl ? { title, url: resolvedUrl } : null;
     }));
 
-    return rankAndDedupeLegalSources(
+    const sources = rankAndDedupeLegalSources(
       resolved.filter((value): value is { title: string; url: string } => value !== null),
     );
+    const visibleUrls = new Set(sources.map(source => source.url));
+    const seenClaims = new Set<string>();
+    const claims = (supports || []).flatMap(support => {
+      const text = support.segment?.text?.replace(/\s+/g, ' ').trim();
+      if (!text || seenClaims.has(text)) return [];
+
+      const sourceUrls = [...new Set(
+        (support.groundingChunkIndices || [])
+          .map(index => resolved[index]?.url)
+          .filter((url): url is string => Boolean(url && visibleUrls.has(url))),
+      )];
+      if (sourceUrls.length === 0) return [];
+
+      seenClaims.add(text);
+      return [{ text: text.slice(0, 600), sourceUrls }];
+    });
+
+    return { sources, claims };
   }
 
   private async resolveGoogleRedirect(rawUrl: string): Promise<string | null> {

@@ -15,6 +15,7 @@ import '../../../core/widgets/app_pagination_bar.dart';
 import '../../customers/providers/customer_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../settings/providers/system_provider.dart';
+import '../../settings/providers/operations_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
 import '../../finance/providers/finance_provider.dart';
 import '../providers/sales_provider.dart';
@@ -84,6 +85,12 @@ class CartState {
   final String? customerName;
   final double discountAmount;
   final String? notes;
+  final int? shippingCarrierId;
+  final String? shippingCarrierName;
+  final String? trackingCode;
+  final double shippingFee;
+  final String shippingFeePayer;
+  final double shippingTaxRate;
 
   const CartState({
     this.items = const [],
@@ -91,16 +98,18 @@ class CartState {
     this.customerName,
     this.discountAmount = 0.0,
     this.notes,
+    this.shippingCarrierId,
+    this.shippingCarrierName,
+    this.trackingCode,
+    this.shippingFee = 0,
+    this.shippingFeePayer = 'SHOP',
+    this.shippingTaxRate = 0,
   });
 
-  double get subtotal => items.fold<double>(
-    0.0,
-    (sum, item) => sum + item.subtotal,
-  );
-  double get taxableSubtotal => (subtotal - discountAmount).clamp(
-    0.0,
-    double.infinity,
-  );
+  double get subtotal =>
+      items.fold<double>(0.0, (sum, item) => sum + item.subtotal);
+  double get taxableSubtotal =>
+      (subtotal - discountAmount).clamp(0.0, double.infinity);
   double get taxAmount {
     if (subtotal <= 0) return 0;
     final discountRatio = (discountAmount / subtotal).clamp(0.0, 1.0);
@@ -109,7 +118,11 @@ class CartState {
       return sum + taxableLine * item.taxRate / 100;
     });
   }
-  double get total => taxableSubtotal + taxAmount;
+
+  double get customerShippingCharge => shippingFeePayer == 'CUSTOMER'
+      ? shippingFee * (1 + shippingTaxRate / 100)
+      : 0;
+  double get total => taxableSubtotal + taxAmount + customerShippingCharge;
   int get itemCount => items.fold(0, (sum, i) => sum + i.quantity);
 
   CartState copyWith({
@@ -121,6 +134,13 @@ class CartState {
     bool clearCustomer = false,
     bool clearDiscount = false,
     bool clearNotes = false,
+    int? shippingCarrierId,
+    String? shippingCarrierName,
+    String? trackingCode,
+    double? shippingFee,
+    String? shippingFeePayer,
+    double? shippingTaxRate,
+    bool clearShipping = false,
   }) {
     return CartState(
       items: items ?? this.items,
@@ -130,6 +150,20 @@ class CartState {
           ? 0.0
           : (discountAmount ?? this.discountAmount),
       notes: clearNotes ? null : (notes ?? this.notes),
+      shippingCarrierId: clearShipping
+          ? null
+          : (shippingCarrierId ?? this.shippingCarrierId),
+      shippingCarrierName: clearShipping
+          ? null
+          : (shippingCarrierName ?? this.shippingCarrierName),
+      trackingCode: clearShipping ? null : (trackingCode ?? this.trackingCode),
+      shippingFee: clearShipping ? 0 : (shippingFee ?? this.shippingFee),
+      shippingFeePayer: clearShipping
+          ? 'SHOP'
+          : (shippingFeePayer ?? this.shippingFeePayer),
+      shippingTaxRate: clearShipping
+          ? 0
+          : (shippingTaxRate ?? this.shippingTaxRate),
     );
   }
 }
@@ -264,6 +298,25 @@ class CartNotifier extends Notifier<CartState> {
     state = state.copyWith(
       notes: notes,
       clearNotes: notes == null || notes.isEmpty,
+    );
+  }
+
+  void setShipping({
+    int? carrierId,
+    String? carrierName,
+    String? trackingCode,
+    double fee = 0,
+    String payer = 'SHOP',
+    double taxRate = 0,
+  }) {
+    state = state.copyWith(
+      shippingCarrierId: carrierId,
+      shippingCarrierName: carrierName,
+      trackingCode: trackingCode,
+      shippingFee: fee,
+      shippingFeePayer: payer,
+      shippingTaxRate: taxRate,
+      clearShipping: carrierId == null,
     );
   }
 }
@@ -876,8 +929,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               ? const AppEmpty(
                   visual: AppEmptyVisual.sales,
                   message: 'Chưa chọn sản phẩm',
-                  subtitle:
-                      'Chọn sản phẩm từ danh sách để bắt đầu giao dịch.',
+                  subtitle: 'Chọn sản phẩm từ danh sách để bắt đầu giao dịch.',
                   size: 64,
                 )
               : ListView.separated(
@@ -1106,6 +1158,22 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                           : FontWeight.normal,
                     ),
                   ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Giao hàng:',
+                  style: TextStyle(fontSize: 13, color: c.textSecondary),
+                ),
+                TextButton(
+                  onPressed: () => _showShippingDialog(context),
+                  child: Text(cart.shippingCarrierName ?? 'Thiết lập...'),
                 ),
               ],
             ),
@@ -1742,6 +1810,160 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
   }
 
+  Future<void> _showShippingDialog(BuildContext context) async {
+    try {
+      final carriers = await ref
+          .read(settingsOperationsRepositoryProvider)
+          .carriers();
+      if (!mounted) return;
+      final active = carriers
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((e) => e['isActive'] != false)
+          .toList();
+      if (active.isEmpty) {
+        ToastService.showError(
+          'Chưa có đơn vị vận chuyển đang hoạt động trong Cài đặt',
+        );
+        return;
+      }
+      final cart = ref.read(_cartProvider);
+      int? carrierId = cart.shippingCarrierId;
+      String payer = cart.shippingFeePayer;
+      double taxRate = cart.shippingTaxRate;
+      final fee = TextEditingController(
+        text: cart.shippingFee.toStringAsFixed(0),
+      );
+      final tracking = TextEditingController(text: cart.trackingCode ?? '');
+      if (!context.mounted) return;
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (_, setDialogState) => AlertDialog(
+            title: const Text('Thiết lập giao hàng'),
+            content: SizedBox(
+              width: 500,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<int>(
+                      initialValue: carrierId,
+                      decoration: const InputDecoration(
+                        labelText: 'Đơn vị vận chuyển',
+                      ),
+                      items: active
+                          .map(
+                            (e) => DropdownMenuItem(
+                              value: e['id'] as int,
+                              child: Text(e['name'].toString()),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        final selected = active.firstWhere(
+                          (e) => e['id'] == value,
+                        );
+                        setDialogState(() {
+                          carrierId = value;
+                          fee.text = selected['defaultFee']?.toString() ?? '0';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: tracking,
+                      decoration: const InputDecoration(
+                        labelText: 'Mã vận đơn',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: fee,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Phí giao hàng',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: 'SHOP',
+                          label: Text('Cửa hàng trả'),
+                        ),
+                        ButtonSegment(
+                          value: 'CUSTOMER',
+                          label: Text('Khách trả'),
+                        ),
+                      ],
+                      selected: {payer},
+                      onSelectionChanged: (value) =>
+                          setDialogState(() => payer = value.first),
+                    ),
+                    if (payer == 'CUSTOMER') ...[
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<double>(
+                        initialValue: taxRate,
+                        decoration: const InputDecoration(
+                          labelText: 'Thuế suất phí giao hàng',
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 0, child: Text('0%')),
+                          DropdownMenuItem(value: 5, child: Text('5%')),
+                          DropdownMenuItem(value: 8, child: Text('8%')),
+                          DropdownMenuItem(value: 10, child: Text('10%')),
+                        ],
+                        onChanged: (value) =>
+                            setDialogState(() => taxRate = value ?? 0),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  carrierId = null;
+                  ref.read(_cartProvider.notifier).setShipping();
+                  Navigator.pop(dialogContext, true);
+                },
+                child: const Text('Bỏ giao hàng'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Hủy'),
+              ),
+              FilledButton(
+                onPressed: carrierId == null
+                    ? null
+                    : () => Navigator.pop(dialogContext, true),
+                child: const Text('Áp dụng'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (saved == true && carrierId != null) {
+        final selected = active.firstWhere((e) => e['id'] == carrierId);
+        ref
+            .read(_cartProvider.notifier)
+            .setShipping(
+              carrierId: carrierId,
+              carrierName: selected['name'].toString(),
+              trackingCode: tracking.text.trim(),
+              fee: double.tryParse(fee.text) ?? 0,
+              payer: payer,
+              taxRate: taxRate,
+            );
+      }
+      fee.dispose();
+      tracking.dispose();
+    } catch (error) {
+      ToastService.showError(error.toString());
+    }
+  }
+
   void _showNotesDialog(BuildContext context) {
     final cart = ref.read(_cartProvider);
     final ctrl = TextEditingController(text: cart.notes ?? '');
@@ -1811,6 +2033,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         if (cart.customerId != null) 'customerId': cart.customerId,
         'discountAmount': cart.discountAmount,
         if (cart.notes != null) 'notes': cart.notes,
+        if (cart.shippingCarrierId != null) ...{
+          'shippingCarrierId': cart.shippingCarrierId,
+          'trackingCode': cart.trackingCode,
+          'shippingFee': cart.shippingFee,
+          'shippingFeePayer': cart.shippingFeePayer,
+          'shippingTaxRate': cart.shippingTaxRate,
+          'deliveryStatus': 'PENDING',
+        },
         'paymentMethod': method,
         'status': method == 'CASH' ? 'DELIVERED' : 'PENDING',
         'settleInFull': method == 'CASH',

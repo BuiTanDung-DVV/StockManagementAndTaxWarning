@@ -190,7 +190,6 @@ async function seedShop(
               AND status = 'ACTIVE'
               AND is_active = true
             ORDER BY id
-            LIMIT 1
         `, [shopId]),
         AppDataSource.query(`
             SELECT id::int, name
@@ -225,8 +224,8 @@ async function seedShop(
             ORDER BY product.id
         `, [shopId]),
     ]);
-    if (!ownerRows.length || !customerRows.length || productRows.length < 12) {
-        throw new Error(`Shop ${shopId} thiếu owner, khách hàng hoặc tồn khả dụng`);
+    if (ownerRows.length !== 1 || !customerRows.length || productRows.length < 12) {
+        throw new Error(`Shop ${shopId} phải có đúng 1 owner, khách hàng và tồn khả dụng`);
     }
 
     const ownerId = Number(ownerRows[0].id);

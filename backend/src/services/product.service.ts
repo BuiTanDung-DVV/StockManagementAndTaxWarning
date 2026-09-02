@@ -5,6 +5,7 @@ import { Brackets } from 'typeorm';
 import { COGSService } from './cogs.service';
 import { ImageStorageService } from './image-storage.service';
 import {
+    ProductInputError,
     normalizeBatchInput,
     normalizeCategoryInput,
     normalizeCostItemInput,
@@ -275,10 +276,83 @@ export class ProductService {
     }
 
     // === CATEGORIES ===
-    async findAllCategories(shopId: number) { return this.categoryRepo.find({ where: { isActive: true, shopId } }); }
+    async findAllCategories(shopId: number, search?: string, includeInactive = false) {
+        const qb = this.categoryRepo.createQueryBuilder('category')
+            .leftJoin('category.products', 'product', 'product.shop_id = :shopId', { shopId })
+            .select('category')
+            .addSelect('COUNT(product.id)', 'productCount')
+            .where('category.shop_id = :shopId', { shopId })
+            .groupBy('category.id')
+            .orderBy('category.is_active', 'DESC')
+            .addOrderBy('category.name', 'ASC');
+        if (!includeInactive) qb.andWhere('category.is_active = true');
+        if (search?.trim()) {
+            qb.andWhere('LOWER(category.name) LIKE LOWER(:search)', { search: `%${search.trim()}%` });
+        }
+        const { entities, raw } = await qb.getRawAndEntities();
+        return entities.map((item, index) => ({
+            ...item,
+            productCount: Number(raw[index]?.productCount || raw[index]?.productcount || 0),
+        }));
+    }
     async createCategory(shopId: number, dto: Partial<Category>) {
         const input = normalizeCategoryInput(dto);
+        await this.assertCategoryNameAvailable(shopId, input.name);
         return this.categoryRepo.save(this.categoryRepo.create({ ...input, description: input.description ?? undefined, isActive: true, shopId }));
+    }
+
+    async updateCategory(shopId: number, id: number, dto: Partial<Category>) {
+        const category = await this.categoryRepo.findOne({ where: { id, shopId } });
+        if (!category) throw new Error('Category not found');
+        const input = normalizeCategoryInput(dto);
+        await this.assertCategoryNameAvailable(shopId, input.name, id);
+        category.name = input.name;
+        category.description = input.description ?? '';
+        return this.categoryRepo.save(category);
+    }
+
+    async deleteCategory(
+        shopId: number,
+        id: number,
+        input: { action?: unknown; replacementCategoryId?: unknown },
+    ) {
+        return AppDataSource.transaction(async manager => {
+            const categoryRepo = manager.getRepository(Category);
+            const category = await categoryRepo.findOne({ where: { id, shopId } });
+            if (!category) throw new Error('Category not found');
+            const productCount = await manager.getRepository(Product).count({
+                where: { shopId, category: { id } } as any,
+            });
+            const action = String(input.action || '').trim().toLowerCase();
+            if (productCount > 0 && input.replacementCategoryId !== undefined) {
+                const replacementId = Number(input.replacementCategoryId);
+                if (!Number.isSafeInteger(replacementId) || replacementId === id) {
+                    throw new ProductInputError('Danh mục thay thế không hợp lệ');
+                }
+                const replacement = await categoryRepo.findOne({
+                    where: { id: replacementId, shopId, isActive: true },
+                });
+                if (!replacement) throw new ProductInputError('Không tìm thấy danh mục thay thế');
+                await manager.createQueryBuilder()
+                    .update(Product)
+                    .set({ category: replacement })
+                    .where('shop_id = :shopId AND category_id = :id', { shopId, id })
+                    .execute();
+            } else if (productCount > 0 && action !== 'deactivate') {
+                throw new ProductInputError('Danh mục đang được sử dụng; hãy chọn danh mục thay thế hoặc ngừng sử dụng');
+            }
+            category.isActive = false;
+            await categoryRepo.save(category);
+            return { id, isActive: false, reassignedProducts: input.replacementCategoryId !== undefined ? productCount : 0 };
+        });
+    }
+
+    private async assertCategoryNameAvailable(shopId: number, name: string, excludeId?: number) {
+        const qb = this.categoryRepo.createQueryBuilder('category')
+            .where('category.shop_id = :shopId', { shopId })
+            .andWhere('LOWER(TRIM(category.name)) = LOWER(TRIM(:name))', { name });
+        if (excludeId) qb.andWhere('category.id != :excludeId', { excludeId });
+        if (await qb.getOne()) throw new ProductInputError('Tên danh mục đã tồn tại trong cửa hàng');
     }
 
     private async loadProductEntity(shopId: number, id: number) {

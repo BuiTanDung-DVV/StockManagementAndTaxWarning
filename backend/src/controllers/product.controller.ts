@@ -122,8 +122,16 @@ export const createConversion = async (req: Request, res: Response) => {
 };
 
 export const findAllCategories = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await productService.findAllCategories((req as any).shopId) }); }
+    try { res.json({ success: true, data: await productService.findAllCategories((req as any).shopId, req.query.search as string, req.query.includeInactive === 'true') }); }
     catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+};
+export const updateCategory = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await productService.updateCategory((req as any).shopId, +req.params.id, req.body) }); }
+    catch (e: any) { res.status(e.message === 'Category not found' ? 404 : e instanceof ProductInputError ? 400 : 500).json({ success: false, message: e.message }); }
+};
+export const deleteCategory = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await productService.deleteCategory((req as any).shopId, +req.params.id, req.body || {}) }); }
+    catch (e: any) { res.status(e.message === 'Category not found' ? 404 : e instanceof ProductInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 export const createCategory = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await productService.createCategory((req as any).shopId, req.body) }); }

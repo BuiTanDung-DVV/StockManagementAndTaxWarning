@@ -65,6 +65,10 @@ export function isOwnedDebtEvidenceImageKey(
         !key.includes('..');
 }
 
+export function isOwnedInvoiceScanImageKey(shopId: number, key: string): boolean {
+    return key.startsWith(`smartstock/shops/${shopId}/invoice-scans/`) && !key.includes('..');
+}
+
 export function cloudinaryPublicIdFromUrl(
     imageUrl: string,
     cloudName: string,
@@ -129,6 +133,15 @@ export function debtEvidenceImageKeyFromPublicUrl(
     return key && isOwnedDebtEvidenceImageKey(shopId, key) ? key : null;
 }
 
+export function invoiceScanImageKeyFromPublicUrl(
+    shopId: number,
+    imageUrl: string,
+    cloudName: string,
+): string | null {
+    const key = cloudinaryPublicIdFromUrl(imageUrl, cloudName);
+    return key && isOwnedInvoiceScanImageKey(shopId, key) ? key : null;
+}
+
 export class ImageStorageService {
     private configured = false;
 
@@ -168,6 +181,55 @@ export class ImageStorageService {
         bytes: Buffer,
     ) {
         return this.uploadBuffer(shopId, request, bytes, 'debt-evidence');
+    }
+
+    async uploadInvoiceScanImage(shopId: number, request: ProductImageUploadRequest, bytes: Buffer) {
+        return this.uploadBuffer(shopId, request, bytes, 'invoice-scans');
+    }
+
+    async confirmInvoiceScanImage(shopId: number, objectKey: string) {
+        if (!isOwnedInvoiceScanImageKey(shopId, String(objectKey || ''))) {
+            throw new ImageStorageError('Đường dẫn ảnh hóa đơn không hợp lệ', 400);
+        }
+        return this.confirmImage(objectKey, 'Ảnh hóa đơn');
+    }
+
+    async downloadInvoiceScanImage(shopId: number, imageUrl: string) {
+        const objectKey = invoiceScanImageKeyFromPublicUrl(
+            shopId,
+            imageUrl,
+            config.cloudinaryCloudName,
+        );
+        if (!objectKey) {
+            throw new ImageStorageError('Ảnh hóa đơn không thuộc cửa hàng đang chọn', 400);
+        }
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10_000);
+        try {
+            const response = await fetch(imageUrl, {
+                method: 'GET',
+                redirect: 'error',
+                signal: controller.signal,
+            });
+            if (!response.ok) throw new ImageStorageError('Không thể tải lại ảnh hóa đơn', 502);
+            const contentType = String(response.headers.get('content-type') || '')
+                .split(';')[0]
+                .trim()
+                .toLowerCase();
+            const announcedSize = Number(response.headers.get('content-length') || 0);
+            if (announcedSize > MAX_PRODUCT_IMAGE_BYTES) {
+                throw new ImageStorageError('Ảnh hóa đơn vượt quá 4 MB', 413);
+            }
+            const bytes = Buffer.from(await response.arrayBuffer());
+            validateProductImageUpload({
+                fileName: `${objectKey.split('/').pop() || 'invoice'}.${contentType.split('/')[1] || 'jpg'}`,
+                contentType,
+                size: bytes.length,
+            });
+            return { bytes, contentType };
+        } finally {
+            clearTimeout(timeout);
+        }
     }
 
     async confirmDebtEvidenceImage(shopId: number, objectKey: string) {
@@ -235,12 +297,18 @@ export class ImageStorageService {
         shopId: number,
         request: ProductImageUploadRequest,
         bytes: Buffer,
-        scope: 'products' | 'payment-qr' | 'debt-evidence',
+        scope: 'products' | 'payment-qr' | 'debt-evidence' | 'invoice-scans',
     ) {
         const validated = validateProductImageUpload(request);
         if (!Buffer.isBuffer(bytes) || bytes.length !== validated.size) {
             throw new ImageStorageError('Dữ liệu ảnh không hợp lệ', 400);
         }
+        const validSignature = validated.contentType === 'image/jpeg'
+            ? bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9
+            : validated.contentType === 'image/png'
+                ? bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+                : bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP';
+        if (!validSignature) throw new ImageStorageError('Nội dung tệp không khớp định dạng ảnh', 400);
         this.configure();
 
         const publicId = `smartstock/shops/${shopId}/${scope}/${randomUUID()}`;

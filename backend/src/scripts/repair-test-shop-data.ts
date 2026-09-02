@@ -12,14 +12,23 @@ type RepairCounts = {
   missingPurchaseInvoiceItems: number;
   safeDiscountUpdates: number;
   safeTotalUpdates: number;
+  zeroQuantityPurchaseItems: number;
+  zeroQuantityInventoryMovements: number;
+  zeroQuantityPurchaseInvoiceItems: number;
+  zeroQuantityPurchaseWithoutInvoiceItems: number;
+  customerMasterUpdates: number;
   unresolvedInvoiceIssues: number;
 };
 
 type RepairSnapshot = {
   invoices: number;
   invoiceItems: number;
+  purchaseInvoiceItems: number;
   salesOrders: number;
   purchaseOrders: number;
+  purchaseItems: number;
+  inventoryMovements: number;
+  purchaseWithoutInvoiceItems: number;
   invoiceIssues: number;
 };
 
@@ -43,6 +52,14 @@ const asOf = parseAsOfDate(argument('as-of'));
 async function queryOne<T>(executor: SqlExecutor, sql: string, params: any[]): Promise<T> {
   const rows = await executor.query(sql, params) as T[];
   return rows[0] ?? ({} as T);
+}
+
+function affectedCount(result: unknown): number {
+  if (!Array.isArray(result)) return 0;
+  if (result.length === 2 && Array.isArray(result[0]) && typeof result[1] === 'number') {
+    return result[1];
+  }
+  return result.length;
 }
 
 async function getRepairCandidates(shopIds: number[]): Promise<RepairCounts[]> {
@@ -100,6 +117,80 @@ async function getRepairCandidates(shopIds: number[]): Promise<RepairCounts[]> {
       WHERE i.shop_id = ANY($1::int[]) AND o.discount_amount > 0
       GROUP BY i.shop_id, i.id, i.subtotal, o.subtotal, o.discount_amount
       HAVING ABS(COALESCE(SUM(ii.subtotal), 0) - o.subtotal) <= 1
+    ), zero_purchase_items AS (
+      SELECT o.shop_id, COUNT(*)::int AS count
+      FROM purchase_order_items oi
+      JOIN purchase_orders o ON o.id = oi.order_id
+      WHERE o.shop_id = ANY($1::int[])
+        AND oi.quantity = 0
+        AND COALESCE(oi.subtotal, 0) = 0
+        AND COALESCE(oi.unit_price, 0) >= 0
+      GROUP BY o.shop_id
+    ), zero_purchase_movements AS (
+      SELECT m.shop_id, COUNT(*)::int AS count
+      FROM inventory_movements m
+      JOIN purchase_orders o
+        ON o.id = m.reference_id
+       AND o.shop_id = m.shop_id
+      WHERE m.shop_id = ANY($1::int[])
+        AND m.reference_type = 'PURCHASE_ORDER'
+        AND m.quantity = 0
+      GROUP BY m.shop_id
+    ), zero_purchase_invoice_items AS (
+      SELECT i.shop_id, COUNT(*)::int AS count
+      FROM invoice_items ii
+      JOIN invoices i ON i.id = ii.invoice_id
+      WHERE i.shop_id = ANY($1::int[])
+        AND i.reference_type = 'PURCHASE_ORDER'
+        AND ii.quantity = 0
+        AND COALESCE(ii.subtotal, 0) = 0
+        AND COALESCE(ii.unit_price, 0) >= 0
+        AND EXISTS (
+          SELECT 1
+          FROM purchase_orders o
+          JOIN purchase_order_items oi ON oi.order_id = o.id
+          WHERE o.id = i.reference_id
+            AND o.shop_id = i.shop_id
+            AND oi.product_id = ii.product_id
+            AND oi.quantity = 0
+            AND COALESCE(oi.subtotal, 0) = 0
+        )
+      GROUP BY i.shop_id
+    ), zero_without_invoice_items AS (
+      SELECT p.shop_id, COUNT(*)::int AS count
+      FROM purchase_without_invoice_items pi
+      JOIN purchases_without_invoice p ON p.id = pi.purchase_id
+      WHERE p.shop_id = ANY($1::int[])
+        AND pi.quantity = 0
+        AND COALESCE(pi.subtotal, 0) = 0
+        AND COALESCE(pi.unit_price, 0) >= 0
+      GROUP BY p.shop_id
+    ), customer_master AS (
+      SELECT
+        c.id,
+        c.shop_id,
+        CASE
+          WHEN (((SUBSTRING(c.code FROM 4 FOR 4)::int - 1) / 5)::int) >= 12 THEN 'WHOLESALE'
+          WHEN (((SUBSTRING(c.code FROM 4 FOR 4)::int - 1) / 5)::int) % 7 = 0 THEN 'VIP'
+          ELSE 'RETAIL'
+        END AS expected_type,
+        CASE
+          WHEN (((SUBSTRING(c.code FROM 4 FOR 4)::int - 1) / 5)::int) >= 12 THEN 120000000
+          ELSE 25000000
+        END AS expected_credit_limit
+        ,CASE
+          WHEN (((SUBSTRING(c.code FROM 4 FOR 4)::int - 1) / 5)::int) >= 12
+            THEN 'Khách mua sỉ ngành ' || CASE WHEN c.shop_id = 34
+              THEN 'Vật liệu xây dựng, điện nước, đồ gia dụng và thiết bị phòng tắm'
+              ELSE 'Phân bón, hạt giống, bảo vệ thực vật và vật tư nông nghiệp'
+            END
+          ELSE 'Khách hàng thường xuyên'
+        END AS expected_notes
+      FROM customers c
+      WHERE c.shop_id = ANY($1::int[])
+        AND c.code LIKE 'KH%'
+        AND SUBSTRING(c.code FROM 4 FOR 4) ~ '^[0-9]{4}$'
+        AND SUBSTRING(c.code FROM 4 FOR 4)::int BETWEEN 1 AND 100
     )
     SELECT
       s.id AS "shopId",
@@ -113,6 +204,15 @@ async function getRepairCandidates(shopIds: number[]): Promise<RepairCounts[]> {
             AND (ABS(COALESCE(i.discount_amount, 0) - o.discount_amount) > 1
               OR ABS(i.subtotal - o.subtotal) > 1)
         ))::int AS "safeDiscountUpdates"
+      ,COALESCE((SELECT count FROM zero_purchase_items WHERE shop_id = s.id), 0)::int AS "zeroQuantityPurchaseItems"
+      ,COALESCE((SELECT count FROM zero_purchase_movements WHERE shop_id = s.id), 0)::int AS "zeroQuantityInventoryMovements"
+      ,COALESCE((SELECT count FROM zero_purchase_invoice_items WHERE shop_id = s.id), 0)::int AS "zeroQuantityPurchaseInvoiceItems"
+      ,COALESCE((SELECT count FROM zero_without_invoice_items WHERE shop_id = s.id), 0)::int AS "zeroQuantityPurchaseWithoutInvoiceItems"
+      ,COALESCE((SELECT COUNT(*) FROM customer_master c
+        WHERE c.shop_id = s.id
+          AND (c.expected_type IS DISTINCT FROM (SELECT customer_type FROM customers WHERE id = c.id)
+            OR c.expected_credit_limit IS DISTINCT FROM (SELECT credit_limit FROM customers WHERE id = c.id)::numeric
+            OR c.expected_notes IS DISTINCT FROM (SELECT notes FROM customers WHERE id = c.id))), 0)::int AS "customerMasterUpdates"
     FROM unnest($1::int[]) s(id)
     ORDER BY s.id
   `, [shopIds]) as Array<Record<string, string | number>>;
@@ -123,6 +223,11 @@ async function getRepairCandidates(shopIds: number[]): Promise<RepairCounts[]> {
     missingPurchaseInvoiceItems: numberValue(row.missingPurchaseInvoiceItems),
     safeDiscountUpdates: numberValue(row.safeDiscountUpdates),
     safeTotalUpdates: 0,
+    zeroQuantityPurchaseItems: numberValue(row.zeroQuantityPurchaseItems),
+    zeroQuantityInventoryMovements: numberValue(row.zeroQuantityInventoryMovements),
+    zeroQuantityPurchaseInvoiceItems: numberValue(row.zeroQuantityPurchaseInvoiceItems),
+    zeroQuantityPurchaseWithoutInvoiceItems: numberValue(row.zeroQuantityPurchaseWithoutInvoiceItems),
+    customerMasterUpdates: numberValue(row.customerMasterUpdates),
     unresolvedInvoiceIssues: 0,
   }));
 }
@@ -156,20 +261,38 @@ async function loadRepairSnapshot(executor: SqlExecutor, shopId: number): Promis
   const row = await queryOne<{
     invoices: string | number;
     invoiceItems: string | number;
+    purchaseInvoiceItems: string | number;
     salesOrders: string | number;
     purchaseOrders: string | number;
+    purchaseItems: string | number;
+    inventoryMovements: string | number;
+    purchaseWithoutInvoiceItems: string | number;
   }>(executor, `
     SELECT
       (SELECT COUNT(*) FROM invoices WHERE shop_id = $1)::int AS invoices,
       (SELECT COUNT(*) FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id WHERE i.shop_id = $1)::int AS "invoiceItems",
+      (SELECT COUNT(*) FROM invoice_items ii
+         JOIN invoices i ON i.id = ii.invoice_id
+        WHERE i.shop_id = $1 AND i.reference_type = 'PURCHASE_ORDER')::int AS "purchaseInvoiceItems",
       (SELECT COUNT(*) FROM sales_orders WHERE shop_id = $1)::int AS "salesOrders",
-      (SELECT COUNT(*) FROM purchase_orders WHERE shop_id = $1)::int AS "purchaseOrders"
+      (SELECT COUNT(*) FROM purchase_orders WHERE shop_id = $1)::int AS "purchaseOrders",
+      (SELECT COUNT(*) FROM purchase_order_items oi
+         JOIN purchase_orders o ON o.id = oi.order_id
+        WHERE o.shop_id = $1)::int AS "purchaseItems",
+      (SELECT COUNT(*) FROM inventory_movements WHERE shop_id = $1)::int AS "inventoryMovements",
+      (SELECT COUNT(*) FROM purchase_without_invoice_items pi
+         JOIN purchases_without_invoice p ON p.id = pi.purchase_id
+        WHERE p.shop_id = $1)::int AS "purchaseWithoutInvoiceItems"
   `, [shopId]);
   return {
     invoices: numberValue(row.invoices),
     invoiceItems: numberValue(row.invoiceItems),
+    purchaseInvoiceItems: numberValue(row.purchaseInvoiceItems),
     salesOrders: numberValue(row.salesOrders),
     purchaseOrders: numberValue(row.purchaseOrders),
+    purchaseItems: numberValue(row.purchaseItems),
+    inventoryMovements: numberValue(row.inventoryMovements),
+    purchaseWithoutInvoiceItems: numberValue(row.purchaseWithoutInvoiceItems),
     invoiceIssues: await loadRemainingInvoiceIssues(executor, shopId),
   };
 }
@@ -290,15 +413,150 @@ async function updateSafeInvoiceHeaders(
       AND ABS(invoice.total_amount - (safe.subtotal - COALESCE(safe.discount_amount, 0) + COALESCE(safe.tax_amount, 0))) > 1
     RETURNING invoice.id
   `, [shopIds]) as Array<{ id: number }>;
-  return { discounts: discountRows.length, totals: totalRows.length };
+  return { discounts: affectedCount(discountRows), totals: affectedCount(totalRows) };
+}
+
+async function deleteZeroQuantityPurchaseRows(
+  executor: SqlExecutor,
+  shopId: number,
+): Promise<{
+  purchaseItems: number;
+  inventoryMovements: number;
+  purchaseInvoiceItems: number;
+  purchaseWithoutInvoiceItems: number;
+}> {
+  const purchaseInvoiceItems = await executor.query(`
+    DELETE FROM invoice_items item
+    WHERE item.quantity = 0
+      AND COALESCE(item.subtotal, 0) = 0
+      AND COALESCE(item.unit_price, 0) >= 0
+      AND EXISTS (
+        SELECT 1
+        FROM invoices invoice
+        JOIN purchase_orders purchase ON purchase.id = invoice.reference_id
+        WHERE invoice.id = item.invoice_id
+          AND invoice.shop_id = $1
+          AND invoice.reference_type = 'PURCHASE_ORDER'
+          AND purchase.shop_id = invoice.shop_id
+          AND EXISTS (
+            SELECT 1
+            FROM purchase_order_items source_item
+            WHERE source_item.order_id = purchase.id
+              AND source_item.product_id = item.product_id
+              AND source_item.quantity = 0
+              AND COALESCE(source_item.subtotal, 0) = 0
+          )
+      )
+    RETURNING item.id
+  `, [shopId]);
+
+  const purchaseWithoutInvoiceItems = await executor.query(`
+    DELETE FROM purchase_without_invoice_items item
+    WHERE item.quantity = 0
+      AND COALESCE(item.subtotal, 0) = 0
+      AND COALESCE(item.unit_price, 0) >= 0
+      AND EXISTS (
+        SELECT 1
+        FROM purchases_without_invoice purchase
+        WHERE purchase.id = item.purchase_id
+          AND purchase.shop_id = $1
+      )
+    RETURNING item.id
+  `, [shopId]);
+
+  const inventoryMovements = await executor.query(`
+    DELETE FROM inventory_movements movement
+    WHERE movement.quantity = 0
+      AND movement.reference_type = 'PURCHASE_ORDER'
+      AND EXISTS (
+        SELECT 1
+        FROM purchase_orders purchase
+        WHERE purchase.id = movement.reference_id
+          AND purchase.shop_id = $1
+          AND movement.shop_id = purchase.shop_id
+      )
+    RETURNING movement.id
+  `, [shopId]);
+
+  const purchaseItems = await executor.query(`
+    DELETE FROM purchase_order_items item
+    WHERE item.quantity = 0
+      AND COALESCE(item.subtotal, 0) = 0
+      AND COALESCE(item.unit_price, 0) >= 0
+      AND EXISTS (
+        SELECT 1
+        FROM purchase_orders purchase
+        WHERE purchase.id = item.order_id
+          AND purchase.shop_id = $1
+      )
+    RETURNING item.id
+  `, [shopId]);
+
+  return {
+    purchaseItems: affectedCount(purchaseItems),
+    inventoryMovements: affectedCount(inventoryMovements),
+    purchaseInvoiceItems: affectedCount(purchaseInvoiceItems),
+    purchaseWithoutInvoiceItems: affectedCount(purchaseWithoutInvoiceItems),
+  };
+}
+
+async function updateTestCustomerMaster(
+  executor: SqlExecutor,
+  shopId: number,
+): Promise<number> {
+  const customerPrefix = `KH${shopId.toString(36).toUpperCase()}`;
+  const description = shopId === 34
+    ? 'Vật liệu xây dựng, điện nước, đồ gia dụng và thiết bị phòng tắm'
+    : 'Phân bón, hạt giống, bảo vệ thực vật và vật tư nông nghiệp';
+  const result = await executor.query(`
+    WITH expected AS (
+      SELECT
+        c.id,
+        CASE
+          WHEN (((SUBSTRING(c.code FROM 4 FOR 4)::int - 1) / 5)::int) >= 12 THEN 'WHOLESALE'
+          WHEN (((SUBSTRING(c.code FROM 4 FOR 4)::int - 1) / 5)::int) % 7 = 0 THEN 'VIP'
+          ELSE 'RETAIL'
+        END AS customer_type,
+        CASE
+          WHEN (((SUBSTRING(c.code FROM 4 FOR 4)::int - 1) / 5)::int) >= 12 THEN 120000000
+          ELSE 25000000
+        END AS credit_limit,
+        CASE
+          WHEN (((SUBSTRING(c.code FROM 4 FOR 4)::int - 1) / 5)::int) >= 12
+            THEN 'Khách mua sỉ ngành ' || $3
+          ELSE 'Khách hàng thường xuyên'
+        END AS notes
+      FROM customers c
+      WHERE c.shop_id = $1
+        AND c.code LIKE $2 || '%'
+        AND SUBSTRING(c.code FROM 4 FOR 4) ~ '^[0-9]{4}$'
+        AND SUBSTRING(c.code FROM 4 FOR 4)::int BETWEEN 1 AND 100
+    )
+    UPDATE customers customer
+    SET customer_type = expected.customer_type,
+        credit_limit = expected.credit_limit,
+        notes = expected.notes,
+        updated_at = NOW()
+    FROM expected
+    WHERE customer.id = expected.id
+      AND (
+        customer.customer_type IS DISTINCT FROM expected.customer_type
+        OR customer.credit_limit IS DISTINCT FROM expected.credit_limit
+        OR customer.notes IS DISTINCT FROM expected.notes
+      )
+    RETURNING customer.id
+  `, [shopId, customerPrefix, description]);
+  return affectedCount(result);
 }
 
 async function writeRepairMetadata(
   executor: SqlExecutor,
   shopId: number,
   counts: RepairCounts,
+  candidates: RepairCounts,
   before: RepairSnapshot,
   after: RepairSnapshot,
+  inserted: { sales: number; purchase: number },
 ): Promise<void> {
   const owner = await queryOne<{ userId: number }>(executor, `
     SELECT user_id AS "userId"
@@ -316,7 +574,7 @@ async function writeRepairMetadata(
     owner.userId,
     shopId,
     runId,
-    JSON.stringify({ version: 'TEST_SHOP_DATA_QUALITY_V1', status: 'before', asOf, runId, snapshot: before, candidates: counts }),
+    JSON.stringify({ version: 'TEST_SHOP_DATA_QUALITY_V1', status: 'before', asOf, runId, snapshot: before, candidates }),
     JSON.stringify({
       version: 'TEST_SHOP_DATA_QUALITY_V1',
       status: apply ? 'applied' : 'dry-run',
@@ -324,7 +582,12 @@ async function writeRepairMetadata(
       runId,
       snapshot: after,
       changes: {
-        invoiceItemsInserted: after.invoiceItems - before.invoiceItems,
+        invoiceItemsInserted: inserted.sales + inserted.purchase,
+        purchaseItemsRemoved: before.purchaseItems - after.purchaseItems,
+        inventoryMovementsRemoved: before.inventoryMovements - after.inventoryMovements,
+        purchaseInvoiceItemsRemoved: before.purchaseInvoiceItems - after.purchaseInvoiceItems,
+        purchaseWithoutInvoiceItemsRemoved:
+          before.purchaseWithoutInvoiceItems - after.purchaseWithoutInvoiceItems,
         invoiceIssuesResolved: before.invoiceIssues - after.invoiceIssues,
         ...counts,
       },
@@ -356,6 +619,7 @@ async function main(): Promise<void> {
     for (const shopId of shopIds) {
       const [before] = await getRepairCandidates([shopId]);
       const beforeSnapshot = await loadRepairSnapshot(appExecutor, shopId);
+      before.unresolvedInvoiceIssues = beforeSnapshot.invoiceIssues;
       const runner = AppDataSource.createQueryRunner();
       await runner.connect();
       await runner.startTransaction();
@@ -363,14 +627,29 @@ async function main(): Promise<void> {
         await runner.query('SELECT pg_advisory_xact_lock($1)', [20260831]);
         const inserted = await insertSafeInvoiceItems(runner, [shopId]);
         const updated = await updateSafeInvoiceHeaders(runner, [shopId]);
+        const removed = await deleteZeroQuantityPurchaseRows(runner, shopId);
+        const customerMasterUpdates = await updateTestCustomerMaster(runner, shopId);
         const counts: RepairCounts = {
           ...before,
           safeDiscountUpdates: updated.discounts,
           safeTotalUpdates: updated.totals,
+          zeroQuantityPurchaseItems: removed.purchaseItems,
+          zeroQuantityInventoryMovements: removed.inventoryMovements,
+          zeroQuantityPurchaseInvoiceItems: removed.purchaseInvoiceItems,
+          zeroQuantityPurchaseWithoutInvoiceItems: removed.purchaseWithoutInvoiceItems,
+          customerMasterUpdates,
           unresolvedInvoiceIssues: await loadRemainingInvoiceIssues(runner, shopId),
         };
         const afterSnapshot = await loadRepairSnapshot(runner, shopId);
-        await writeRepairMetadata(runner, shopId, counts, beforeSnapshot, afterSnapshot);
+        await writeRepairMetadata(
+          runner,
+          shopId,
+          counts,
+          before,
+          beforeSnapshot,
+          afterSnapshot,
+          inserted,
+        );
         await runner.commitTransaction();
         applied.push({
           runId,
@@ -382,6 +661,11 @@ async function main(): Promise<void> {
           insertedPurchaseInvoiceItems: inserted.purchase,
           updatedDiscountInvoices: updated.discounts,
           updatedTotalInvoices: updated.totals,
+          removedZeroQuantityPurchaseItems: removed.purchaseItems,
+          removedZeroQuantityInventoryMovements: removed.inventoryMovements,
+          removedZeroQuantityPurchaseInvoiceItems: removed.purchaseInvoiceItems,
+          removedZeroQuantityPurchaseWithoutInvoiceItems: removed.purchaseWithoutInvoiceItems,
+          customerMasterUpdates,
           unresolvedInvoiceIssues: counts.unresolvedInvoiceIssues,
         });
       } catch (error) {

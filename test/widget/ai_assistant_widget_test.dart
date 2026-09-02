@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/network/api_client.dart';
 import 'package:flutter_app/core/theme/app_theme.dart';
 import 'package:flutter_app/core/widgets/ai_assistant_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _buildHost({Size size = const Size(390, 700)}) {
+Widget _buildHost({Size size = const Size(390, 700), ApiClient? apiClient}) {
   return ProviderScope(
+    overrides: [
+      if (apiClient != null) apiClientProvider.overrideWithValue(apiClient),
+    ],
     child: MaterialApp(
       theme: AppTheme.lightTheme(AppColors.primary),
       home: Scaffold(
@@ -21,6 +25,34 @@ Widget _buildHost({Size size = const Size(390, 700)}) {
       ),
     ),
   );
+}
+
+class _GroundedAiApiClient extends ApiClient {
+  @override
+  Future<dynamic> post(String path, {dynamic data}) async {
+    expect(path, '/ai/chat');
+    return {
+      'data': {
+        'answer': 'Hộ kinh doanh cần kiểm tra quy định hiện hành.',
+        'provider': 'Google Gemini',
+        'searchedAt': '2026-09-01T01:00:00.000Z',
+        'sources': [
+          {
+            'title': 'Văn bản chính thức',
+            'url': 'https://vbpl.vn/TW/Pages/a.aspx',
+            'domain': 'vbpl.vn',
+            'sourceLabel': 'CSDL quốc gia về văn bản pháp luật',
+          },
+        ],
+        'claims': [
+          {
+            'text': 'Hộ kinh doanh cần kiểm tra quy định hiện hành.',
+            'sourceUrls': ['https://vbpl.vn/TW/Pages/a.aspx'],
+          },
+        ],
+      },
+    };
+  }
 }
 
 Widget _buildHeaderOnlyHost({Size size = const Size(390, 700)}) {
@@ -162,5 +194,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Ẩn nút AI'), findsNothing);
+  });
+
+  testWidgets('grounded legal answer shows claim-to-source evidence', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildHost(apiClient: _GroundedAiApiClient()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.bySemanticsLabel('Hỏi AI. Có thể kéo để đổi vị trí.'),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Quy định thuế mới nhất?');
+    await tester.tap(find.text('Gửi'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nội dung và căn cứ'), findsOneWidget);
+    expect(
+      find.text('Hộ kinh doanh cần kiểm tra quy định hiện hành.'),
+      findsWidgets,
+    );
+    expect(find.text('Nguồn 1'), findsOneWidget);
+    expect(find.text('Văn bản chính thức'), findsOneWidget);
   });
 }

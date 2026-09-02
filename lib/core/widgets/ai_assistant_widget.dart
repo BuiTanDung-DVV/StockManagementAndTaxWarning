@@ -174,20 +174,31 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
           ? data['data'] as Map<String, dynamic>
           : data;
       final answer =
-          payload['answer']?.toString() ??
-          'Trợ lý AI đã ghi nhận thông tin.';
+          payload['answer']?.toString() ?? 'Trợ lý AI đã ghi nhận thông tin.';
       final provider = payload['provider']?.toString() ?? 'AI Assistant';
       final sources = payload['sources'] is List
           ? (payload['sources'] as List)
                 .whereType<Map>()
                 .map(
-                  (item) => _LegalSource.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ),
+                  (item) =>
+                      _LegalSource.fromJson(Map<String, dynamic>.from(item)),
                 )
                 .where((item) => item.url.isNotEmpty && item.title.isNotEmpty)
                 .toList(growable: false)
           : const <_LegalSource>[];
+      final claims = payload['claims'] is List
+          ? (payload['claims'] as List)
+                .whereType<Map>()
+                .map(
+                  (item) => _LegalClaimEvidence.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .where(
+                  (item) => item.text.isNotEmpty && item.sourceUrls.isNotEmpty,
+                )
+                .toList(growable: false)
+          : const <_LegalClaimEvidence>[];
       final searchedAt = DateTime.tryParse(
         payload['searchedAt']?.toString() ?? '',
       );
@@ -203,6 +214,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
             text: answer,
             source: provider,
             sources: sources,
+            claims: claims,
             searchedAt: searchedAt,
           ),
         );
@@ -722,7 +734,12 @@ class _MessageBlock extends ConsumerWidget {
               if (!message.fromUser) ...[
                 const SizedBox(height: 8),
                 if (message.sources.isNotEmpty)
-                  _buildStructuredSources(context, message.sources, primary)
+                  _buildStructuredSources(
+                    context,
+                    message.sources,
+                    message.claims,
+                    primary,
+                  )
                 else
                   _buildLegalDocumentCitations(
                     context,
@@ -798,17 +815,70 @@ class _MessageBlock extends ConsumerWidget {
   Widget _buildStructuredSources(
     BuildContext context,
     List<_LegalSource> sources,
+    List<_LegalClaimEvidence> claims,
     Color primary,
   ) {
+    final sourceIndexByUrl = <String, int>{
+      for (var index = 0; index < sources.length; index++)
+        sources[index].url: index + 1,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(height: 12),
+        if (claims.isNotEmpty) ...[
+          Text(
+            'Nội dung và căn cứ',
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          ...claims.map(
+            (claim) => Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primary.withValues(alpha: 0.035),
+                borderRadius: BorderRadius.circular(8),
+                border: Border(left: BorderSide(color: primary, width: 3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    claim.text,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 5),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: claim.sourceUrls
+                        .where(sourceIndexByUrl.containsKey)
+                        .map(
+                          (url) => ActionChip(
+                            visualDensity: VisualDensity.compact,
+                            label: Text('Nguồn ${sourceIndexByUrl[url]}'),
+                            onPressed: () => _openSource(url),
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+        ],
         Text(
           'Nguồn đã kiểm tra (${sources.length})',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 6),
         ...sources.map(
@@ -849,8 +919,9 @@ class _MessageBlock extends ConsumerWidget {
                             const SizedBox(height: 2),
                             Text(
                               '${source.sourceLabel} · ${source.domain}',
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(color: primary),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.labelSmall?.copyWith(color: primary),
                             ),
                           ],
                         ),
@@ -1183,6 +1254,7 @@ class _AssistantMessage {
   final String text;
   final String? source;
   final List<_LegalSource> sources;
+  final List<_LegalClaimEvidence> claims;
   final DateTime? searchedAt;
 
   const _AssistantMessage({
@@ -1190,8 +1262,28 @@ class _AssistantMessage {
     required this.text,
     this.source,
     this.sources = const [],
+    this.claims = const [],
     this.searchedAt,
   });
+}
+
+class _LegalClaimEvidence {
+  final String text;
+  final List<String> sourceUrls;
+
+  const _LegalClaimEvidence({required this.text, required this.sourceUrls});
+
+  factory _LegalClaimEvidence.fromJson(Map<String, dynamic> json) {
+    return _LegalClaimEvidence(
+      text: json['text']?.toString() ?? '',
+      sourceUrls: json['sourceUrls'] is List
+          ? (json['sourceUrls'] as List)
+                .map((value) => value.toString())
+                .where((value) => value.startsWith('https://'))
+                .toList(growable: false)
+          : const [],
+    );
+  }
 }
 
 class _LegalSource {

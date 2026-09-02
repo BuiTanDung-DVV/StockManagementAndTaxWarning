@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColum
 
 import { Customer } from '../customer/entities';
 import { Product } from '../product/entities';
+import { ShippingCarrier } from '../system/entities';
 
 @Entity('sales_orders')
 export class SalesOrder {
@@ -59,6 +60,31 @@ export class SalesOrder {
 
     @Column({ name: 'invoice_number', length: 50, nullable: true })
     invoiceNumber: string;
+
+    @ManyToOne(() => ShippingCarrier, { nullable: true })
+    @JoinColumn({ name: 'shipping_carrier_id' })
+    shippingCarrier: ShippingCarrier | null;
+
+    @Column({ name: 'shipping_carrier_id', type: 'integer', nullable: true })
+    shippingCarrierId: number | null;
+
+    @Column({ name: 'tracking_code', type: 'varchar', length: 100, nullable: true })
+    trackingCode: string | null;
+
+    @Column({ name: 'delivery_status', length: 20, default: 'NOT_REQUIRED' })
+    deliveryStatus: string;
+
+    @Column({ name: 'shipping_fee', type: 'decimal', precision: 18, scale: 2, default: 0 })
+    shippingFee: number;
+
+    @Column({ name: 'shipping_fee_payer', length: 20, default: 'SHOP' })
+    shippingFeePayer: string;
+
+    @Column({ name: 'shipping_tax_rate', type: 'decimal', precision: 5, scale: 2, default: 0 })
+    shippingTaxRate: number;
+
+    @Column({ name: 'shipping_expense_transaction_id', type: 'integer', nullable: true })
+    shippingExpenseTransactionId: number | null;
 
     @Column({ name: 'created_by', nullable: true })
     createdBy: number;
@@ -175,6 +201,12 @@ export class SalesReturn {
 
     @Column({ name: 'refund_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
     refundAmount: number;
+
+    @Column({ name: 'refund_shipping_fee', default: false })
+    refundShippingFee: boolean;
+
+    @Column({ name: 'refunded_shipping_amount', type: 'decimal', precision: 18, scale: 2, default: 0 })
+    refundedShippingAmount: number;
 
     @Column({ name: 'refund_method', length: 20, default: 'CASH' })
     refundMethod: string;

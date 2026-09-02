@@ -40,6 +40,8 @@ router.post('/products/:id/conversions', requirePermission('products', 'edit'), 
 // Categories
 router.get('/categories', requirePermission('products', 'view'), productCtrl.findAllCategories);
 router.post('/categories', requirePermission('products', 'edit'), productCtrl.createCategory);
+router.put('/categories/:id', requirePermission('products', 'edit'), productCtrl.updateCategory);
+router.delete('/categories/:id', requirePermission('products', 'edit'), productCtrl.deleteCategory);
 
 // Cost Types
 router.get('/cost-types', requirePermission('products', 'view'), productCtrl.findAllCostTypes);

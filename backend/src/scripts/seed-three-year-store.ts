@@ -281,6 +281,63 @@ function createRandom(seed: number): () => number {
   };
 }
 
+function customerBaseIndex(profile: StoreProfile, customerIndex: number): number {
+  return Math.floor(customerIndex / CUSTOMER_CONTEXTS[profile.key].length);
+}
+
+function customerType(profile: StoreProfile, customerIndex: number): 'RETAIL' | 'VIP' | 'WHOLESALE' {
+  const baseIndex = customerBaseIndex(profile, customerIndex);
+  if (baseIndex >= 12) return 'WHOLESALE';
+  return baseIndex % 7 === 0 ? 'VIP' : 'RETAIL';
+}
+
+function buildCustomerWeights(profile: StoreProfile): number[] {
+  return profile.customers.map((_, index) => {
+    const baseIndex = customerBaseIndex(profile, index);
+    if (baseIndex < 3) return 8;
+    if (baseIndex < 4) return 3;
+    if (baseIndex < 8) return 1.5;
+    if (baseIndex < 12) return 1;
+    if (baseIndex < 16) return 3;
+    return 1.2;
+  });
+}
+
+function buildProductWeights(profile: StoreProfile): number[] {
+  const categoryWeights: Record<ProfileKey, Record<string, number>> = {
+    construction: {
+      'Vật liệu thô': 1.8,
+      'Sắt thép': 1.65,
+      'Điện nước': 2.05,
+      'Sơn & chống thấm': 2.1,
+      'Thiết bị phòng tắm': 2.55,
+      'Đồ gia dụng': 1,
+    },
+    agriculture: {
+      'Phân vô cơ': 2.35,
+      'Phân hữu cơ & vi sinh': 1.8,
+      'Bảo vệ thực vật': 1.55,
+      'Hạt giống': 2.15,
+      'Giá thể & đất trồng': 1.25,
+      'Vật tư nông nghiệp': 1.45,
+    },
+  };
+  const variantWeights = [1.08, 1.02, 0.98, 0.93, 0.87];
+  return profile.products.map((product, index) => (
+    (categoryWeights[profile.key][product.category] ?? 1) * variantWeights[index % DATA_SCALE]
+  ));
+}
+
+function pickWeightedIndex(random: () => number, weights: number[]): number {
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  let cursor = random() * totalWeight;
+  for (let index = 0; index < weights.length; index += 1) {
+    cursor -= weights[index];
+    if (cursor < 0) return index;
+  }
+  return Math.max(weights.length - 1, 0);
+}
+
 function roundMoney(value: number): number {
   if (value < 10_000) return Math.round(value / 50) * 50;
   if (value < 100_000) return Math.round(value / 500) * 500;
@@ -874,10 +931,12 @@ async function seed(
     }
 
     const owners = await runner.query(
-      "SELECT user_id FROM shop_members WHERE shop_id = $1 AND member_type = 'OWNER' AND status = 'ACTIVE' AND is_active = true ORDER BY id LIMIT 1",
+      "SELECT user_id FROM shop_members WHERE shop_id = $1 AND member_type = 'OWNER' AND status = 'ACTIVE' AND is_active = true ORDER BY id",
       [shopId],
     );
-    if (!owners.length) throw new Error('Cửa hàng chưa có chủ sở hữu đang hoạt động');
+    if (owners.length !== 1) {
+      throw new Error(`Cửa hàng phải có đúng 1 owner đang hoạt động, hiện có ${owners.length}`);
+    }
     const ownerId = Number(owners[0].user_id);
     if (replaceExisting) {
       await clearExistingShopData(runner, shopId);
@@ -1085,10 +1144,12 @@ async function seed(
       identity_image_url: customerIdentityUrls.length && index % 4 === 0
         ? customerIdentityUrls[index % customerIdentityUrls.length]
         : null,
-      customer_type: index >= 16 ? 'WHOLESALE' : index % 7 === 0 ? 'VIP' : 'RETAIL',
-      credit_limit: index >= 16 ? 120000000 : 25000000,
+      customer_type: customerType(profile, index),
+      credit_limit: customerType(profile, index) === 'WHOLESALE' ? 120000000 : 25000000,
       balance: 0,
-      notes: index >= 16 ? `Khách mua sỉ ngành ${profile.description.toLocaleLowerCase('vi-VN')}` : 'Khách hàng thường xuyên',
+      notes: customerType(profile, index) === 'WHOLESALE'
+        ? `Khách mua sỉ ngành ${profile.description.toLocaleLowerCase('vi-VN')}`
+        : 'Khách hàng thường xuyên',
       is_active: true,
       created_at: START_DATE,
       updated_at: END_DATE,
@@ -1166,6 +1227,8 @@ async function seed(
 
     const generatedOrders: GeneratedOrder[] = [];
     const monthlySold = new Map<string, number[]>();
+    const customerWeights = buildCustomerWeights(profile);
+    const productWeights = buildProductWeights(profile);
     const days = Math.floor((END_DATE.getTime() - START_DATE.getTime()) / DAY_MS) + 1;
 
     for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
@@ -1187,8 +1250,7 @@ async function seed(
         const items: GeneratedItem[] = [];
         let subtotal = 0;
         while (items.length < itemCount) {
-          const weighted = Math.pow(random(), 1.55);
-          const productIndex = Math.min(Math.floor(weighted * profile.products.length), profile.products.length - 1);
+          const productIndex = pickWeightedIndex(random, productWeights);
           if (used.has(productIndex)) continue;
           used.add(productIndex);
           const definition = profile.products[productIndex];
@@ -1238,7 +1300,7 @@ async function seed(
         generatedOrders.push({
           code,
           date: orderDate,
-          customerIndex: Math.floor(random() * customers.length),
+          customerIndex: pickWeightedIndex(random, customerWeights),
           status: cancelled ? 'CANCELLED' : finalPaid >= total ? 'DELIVERED' : 'PENDING',
           method,
           subtotal,
@@ -1765,17 +1827,20 @@ async function seed(
       const code = `P3${key}${String(purchaseNumber).padStart(4, '0')}`;
       const isWithoutInvoice = purchaseNumber % 5 === 0;
       if (isWithoutInvoice) purchaseWithoutInvoiceCodes.add(code);
-        const items = soldQuantities.map((sold, index) => ({
-          product_id: Number(products[index].id),
-          quantity:
-            Math.ceil(sold / PURCHASE_CYCLES_PER_MONTH) +
-            (purchaseNumber === 1
-              ? profile.products[index].minStock * 2
-              : 0),
-          unit_price: roundMoney(
-            profile.products[index].cost * (1 + purchaseYear * 0.035),
-          ),
-        }));
+        const items = soldQuantities.flatMap((sold, index) => {
+          if (sold <= 0) return [];
+          return [{
+            product_id: Number(products[index].id),
+            quantity:
+              Math.ceil(sold / PURCHASE_CYCLES_PER_MONTH) +
+              (purchaseNumber === 1
+                ? profile.products[index].minStock * 2
+                : 0),
+            unit_price: roundMoney(
+              profile.products[index].cost * (1 + purchaseYear * 0.035),
+            ),
+          }];
+        });
       const total = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
       const initialPaid = roundMoney(total * 0.82);
       const outstanding = total - initialPaid;

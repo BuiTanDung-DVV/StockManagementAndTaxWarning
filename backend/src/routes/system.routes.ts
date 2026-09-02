@@ -1,6 +1,7 @@
 import { Router, raw } from 'express';
 import * as systemCtrl from '../controllers/system.controller';
 import { requirePermission } from '../middleware/permission.middleware';
+import * as invoiceOcrCtrl from '../controllers/invoice-ocr.controller';
 
 const router = Router();
 
@@ -23,6 +24,10 @@ router.get('/activity-logs', requirePermission('settings', 'view'), systemCtrl.g
 
 // Invoice Scans
 router.get('/invoice-scans', requirePermission('finance', 'view'), systemCtrl.getInvoiceScans);
+router.post('/invoice-scans/upload', requirePermission('finance', 'edit'), raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '4mb' }), invoiceOcrCtrl.upload);
+router.get('/invoice-scans/:id', requirePermission('finance', 'view'), invoiceOcrCtrl.get);
+router.post('/invoice-scans/:id/retry', requirePermission('finance', 'edit'), invoiceOcrCtrl.retry);
+router.post('/invoice-scans/:id/confirm', requirePermission('finance', 'edit'), invoiceOcrCtrl.confirm);
 router.post('/invoice-scans', requirePermission('finance', 'edit'), systemCtrl.createInvoiceScan);
 router.put('/invoice-scans/:id', requirePermission('finance', 'edit'), systemCtrl.updateInvoiceScan);
 
