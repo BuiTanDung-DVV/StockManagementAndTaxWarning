@@ -38,7 +38,7 @@ test('AI uses database-backed net sales and fails safe without legal sources', (
   assert.match(aiServiceSource, /Chưa ghi nhận cảnh báo trong phạm vi đã kiểm tra/);
   assert.doesNotMatch(aiServiceSource, /Cửa hàng vận hành ổn định/);
   assert.match(aiServiceSource, /generateWithGoogleSearch/);
-  assert.match(aiServiceSource, /legalGroundingService\.extractTrustedSources/);
+  assert.match(aiServiceSource, /legalGroundingService\.extractTrustedGrounding/);
   assert.match(aiServiceSource, /insufficient_sources/);
   assert.match(aiServiceSource, /TÀI LIỆU TRI THỨC ĐÃ CẤU HÌNH/);
 });

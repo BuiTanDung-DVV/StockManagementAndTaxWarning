@@ -63,6 +63,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final costing = ref.watch(costingProvider);
     final canManageSettings =
         shopState.isOwner || shopState.hasPermission('settings');
+    final canManageProducts =
+        shopState.isOwner || shopState.hasPermission('products');
     final canManageStaff = shopState.isOwner || auth.isShopOwner;
 
     final sections = <_SettingsSectionData>[
@@ -107,12 +109,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _SettingsSectionData(
         title: 'Hàng hóa & kho vận',
         entries: [
-          _SettingsEntry(
-            label: 'Danh mục sản phẩm',
-            description: 'Chuẩn hóa nhóm hàng phục vụ tra cứu và báo cáo.',
-            badge: 'Sắp có',
-            onTap: () => _showComingSoon('Quản lý danh mục sản phẩm'),
-          ),
+          if (canManageProducts)
+            _SettingsEntry(
+              label: 'Danh mục sản phẩm',
+              description: 'Chuẩn hóa nhóm hàng phục vụ tra cứu và báo cáo.',
+              onTap: () => context.push('/settings/product-categories'),
+            ),
           if (canManageSettings)
             _SettingsEntry(
               label: 'Nhật ký hoạt động',
@@ -152,19 +154,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               description: 'Thiết lập tài khoản ngân hàng dùng khi thanh toán.',
               onTap: () => context.push('/payment-config'),
             ),
-          _SettingsEntry(
-            label: 'Mẫu hóa đơn in',
-            description:
-                'Tùy chỉnh nội dung và nhận diện trên chứng từ bán hàng.',
-            badge: 'Sắp có',
-            onTap: () => _showComingSoon('Tùy biến mẫu hóa đơn'),
-          ),
-          _SettingsEntry(
-            label: 'Đơn vị vận chuyển',
-            description: 'Quản lý đối tác giao hàng và cấu hình vận chuyển.',
-            badge: 'Sắp có',
-            onTap: () => _showComingSoon('Quản lý đơn vị vận chuyển'),
-          ),
+          if (canManageSettings)
+            _SettingsEntry(
+              label: 'Mẫu hóa đơn in',
+              description:
+                  'Tùy chỉnh nội dung và nhận diện trên chứng từ bán hàng.',
+              onTap: () => context.push('/settings/receipt-template'),
+            ),
+          if (canManageSettings)
+            _SettingsEntry(
+              label: 'Đơn vị vận chuyển',
+              description: 'Quản lý đối tác giao hàng và cấu hình vận chuyển.',
+              onTap: () => context.push('/settings/shipping-carriers'),
+            ),
         ],
       ),
       _SettingsSectionData(
@@ -207,12 +209,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             description: 'Đang dùng: ${brandColor.label}.',
             onTap: () => _showBrandColorPicker(context, brandColor),
           ),
-          _SettingsEntry(
-            label: 'Sao lưu và khôi phục',
-            description: 'Tạo bản sao dữ liệu và khôi phục khi có sự cố.',
-            badge: 'Sắp có',
-            onTap: () => _showComingSoon('Sao lưu và khôi phục dữ liệu'),
-          ),
+          if (shopState.isOwner)
+            _SettingsEntry(
+              label: 'Sao lưu và khôi phục',
+              description: 'Tạo bản sao dữ liệu và khôi phục khi có sự cố.',
+              onTap: () => context.push('/settings/backup-restore'),
+            ),
           _SettingsEntry(
             label: 'Thông tin phần mềm',
             description: 'Xem phiên bản và thông tin sản phẩm.',
@@ -319,12 +321,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  void _showComingSoon(String feature) {
-    ToastService.showSuccess(
-      '$feature đang được chuẩn bị cho phiên bản tiếp theo.',
     );
   }
 
@@ -938,9 +934,7 @@ class _SettingsActionRow extends StatelessWidget {
             if (entry.badge != null)
               AppStatusBadge(
                 label: entry.badge!,
-                color: entry.badge == 'Sắp có'
-                    ? colors.textMuted
-                    : Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.primary,
               )
             else
               Text(

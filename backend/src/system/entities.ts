@@ -46,6 +46,9 @@ export class ShopProfile {
     @Column({ name: 'receipt_footer', length: 500, nullable: true })
     receiptFooter: string;
 
+    @Column({ name: 'receipt_template_config', type: 'jsonb', nullable: true })
+    receiptTemplateConfig: Record<string, unknown> | null;
+
     @Column({ length: 100, nullable: true })
     email: string;
 
@@ -206,6 +209,66 @@ export class InvoiceScan {
 
     @Column({ length: 500, nullable: true })
     notes: string;
+
+    @Column({ name: 'error_message', type: 'varchar', length: 500, nullable: true })
+    errorMessage: string | null;
+}
+
+@Entity('shipping_carriers')
+export class ShippingCarrier {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ name: 'shop_id' })
+    shopId: number;
+
+    @Column({ length: 120 })
+    name: string;
+
+    @Column({ length: 30 })
+    code: string;
+
+    @Column({ type: 'varchar', length: 20, nullable: true })
+    phone: string | null;
+
+    @Column({ name: 'tracking_url_template', type: 'varchar', length: 500, nullable: true })
+    trackingUrlTemplate: string | null;
+
+    @Column({ name: 'default_fee', type: 'decimal', precision: 18, scale: 2, default: 0 })
+    defaultFee: number;
+
+    @Column({ name: 'is_active', default: true })
+    isActive: boolean;
+
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
+
+    @UpdateDateColumn({ name: 'updated_at' })
+    updatedAt: Date;
+}
+
+@Entity('shop_backup_snapshots')
+export class ShopBackupSnapshot {
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
+
+    @Column({ name: 'shop_id' })
+    shopId: number;
+
+    @Column({ name: 'created_by' })
+    createdBy: number;
+
+    @Column({ length: 64 })
+    checksum: string;
+
+    @Column({ name: 'payload_gzip', type: 'bytea' })
+    payloadGzip: Buffer;
+
+    @Column({ length: 20, default: 'READY' })
+    status: string;
+
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
 }
 
 // === HÓA ĐƠN ĐẦU VÀO / ĐẦU RA ===

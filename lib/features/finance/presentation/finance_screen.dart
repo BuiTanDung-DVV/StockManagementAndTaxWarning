@@ -79,6 +79,12 @@ final _financeToolGroups = <_FinanceToolGroupDefinition>[
         description: 'Kiểm tra hóa đơn đầu vào, đầu ra và trạng thái xử lý.',
         route: '/invoices',
       ),
+      _FinanceToolDefinition(
+        title: 'Quét hóa đơn',
+        description:
+            'Nhận dạng ảnh và kiểm tra thủ công trước khi tạo hóa đơn.',
+        route: '/invoice-scans',
+      ),
     ],
   ),
   _FinanceToolGroupDefinition(

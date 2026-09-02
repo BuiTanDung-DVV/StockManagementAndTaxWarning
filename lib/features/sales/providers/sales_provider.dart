@@ -34,6 +34,8 @@ class SalesRepository {
       await _api.post('/sales-orders', data: dto);
   Future<Map<String, dynamic>> cancel(int id) async =>
       await _api.post('/sales-orders/$id/cancel');
+  Future<Map<String, dynamic>> update(int id, Map<String, dynamic> dto) async =>
+      await _api.put('/sales-orders/$id', data: dto);
   Future<Map<String, dynamic>> addPayment(
     int id,
     Map<String, dynamic> dto,

@@ -181,6 +181,7 @@ class _MainShellState extends ConsumerState<MainShell> {
             '/tax-declaration',
             '/transactions',
             '/purchases-no-invoice',
+            '/invoice-scans',
             '/tax-estimate',
             '/supplier-payables-aging',
           ],

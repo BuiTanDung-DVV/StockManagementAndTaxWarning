@@ -118,6 +118,8 @@ replace_*.js
 test-*.js
 tmp*.txt
 /tmp/
+/.tmp-*/
+/backend/database/backups/
 
 # Google OAuth Client Secrets
 google_client_secret_*.json

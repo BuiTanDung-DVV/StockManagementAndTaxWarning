@@ -5,6 +5,7 @@ import { AiKnowledgeDocument } from '../system/entities';
 import { vietnamDateKey } from '../finance/finance-period.utils';
 import {
   isLegalDocumentQuestion,
+  LegalClaimEvidence,
   LegalSourceCitation,
 } from '../ai/legal-grounding.utils';
 
@@ -34,6 +35,7 @@ export interface AiAdvisorResult {
   groundingStatus: 'not_required' | 'grounded' | 'insufficient_sources';
   searchedAt?: string;
   sources: LegalSourceCitation[];
+  claims: LegalClaimEvidence[];
 }
 
 export class AiService {
@@ -268,14 +270,18 @@ Người dùng hỏi: ${dto.question}`;
             modelName,
             fullPrompt,
           );
-          const sources = await legalGroundingService.extractTrustedSources(grounded.chunks);
-          if (sources.length === 0) {
+          const evidence = await legalGroundingService.extractTrustedGrounding(
+            grounded.chunks,
+            grounded.supports,
+          );
+          if (evidence.sources.length === 0 || evidence.claims.length === 0) {
             return {
               answer: 'Mình chưa tìm được tài liệu đủ tin cậy từ cơ quan nhà nước hoặc Thư Viện Pháp Luật trong lần tra cứu này, nên chưa thể đưa ra kết luận pháp lý. Bạn có thể nêu rõ loại thuế, loại hóa đơn hoặc số hiệu văn bản cần kiểm tra.',
               provider: `Google Gemini (${modelName})`,
               groundingStatus: 'insufficient_sources',
               searchedAt,
               sources: [],
+              claims: [],
             };
           }
 
@@ -284,7 +290,8 @@ Người dùng hỏi: ${dto.question}`;
             provider: `Google Gemini (${modelName})`,
             groundingStatus: 'grounded',
             searchedAt,
-            sources,
+            sources: evidence.sources,
+            claims: evidence.claims,
           };
         }
 
@@ -298,6 +305,7 @@ Người dùng hỏi: ${dto.question}`;
             provider: `Google Gemini (${modelName})`,
             groundingStatus: 'not_required',
             sources: [],
+            claims: [],
           };
         }
       } catch (err: any) {

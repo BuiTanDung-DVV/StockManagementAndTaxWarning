@@ -12,7 +12,7 @@ import { Category, Product, CostType, ProductCostItem, ProductBatch, UnitConvers
 import { Warehouse, InventoryStock, InventoryMovement, PurchaseOrder, PurchaseOrderItem, StockTake, StockTakeItem } from '../inventory/entities';
 import { InventoryLot } from '../inventory/lot.entity';
 import { SalesOrder, SalesOrderItem, SalesOrderPayment, SalesReturn, SalesReturnItem, SalesOrderLotDeduction } from '../sales/entities';
-import { ShopProfile, ActivityLog, AiKnowledgeDocument, InvoiceScan, Invoice as SystemInvoice, InvoiceItem as SystemInvoiceItem } from '../system/entities';
+import { ShopProfile, ActivityLog, AiKnowledgeDocument, InvoiceScan, Invoice as SystemInvoice, InvoiceItem as SystemInvoiceItem, ShippingCarrier, ShopBackupSnapshot } from '../system/entities';
 import { FinancialLedger } from '../finance/entities/financial-ledger.entity';
 import { JournalEntry, JournalLine } from '../finance/ledger.entity';
 import { CashAccount, TaxRule, CashTransaction, BudgetPlan, CashflowForecast, DailyClosing, TaxObligation, PurchaseWithoutInvoice, PurchaseWithoutInvoiceItem } from '../finance/entities';
@@ -39,7 +39,7 @@ export const AppDataSource = new DataSource({
     SalesReturnItem, SalesOrderLotDeduction, ShopProfile, ActivityLog, AiKnowledgeDocument, InvoiceScan, SystemInvoice,
     SystemInvoiceItem, FinancialLedger, JournalEntry, JournalLine, CashAccount, TaxRule, CashTransaction,
     BudgetPlan, CashflowForecast, DailyClosing, TaxObligation, PurchaseWithoutInvoice,
-    PurchaseWithoutInvoiceItem
+    PurchaseWithoutInvoiceItem, ShippingCarrier, ShopBackupSnapshot
   ],
   migrations: [],
   subscribers: [AuditLogSubscriber],

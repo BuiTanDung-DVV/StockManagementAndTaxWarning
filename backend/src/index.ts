@@ -52,6 +52,8 @@ import taxRoutes from './routes/tax.routes';
 import tagRoutes from './routes/tag.routes';
 import aiRoutes from './routes/ai.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import shippingCarrierRoutes from './routes/shipping-carrier.routes';
+import shopBackupRoutes from './routes/shop-backup.routes';
 
 import { authenticateJwt, requireShopId } from './middleware/auth.middleware';
 
@@ -69,6 +71,8 @@ apiRouter.post('/shop-members/request-join', shopMemberCtrl.requestJoin);
 apiRouter.use(requireShopId);
 apiRouter.use('/', financeRoutes);
 apiRouter.use('/', dashboardRoutes);
+apiRouter.use('/', shippingCarrierRoutes);
+apiRouter.use('/', shopBackupRoutes);
 apiRouter.use('/', inventoryRoutes);
 apiRouter.use('/', salesRoutes);
 apiRouter.use('/', productRoutes);

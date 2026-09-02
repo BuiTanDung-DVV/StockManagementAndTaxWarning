@@ -96,12 +96,16 @@ const CORE_CHECKS: readonly CheckDefinition[] = [
       SELECT
         1 AS population,
         CASE WHEN COUNT(*) = 1 THEN 0 ELSE 1 END AS violations,
-        COUNT(*)::text AS evidence
-      FROM shop_members
-      WHERE shop_id = $1
-        AND member_type = 'OWNER'
-        AND status = 'ACTIVE'
-        AND is_active = true
+        COALESCE(string_agg(
+          sm.user_id::text || ':' || COALESCE(u.full_name, u.username, 'unknown'),
+          ', ' ORDER BY sm.id
+        ), '') AS evidence
+      FROM shop_members sm
+      LEFT JOIN users u ON u.id = sm.user_id
+      WHERE sm.shop_id = $1
+        AND sm.member_type = 'OWNER'
+        AND sm.status = 'ACTIVE'
+        AND sm.is_active = true
     `,
     risk: 'Không có actor hợp lệ để ghi audit metadata và phân quyền có thể sai.',
     cause: 'Membership owner thiếu, trùng hoặc đã bị vô hiệu hóa.',

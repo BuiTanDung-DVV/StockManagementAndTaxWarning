@@ -8,6 +8,11 @@ export interface LegalSourceCitation {
   sourceLabel: string;
 }
 
+export interface LegalClaimEvidence {
+  text: string;
+  sourceUrls: string[];
+}
+
 const LEGAL_QUESTION_PATTERN = new RegExp(
   [
     'pháp luật', 'quy định', 'luật', 'nghị định', 'thông tư', 'quyết định',

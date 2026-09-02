@@ -8,13 +8,17 @@ const service = fs.readFileSync(
   'utf8',
 );
 
-test('daily closing loads transactions by Vietnam day range instead of exact timestamp', () => {
+test('daily closing loads DATE transactions by the Vietnam business-date key', () => {
   assert.match(service, /resolveVietnamBusinessDayPeriod\(date\)/);
   assert.match(
     service,
-    /transactionDate: Between\(fromDate, toDate\)/,
+    /transactionDate: businessDate/,
   );
-  assert.doesNotMatch(service, /transactionDate: d as any/);
+  assert.match(
+    service,
+    /const \{ businessDate, fromDate, toDate \} = resolveVietnamBusinessDayPeriod\(date\)/,
+  );
+  assert.doesNotMatch(service, /transactionDate: Between\(fromDate, toDate\)/);
   assert.doesNotMatch(service, /CAST\(t\.transaction_date AS DATE\)/);
 });
 

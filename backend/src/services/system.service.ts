@@ -30,12 +30,16 @@ export class SystemService {
         const allowedFields: (keyof ShopProfile)[] = [
             'shopName', 'phone', 'address', 'taxCode', 'email', 'website',
             'ownerName', 'ownerIdentityNumber', 'businessLicenseNumber',
-            'receiptFooter', 'costingMethod', 'businessSector',
+            'receiptFooter', 'receiptTemplateConfig', 'costingMethod', 'businessSector',
             'applyVatReduction', 'customVatRate', 'customPitRate',
             'bankId', 'bankAccount', 'bankName', 'accountHolder',
         ];
         for (const key of allowedFields) {
             if (dto[key] !== undefined) (profile as any)[key] = dto[key];
+        }
+
+        if (dto.receiptTemplateConfig !== undefined) {
+            profile.receiptTemplateConfig = this.normalizeReceiptTemplateConfig(dto.receiptTemplateConfig);
         }
 
         if (dto.bankId !== undefined) {
@@ -47,6 +51,35 @@ export class SystemService {
             profile.bankName = bank.name;
         }
         return this.profileRepo.save(profile);
+    }
+
+    private normalizeReceiptTemplateConfig(value: unknown) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error('Validation: Cấu hình phiếu in không hợp lệ');
+        }
+        const raw = value as Record<string, unknown>;
+        const paperSize = String(raw.paperSize || '80mm');
+        if (!['80mm', 'A4'].includes(paperSize)) {
+            throw new Error('Validation: Khổ giấy chỉ hỗ trợ 80mm hoặc A4');
+        }
+        const title = String(raw.title || 'PHIẾU BÁN HÀNG').trim();
+        const footer = String(raw.footer || '').trim();
+        if (!title || title.length > 100 || footer.length > 500) {
+            throw new Error('Validation: Tiêu đề hoặc chân trang phiếu in không hợp lệ');
+        }
+        const flag = (key: string, fallback = true) => raw[key] === undefined ? fallback : Boolean(raw[key]);
+        return {
+            paperSize,
+            title,
+            footer,
+            showLogo: flag('showLogo'),
+            showShopInfo: flag('showShopInfo'),
+            showCustomer: flag('showCustomer'),
+            showSku: flag('showSku'),
+            showDiscount: flag('showDiscount'),
+            showPayment: flag('showPayment'),
+            showQr: flag('showQr'),
+        };
     }
 
     async getShopPaymentQr(shopId: number) {

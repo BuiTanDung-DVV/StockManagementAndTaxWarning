@@ -23,7 +23,7 @@ export class Category {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ unique: true, length: 100 })
+    @Column({ length: 100 })
     name: string;
 
     @Column({ name: 'shop_id', nullable: true })

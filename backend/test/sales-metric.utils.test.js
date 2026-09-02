@@ -94,7 +94,7 @@ test('sales detail loads the same customer relation as the sales list', () => {
 
   assert.match(
     source,
-    /relations: \['customer', 'items', 'items\.product', 'payments'\]/,
+    /relations: \['customer', 'items', 'items\.product', 'payments', 'shippingCarrier'\]/,
   );
 });
 

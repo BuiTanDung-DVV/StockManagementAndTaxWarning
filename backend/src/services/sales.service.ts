@@ -6,6 +6,7 @@ import {
 } from '../finance/finance-period.utils';
 import { normalizeDatabaseBusinessDate } from '../system/data-freshness.utils';
 import { SalesOrder, SalesOrderItem, SalesReturn, SalesReturnItem, SalesOrderPayment, SalesOrderLotDeduction } from '../sales/entities';
+import { ShippingCarrier } from '../system/entities';
 import {
     Customer,
     DebtPaymentHistory,
@@ -31,7 +32,9 @@ import {
 } from '../common/vietnamese-search.utils';
 import { assertAllowedUnitPrice } from '../sales/sales-pricing.utils';
 import {
+    assertDeliveryStatusTransition,
     buildAllocatedMerchandiseRevenueSql,
+    calculateShippingReturnAllocation,
     calculateSalesAccountingSplit,
     calculateSalesTaxLines,
 } from '../sales/sales-accounting.utils';
@@ -609,7 +612,7 @@ export class SalesService {
     async findById(shopId: number, id: number) {
         const order = await this.orderRepo.findOne({
             where: { id, shopId },
-            relations: ['customer', 'items', 'items.product', 'payments'],
+            relations: ['customer', 'items', 'items.product', 'payments', 'shippingCarrier'],
         });
         if (!order) throw new Error('Order not found');
 
@@ -640,6 +643,22 @@ export class SalesService {
             if (dto.customerId && !customer) {
                 throw new Error('Validation: Customer not found');
             }
+
+            const shippingCarrierId = dto.shippingCarrierId == null ? null : Number(dto.shippingCarrierId);
+            const shippingCarrier = shippingCarrierId
+                ? await manager.findOne(ShippingCarrier, { where: { id: shippingCarrierId, shopId, isActive: true } })
+                : null;
+            if (shippingCarrierId && !shippingCarrier) throw new Error('Validation: Shipping carrier not found');
+            const shippingFee = Number(dto.shippingFee ?? shippingCarrier?.defaultFee ?? 0);
+            const shippingTaxRate = Number(dto.shippingTaxRate ?? 0);
+            const shippingFeePayer = String(dto.shippingFeePayer || 'SHOP').toUpperCase();
+            const trackingCode = shippingCarrier ? String(dto.trackingCode || '').trim() || null : null;
+            const deliveryStatus = shippingCarrier ? 'PENDING' : 'NOT_REQUIRED';
+            if (!Number.isFinite(shippingFee) || shippingFee < 0 || shippingFee > 1_000_000_000) throw new Error('Validation: Shipping fee is invalid');
+            if (!Number.isFinite(shippingTaxRate) || shippingTaxRate < 0 || shippingTaxRate > 100) throw new Error('Validation: Shipping tax rate is invalid');
+            if (!['SHOP', 'CUSTOMER'].includes(shippingFeePayer)) throw new Error('Validation: Shipping fee payer is invalid');
+            if (trackingCode && trackingCode.length > 100) throw new Error('Validation: Tracking code is too long');
+            if (!shippingCarrier && shippingFee > 0) throw new Error('Validation: Shipping carrier is required when a fee is entered');
 
             let subtotal = 0;
             let totalCogs = 0;
@@ -723,7 +742,12 @@ export class SalesService {
                 items[index].taxAmount = line.taxAmount;
             });
             const taxAmount = taxCalculation.taxAmount;
-            const totalAmount = subtotal - discountAmount + taxAmount;
+            const merchandiseTotal = subtotal - discountAmount + taxAmount;
+            const shippingTaxAmount = shippingFeePayer === 'CUSTOMER'
+                ? Number((shippingFee * shippingTaxRate / 100).toFixed(2))
+                : 0;
+            const customerShippingCharge = shippingFeePayer === 'CUSTOMER' ? shippingFee + shippingTaxAmount : 0;
+            const totalAmount = merchandiseTotal + customerShippingCharge;
             const paidAmount = dto.settleInFull === true
                 ? totalAmount
                 : Number(dto.paidAmount || 0);
@@ -738,9 +762,9 @@ export class SalesService {
                 subtotal,
                 discountAmount,
                 taxAmount,
-                paidAmount,
+                Math.min(paidAmount, merchandiseTotal),
             );
-            const unpaidAmount = accountingSplit.receivableAmount;
+            const unpaidAmount = totalAmount - paidAmount;
             if (unpaidAmount > 0 && !customer) {
                 throw new Error('Validation: Customer is required for an unpaid order');
             }
@@ -784,6 +808,13 @@ export class SalesService {
                 paymentMethod: settledPaymentMethod,
                 notes: dto.notes,
                 invoiceNumber: dto.invoiceNumber,
+                shippingCarrier,
+                shippingCarrierId: shippingCarrier?.id || null,
+                trackingCode,
+                deliveryStatus,
+                shippingFee,
+                shippingFeePayer,
+                shippingTaxRate,
                 ...(customer ? { customer } : {}),
                 items,
                 createdBy: dto.createdBy,
@@ -867,6 +898,10 @@ export class SalesService {
                     amount: taxAmount,
                     entryType: 'CREDIT',
                 });
+            }
+            if (customerShippingCharge > 0) {
+                journalLines.push({ accountCode: '3388', amount: shippingFee, entryType: 'CREDIT' });
+                if (shippingTaxAmount > 0) journalLines.push({ accountCode: '3331', amount: shippingTaxAmount, entryType: 'CREDIT' });
             }
 
             // Tiền đã thu: tiền mặt vào 111, chuyển khoản/QR/thẻ vào 112.
@@ -1044,18 +1079,47 @@ export class SalesService {
     }
 
     async updateOrder(shopId: number, id: number, dto: Partial<SalesOrder>) {
-        const order = await this.orderRepo.findOne({ where: { id, shopId } });
-        if (!order) throw new Error('Order not found');
-        if (dto.status !== undefined || dto.paymentMethod !== undefined) {
-            throw new Error('Validation: Financial fields must use the payment or cancellation workflow');
-        }
-        const allowedFields: (keyof SalesOrder)[] = ['notes', 'invoiceNumber'];
-        for (const field of allowedFields) {
-            if (dto[field] !== undefined) {
-                (order as any)[field] = dto[field];
+        await AppDataSource.transaction(async manager => {
+            const order = await manager.findOne(SalesOrder, {
+                where: { id, shopId },
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!order) throw new Error('Order not found');
+            if (dto.status !== undefined || dto.paymentMethod !== undefined || dto.shippingFee !== undefined || dto.shippingFeePayer !== undefined || dto.shippingTaxRate !== undefined) {
+                throw new Error('Validation: Financial fields must use the payment or cancellation workflow');
             }
-        }
-        await this.orderRepo.save(order);
+            if (dto.shippingCarrierId !== undefined) {
+                const carrierId = Number(dto.shippingCarrierId);
+                const carrier = await manager.findOne(ShippingCarrier, { where: { id: carrierId, shopId, isActive: true } });
+                if (!carrier) throw new Error('Validation: Shipping carrier not found');
+                order.shippingCarrierId = carrier.id;
+                order.shippingCarrier = carrier;
+                if (order.deliveryStatus === 'NOT_REQUIRED') order.deliveryStatus = 'PENDING';
+            }
+            if (dto.trackingCode !== undefined) {
+                if (!order.shippingCarrierId) throw new Error('Validation: Shipping carrier is required');
+                const trackingCode = String(dto.trackingCode || '').trim();
+                if (trackingCode.length > 100) throw new Error('Validation: Tracking code is too long');
+                order.trackingCode = trackingCode || null;
+            }
+            if (dto.deliveryStatus !== undefined) {
+                const next = String(dto.deliveryStatus).toUpperCase();
+                assertDeliveryStatusTransition(order.deliveryStatus, next);
+                order.deliveryStatus = next;
+                if (next === 'DELIVERED' && order.shippingFeePayer === 'SHOP' && Number(order.shippingFee) > 0 && !order.shippingExpenseTransactionId) {
+                    const expense = await this.financeService.createCashTransaction(shopId, {
+                        transactionCode: `DL${shopId}${order.id}`,
+                        amount: Number(order.shippingFee), type: 'EXPENSE', category: 'DELIVERY', paymentMethod: 'CASH',
+                        referenceType: 'DELIVERY', referenceId: order.id, referenceCode: order.orderCode,
+                        description: `Phí giao hàng đơn ${order.orderCode}`, transactionDate: new Date(), status: 'COMPLETED',
+                    } as any, manager);
+                    order.shippingExpenseTransactionId = expense.id;
+                }
+            }
+            if (dto.notes !== undefined) order.notes = dto.notes;
+            if (dto.invoiceNumber !== undefined) order.invoiceNumber = dto.invoiceNumber;
+            await manager.save(SalesOrder, order);
+        });
         return this.findById(shopId, id);
     }
 
@@ -1244,8 +1308,8 @@ export class SalesService {
             const settledPayments = await manager.find(SalesOrderPayment, {
                 where: { shopId, order: { id: orderId } },
             });
-            const refunds = groupSettledPaymentsByMethod(settledPayments);
-            const recordedPaymentTotal = refunds.reduce(
+            const paymentAllocations = groupSettledPaymentsByMethod(settledPayments);
+            const recordedPaymentTotal = paymentAllocations.reduce(
                 (sum, refund) => sum + refund.amount,
                 0,
             );
@@ -1255,19 +1319,40 @@ export class SalesService {
                     order.paymentMethod || dto.refundMethod || 'CASH',
                 );
                 const missingAmount = paidAmount - recordedPaymentTotal;
-                const existing = refunds.find((entry) => entry.method === fallbackMethod);
+                const existing = paymentAllocations.find((entry) => entry.method === fallbackMethod);
                 if (existing) existing.amount += missingAmount;
-                else refunds.push({ method: fallbackMethod, amount: missingAmount });
+                else paymentAllocations.push({ method: fallbackMethod, amount: missingAmount });
             }
-            const refundAmount = refunds.reduce(
-                (sum, refund) => sum + refund.amount,
-                0,
-            );
+            const shippingReturn = calculateShippingReturnAllocation({
+                subtotal: Number(order.subtotal || 0),
+                discountAmount: Number(order.discountAmount || 0),
+                taxAmount: Number(order.taxAmount || 0),
+                paidAmount,
+                shippingFee: Number(order.shippingFee || 0),
+                shippingFeePayer: order.shippingFeePayer,
+                shippingTaxRate: Number(order.shippingTaxRate || 0),
+                refundShippingFee: dto.refundShippingFee === true,
+            });
+            const {
+                merchandiseTotal,
+                shippingTaxAmount,
+                customerShippingCharge,
+                refundShippingFee,
+                refundedShippingAmount,
+                refundAmount,
+            } = shippingReturn;
+            let remainingRefund = refundAmount;
+            const refunds = paymentAllocations.flatMap((payment) => {
+                if (remainingRefund <= 0) return [];
+                const amount = Math.min(payment.amount, remainingRefund);
+                remainingRefund = Number((remainingRefund - amount).toFixed(2));
+                return amount > 0 ? [{ method: payment.method, amount }] : [];
+            });
             if (
                 dto.refundAmount != null &&
                 Math.abs(Number(dto.refundAmount) - refundAmount) > 0.01
             ) {
-                throw new Error('Validation: Full return must refund the full amount paid');
+                throw new Error('Validation: Refund amount does not match the selected shipping-fee option');
             }
 
             const entity = manager.create(SalesReturn, {
@@ -1277,6 +1362,8 @@ export class SalesService {
                 returnDate,
                 reason: dto.reason || '',
                 refundAmount,
+                refundShippingFee,
+                refundedShippingAmount,
                 refundMethod: refunds.length === 1 ? refunds[0].method : 'MULTIPLE',
                 status: 'COMPLETED',
                 notes: dto.notes,
@@ -1311,15 +1398,21 @@ export class SalesService {
                 relations: ['customer'],
             });
             if (receivable && receivable.status !== 'CANCELLED') {
-                const unpaidAmount = Math.max(
+                const outstandingBeforeReturn = Math.max(
                     Number(receivable.amount) - Number(receivable.paidAmount || 0),
                     0,
                 );
-                receivable.status = 'CANCELLED';
+                const outstandingAfterReturn = refundShippingFee
+                    ? 0
+                    : Math.min(outstandingBeforeReturn, customerShippingCharge);
+                const reducedDebt = outstandingBeforeReturn - outstandingAfterReturn;
+                receivable.amount = outstandingAfterReturn;
+                receivable.paidAmount = 0;
+                receivable.status = outstandingAfterReturn > 0 ? 'UNPAID' : 'CANCELLED';
                 await manager.save(Receivable, receivable);
-                if (unpaidAmount > 0 && receivable.customer) {
+                if (reducedDebt > 0 && receivable.customer) {
                     receivable.customer.balance = Math.max(
-                        Number(receivable.customer.balance || 0) - unpaidAmount,
+                        Number(receivable.customer.balance || 0) - reducedDebt,
                         0,
                     );
                     await manager.save(Customer, receivable.customer);
@@ -1409,7 +1502,7 @@ export class SalesService {
                 Number(order.subtotal || 0),
                 Number(order.discountAmount || 0),
                 Number(order.taxAmount || 0),
-                paidAmount,
+                Math.min(paidAmount, merchandiseTotal),
             );
             const netSalesAmount = accountingSplit.netSales;
             const taxAmount = accountingSplit.taxAmount;
@@ -1433,6 +1526,22 @@ export class SalesService {
                     entryType: 'DEBIT',
                 });
             }
+            if (refundShippingFee) {
+                if (Number(order.shippingFee || 0) > 0) {
+                    returnJournalLines.push({
+                        accountCode: '3388',
+                        amount: Number(order.shippingFee),
+                        entryType: 'DEBIT',
+                    });
+                }
+                if (shippingTaxAmount > 0) {
+                    returnJournalLines.push({
+                        accountCode: '3331',
+                        amount: shippingTaxAmount,
+                        entryType: 'DEBIT',
+                    });
+                }
+            }
             for (const refund of refunds) {
                 returnJournalLines.push({
                     accountCode: paymentLedgerAccountCode(refund.method),
@@ -1446,6 +1555,16 @@ export class SalesService {
                     amount: unpaidAmount,
                     entryType: 'CREDIT',
                 });
+            }
+            if (refundShippingFee) {
+                const unpaidShipping = shippingReturn.unpaidShipping;
+                if (unpaidShipping > 0) {
+                    returnJournalLines.push({
+                        accountCode: '131',
+                        amount: unpaidShipping,
+                        entryType: 'CREDIT',
+                    });
+                }
             }
             if (returnedCogs > 0) {
                 returnJournalLines.push(

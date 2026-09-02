@@ -19,6 +19,7 @@ import {
     normalizeCashTransactionQuery,
     resolveCurrentMonthExpensePeriod,
     resolveVietnamBusinessDayPeriod,
+    vietnamDateKey,
 } from '../finance/finance-period.utils';
 import { normalizeCashflowForecastInput } from '../finance/cashflow-forecast.utils';
 import {
@@ -105,10 +106,14 @@ export class FinanceService {
             qb.andWhere('t.category = :category', { category: query.category });
         }
         if (query.fromDate) {
-            qb.andWhere('t.transaction_date >= :from', { from: query.fromDate });
+            qb.andWhere('t.transaction_date >= CAST(:from AS date)', {
+                from: vietnamDateKey(query.fromDate),
+            });
         }
         if (query.toDate) {
-            qb.andWhere('t.transaction_date <= :to', { to: query.toDate });
+            qb.andWhere('t.transaction_date <= CAST(:to AS date)', {
+                to: vietnamDateKey(query.toDate),
+            });
         }
 
         const totalRow = await qb.clone()
@@ -340,19 +345,21 @@ export class FinanceService {
             }
             toDate.setHours(23, 59, 59, 999);
         }
+        const fromDateKey = vietnamDateKey(fromDate);
+        const toDateKey = vietnamDateKey(toDate);
 
         const shopCondition = Array.isArray(shopId) ? 't.shop_id IN (:...shopIds)' : 't.shop_id = :shopId';
         const shopParams = Array.isArray(shopId) ? { shopIds: shopId } : { shopId };
         const result = await this.cashTxRepo.createQueryBuilder('t')
             .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition} AND t.transaction_date >= CAST(:fromDateKey AS date) AND t.transaction_date <= CAST(:toDateKey AS date)`, { ...shopParams, fromDateKey, toDateKey })
             .getRawOne();
         const latestTransactionRow = await this.cashTxRepo.createQueryBuilder('t')
             .select('MAX(t.transaction_date)', 'latestTransactionDate')
-            .where(`${shopCondition} AND t.transaction_date <= :toDate`, {
+            .where(`${shopCondition} AND t.transaction_date <= CAST(:toDateKey AS date)`, {
                 ...shopParams,
-                toDate,
+                toDateKey,
             })
             .getRawOne();
 
@@ -365,7 +372,7 @@ export class FinanceService {
             .select(transactionDateBucket, 'date')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'income')
             .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'expense')
-            .where(`${shopCondition} AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition} AND t.transaction_date >= CAST(:fromDateKey AS date) AND t.transaction_date <= CAST(:toDateKey AS date)`, { ...shopParams, fromDateKey, toDateKey })
             .groupBy(transactionDateBucket)
             .orderBy(transactionDateBucket, 'ASC')
             .getRawMany();
@@ -392,7 +399,7 @@ export class FinanceService {
         const expense = Number(result?.expense || 0);
         const cashResult = await this.cashTxRepo.createQueryBuilder('t')
             .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END), 0)", 'cashBalance')
-            .where(`${shopCondition} AND t.transaction_date <= :toDate AND (t.payment_method = 'CASH' OR t.payment_method IS NULL)`, { ...shopParams, toDate })
+            .where(`${shopCondition} AND t.transaction_date <= CAST(:toDateKey AS date) AND (t.payment_method = 'CASH' OR t.payment_method IS NULL)`, { ...shopParams, toDateKey })
             .getRawOne();
         const netCashFlow = calculateNetAmount(income, expense);
         return {
@@ -608,6 +615,8 @@ export class FinanceService {
     // Expenses by category
     async getExpensesByCategory(shopId: number | number[], from?: string, to?: string) {
         const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
+        const fromDateKey = vietnamDateKey(fromDate);
+        const toDateKey = vietnamDateKey(toDate);
         const shopCondition = Array.isArray(shopId)
             ? 't.shop_id IN (:...shopIds)'
             : 't.shop_id = :shopId';
@@ -617,7 +626,7 @@ export class FinanceService {
             .select('t.category', 'category')
             .addSelect('SUM(t.amount)', 'amount')
             .addSelect('COUNT(*)', 'count')
-            .where(`${shopCondition} AND t.type = 'EXPENSE' AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate`, { ...shopParams, fromDate, toDate })
+            .where(`${shopCondition} AND t.type = 'EXPENSE' AND t.transaction_date >= CAST(:fromDateKey AS date) AND t.transaction_date <= CAST(:toDateKey AS date)`, { ...shopParams, fromDateKey, toDateKey })
             .groupBy('t.category')
             .orderBy('SUM(t.amount)', 'DESC')
             .getRawMany();
@@ -630,7 +639,7 @@ export class FinanceService {
             where: {
                 shopId: Array.isArray(shopId) ? In(shopId) : shopId,
                 type: 'EXPENSE',
-                transactionDate: Between(fromDate, toDate),
+                transactionDate: Between(fromDateKey as any, toDateKey as any),
             },
             order: { transactionDate: 'DESC' },
             take: 10,
@@ -663,7 +672,7 @@ export class FinanceService {
                 .addSelect("COALESCE(SUM(CASE WHEN t.type = 'INCOME' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)", 'bankIncome')
                 .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' AND t.payment_method != 'CASH' THEN t.amount ELSE 0 END), 0)", 'bankExpense')
                 .addSelect("COUNT(*)", 'transactionCount')
-                .where('t.shop_id = :shopId AND t.transaction_date >= :fromDate AND t.transaction_date <= :toDate', { shopId, fromDate, toDate })
+                .where('t.shop_id = :shopId AND t.transaction_date = CAST(:businessDate AS date)', { shopId, businessDate })
                 .getRawOne();
 
             const salesRows = await AppDataSource.query(`
@@ -706,7 +715,7 @@ export class FinanceService {
 
             // Get recent transactions for the day
             const transactions = await this.cashTxRepo.find({
-                where: { shopId, transactionDate: Between(fromDate, toDate) },
+                where: { shopId, transactionDate: businessDate as any },
                 order: { createdAt: 'DESC' },
                 take: 20,
             });
@@ -858,13 +867,15 @@ export class FinanceService {
             order: { startDate: 'DESC' },
         });
         return Promise.all(plans.map(async plan => {
+            const startDateKey = vietnamDateKey(new Date(plan.startDate));
+            const endDateKey = vietnamDateKey(new Date(plan.endDate));
             const actual = await this.cashTxRepo.createQueryBuilder('t')
                 .select("COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END), 0)", 'actualIncome')
                 .addSelect("COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END), 0)", 'actualExpense')
                 .where('t.shop_id = :shopId', { shopId })
-                .andWhere('t.transaction_date BETWEEN :startDate AND :endDate', {
-                    startDate: plan.startDate,
-                    endDate: plan.endDate,
+                .andWhere('t.transaction_date BETWEEN CAST(:startDate AS date) AND CAST(:endDate AS date)', {
+                    startDate: startDateKey,
+                    endDate: endDateKey,
                 })
                 .getRawOne();
             return {

@@ -47,7 +47,12 @@ void main() {
     var opened = false;
     await tester.pumpWidget(app(width: 390, onOpen: () => opened = true));
 
-    expect(find.text('Tháng này · Kỳ trước'), findsOneWidget);
+    expect(
+      find.text(
+        '${reportingPeriodSelectionLabel(selection, DateTime.now())} · Kỳ trước',
+      ),
+      findsOneWidget,
+    );
     expect(find.textContaining('01/08–26/08/2026'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('reporting-period-mobile-summary')),

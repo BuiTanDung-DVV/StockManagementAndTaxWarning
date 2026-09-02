@@ -7,6 +7,7 @@ const {
   resolveCurrentMonthExpensePeriod,
   resolveVietnamBusinessDayEnd,
   resolveVietnamBusinessDayPeriod,
+  vietnamDateKey,
 } = require('../dist/finance/finance-period.utils.js');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -82,6 +83,25 @@ test('chart labels are filled from Vietnam calendar dates, not server local date
       'month',
     ),
     ['2025-12', '2026-01'],
+  );
+});
+
+test('DATE columns use Vietnam date keys instead of timestamp parameters', () => {
+  assert.equal(
+    vietnamDateKey(new Date('2026-08-31T17:00:00.000Z')),
+    '2026-09-01',
+  );
+  const financeSource = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'services', 'finance.service.ts'),
+    'utf8',
+  );
+  assert.match(financeSource, /from: vietnamDateKey\(query\.fromDate\)/);
+  assert.match(financeSource, /to: vietnamDateKey\(query\.toDate\)/);
+  assert.match(financeSource, /CAST\(:fromDateKey AS date\)/);
+  assert.match(financeSource, /CAST\(:toDateKey AS date\)/);
+  assert.doesNotMatch(
+    financeSource,
+    /transactionDate: Between\(fromDate, toDate\)/,
   );
 });
 
