@@ -18,6 +18,7 @@ import '../providers/costing_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/shop_provider.dart';
 import '../providers/system_provider.dart';
+import 'shop_payment_qr_dialog.dart';
 
 bool settingsShouldLoadShopProfile(ShopState state) =>
     !state.isAllShops && state.currentShopId != null;
@@ -150,9 +151,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           if (canManageSettings)
             _SettingsEntry(
-              label: 'VietQR và tài khoản nhận tiền',
-              description: 'Thiết lập tài khoản ngân hàng dùng khi thanh toán.',
-              onTap: () => context.push('/payment-config'),
+              label: 'Ảnh QR thanh toán',
+              description: 'Tải lên hoặc thay ảnh QR nhận tiền của cửa hàng.',
+              onTap: () => showShopPaymentQrDialog(context, canManage: true),
             ),
           if (canManageSettings)
             _SettingsEntry(
