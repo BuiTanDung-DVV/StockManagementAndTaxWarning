@@ -134,10 +134,21 @@ class _PaymentConfigScreenState extends ConsumerState<PaymentConfigScreen> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Không thể tải danh mục ngân hàng từ cơ sở dữ liệu.\n${banksAsync.error}',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(color: AppColors.danger),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Chưa thể tải danh sách ngân hàng. Vui lòng thử lại.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(color: c.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: () => ref.invalidate(paymentBanksProvider),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Thử lại'),
+                    ),
+                  ],
                 ),
               ),
             );

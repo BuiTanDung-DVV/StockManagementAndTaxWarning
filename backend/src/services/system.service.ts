@@ -2,7 +2,10 @@ import { AppDataSource } from '../config/db.config';
 import { ShopProfile, ActivityLog, AiKnowledgeDocument, InvoiceScan, Invoice } from '../system/entities';
 import { PurchaseWithoutInvoice } from '../finance/entities';
 import { ImageStorageService, ProductImageUploadRequest } from './image-storage.service';
-import { parsePaymentBankOptions } from '../system/payment-config.utils';
+import {
+    DEFAULT_PAYMENT_BANK_OPTIONS,
+    parsePaymentBankOptions,
+} from '../system/payment-config.utils';
 import {
     parseTaxDeclarationForms,
     parseTaxSupportLinks,
@@ -88,9 +91,16 @@ export class SystemService {
     }
 
     async getPaymentBankOptions(shopId: number) {
-        return parsePaymentBankOptions(
-            await this.getSystemConfig(shopId, 'VIETQR_BANKS'),
-        );
+        try {
+            return parsePaymentBankOptions(
+                await this.getSystemConfig(shopId, 'VIETQR_BANKS'),
+            );
+        } catch (error) {
+            if (error instanceof Error && error.message === 'Thiếu cấu hình VIETQR_BANKS trong DB') {
+                return DEFAULT_PAYMENT_BANK_OPTIONS.map((bank) => ({ ...bank }));
+            }
+            throw error;
+        }
     }
 
     async getTaxReferenceData(shopId: number) {
