@@ -3,6 +3,36 @@ export type PaymentBankOption = {
     name: string;
 };
 
+export const DEFAULT_PAYMENT_BANK_OPTIONS: PaymentBankOption[] = [
+    { id: 'MB', name: 'MB Bank' },
+    { id: 'VCB', name: 'Vietcombank' },
+    { id: 'TCB', name: 'Techcombank' },
+    { id: 'ACB', name: 'ACB' },
+    { id: 'TPB', name: 'TPBank' },
+    { id: 'VPB', name: 'VPBank' },
+    { id: 'BIDV', name: 'BIDV' },
+    { id: 'VTB', name: 'VietinBank' },
+    { id: 'AGR', name: 'Agribank' },
+    { id: 'SHB', name: 'SHB' },
+    { id: 'STB', name: 'Sacombank' },
+    { id: 'HDB', name: 'HDBank' },
+    { id: 'MSB', name: 'MSB' },
+    { id: 'OCB', name: 'OCB' },
+    { id: 'LPB', name: 'LPBank' },
+    { id: 'EIB', name: 'Eximbank' },
+    { id: 'SCB', name: 'SCB' },
+    { id: 'NAB', name: 'Nam A Bank' },
+    { id: 'VAB', name: 'VietABank' },
+    { id: 'SEAB', name: 'SeABank' },
+    { id: 'BAB', name: 'Bac A Bank' },
+    { id: 'PVCB', name: 'PVcomBank' },
+    { id: 'KLB', name: 'KienlongBank' },
+    { id: 'ABB', name: 'ABBank' },
+    { id: 'WOO', name: 'Woori Bank Việt Nam' },
+    { id: 'CAKE', name: 'CAKE by VPBank' },
+    { id: 'UBANK', name: 'Ubank by VPBank' },
+];
+
 export function parsePaymentBankOptions(value: string): PaymentBankOption[] {
     let parsed: unknown;
     try {
