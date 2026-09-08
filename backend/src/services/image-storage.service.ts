@@ -175,6 +175,32 @@ export class ImageStorageService {
         return this.confirmImage(objectKey, 'Ảnh QR');
     }
 
+    async downloadShopPaymentQrImage(shopId: number, objectKey: string) {
+        const confirmed = await this.confirmShopPaymentQr(shopId, objectKey);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10_000);
+        try {
+            const response = await fetch(confirmed.imageUrl, {
+                method: 'GET',
+                redirect: 'error',
+                signal: controller.signal,
+            });
+            if (!response.ok) {
+                throw new ImageStorageError('Không thể kiểm tra lại ảnh QR', 502);
+            }
+            const bytes = Buffer.from(await response.arrayBuffer());
+            if (!bytes.length || bytes.length > MAX_PRODUCT_IMAGE_BYTES) {
+                throw new ImageStorageError('Ảnh QR không hợp lệ hoặc quá 4 MB', 400);
+            }
+            return { ...confirmed, bytes };
+        } catch (error) {
+            if (error instanceof ImageStorageError) throw error;
+            throw new ImageStorageError('Không thể kiểm tra lại ảnh QR', 502);
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
     async uploadDebtEvidenceImage(
         shopId: number,
         request: ProductImageUploadRequest,

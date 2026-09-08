@@ -19,7 +19,7 @@ test('frontend image upload never receives Cloudinary credentials', () => {
   assert.match(apiClient, /postImage\(/);
 });
 
-test('frontend payment configuration loads business options from backend', () => {
+test('frontend payment QR uses backend-owned image data', () => {
   const root = path.join(__dirname, '..', '..');
   const provider = fs.readFileSync(
     path.join(root, 'lib', 'features', 'settings', 'providers', 'system_provider.dart'),
@@ -30,10 +30,10 @@ test('frontend payment configuration loads business options from backend', () =>
     'utf8',
   );
 
-  assert.match(provider, /get\('\/payment-banks'\)/);
-  assert.match(screen, /paymentBanksProvider/);
-  assert.doesNotMatch(screen, /_vietqrBanks/);
-  assert.doesNotMatch(screen, /\{'id': 'VCB', 'name': 'Vietcombank'\}/);
+  assert.match(provider, /get\('\/shop-payment-qr'\)/);
+  assert.match(provider, /postImage\(/);
+  assert.match(screen, /showShopPaymentQrDialog/);
+  assert.doesNotMatch(screen, /bankAccount|accountHolder|_vietqrBanks/);
 });
 
 test('frontend source never contains backend secret names or database credentials', () => {

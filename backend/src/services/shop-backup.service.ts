@@ -251,8 +251,8 @@ export class ShopBackupService {
         }
         if (envelope.profile) {
             const p = envelope.profile as Record<string, unknown>;
-            await manager.query(`UPDATE shop_profiles SET shop_name=$2, logo_url=$3, phone=$4, address=$5, tax_code=$6, bank_account=$7, bank_id=$8, bank_name=$9, account_holder=$10, qr_payment_url=$11, receipt_footer=$12, receipt_template_config=$13::jsonb, email=$14, website=$15 WHERE shop_id=$1 OR id=$1`, [
-                shopId, p.shop_name, p.logo_url, p.phone, p.address, p.tax_code, p.bank_account, p.bank_id, p.bank_name, p.account_holder, p.qr_payment_url, p.receipt_footer, JSON.stringify(p.receipt_template_config || null), p.email, p.website,
+            await manager.query(`UPDATE shop_profiles SET shop_name=$2, logo_url=$3, phone=$4, address=$5, tax_code=$6, bank_account=$7, bank_id=$8, bank_name=$9, account_holder=$10, qr_payment_url=$11, receipt_footer=$12, receipt_template_config=$13::jsonb, email=$14, website=$15, qr_payment_payload=$16, qr_payment_details=$17::jsonb WHERE shop_id=$1 OR id=$1`, [
+                shopId, p.shop_name, p.logo_url, p.phone, p.address, p.tax_code, p.bank_account, p.bank_id, p.bank_name, p.account_holder, p.qr_payment_url, p.receipt_footer, JSON.stringify(p.receipt_template_config || null), p.email, p.website, p.qr_payment_payload || null, JSON.stringify(p.qr_payment_details || null),
             ]);
         }
     }

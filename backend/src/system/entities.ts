@@ -43,6 +43,12 @@ export class ShopProfile {
     @Column({ name: 'qr_payment_url', type: 'varchar', length: 1000, nullable: true })
     qrPaymentUrl: string | null;
 
+    @Column({ name: 'qr_payment_payload', type: 'text', nullable: true })
+    qrPaymentPayload: string | null;
+
+    @Column({ name: 'qr_payment_details', type: 'jsonb', nullable: true })
+    qrPaymentDetails: Record<string, unknown> | null;
+
     @Column({ name: 'receipt_footer', length: 500, nullable: true })
     receiptFooter: string;
 

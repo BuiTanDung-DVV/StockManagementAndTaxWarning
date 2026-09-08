@@ -15,6 +15,8 @@ class _FakeQrApiClient extends ApiClient {
       'imageUrl':
           'https://res.cloudinary.com/demo/image/upload/'
           'v1/smartstock/shops/4/payment-qr/qr.webp',
+      'displayText': 'QR thanh toán VietQR/NAPAS\nSố tài khoản: 123456789',
+      'details': {'accountNumber': '123456789'},
     };
   }
 
@@ -46,11 +48,14 @@ void main() {
     final api = _FakeQrApiClient();
     final repository = SystemRepository(api);
 
+    final qr = await repository.getShopPaymentQr();
     expect(
-      await repository.getShopPaymentQr(),
+      qr.imageUrl,
       'https://res.cloudinary.com/demo/image/upload/'
       'v1/smartstock/shops/4/payment-qr/qr.webp',
     );
+    expect(qr.displayText, contains('123456789'));
+    expect(qr.details?['accountNumber'], '123456789');
 
     final bytes = Uint8List.fromList([1, 2, 3]);
     final imageUrl = await repository.uploadShopPaymentQr(

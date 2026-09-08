@@ -40,7 +40,8 @@
         "migrate:auth": "npm run build && node dist/scripts/apply-auth-migration.js",
         "migrate:20260728": "tsx src/scripts/apply-database-migrations.ts",
         "migrate:account-type": "npm run build && node dist/scripts/apply-nullable-account-type-migration.js",
-        "migrate:tax-policy": "npm run build && node dist/scripts/apply-verified-tax-policy-migration.js"
+        "migrate:tax-policy": "npm run build && node dist/scripts/apply-verified-tax-policy-migration.js",
+        "migrate:payment-qr": "npm run build && node dist/scripts/apply-payment-qr-migration.js"
     },
     "dependencies": {
         "@google/generative-ai": "^0.24.1",
@@ -53,10 +54,12 @@
         "google-auth-library": "^10.9.1",
         "helmet": "^7.1.0",
         "jsonwebtoken": "^9.0.2",
+        "jsqr": "^1.4.0",
         "morgan": "^1.11.0",
         "nodemailer": "^9.0.3",
         "pg": "^8.20.0",
         "reflect-metadata": "^0.2.2",
+        "sharp": "^0.35.4",
         "typeorm": "^0.3.31",
         "xml2js": "^0.6.2",
         "zod": "^3.22.4"

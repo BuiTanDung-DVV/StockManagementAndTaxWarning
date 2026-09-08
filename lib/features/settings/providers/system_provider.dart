@@ -32,10 +32,16 @@ class SystemRepository {
         params: {'page': '$page', 'limit': '$limit'},
       );
 
-  Future<String?> getShopPaymentQr() async {
+  Future<ShopPaymentQr> getShopPaymentQr() async {
     final data = Map<String, dynamic>.from(await _api.get('/shop-payment-qr'));
     final imageUrl = data['imageUrl']?.toString().trim();
-    return imageUrl == null || imageUrl.isEmpty ? null : imageUrl;
+    return ShopPaymentQr(
+      imageUrl: imageUrl == null || imageUrl.isEmpty ? null : imageUrl,
+      displayText: data['displayText']?.toString().trim(),
+      details: data['details'] is Map
+          ? Map<String, dynamic>.from(data['details'] as Map)
+          : null,
+    );
   }
 
   Future<String> uploadShopPaymentQr({
@@ -78,9 +84,17 @@ final paymentBanksProvider = FutureProvider<List<Map<String, String>>>((ref) {
   return ref.watch(systemRepoProvider).getPaymentBanks();
 });
 
-final shopPaymentQrProvider = FutureProvider<String?>((ref) {
+final shopPaymentQrProvider = FutureProvider<ShopPaymentQr>((ref) {
   return ref.watch(systemRepoProvider).getShopPaymentQr();
 });
+
+class ShopPaymentQr {
+  final String? imageUrl;
+  final String? displayText;
+  final Map<String, dynamic>? details;
+
+  const ShopPaymentQr({this.imageUrl, this.displayText, this.details});
+}
 
 final activityLogsProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
