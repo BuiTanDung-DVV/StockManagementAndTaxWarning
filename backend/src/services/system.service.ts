@@ -1,7 +1,15 @@
 import { AppDataSource } from '../config/db.config';
 import { ShopProfile, ActivityLog, AiKnowledgeDocument, InvoiceScan, Invoice } from '../system/entities';
 import { PurchaseWithoutInvoice } from '../finance/entities';
-import { ImageStorageService, ProductImageUploadRequest } from './image-storage.service';
+import {
+    ImageStorageError,
+    ImageStorageService,
+    ProductImageUploadRequest,
+} from './image-storage.service';
+import {
+    decodePaymentQrImage,
+    paymentQrDisplayText,
+} from '../system/payment-qr.utils';
 import {
     DEFAULT_PAYMENT_BANK_OPTIONS,
     parsePaymentBankOptions,
@@ -11,6 +19,19 @@ import {
     parseTaxSupportLinks,
 } from '../system/tax-reference-data.utils';
 
+const paymentQrValidationMessage = (error: unknown): string => {
+    const message = error instanceof Error ? error.message : '';
+    return [
+        'Không tìm thấy mã QR trong ảnh',
+        'Ảnh không chứa mã QR thanh toán ngân hàng hợp lệ',
+        'Mã QR thanh toán bị lỗi hoặc không đọc được đầy đủ',
+        'Ảnh không chứa mã VietQR/NAPAS hợp lệ',
+        'Ảnh QR có kích thước không hợp lệ',
+    ].includes(message)
+        ? message
+        : 'Không thể đọc mã QR ngân hàng từ ảnh này';
+};
+
 export class SystemService {
     private profileRepo = AppDataSource.getRepository(ShopProfile);
     private logRepo = AppDataSource.getRepository(ActivityLog);
@@ -19,6 +40,7 @@ export class SystemService {
     private pwioRepo = AppDataSource.getRepository(PurchaseWithoutInvoice);
     private aiKnowledgeRepo = AppDataSource.getRepository(AiKnowledgeDocument);
     private imageStorageService = new ImageStorageService();
+    private decodePaymentQrImage = decodePaymentQrImage;
 
     // Profile
     async getShopProfile(shopId: number) {
@@ -87,7 +109,13 @@ export class SystemService {
 
     async getShopPaymentQr(shopId: number) {
         const profile = await this.getShopProfile(shopId);
-        return { imageUrl: profile.qrPaymentUrl || null };
+        return {
+            imageUrl: profile.qrPaymentUrl || null,
+            details: profile.qrPaymentDetails || null,
+            displayText: profile.qrPaymentDetails
+                ? paymentQrDisplayText(profile.qrPaymentDetails as any)
+                : null,
+        };
     }
 
     async getPaymentBankOptions(shopId: number) {
@@ -119,23 +147,49 @@ export class SystemService {
         request: ProductImageUploadRequest,
         bytes: Buffer,
     ) {
-        return this.imageStorageService.uploadShopPaymentQrImage(
-            shopId,
-            request,
-            bytes,
-        );
+        try {
+            const details = await this.decodePaymentQrImage(bytes);
+            const uploaded = await this.imageStorageService.uploadShopPaymentQrImage(
+                shopId,
+                request,
+                bytes,
+            );
+            return {
+                ...uploaded,
+                details,
+                displayText: paymentQrDisplayText(details),
+            };
+        } catch (error) {
+            if (error instanceof ImageStorageError) throw error;
+            throw new ImageStorageError(
+                paymentQrValidationMessage(error),
+                400,
+            );
+        }
     }
 
     async confirmAndReplaceShopPaymentQr(shopId: number, objectKey: string) {
-        const uploaded = await this.imageStorageService.confirmShopPaymentQr(
+        const uploaded = await this.imageStorageService.downloadShopPaymentQrImage(
             shopId,
             objectKey,
         );
+        let details;
+        try {
+            details = await this.decodePaymentQrImage(uploaded.bytes);
+        } catch (error) {
+            await this.imageStorageService.deleteShopPaymentQr(shopId, objectKey);
+            throw new ImageStorageError(
+                paymentQrValidationMessage(error),
+                400,
+            );
+        }
         const profile = await this.getShopProfile(shopId);
         const previousImageUrl = profile.qrPaymentUrl;
 
         try {
             profile.qrPaymentUrl = uploaded.imageUrl;
+            profile.qrPaymentPayload = details.rawText;
+            profile.qrPaymentDetails = details as unknown as Record<string, unknown>;
             await this.profileRepo.save(profile);
         } catch (error) {
             try {
@@ -160,7 +214,11 @@ export class SystemService {
             }
         }
 
-        return { imageUrl: uploaded.imageUrl };
+        return {
+            imageUrl: uploaded.imageUrl,
+            details,
+            displayText: paymentQrDisplayText(details),
+        };
     }
 
     // Activity Log

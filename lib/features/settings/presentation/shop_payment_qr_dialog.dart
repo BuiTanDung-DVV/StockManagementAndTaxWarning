@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/network/api_client.dart';
@@ -132,14 +133,15 @@ class _ShopPaymentQrDialogState extends ConsumerState<ShopPaymentQrDialog> {
                 error: (_, _) => _QrErrorState(
                   onRetry: () => ref.invalidate(shopPaymentQrProvider),
                 ),
-                data: (imageUrl) => imageUrl == null
+                data: (qr) => qr.imageUrl == null
                     ? _EmptyQrState(
                         canManage: widget.canManage,
                         uploading: _uploading,
                         onUpload: _pickAndUpload,
                       )
                     : _QrPreview(
-                        imageUrl: imageUrl,
+                        imageUrl: qr.imageUrl!,
+                        displayText: qr.displayText,
                         canManage: widget.canManage,
                         uploading: _uploading,
                         onReplace: _pickAndUpload,
@@ -155,12 +157,14 @@ class _ShopPaymentQrDialogState extends ConsumerState<ShopPaymentQrDialog> {
 
 class _QrPreview extends StatelessWidget {
   final String imageUrl;
+  final String? displayText;
   final bool canManage;
   final bool uploading;
   final VoidCallback onReplace;
 
   const _QrPreview({
     required this.imageUrl,
+    required this.displayText,
     required this.canManage,
     required this.uploading,
     required this.onReplace,
@@ -193,6 +197,53 @@ class _QrPreview extends StatelessWidget {
             ),
           ),
         ),
+        if (displayText != null && displayText!.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: colors.cardAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.divider),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Thông tin từ mã QR',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SelectableText(
+                  displayText!,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: displayText!));
+                      if (context.mounted) {
+                        ToastService.showSuccess('Đã sao chép thông tin QR');
+                      }
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    label: const Text('Sao chép'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (canManage) ...[
           const SizedBox(height: 16),
           OutlinedButton(
@@ -245,7 +296,7 @@ class _EmptyQrState extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             canManage
-                ? 'Chọn ảnh QR thanh toán từ thiết bị để nhân viên có thể mở nhanh khi cần.'
+                ? 'Chọn ảnh QR ngân hàng. Hệ thống sẽ kiểm tra và trích xuất thông tin trước khi lưu.'
                 : 'Vui lòng liên hệ chủ cửa hàng hoặc người có quyền cài đặt để bổ sung QR.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
