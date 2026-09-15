@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _kColorKey = 'brand_color';
 
 enum AppBrandColor {
+  tealSmartStock('Xanh ngọc SmartStock', Color(0xFF0F766E), false),
   luminaBlue('Xanh SmartStock', Color(0xFF1769AA), false),
   emeraldWealth('Xanh vận hành', Color(0xFF167A5B), false),
   sunsetCopper('Cam bán lẻ', Color(0xFFC65D18), false),
@@ -32,7 +33,7 @@ class BrandColorNotifier extends Notifier<AppBrandColor> {
   @override
   AppBrandColor build() {
     _load();
-    return AppBrandColor.luminaBlue;
+    return AppBrandColor.tealSmartStock;
   }
 
   Future<void> _load() async {
@@ -41,7 +42,7 @@ class BrandColorNotifier extends Notifier<AppBrandColor> {
     if (value != null) {
       state = AppBrandColor.values.firstWhere(
         (e) => e.name == value,
-        orElse: () => AppBrandColor.luminaBlue,
+        orElse: () => AppBrandColor.tealSmartStock,
       );
     }
   }

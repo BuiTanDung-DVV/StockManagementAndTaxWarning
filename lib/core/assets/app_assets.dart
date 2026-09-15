@@ -39,6 +39,10 @@ abstract final class AppAssets {
   static const String externalLink = 'assets/icon/external_link_icon.svg';
   static const String expand = 'assets/icon/expand_icon.svg';
   static const String collapse = 'assets/icon/collapse_icon.svg';
+  static const String demoWarehouse = 'assets/icon/demo_warehouse.png';
+  static const String warehouseMotif = 'assets/icon/warehouse_motif.svg';
+  static const String parcelBox = 'assets/icon/parcel_box.svg';
+  static const String analyticsMotif = 'assets/icon/analytics_motif.svg';
 }
 
 class AppAssetIcon extends StatelessWidget {

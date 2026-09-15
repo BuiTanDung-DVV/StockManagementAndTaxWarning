@@ -223,6 +223,7 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
   Future<void> refresh() => _fetchConfigFromBackend();
 
   Future<void> _fetchConfigFromBackend() async {
+    state = const TaxConfig.loading();
     try {
       final response = await ref.read(apiClientProvider).get('/tax/config');
       if (response is! Map) {

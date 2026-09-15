@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,7 +12,6 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/ai_assistant_widget.dart';
@@ -22,6 +24,7 @@ import '../../inventory/providers/inventory_provider.dart';
 import '../../sales/providers/sales_provider.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/dashboard_action_provider.dart';
+import 'widgets/dashboard_insights_widgets.dart';
 import 'widgets/dashboard_widgets.dart';
 
 final _currencyFormat = NumberFormat.currency(
@@ -66,7 +69,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  bool _showAllMobileMetrics = false;
   late ReportingPeriodSelection _periodSelection;
 
   @override
@@ -106,6 +108,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final shopState = ref.watch(shopProvider);
     final hasFinance = shopState.isOwner || shopState.hasPermission('finance');
     final hasSalesInsights = dashboardCanViewSalesInsights(shopState);
+    final canViewSales = shopState.isOwner || shopState.hasPermission('sales');
     final hasInventory =
         shopState.isOwner || shopState.hasPermission('inventory');
     final canSell = dashboardCanSell(shopState);
@@ -164,6 +167,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               previousTo: null,
             )),
           )
+        : null;
+    final inventoryCategoriesAsync =
+        hasInventory && shopState.userShops.isNotEmpty
+        ? ref.watch(inventoryCategoriesSummaryProvider)
+        : null;
+    final lowStockAsync = hasInventory && shopState.userShops.isNotEmpty
+        ? ref.watch(lowStockProvider)
         : null;
 
     if (shopState.userShops.isEmpty) {
@@ -229,7 +239,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ref.invalidate(cashSummaryProvider);
               ref.invalidate(recentTransactionsProvider);
             }
-            if (refreshPlan.inventory) ref.invalidate(lowStockProvider);
+            if (refreshPlan.inventory) {
+              ref.invalidate(lowStockProvider);
+              ref.invalidate(inventoryCategoriesSummaryProvider);
+            }
             ref.invalidate(dashboardActionProvider);
           },
           child: SingleChildScrollView(
@@ -240,28 +253,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AppPageHeader(
+                  _DashboardMasthead(
                     title: shopState.isAllShops
                         ? 'Tổng quan tất cả cửa hàng'
-                        : 'Tình hình cửa hàng',
+                        : 'Tổng quan cửa hàng',
                     subtitle:
                         'Số liệu đến ${DateFormat('dd/MM/yyyy').format(periods.currentToDate)}',
-                    dense: true,
-                    titleStyle: GoogleFonts.manrope(
-                      fontSize: 26,
-                      height: 1.15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.65,
-                      color: colors.textPrimary,
-                    ),
-                    subtitleStyle: GoogleFonts.manrope(
-                      fontSize: 14,
-                      height: 1.35,
-                      fontWeight: FontWeight.w500,
-                      color: colors.textSecondary,
-                    ),
                     action: headerActions(compact: compactLayout),
                     compactAction: headerActions(compact: true),
+                    compact: compactLayout,
                   ),
                   ReportingPeriodControl(
                     selection: periodSelection,
@@ -295,6 +295,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         Widget metricStrip(
                           Map<String, dynamic> cashData, {
                           required bool cashAvailable,
+                          bool cashHasError = false,
                         }) => _DashboardMetricStrip(
                           metrics: _buildMetrics(
                             salesData: salesData,
@@ -304,23 +305,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             previousPeriodLabel: periods.previousLabel,
                             asOf: today,
                             cashAvailable: cashAvailable,
-                          ),
-                          showAllMobile: _showAllMobileMetrics,
-                          onToggleMobile: () => setState(
-                            () =>
-                                _showAllMobileMetrics = !_showAllMobileMetrics,
+                            hasFinance: hasFinance,
+                            canViewSales: canViewSales,
+                            cashHasError: cashHasError,
                           ),
                         );
 
                         if (cashAsync == null) {
-                          return metricStrip(const {}, cashAvailable: false);
+                          return metricStrip(
+                            const {},
+                            cashAvailable: false,
+                            cashHasError: false,
+                          );
                         }
                         return cashAsync.when(
                           data: (cashData) =>
                               metricStrip(cashData, cashAvailable: true),
                           loading: () => const _MetricStripSkeleton(),
-                          error: (_, _) =>
-                              metricStrip(const {}, cashAvailable: false),
+                          error: (_, _) => metricStrip(
+                            const {},
+                            cashAvailable: false,
+                            cashHasError: true,
+                          ),
                         );
                       },
                       loading: () => const _MetricStripSkeleton(),
@@ -334,10 +340,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       hasInventory: hasInventory,
                       periodLabel: periods.currentLabel,
                     ),
+                  if (hasFinance && !shopState.isAllShops)
+                    const Padding(
+                      padding: EdgeInsets.only(top: AppSpacing.md),
+                      child: TaxObligationReminder(),
+                    ),
                   const SizedBox(height: AppSpacing.lg),
                   _DashboardWorkspace(
                     currentSales: salesAsync,
                     comparisonSales: comparisonAsync,
+                    cashSummary: cashAsync,
+                    inventoryCategories: inventoryCategoriesAsync,
+                    lowStock: lowStockAsync,
+                    hasInventory: hasInventory,
+                    isAllShops: shopState.isAllShops,
                     recentTransactions: recentTransactionsAsync,
                     topProducts: topProductsAsync,
                     previousTopProducts: previousTopProductsAsync,
@@ -362,6 +378,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     required String previousPeriodLabel,
     required DateTime asOf,
     bool cashAvailable = true,
+    bool hasFinance = true,
+    bool canViewSales = true,
+    bool cashHasError = false,
   }) {
     final revenue =
         num.tryParse(
@@ -401,9 +420,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final salesContext = hasSalesActivity
         ? periodLabel
         : 'Chưa phát sinh · $periodLabel';
-    final cashBalance = cashAvailable
-        ? num.tryParse(cashData['cashBalance']?.toString() ?? '0')
-        : null;
+
+    final rawCash = cashData['cashBalance'];
+    final num? parsedCash =
+        rawCash == null ? null : num.tryParse(rawCash.toString());
+    final cashBalance =
+        (hasFinance && cashAvailable && !cashHasError) ? parsedCash : null;
+
+    final String cashValue;
+    final String cashContext;
+    final String? cashRoute;
+
+    if (!hasFinance) {
+      cashValue = 'Không có quyền';
+      cashContext = 'Cần quyền tài chính';
+      cashRoute = null;
+    } else if (cashHasError) {
+      cashValue = 'Chưa tải được';
+      cashContext = 'Lỗi tải dữ liệu';
+      cashRoute = null;
+    } else if (cashBalance != null) {
+      cashValue = _currencyFormat.format(cashBalance);
+      cashContext = 'Tại ${DateFormat('dd/MM/yyyy').format(asOf)}';
+      cashRoute = '/transactions';
+    } else {
+      cashValue = 'Chưa có số liệu';
+      cashContext = 'Chưa có số dư';
+      cashRoute = null;
+    }
 
     return [
       _DashboardMetric(
@@ -411,14 +455,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         value: _currencyFormat.format(revenue),
         context: salesContext,
         assetPath: AppAssets.revenue,
-        color: hasSalesActivity
-            ? AppColors.success
-            : Theme.of(context).colorScheme.primary,
+        color: AppColors.primary,
         comparison: hasSalesActivity
             ? _growthComparison(revenue, previousRevenue, previousPeriodLabel)
             : null,
         comparisonPositive: revenue >= previousRevenue,
-        route: '/sales',
+        route: canViewSales ? '/sales' : null,
       ),
       _DashboardMetric(
         label: 'Lợi nhuận gộp',
@@ -430,17 +472,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ? _growthComparison(profit, previousProfit, previousPeriodLabel)
             : null,
         comparisonPositive: profit >= previousProfit,
-        route: '/profit-loss',
+        route: hasFinance ? '/profit-loss' : null,
       ),
       _DashboardMetric(
         label: 'Số dư quỹ',
-        value: cashBalance == null
-            ? 'Chưa tải được'
-            : _currencyFormat.format(cashBalance),
-        context: 'Tại ${DateFormat('dd/MM/yyyy').format(asOf)}',
+        value: cashValue,
+        context: cashContext,
         assetPath: AppAssets.cash,
         color: Theme.of(context).colorScheme.primary,
-        route: '/transactions',
+        route: cashRoute,
       ),
       _DashboardMetric(
         label: 'Đơn hàng',
@@ -456,7 +496,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               )
             : null,
         comparisonPositive: numericOrderCount >= previousOrderCount,
-        route: '/sales',
+        route: canViewSales ? '/sales' : null,
       ),
     ];
   }
@@ -522,7 +562,7 @@ class _NoShopWorkspace extends StatelessWidget {
                         ),
                       ),
                       child: const AppAssetIcon(
-                        assetPath: AppAssets.appIcon,
+                        assetPath: AppAssets.parcelBox,
                         size: 40,
                         semanticLabel: 'SmartStock',
                       ),
@@ -706,6 +746,84 @@ class _ActivationStep extends StatelessWidget {
   }
 }
 
+class _DashboardMasthead extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Widget action;
+  final Widget compactAction;
+  final bool compact;
+
+  const _DashboardMasthead({
+    required this.title,
+    required this.subtitle,
+    required this.action,
+    required this.compactAction,
+    required this.compact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    final titleWidget = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.manrope(
+            fontSize: compact ? 22 : 26,
+            height: 1.15,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.6,
+            color: colors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: GoogleFonts.inter(
+            fontSize: compact ? 12.5 : 13.5,
+            height: 1.35,
+            fontWeight: FontWeight.w400,
+            color: colors.textSecondary,
+          ),
+        ),
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                titleWidget,
+                const SizedBox(height: AppSpacing.sm),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: compact ? compactAction : action,
+                ),
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: titleWidget),
+              const SizedBox(width: AppSpacing.md),
+              compact ? compactAction : action,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _AllShopsNotice extends StatelessWidget {
   final int shopCount;
   final VoidCallback onChooseShop;
@@ -776,9 +894,223 @@ class _AllShopsNotice extends StatelessWidget {
   }
 }
 
-class _DashboardWorkspace extends StatelessWidget {
+class _DashboardEqualHeightRow extends MultiChildRenderObjectWidget {
+  final Widget left;
+  final Widget right;
+  final double spacing;
+  final double? rightWidth;
+
+  _DashboardEqualHeightRow({
+    super.key,
+    required this.left,
+    required this.right,
+    this.spacing = AppSpacing.lg,
+    this.rightWidth,
+  }) : super(children: [left, right]);
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderDashboardEqualHeightRow(
+      spacing: spacing,
+      rightWidth: rightWidth,
+    );
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderDashboardEqualHeightRow renderObject,
+  ) {
+    renderObject
+      ..spacing = spacing
+      ..rightWidth = rightWidth;
+  }
+}
+
+class _EqualHeightParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderDashboardEqualHeightRow extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _EqualHeightParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _EqualHeightParentData> {
+  double _spacing;
+  double? _rightWidth;
+
+  _RenderDashboardEqualHeightRow({required double spacing, double? rightWidth})
+    : _spacing = spacing,
+      _rightWidth = rightWidth;
+
+  double get spacing => _spacing;
+  set spacing(double value) {
+    if (_spacing != value) {
+      _spacing = value;
+      markNeedsLayout();
+    }
+  }
+
+  double? get rightWidth => _rightWidth;
+  set rightWidth(double? value) {
+    if (_rightWidth != value) {
+      _rightWidth = value;
+      markNeedsLayout();
+    }
+  }
+
+  @override
+  void setupParentData(RenderObject child) {
+    if (child.parentData is! _EqualHeightParentData) {
+      child.parentData = _EqualHeightParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    if (childCount == 0) {
+      size = constraints.smallest;
+      return;
+    }
+
+    final leftChild = firstChild!;
+    final rightChild = childAfter(leftChild);
+
+    if (rightChild == null) {
+      leftChild.layout(constraints, parentUsesSize: true);
+      size = leftChild.size;
+      return;
+    }
+
+    final double totalWidth = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : 1000.0;
+    final double availableWidth = math.max(0.0, totalWidth - _spacing);
+
+    final double allocatedRightWidth;
+    final double allocatedLeftWidth;
+
+    if (_rightWidth != null) {
+      allocatedRightWidth = math.min(_rightWidth!, availableWidth);
+      allocatedLeftWidth = math.max(0.0, availableWidth - allocatedRightWidth);
+    } else {
+      allocatedLeftWidth = (availableWidth / 2).floorToDouble();
+      allocatedRightWidth = availableWidth - allocatedLeftWidth;
+    }
+
+    // Pass 1: Natural layout at allocated widths, unconstrained height
+    leftChild.layout(
+      BoxConstraints(
+        minWidth: allocatedLeftWidth,
+        maxWidth: allocatedLeftWidth,
+        minHeight: 0,
+        maxHeight: double.infinity,
+      ),
+      parentUsesSize: true,
+    );
+
+    rightChild.layout(
+      BoxConstraints(
+        minWidth: allocatedRightWidth,
+        maxWidth: allocatedRightWidth,
+        minHeight: 0,
+        maxHeight: double.infinity,
+      ),
+      parentUsesSize: true,
+    );
+
+    final double tallestHeight = math.max(
+      leftChild.size.height,
+      rightChild.size.height,
+    );
+
+    // Pass 2: Relayout both children with tight tallest height
+    leftChild.layout(
+      BoxConstraints.tightFor(width: allocatedLeftWidth, height: tallestHeight),
+      parentUsesSize: true,
+    );
+
+    rightChild.layout(
+      BoxConstraints.tightFor(
+        width: allocatedRightWidth,
+        height: tallestHeight,
+      ),
+      parentUsesSize: true,
+    );
+
+    final leftParentData = leftChild.parentData! as _EqualHeightParentData;
+    leftParentData.offset = Offset.zero;
+
+    final rightParentData = rightChild.parentData! as _EqualHeightParentData;
+    rightParentData.offset = Offset(allocatedLeftWidth + _spacing, 0);
+
+    size = constraints.constrain(Size(totalWidth, tallestHeight));
+  }
+
+  @override
+  double computeMinIntrinsicWidth(double height) {
+    if (firstChild == null) return 0;
+    final left = firstChild!;
+    final right = childAfter(left);
+    if (right == null) return left.getMinIntrinsicWidth(height);
+    return left.getMinIntrinsicWidth(height) +
+        _spacing +
+        right.getMinIntrinsicWidth(height);
+  }
+
+  @override
+  double computeMaxIntrinsicWidth(double height) {
+    if (firstChild == null) return 0;
+    final left = firstChild!;
+    final right = childAfter(left);
+    if (right == null) return left.getMaxIntrinsicWidth(height);
+    return left.getMaxIntrinsicWidth(height) +
+        _spacing +
+        right.getMaxIntrinsicWidth(height);
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) {
+    if (firstChild == null) return 0;
+    final left = firstChild!;
+    final right = childAfter(left);
+    if (right == null) return left.getMinIntrinsicHeight(width);
+    final colWidth = math.max(0.0, (width - _spacing) / 2);
+    return math.max(
+      left.getMinIntrinsicHeight(colWidth),
+      right.getMinIntrinsicHeight(colWidth),
+    );
+  }
+
+  @override
+  double computeMaxIntrinsicHeight(double width) {
+    if (firstChild == null) return 0;
+    final left = firstChild!;
+    final right = childAfter(left);
+    if (right == null) return left.getMaxIntrinsicHeight(width);
+    final colWidth = math.max(0.0, (width - _spacing) / 2);
+    return math.max(
+      left.getMaxIntrinsicHeight(colWidth),
+      right.getMaxIntrinsicHeight(colWidth),
+    );
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    defaultPaint(context, offset);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    return defaultHitTestChildren(result, position: position);
+  }
+}
+
+class _DashboardWorkspace extends ConsumerWidget {
   final AsyncValue<Map<String, dynamic>>? currentSales;
   final AsyncValue<Map<String, dynamic>>? comparisonSales;
+  final AsyncValue<Map<String, dynamic>>? cashSummary;
+  final AsyncValue<List<dynamic>>? inventoryCategories;
+  final AsyncValue<List<dynamic>>? lowStock;
+  final bool hasInventory;
+  final bool isAllShops;
   final AsyncValue<List<dynamic>>? recentTransactions;
   final AsyncValue<List<dynamic>>? topProducts;
   final AsyncValue<List<dynamic>>? previousTopProducts;
@@ -788,6 +1120,11 @@ class _DashboardWorkspace extends StatelessWidget {
   const _DashboardWorkspace({
     required this.currentSales,
     required this.comparisonSales,
+    required this.cashSummary,
+    required this.inventoryCategories,
+    required this.lowStock,
+    required this.hasInventory,
+    required this.isAllShops,
     required this.recentTransactions,
     required this.topProducts,
     required this.previousTopProducts,
@@ -796,14 +1133,61 @@ class _DashboardWorkspace extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final chart = _DashboardChart(
-      currentSales: currentSales,
-      comparisonSales: comparisonSales,
-      currentLabel: currentLabel,
-      previousLabel: previousLabel,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chart = KeyedSubtree(
+      key: const Key('dashboard-card-chart'),
+      child: _DashboardChart(
+        currentSales: currentSales,
+        comparisonSales: comparisonSales,
+        currentLabel: currentLabel,
+        previousLabel: previousLabel,
+      ),
     );
-    final priorities = const DashboardPriorityList();
+    final priorities = const KeyedSubtree(
+      key: Key('dashboard-card-priority'),
+      child: DashboardPriorityList(),
+    );
+
+    final salesPerformance = KeyedSubtree(
+      key: const Key('dashboard-card-sales'),
+      child: DashboardSalesPerformanceCard(
+        currentSales: currentSales,
+        comparisonSales: comparisonSales,
+        currentLabel: currentLabel,
+        previousLabel: previousLabel,
+        onRetry: () => ref.invalidate(salesSummaryProvider),
+      ),
+    );
+
+    final cashFlow = KeyedSubtree(
+      key: const Key('dashboard-card-cash'),
+      child: DashboardCashFlowCard(
+        cashAsync: cashSummary,
+        currentLabel: currentLabel,
+        onRetry: () => ref.invalidate(cashSummaryProvider),
+      ),
+    );
+
+    Widget? inventoryCategoriesCard;
+    Widget? lowStockCard;
+    if (hasInventory) {
+      inventoryCategoriesCard = KeyedSubtree(
+        key: const Key('dashboard-card-inventory'),
+        child: DashboardInventoryCategoryCard(
+          categoriesAsync: inventoryCategories,
+          onRetry: () => ref.invalidate(inventoryCategoriesSummaryProvider),
+        ),
+      );
+      lowStockCard = KeyedSubtree(
+        key: const Key('dashboard-card-low-stock'),
+        child: DashboardLowStockCard(
+          lowStockAsync: lowStock,
+          isAllShops: isAllShops,
+          onRetry: () => ref.invalidate(lowStockProvider),
+        ),
+      );
+    }
+
     Widget productPanel(List<dynamic> items) {
       if (items.isNotEmpty || previousTopProducts == null) {
         return DashboardTopProductsRevenueChart(
@@ -874,6 +1258,51 @@ class _DashboardWorkspace extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (currentSales == null && hasInventory) {
+          if (constraints.maxWidth < 960) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                priorities,
+                if (lowStockCard != null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  lowStockCard,
+                ],
+                if (inventoryCategoriesCard != null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  inventoryCategoriesCard,
+                ],
+                products,
+                orders,
+              ],
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (lowStockCard != null)
+                _DashboardEqualHeightRow(
+                  key: const Key('dashboard-row-warehouse-priority-stock'),
+                  spacing: AppSpacing.lg,
+                  left: const KeyedSubtree(
+                    key: Key('dashboard-card-priority'),
+                    child: DashboardPriorityList(fixedHeight: false),
+                  ),
+                  right: lowStockCard,
+                )
+              else
+                priorities,
+              if (inventoryCategoriesCard != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                inventoryCategoriesCard,
+              ],
+              products,
+              orders,
+            ],
+          );
+        }
+
         if (constraints.maxWidth < 960) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -881,6 +1310,18 @@ class _DashboardWorkspace extends StatelessWidget {
               chart,
               const SizedBox(height: AppSpacing.lg),
               priorities,
+              const SizedBox(height: AppSpacing.lg),
+              salesPerformance,
+              const SizedBox(height: AppSpacing.lg),
+              cashFlow,
+              if (hasInventory &&
+                  inventoryCategoriesCard != null &&
+                  lowStockCard != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                inventoryCategoriesCard,
+                const SizedBox(height: AppSpacing.lg),
+                lowStockCard,
+              ],
               products,
               orders,
             ],
@@ -890,17 +1331,34 @@ class _DashboardWorkspace extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 3, child: chart),
-                const SizedBox(width: AppSpacing.lg),
-                const SizedBox(
-                  width: 360,
-                  child: DashboardPriorityList(fixedHeight: true),
-                ),
-              ],
+            _DashboardEqualHeightRow(
+              key: const Key('dashboard-row-chart-priority'),
+              spacing: AppSpacing.lg,
+              rightWidth: 360,
+              left: chart,
+              right: const KeyedSubtree(
+                key: Key('dashboard-card-priority'),
+                child: DashboardPriorityList(fixedHeight: false),
+              ),
             ),
+            const SizedBox(height: AppSpacing.lg),
+            _DashboardEqualHeightRow(
+              key: const Key('dashboard-row-sales-cash'),
+              spacing: AppSpacing.lg,
+              left: salesPerformance,
+              right: cashFlow,
+            ),
+            if (hasInventory &&
+                inventoryCategoriesCard != null &&
+                lowStockCard != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              _DashboardEqualHeightRow(
+                key: const Key('dashboard-row-inventory-stock'),
+                spacing: AppSpacing.lg,
+                left: inventoryCategoriesCard,
+                right: lowStockCard,
+              ),
+            ],
             products,
             orders,
           ],
@@ -929,10 +1387,13 @@ class DashboardTopProductsRevenueChart extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final products = items.take(10).toList();
     final mobile = MediaQuery.sizeOf(context).width < 600;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final mobileItemHeight = textScaler.scale(78.0);
+    final mobileHeaderBase = textScaler.scale(140.0);
     final chartHeight = products.isEmpty
         ? 220.0
         : mobile
-        ? (140 + products.length * 78).toDouble()
+        ? (mobileHeaderBase + products.length * mobileItemHeight).toDouble()
         : (136 + products.length * 55).clamp(324, 686).toDouble();
 
     return Padding(
@@ -941,6 +1402,9 @@ class DashboardTopProductsRevenueChart extends StatelessWidget {
         title: isPreviousPeriodFallback
             ? 'Top sản phẩm kỳ trước'
             : 'Top sản phẩm bán chạy',
+        subtitle: products.isNotEmpty
+            ? 'Xếp hạng các sản phẩm có doanh thu cao nhất trong kỳ.'
+            : null,
         height: chartHeight,
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -1020,7 +1484,7 @@ class _TopProductsHorizontalBars extends StatelessWidget {
           ],
           Expanded(
             child: ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
+              physics: const ClampingScrollPhysics(),
               itemCount: products.length,
               separatorBuilder: (_, _) =>
                   Divider(height: 1, color: colors.divider),
@@ -1216,9 +1680,11 @@ class _TopProductMobileRow extends StatelessWidget {
         : growth! >= 0
         ? AppColors.success
         : AppColors.danger;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final rowHeight = textScaler.scale(77.0).clamp(77.0, 140.0);
 
     return SizedBox(
-      height: 77,
+      height: rowHeight,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -1490,11 +1956,27 @@ class _DashboardChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    Widget cardWrapper(Widget child) {
+      return Container(
+        decoration: BoxDecoration(
+          color: colors.card,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(color: colors.divider),
+        ),
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: child,
+      );
+    }
+
     if (currentSales == null || comparisonSales == null) {
-      return const AppEmpty(
-        visual: AppEmptyVisual.finance,
-        message: 'Không có quyền xem doanh thu',
-        subtitle: 'Các ưu tiên kho và công nợ vẫn được hiển thị theo quyền.',
+      return cardWrapper(
+        const AppEmpty(
+          visual: AppEmptyVisual.finance,
+          message: 'Không có quyền xem doanh thu',
+          subtitle: 'Các ưu tiên kho và công nợ vẫn được hiển thị theo quyền.',
+        ),
       );
     }
 
@@ -1507,12 +1989,14 @@ class _DashboardChart extends StatelessWidget {
           previousLabel,
         ),
         loading: () => const _ChartSkeleton(),
-        error: (_, _) =>
-            const AppInlineError(message: 'Không thể tải dữ liệu so sánh.'),
+        error: (_, _) => cardWrapper(
+          const AppInlineError(message: 'Không thể tải dữ liệu so sánh.'),
+        ),
       ),
       loading: () => const _ChartSkeleton(),
-      error: (_, _) =>
-          const AppInlineError(message: 'Không thể tải biểu đồ doanh thu.'),
+      error: (_, _) => cardWrapper(
+        const AppInlineError(message: 'Không thể tải biểu đồ doanh thu.'),
+      ),
     );
   }
 }
@@ -1525,191 +2009,308 @@ class _ChartSkeleton extends StatelessWidget {
     return const AppShimmer(
       child: ShimmerBox(
         width: double.infinity,
-        height: 420,
+        height: 440,
         radius: AppRadius.card,
       ),
     );
   }
 }
 
+class _MetricSurfaceStyle {
+  final Color background;
+  final Color border;
+  final Color iconBg;
+  final Color iconColor;
+
+  const _MetricSurfaceStyle({
+    required this.background,
+    required this.border,
+    required this.iconBg,
+    required this.iconColor,
+  });
+}
+
+_MetricSurfaceStyle _getMetricSurface(String label) {
+  if (label.contains('Doanh thu')) {
+    return const _MetricSurfaceStyle(
+      background: Color(0xFFF0FDFA),
+      border: Color(0xFFCCFBF1),
+      iconBg: Color(0xFFCCFBF1),
+      iconColor: Color(0xFF0F766E),
+    );
+  } else if (label.contains('Lợi nhuận')) {
+    return const _MetricSurfaceStyle(
+      background: Color(0xFFF0FDF4),
+      border: Color(0xFFDCFCE7),
+      iconBg: Color(0xFFDCFCE7),
+      iconColor: Color(0xFF16A34A),
+    );
+  } else if (label.contains('quỹ') || label.contains('tiền')) {
+    return const _MetricSurfaceStyle(
+      background: Color(0xFFF0F9FF),
+      border: Color(0xFFE0F2FE),
+      iconBg: Color(0xFFE0F2FE),
+      iconColor: Color(0xFF0284C7),
+    );
+  } else {
+    return const _MetricSurfaceStyle(
+      background: Color(0xFFF8FAFC),
+      border: Color(0xFFE2E8F0),
+      iconBg: Color(0xFFF1F5F9),
+      iconColor: Color(0xFF475569),
+    );
+  }
+}
+
 class _DashboardMetricStrip extends StatelessWidget {
   final List<_DashboardMetric> metrics;
-  final bool showAllMobile;
-  final VoidCallback onToggleMobile;
 
-  const _DashboardMetricStrip({
-    required this.metrics,
-    required this.showAllMobile,
-    required this.onToggleMobile,
-  });
+  const _DashboardMetricStrip({required this.metrics});
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
+    if (metrics.isEmpty) return const SizedBox.shrink();
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 700;
-        if (isCompact) {
-          final primaryMetrics = [metrics[0], metrics[2]];
-          final secondaryMetrics = [metrics[1], metrics[3]];
-          final visibleMetrics = [
-            ...primaryMetrics,
-            if (showAllMobile) ...secondaryMetrics,
-          ];
+        final isDesktop = constraints.maxWidth >= 960;
+        final isTablet =
+            constraints.maxWidth >= 600 && constraints.maxWidth < 960;
 
-          return Container(
-            decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border.all(color: colors.divider),
-              borderRadius: BorderRadius.circular(AppRadius.card),
-              boxShadow: const [AppTheme.diffusionShadow],
-            ),
-            child: Column(
+        if (isDesktop) {
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (var index = 0; index < visibleMetrics.length; index++) ...[
-                  if (index > 0) Divider(height: 1, color: colors.divider),
-                  _MetricRow(
-                    metric: visibleMetrics[index],
-                    emphasized: index == 0,
-                  ),
-                ],
-                Divider(height: 1, color: colors.divider),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: onToggleMobile,
-                    child: Text(
-                      showAllMobile ? 'Thu gọn chỉ số' : 'Xem thêm 2 chỉ số',
+                for (var i = 0; i < metrics.length; i++) ...[
+                  if (i > 0) const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    flex: i == 0 ? 28 : 24,
+                    child: _PastelMetricCard(
+                      metric: metrics[i],
+                      surface: _getMetricSurface(metrics[i].label),
+                      isPrimary: i == 0,
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           );
         }
 
-        return Container(
-          height: 116,
-          decoration: BoxDecoration(
-            color: colors.surface,
-            border: Border.all(color: colors.divider),
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            boxShadow: const [AppTheme.diffusionShadow],
-          ),
-          child: Row(
+        if (isTablet) {
+          final tabletRows = <Widget>[];
+          for (var i = 0; i < metrics.length; i += 2) {
+            if (i > 0) {
+              tabletRows.add(const SizedBox(height: AppSpacing.md));
+            }
+            final first = metrics[i];
+            final hasSecond = i + 1 < metrics.length;
+            final second = hasSecond ? metrics[i + 1] : null;
+
+            tabletRows.add(
+              _DashboardEqualHeightRow(
+                key: Key('dashboard-tablet-kpi-row-${i ~/ 2}'),
+                spacing: AppSpacing.md,
+                left: _PastelMetricCard(
+                  metric: first,
+                  surface: _getMetricSurface(first.label),
+                  isPrimary: false,
+                ),
+                right: second != null
+                    ? _PastelMetricCard(
+                        metric: second,
+                        surface: _getMetricSurface(second.label),
+                        isPrimary: false,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: tabletRows,
+          );
+        }
+
+        // Mobile layout:
+        final textScaler = MediaQuery.textScalerOf(context);
+        final screenWidth = MediaQuery.sizeOf(context).width;
+        final isLargeText = textScaler.scale(1.0) > 1.2;
+        final isNarrowScreen = screenWidth < 340 || constraints.maxWidth < 300;
+
+        // Fallback: compact full-width row fallback only for textScaler > 1.2 (150% text)
+        // or very narrow screens (< 340px); normal 390px is 2x2.
+        if (isLargeText || isNarrowScreen || metrics.length == 1) {
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var index = 0; index < metrics.length; index++) ...[
-                if (index > 0) VerticalDivider(width: 1, color: colors.divider),
-                Expanded(
-                  child: _MetricCell(
-                    metric: metrics[index],
-                    emphasized: index == 0,
-                  ),
-                ),
+              for (var i = 0; i < metrics.length; i++) ...[
+                if (i > 0) const SizedBox(height: 6),
+                _CompactMetricRow(metric: metrics[i]),
               ],
             ],
-          ),
+          );
+        }
+
+        // Compact 2x2 grid layout on neutral white surfaces with subtle dividers
+        final rows = <Widget>[];
+        for (var i = 0; i < metrics.length; i += 2) {
+          if (i > 0) {
+            rows.add(const SizedBox(height: 8));
+          }
+          final first = metrics[i];
+          final hasSecond = i + 1 < metrics.length;
+          final second = hasSecond ? metrics[i + 1] : null;
+
+          rows.add(
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: _MobileMetricCard(metric: first)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: second != null
+                        ? _MobileMetricCard(metric: second)
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: rows,
         );
       },
     );
   }
 }
 
-class _MetricCell extends StatelessWidget {
+class _PastelMetricCard extends StatelessWidget {
   final _DashboardMetric metric;
-  final bool emphasized;
+  final _MetricSurfaceStyle surface;
+  final bool isPrimary;
 
-  const _MetricCell({required this.metric, this.emphasized = false});
+  const _PastelMetricCard({
+    required this.metric,
+    required this.surface,
+    this.isPrimary = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final titleSlotHeight = textScaler.scale(26.0);
+    final amountSlotHeight = textScaler.scale(32.0);
 
-    return Material(
-      color: emphasized
-          ? metric.color.withValues(alpha: 0.055)
-          : Colors.transparent,
-      child: InkWell(
-        onTap: metric.route == null ? null : () => context.go(metric.route!),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
+    return Container(
+      decoration: BoxDecoration(
+        color: surface.background,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: surface.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  AppAssetIcon(
-                    assetPath: metric.assetPath,
-                    size: 16,
-                    color: metric.color,
-                    semanticLabel: metric.label,
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: metric.route == null ? null : () => context.go(metric.route!),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: titleSlotHeight),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: surface.iconBg,
+                          borderRadius: BorderRadius.circular(
+                            AppRadius.control,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: AppAssetIcon(
+                          assetPath: metric.assetPath,
+                          size: 14,
+                          color: surface.iconColor,
+                          semanticLabel: metric.label,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          metric.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
+                ),
+                const SizedBox(height: 10),
+                ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: amountSlotHeight),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
                     child: Text(
-                      metric.label,
+                      metric.value,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.textSecondary,
-                        fontWeight: emphasized
-                            ? FontWeight.w700
-                            : FontWeight.w500,
+                      style: GoogleFonts.manrope(
+                        fontSize: isPrimary ? 24 : 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.6,
+                        color: colors.textPrimary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Tooltip(
+                  message: metric.context,
+                  child: Text(
+                    metric.context,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (metric.comparison != null) ...[
+                  const SizedBox(height: 4),
+                  _ComparisonBadge(
+                    comparison: metric.comparison!,
+                    isPositive: metric.comparisonPositive,
                   ),
                 ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  metric.value,
-                  maxLines: 1,
-                  style: GoogleFonts.manrope(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.35,
-                    color: emphasized ? metric.color : colors.textPrimary,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                metric.context,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
-              ),
-              if (metric.comparison != null) ...[
-                const SizedBox(height: 3),
-                Tooltip(
-                  message: metric.comparison!.semanticLabel,
-                  child: Semantics(
-                    label: metric.comparison!.semanticLabel,
-                    excludeSemantics: true,
-                    child: Text(
-                      metric.comparison!.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: metric.comparisonPositive
-                            ? AppColors.success
-                            : AppColors.danger,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -1717,103 +2318,306 @@ class _MetricCell extends StatelessWidget {
   }
 }
 
-class _MetricRow extends StatelessWidget {
+class _MobileMetricCard extends StatelessWidget {
   final _DashboardMetric metric;
-  final bool emphasized;
 
-  const _MetricRow({required this.metric, this.emphasized = false});
+  const _MobileMetricCard({required this.metric});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Material(
-      color: emphasized
-          ? metric.color.withValues(alpha: 0.055)
-          : Colors.transparent,
-      child: InkWell(
-        onTap: metric.route == null ? null : () => context.go(metric.route!),
+    return Semantics(
+      label: '${metric.label}: ${metric.value}, ${metric.context}',
+      container: true,
+      child: Tooltip(
+        message:
+            '${metric.label}: ${metric.value}${metric.context.isNotEmpty ? ' (${metric.context})' : ''}',
         child: Container(
           decoration: BoxDecoration(
-            border: emphasized
-                ? Border(left: BorderSide(color: metric.color, width: 3))
-                : null,
+            color: colors.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colors.divider),
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              AppAssetIcon(
-                assetPath: metric.assetPath,
-                size: 19,
-                color: metric.color,
-                semanticLabel: metric.label,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: metric.route == null
+                  ? null
+                  : () => context.go(metric.route!),
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 9,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      metric.label,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colors.textSecondary,
-                        fontWeight: emphasized
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      metric.context,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
-                    ),
-                    if (metric.comparison != null) ...[
-                      const SizedBox(height: 2),
-                      Tooltip(
-                        message: metric.comparison!.semanticLabel,
-                        child: Semantics(
-                          label: metric.comparison!.semanticLabel,
-                          excludeSemantics: true,
+                    Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          alignment: Alignment.center,
+                          child: AppAssetIcon(
+                            assetPath: metric.assetPath,
+                            size: 12,
+                            color: AppColors.primary,
+                            semanticLabel: metric.label,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
                           child: Text(
-                            metric.comparison!.label,
+                            metric.label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: metric.comparisonPositive
-                                      ? AppColors.success
-                                      : AppColors.danger,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 22),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          metric.value,
+                          maxLines: 1,
+                          style: AppTheme.tabularStyle(
+                            context,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
                           ),
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: 4),
+                    _buildFooter(context, colors),
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(
-                child: Text(
-                  metric.value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: GoogleFonts.manrope(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                    color: emphasized ? metric.color : colors.textPrimary,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter(BuildContext context, AppThemeColors colors) {
+    if (metric.comparison != null) {
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: _ComparisonBadge(
+          comparison: metric.comparison!,
+          isPositive: metric.comparisonPositive,
+        ),
+      );
+    }
+
+    if (metric.context.startsWith('Tại ')) {
+      return Tooltip(
+        message: metric.context,
+        child: Text(
+          metric.context,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
+    if (metric.context.startsWith('Chưa phát sinh')) {
+      return Tooltip(
+        message: metric.context,
+        child: Text(
+          'Chưa phát sinh',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colors.textMuted,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox(height: 16);
+  }
+}
+
+class _CompactMetricRow extends StatelessWidget {
+  final _DashboardMetric metric;
+
+  const _CompactMetricRow({required this.metric});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Semantics(
+      label: '${metric.label}: ${metric.value}, ${metric.context}',
+      container: true,
+      child: Tooltip(
+        message:
+            '${metric.label}: ${metric.value}${metric.context.isNotEmpty ? ' (${metric.context})' : ''}',
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colors.divider),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: metric.route == null
+                  ? null
+                  : () => context.go(metric.route!),
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 8,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          alignment: Alignment.center,
+                          child: AppAssetIcon(
+                            assetPath: metric.assetPath,
+                            size: 12,
+                            color: AppColors.primary,
+                            semanticLabel: metric.label,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            metric.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        if (metric.comparison != null) ...[
+                          const SizedBox(width: 6),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: _ComparisonBadge(
+                              comparison: metric.comparison!,
+                              isPositive: metric.comparisonPositive,
+                            ),
+                          ),
+                        ] else if (metric.context.startsWith('Tại ')) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            metric.context,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: colors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        metric.value,
+                        maxLines: 1,
+                        style: AppTheme.tabularStyle(
+                          context,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComparisonBadge extends StatelessWidget {
+  final _MetricComparison comparison;
+  final bool isPositive;
+
+  const _ComparisonBadge({required this.comparison, required this.isPositive});
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isPositive
+        ? AppColors.success.withValues(alpha: 0.12)
+        : AppColors.danger.withValues(alpha: 0.12);
+    final textColor = isPositive ? AppColors.success : AppColors.danger;
+
+    return Tooltip(
+      message: comparison.semanticLabel,
+      child: Semantics(
+        label: comparison.semanticLabel,
+        excludeSemantics: true,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            comparison.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 10.5,
+            ),
           ),
         ),
       ),
@@ -1845,10 +2649,11 @@ class _MetricStripSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppShimmer(
+    final isCompact = MediaQuery.sizeOf(context).width < 700;
+    return AppShimmer(
       child: ShimmerBox(
         width: double.infinity,
-        height: 116,
+        height: isCompact ? 210 : 116,
         radius: AppRadius.card,
       ),
     );

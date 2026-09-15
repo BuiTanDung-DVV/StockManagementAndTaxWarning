@@ -14,13 +14,6 @@ import '../settings/providers/shop_provider.dart';
 
 enum MainShellNavigationMode { bottomBar, rail, sidebar }
 
-abstract final class _ShellPalette {
-  static const navy = Color(0xFF102A43);
-  static const cyan = Color(0xFF38BDF8);
-  static const text = Color(0xFFF4F8FC);
-  static const muted = Color(0xFFAAC0D4);
-}
-
 MainShellNavigationMode navigationModeForWidth(double width) {
   if (width < AppBreakpoints.compactNavigation) {
     return MainShellNavigationMode.bottomBar;
@@ -655,8 +648,10 @@ class _DesktopSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
     return ColoredBox(
-      color: _ShellPalette.navy,
+      color: colors.surface,
       child: SafeArea(
         right: false,
         child: AnimatedContainer(
@@ -687,7 +682,7 @@ class _DesktopSidebar extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
-                                  color: _ShellPalette.text,
+                                  color: colors.textPrimary,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.35,
                                 ),
@@ -698,14 +693,14 @@ class _DesktopSidebar extends StatelessWidget {
                   ),
                 ),
               ),
-              const Divider(height: 1, color: Colors.white12),
+              Divider(height: 1, color: colors.divider),
               if (!collapsed)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
                   child: Text(
                     'CHỨC NĂNG CHÍNH',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: _ShellPalette.muted,
+                      color: colors.textMuted,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.1,
@@ -729,7 +724,7 @@ class _DesktopSidebar extends StatelessWidget {
                   ),
                 ),
               ),
-              const Divider(height: 1, color: Colors.white12),
+              Divider(height: 1, color: colors.divider),
               Padding(
                 padding: EdgeInsets.fromLTRB(
                   collapsed ? 8 : 10,
@@ -773,17 +768,19 @@ class _SidebarLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
     return Container(
       width: 38,
       height: 38,
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.cardAlt,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.divider),
       ),
       child: const AppAssetIcon(
         assetPath: AppAssets.appIcon,
-        size: 28,
+        size: 26,
         semanticLabel: 'SmartStock',
       ),
     );
@@ -807,6 +804,8 @@ class _SidebarUtilityItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
     final item = Material(
       color: Colors.transparent,
       child: InkWell(
@@ -824,7 +823,7 @@ class _SidebarUtilityItem extends StatelessWidget {
                 AppAssetIcon(
                   assetPath: assetPath,
                   size: 19,
-                  color: _ShellPalette.muted,
+                  color: colors.textMuted,
                   semanticLabel: label,
                 ),
                 if (!collapsed) ...[
@@ -835,7 +834,7 @@ class _SidebarUtilityItem extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: _ShellPalette.muted,
+                        color: colors.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -864,6 +863,9 @@ class _SidebarNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
     final item = Semantics(
       button: true,
       selected: selected,
@@ -872,6 +874,7 @@ class _SidebarNavItem extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => context.go(definition.route),
+          borderRadius: BorderRadius.circular(AppRadius.input),
           child: Container(
             constraints: const BoxConstraints(minHeight: 44),
             padding: EdgeInsets.symmetric(
@@ -880,12 +883,12 @@ class _SidebarNavItem extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: selected
-                  ? Colors.white.withValues(alpha: 0.10)
+                  ? primary.withValues(alpha: 0.09)
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.input),
               border: Border(
                 left: BorderSide(
-                  color: selected ? _ShellPalette.cyan : Colors.transparent,
+                  color: selected ? primary : Colors.transparent,
                   width: 3,
                 ),
               ),
@@ -896,7 +899,7 @@ class _SidebarNavItem extends StatelessWidget {
                 AppAssetIcon(
                   assetPath: definition.assetPath,
                   size: 20,
-                  color: selected ? _ShellPalette.cyan : _ShellPalette.muted,
+                  color: selected ? primary : colors.textMuted,
                   semanticLabel: definition.label,
                 ),
                 if (!collapsed) ...[
@@ -907,9 +910,7 @@ class _SidebarNavItem extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: selected
-                            ? _ShellPalette.text
-                            : _ShellPalette.muted,
+                        color: selected ? primary : colors.textPrimary,
                         fontWeight: selected
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -936,8 +937,11 @@ class _TabletNavigationRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
     return ColoredBox(
-      color: _ShellPalette.navy,
+      color: colors.surface,
       child: SafeArea(
         right: false,
         child: SizedBox(
@@ -951,8 +955,9 @@ class _TabletNavigationRail extends StatelessWidget {
                   height: 42,
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colors.cardAlt,
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: colors.divider),
                   ),
                   child: const AppAssetIcon(
                     assetPath: AppAssets.appIcon,
@@ -973,9 +978,7 @@ class _TabletNavigationRail extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () => context.push('/settings/ai-knowledge'),
-                style: TextButton.styleFrom(
-                  foregroundColor: _ShellPalette.cyan,
-                ),
+                style: TextButton.styleFrom(foregroundColor: primary),
                 child: const Text('Trợ giúp', textAlign: TextAlign.center),
               ),
               const SizedBox(height: 8),
@@ -995,6 +998,9 @@ class _RailNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Semantics(
       button: true,
       selected: selected,
@@ -1007,7 +1013,7 @@ class _RailNavItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           decoration: BoxDecoration(
             color: selected
-                ? Colors.white.withValues(alpha: 0.12)
+                ? primary.withValues(alpha: 0.09)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.control),
           ),
@@ -1018,7 +1024,7 @@ class _RailNavItem extends StatelessWidget {
               AppAssetIcon(
                 assetPath: definition.assetPath,
                 size: 20,
-                color: selected ? _ShellPalette.cyan : _ShellPalette.muted,
+                color: selected ? primary : colors.textMuted,
                 semanticLabel: definition.label,
               ),
               const SizedBox(height: 5),
@@ -1028,7 +1034,7 @@ class _RailNavItem extends StatelessWidget {
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: selected ? _ShellPalette.text : _ShellPalette.muted,
+                  color: selected ? primary : colors.textMuted,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),

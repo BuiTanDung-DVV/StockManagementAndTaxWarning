@@ -47,18 +47,18 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     inputBorder: Color(0xFF3B5067),
   );
 
-  // Cool neutral palette used by established retail and finance products.
+  // Deep teal and mint neutral palette for retail management.
   static const light = AppThemeColors(
-    bg: Color(0xFFEEF3F7),
+    bg: Color(0xFFF5F8F7),
     surface: Color(0xFFFFFFFF),
     card: Color(0xFFFFFFFF),
-    cardAlt: Color(0xFFF3F7FA),
-    textPrimary: Color(0xFF10283A),
-    textSecondary: Color(0xFF3F5668),
-    textMuted: Color(0xFF687F93),
-    divider: Color(0xFFD3DEE8),
+    cardAlt: Color(0xFFEDF4F1),
+    textPrimary: Color(0xFF17332F),
+    textSecondary: Color(0xFF3D5450),
+    textMuted: Color(0xFF5D716B),
+    divider: Color(0xFFDCE7E3),
     inputFill: Color(0xFFFFFFFF),
-    inputBorder: Color(0xFFBFCEDB),
+    inputBorder: Color(0xFFDCE7E3),
   );
 
   static AppThemeColors createLight(Color primary) => light;
@@ -111,9 +111,10 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 // ─────────────────────────────────────────────
 
 class AppColors {
-  static Color primary = const Color(0xFF1769AA);
-  static Color primaryLight = const Color(0xFF2E83C4);
-  static Color primaryDark = const Color(0xFF0D4F82);
+  static Color primary = const Color(0xFF0F766E);
+  static Color primaryHover = const Color(0xFF115E59);
+  static Color primaryLight = const Color(0xFF14B8A6);
+  static Color primaryDark = const Color(0xFF115E59);
 
   // Semantic
   static const success = Color(0xFF10B981); // Emerald 500
@@ -130,8 +131,8 @@ class AppColors {
   static void updateColors(Color brandColor, bool isDark) {
     primary = brandColor;
     if (isDark) {
-      primaryLight = const Color(0xFF3B82F6);
-      primaryDark = const Color(0xFF1E3A8A);
+      primaryLight = const Color(0xFF2DD4BF);
+      primaryDark = const Color(0xFF0F766E);
     } else {
       primaryLight = Color.alphaBlend(
         Colors.white.withValues(alpha: 0.2),
@@ -156,8 +157,9 @@ abstract final class AppBreakpoints {
 
 abstract final class AppRadius {
   static const double control = 8;
-  static const double card = 12;
-  static const double dialog = 16;
+  static const double input = 12;
+  static const double card = 20;
+  static const double dialog = 20;
 }
 
 abstract final class AppSpacing {
@@ -173,13 +175,13 @@ abstract final class AppSpacing {
 
 class AppTheme {
   static const double _cardRadius = AppRadius.card;
-  static const double _inputRadius = AppRadius.control;
+  static const double _inputRadius = AppRadius.input;
 
   static const diffusionShadow = BoxShadow(
-    color: Color(0x1A17324D),
-    blurRadius: 20,
-    offset: Offset(0, 8),
-    spreadRadius: -12,
+    color: Color(0x0C0F766E),
+    blurRadius: 16,
+    offset: Offset(0, 4),
+    spreadRadius: -4,
   );
 
   static TextStyle tabularStyle(
@@ -375,7 +377,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_inputRadius),
-          borderSide: BorderSide(color: primaryLight, width: 2),
+          borderSide: BorderSide(color: primaryColor, width: 2),
         ),
         hintStyle: TextStyle(color: colors.textMuted),
         labelStyle: TextStyle(
@@ -383,7 +385,7 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
+          horizontal: 16,
           vertical: 14,
         ),
       ),
@@ -391,7 +393,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          minimumSize: const Size(44, 44),
+          minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_inputRadius),
@@ -405,7 +407,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(44, 44),
+          minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_inputRadius),
@@ -418,7 +420,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(44, 44),
+          minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
           side: BorderSide(color: colors.inputBorder),
           foregroundColor: colors.textPrimary,
@@ -433,7 +435,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          minimumSize: const Size(44, 44),
+          minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_inputRadius),
@@ -451,7 +453,7 @@ class AppTheme {
           minimumSize: const Size(40, 40),
           side: BorderSide(color: colors.divider),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(_inputRadius),
+            borderRadius: BorderRadius.circular(AppRadius.control),
           ),
         ),
       ),
@@ -542,7 +544,10 @@ class AppTheme {
       ),
       dataTableTheme: DataTableThemeData(
         headingRowColor: WidgetStatePropertyAll(
-          Color.alphaBlend(primaryColor.withValues(alpha: 0.055), colors.cardAlt),
+          Color.alphaBlend(
+            primaryColor.withValues(alpha: 0.055),
+            colors.cardAlt,
+          ),
         ),
         headingTextStyle: bodyTextTheme.labelSmall?.copyWith(
           color: colors.textSecondary,

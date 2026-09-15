@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/toast_service.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/auth_scaffold.dart';
 import '../providers/auth_provider.dart';
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
@@ -151,230 +151,189 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        title: Text(
-          'Xác Thực Tài Khoản',
-          style: GoogleFonts.manrope(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
+    return AuthScaffold(
+      canPop: true,
+      onPop: () => context.canPop() ? context.pop() : context.go('/register'),
+      title: 'Xác thực tài khoản',
+      subtitle: 'Mã OTP gồm 6 chữ số đã được gửi đến email:',
+      footer: Center(
+        child: TextButton.icon(
+          icon: const Icon(Icons.arrow_back_rounded, size: 16),
+          label: const Text('Quay lại đăng ký / đổi email'),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/register'),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(onPressed: context.pop)
-            : null,
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.mark_email_read_rounded,
-                      size: 36,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Nhập mã xác thực',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.manrope(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Mã xác thực gồm 6 chữ số đã được gửi tới địa chỉ email:',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: c.textSecondary, fontSize: 14),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: c.cardAlt,
+              borderRadius: BorderRadius.circular(AppRadius.control),
+              border: Border.all(color: c.divider),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.mark_email_read_outlined,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Flexible(
+                  child: Text(
                     widget.email,
-                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 32),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _otpHasFocus
-                            ? AppColors.primary
-                            : (_error != null
-                                  ? AppColors.danger
-                                  : c.inputBorder),
-                        width: _otpHasFocus ? 1.5 : 1.0,
-                      ),
-                      boxShadow: [
-                        if (_otpHasFocus)
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.15),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _otpCtrl,
-                      focusNode: _otpFocus,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      maxLength: 6,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      style: GoogleFonts.manrope(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 8.0,
-                        color: c.textPrimary,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '••••••',
-                        hintStyle: GoogleFonts.manrope(
-                          fontSize: 24,
-                          letterSpacing: 8.0,
-                          color: c.textMuted,
-                        ),
-                        counterText: '',
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 18,
-                        ),
-                      ),
-                      onChanged: (val) {
-                        if (val.length == 6 && !_isLoading) {
-                          _verifyAndRegister();
-                        }
-                      },
-                    ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          Container(
+            decoration: BoxDecoration(
+              color: c.card,
+              borderRadius: BorderRadius.circular(AppRadius.input),
+              border: Border.all(
+                color: _otpHasFocus
+                    ? Theme.of(context).colorScheme.primary
+                    : (_error != null ? AppColors.danger : c.inputBorder),
+                width: _otpHasFocus ? 1.5 : 1.0,
+              ),
+              boxShadow: [
+                if (_otpHasFocus)
+                  BoxShadow(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.danger.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: AppColors.danger,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _error!,
-                              style: const TextStyle(
-                                color: AppColors.danger,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _verifyAndRegister,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Xác nhận & Hoàn tất',
-                              style: GoogleFonts.manrope(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
+              ],
+            ),
+            child: TextField(
+              controller: _otpCtrl,
+              focusNode: _otpFocus,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              maxLength: 6,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: GoogleFonts.manrope(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 10.0,
+                color: c.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: '••••••',
+                hintStyle: GoogleFonts.manrope(
+                  fontSize: 26,
+                  letterSpacing: 10.0,
+                  color: c.textMuted,
+                ),
+                counterText: '',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+              ),
+              onChanged: (val) {
+                if (val.length == 6 && !_isLoading) {
+                  _verifyAndRegister();
+                }
+              },
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                border: Border.all(
+                  color: AppColors.danger.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: AppColors.danger,
+                    size: 18,
                   ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Chưa nhận được mã? ',
-                        style: TextStyle(color: c.textSecondary, fontSize: 14),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
                       ),
-                      TextButton(
-                        onPressed: (_countdownSeconds > 0 || _isResending)
-                            ? null
-                            : _resendOtp,
-                        child: _isResending
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                _countdownSeconds > 0
-                                    ? 'Gửi lại sau (${_countdownSeconds}s)'
-                                    : 'Gửi lại mã ngay',
-                                style: TextStyle(
-                                  color: _countdownSeconds > 0
-                                      ? c.textMuted
-                                      : AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+
+          FilledButton(
+            onPressed: _isLoading ? null : _verifyAndRegister,
+            child: _isLoading
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Xác nhận & Hoàn tất'),
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Chưa nhận được mã? ',
+                style: TextStyle(color: c.textSecondary, fontSize: 13),
+              ),
+              TextButton(
+                onPressed: (_countdownSeconds > 0 || _isResending)
+                    ? null
+                    : _resendOtp,
+                child: Text(
+                  _countdownSeconds > 0
+                      ? 'Gửi lại (${_countdownSeconds}s)'
+                      : (_isResending ? 'Đang gửi...' : 'Gửi lại mã OTP'),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: _countdownSeconds > 0
+                        ? c.textMuted
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

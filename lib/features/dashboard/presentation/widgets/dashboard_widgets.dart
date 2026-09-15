@@ -66,12 +66,19 @@ class TaxObligationReminder extends ConsumerWidget {
               final totalOwed = rawTotalOwed < 0 ? 0.0 : rawTotalOwed;
               final status = t['status'] ?? 'pending';
 
-              // Calculate days remaining
+              // Calculate days remaining on calendar dates
               int? daysLeft;
               if (dueDateStr != null) {
                 final dueDate = DateTime.tryParse(dueDateStr);
                 if (dueDate != null) {
-                  daysLeft = dueDate.difference(DateTime.now()).inDays;
+                  final now = DateTime.now();
+                  final todayDate = DateTime(now.year, now.month, now.day);
+                  final dueCalDate = DateTime(
+                    dueDate.year,
+                    dueDate.month,
+                    dueDate.day,
+                  );
+                  daysLeft = dueCalDate.difference(todayDate).inDays;
                 }
               }
 
@@ -84,12 +91,16 @@ class TaxObligationReminder extends ConsumerWidget {
                 urgencyLabel =
                     'Quá hạn${daysLeft != null ? " ${(-daysLeft)} ngày" : ""}';
                 urgencyIcon = Icons.error_rounded;
-              } else if (daysLeft != null && daysLeft <= 7) {
+              } else if (daysLeft != null && daysLeft == 0) {
                 urgencyColor = AppColors.danger;
-                urgencyLabel = 'Còn $daysLeft ngày';
+                urgencyLabel = 'Đến hạn hôm nay';
                 urgencyIcon = Icons.warning_rounded;
-              } else if (daysLeft != null && daysLeft <= 30) {
+              } else if (daysLeft != null && daysLeft <= 7) {
                 urgencyColor = AppColors.warning;
+                urgencyLabel = 'Còn $daysLeft ngày';
+                urgencyIcon = Icons.schedule_rounded;
+              } else if (daysLeft != null && daysLeft <= 30) {
+                urgencyColor = AppColors.info;
                 urgencyLabel = 'Còn $daysLeft ngày';
                 urgencyIcon = Icons.schedule_rounded;
               } else {
@@ -107,7 +118,7 @@ class TaxObligationReminder extends ConsumerWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: urgencyColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(AppRadius.card),
                     border: Border.all(
                       color: urgencyColor.withValues(alpha: 0.25),
                       width: 1.5,
@@ -647,6 +658,13 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  'So sánh doanh thu bán hàng với kỳ liền trước.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: c.textSecondary),
+                ),
                 if (filterWidget != null) ...[
                   const SizedBox(height: 10),
                   filterWidget,
@@ -993,8 +1011,8 @@ class TopProductsChart extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -1146,8 +1164,8 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(color: c.divider),
         ),
         child: Center(
           child: Text(
@@ -1186,8 +1204,8 @@ class _InventoryDonutChartState extends State<InventoryDonutChart> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -1376,8 +1394,8 @@ class CashFlowAreaChart extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -1999,8 +2017,8 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: c.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          border: Border.all(color: c.divider),
         ),
         child: Center(
           child: Text(
@@ -2048,8 +2066,8 @@ class _PaymentMethodDonutChartState extends State<PaymentMethodDonutChart> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -2205,8 +2223,8 @@ class RecentOrdersDataTable extends StatelessWidget {
       margin: const EdgeInsets.only(top: 20),
       decoration: BoxDecoration(
         color: c.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.divider.withValues(alpha: 0.6)),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: c.divider),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -2496,8 +2514,8 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
           margin: const EdgeInsets.only(top: 20),
           decoration: BoxDecoration(
             color: c.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: c.divider.withValues(alpha: 0.6)),
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: c.divider),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
@@ -2715,7 +2733,7 @@ class DashboardHeroHeader extends ConsumerWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppRadius.card),
             border: Border.all(
               color: theme.colorScheme.primary.withValues(alpha: 0.2),
               width: 1.5,
@@ -3406,15 +3424,16 @@ class _ActionCenterSkeleton extends StatelessWidget {
   }
 }
 
-class _PriorityRow extends StatelessWidget {
+class _PriorityRow extends ConsumerWidget {
   final int number;
   final DashboardActionItem item;
 
   const _PriorityRow({required this.number, required this.item});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppThemeColors.of(context);
+    final shopState = ref.watch(shopProvider);
     final statusColor = switch (item.severity) {
       DashboardActionSeverity.critical => AppColors.danger,
       DashboardActionSeverity.warning => AppColors.warning,
@@ -3422,14 +3441,36 @@ class _PriorityRow extends StatelessWidget {
       DashboardActionSeverity.healthy => AppColors.success,
     };
 
+    bool canNavigateTo(String path) {
+      if (shopState.isOwner) return true;
+      if (path.startsWith('/inventory')) {
+        return shopState.hasPermission('inventory');
+      }
+      if (path.startsWith('/customer-debts')) {
+        return shopState.hasPermission('customers');
+      }
+      if (path.startsWith('/tax-config')) {
+        return shopState.hasPermission('settings');
+      }
+      if (path.startsWith('/tax-obligations')) {
+        return shopState.hasPermission('finance');
+      }
+      if (path.startsWith('/notifications')) return true;
+      return true;
+    }
+
+    final canNavigate = canNavigateTo(item.destination);
+
     return Semantics(
-      button: true,
+      button: canNavigate,
       label: '${item.badge}: ${item.title}. ${item.detail}',
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.go(item.destination),
-          mouseCursor: SystemMouseCursors.click,
+          onTap: canNavigate ? () => context.go(item.destination) : null,
+          mouseCursor: canNavigate
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.basic,
           child: Container(
             constraints: const BoxConstraints(minHeight: 76),
             decoration: BoxDecoration(
@@ -3568,11 +3609,22 @@ class DashboardRecentOrdersList extends StatelessWidget {
                 ),
                 const SizedBox(width: 9),
                 Expanded(
-                  child: Text(
-                    'Đơn hàng gần đây',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Đơn hàng gần đây',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Giao dịch bán hàng mới nhất được ghi nhận.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 TextButton(

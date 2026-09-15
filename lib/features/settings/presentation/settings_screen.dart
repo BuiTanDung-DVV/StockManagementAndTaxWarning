@@ -21,7 +21,11 @@ import '../providers/system_provider.dart';
 import 'shop_payment_qr_dialog.dart';
 
 bool settingsShouldLoadShopProfile(ShopState state) =>
-    !state.isAllShops && state.currentShopId != null;
+    !state.isAllShops &&
+    state.currentShopId != null &&
+    (state.userShops.isEmpty ||
+        state.isOwner ||
+        state.hasPermission('settings'));
 
 int settingsActiveShopCount(ShopState state) => state.userShops
     .where((shop) => shop['status'] == 'ACTIVE' && shop['isActive'] != false)
@@ -66,7 +70,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         shopState.isOwner || shopState.hasPermission('settings');
     final canManageProducts =
         shopState.isOwner || shopState.hasPermission('products');
-    final canManageStaff = shopState.isOwner || auth.isShopOwner;
+    final canManageStaff = shopState.isOwner;
+    final canViewFinance =
+        shopState.isOwner || shopState.hasPermission('finance');
 
     final sections = <_SettingsSectionData>[
       _SettingsSectionData(
@@ -180,18 +186,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'Thiết lập thông số dùng trong chức năng hỗ trợ tính thuế.',
               onTap: () => context.push('/tax-config'),
             ),
-          _SettingsEntry(
-            label: 'Kênh hỗ trợ thuế',
-            description:
-                'Xem đầu mối và tài liệu hỗ trợ khi cần làm rõ nghiệp vụ.',
-            onTap: () => context.push('/tax-support'),
-          ),
-          _SettingsEntry(
-            label: 'Nguồn tài liệu tham khảo',
-            description:
-                'Quản lý nguồn kiến thức được dùng trong phần trợ giúp.',
-            onTap: () => context.push('/settings/ai-knowledge'),
-          ),
+          if (canViewFinance)
+            _SettingsEntry(
+              label: 'Kênh hỗ trợ thuế',
+              description:
+                  'Xem đầu mối và tài liệu hỗ trợ khi cần làm rõ nghiệp vụ.',
+              onTap: () => context.push('/tax-support'),
+            ),
+          if (canManageSettings)
+            _SettingsEntry(
+              label: 'Nguồn tài liệu tham khảo',
+              description:
+                  'Quản lý nguồn kiến thức được dùng trong phần trợ giúp.',
+              onTap: () => context.push('/settings/ai-knowledge'),
+            ),
         ],
       ),
       _SettingsSectionData(
@@ -266,6 +274,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onOpenProfile: () => context.push('/profile'),
                 onSwitchShop: shopState.userShops.length > 1
                     ? () => _showShopSwitcher(context, shopState)
+                    : null,
+                onRetry: shopAsync != null
+                    ? () => ref.refresh(shopProfileProvider)
                     : null,
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -591,6 +602,7 @@ class _SettingsProfileCard extends StatelessWidget {
   final ShopState shopState;
   final VoidCallback onOpenProfile;
   final VoidCallback? onSwitchShop;
+  final VoidCallback? onRetry;
 
   const _SettingsProfileCard({
     required this.shopAsync,
@@ -598,6 +610,7 @@ class _SettingsProfileCard extends StatelessWidget {
     required this.shopState,
     required this.onOpenProfile,
     required this.onSwitchShop,
+    this.onRetry,
   });
 
   @override
@@ -609,6 +622,19 @@ class _SettingsProfileCard extends StatelessWidget {
         : fullName;
 
     if (shopState.isAllShops || shopAsync == null) {
+      final currentShop = shopState.userShops
+          .where((s) => parseShopRecordId(s['shopId']) == shopState.currentShopId)
+          .firstOrNull;
+      final shopName = shopState.currentShopName ??
+          currentShop?['shopName']?.toString() ??
+          (shopState.currentShopId != null
+              ? 'Cửa hàng #${shopState.currentShopId}'
+              : 'Tất cả cửa hàng');
+      final roleName = shopState.isOwner
+          ? 'Chủ sở hữu'
+          : (currentShop?['role']?['name']?.toString() ??
+              (shopState.memberType == 'OWNER' ? 'Chủ sở hữu' : 'Nhân viên'));
+
       return AppCardContainer(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -627,12 +653,18 @@ class _SettingsProfileCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  settingsAllShopsSummary(shopState),
+                  shopState.isAllShops
+                      ? settingsAllShopsSummary(shopState)
+                      : shopName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: colors.textSecondary, fontSize: 13),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  'Chọn một cửa hàng để xem và chỉnh sửa cấu hình riêng.',
+                  shopState.isAllShops
+                      ? 'Chọn một cửa hàng để xem và chỉnh sửa cấu hình riêng.'
+                      : 'Vai trò: $roleName${shopState.shopCode != null ? '  ·  Mã CH: ${shopState.shopCode}' : ''}',
                   style: TextStyle(color: colors.textMuted, fontSize: 11),
                 ),
               ],
@@ -805,12 +837,18 @@ class _SettingsProfileCard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    'Chưa tải được thông tin cửa hàng.',
+                    'Chưa tải được thông tin chi tiết cửa hàng.',
                     style: TextStyle(color: colors.textSecondary, fontSize: 12),
                   ),
                 ],
               ),
             ),
+            if (onRetry != null)
+              FilledButton.tonal(
+                onPressed: onRetry,
+                child: const Text('Thử lại'),
+              ),
+            const SizedBox(width: AppSpacing.xs),
             TextButton(
               onPressed: onOpenProfile,
               child: const Text('Xem hồ sơ'),

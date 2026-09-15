@@ -60,36 +60,50 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
         title: const Text('Cấu hình Thuế'),
         actions: [
           if (compactLayout)
-            AppPrimaryHeaderAction(
-              label: 'Lưu cấu hình',
-              assetPath: AppAssets.settings,
-              heroTag: 'tax-config-save-compact',
-              onPressed: _isSaving || !config.isLoaded ? null : _save,
+            Tooltip(
+              message: !config.isLoaded
+                  ? 'Chưa có cấu hình hợp lệ để lưu'
+                  : 'Lưu cấu hình thuế',
+              child: AppPrimaryHeaderAction(
+                label: 'Lưu cấu hình',
+                assetPath: AppAssets.settings,
+                heroTag: 'tax-config-save-compact',
+                onPressed: _isSaving || !config.isLoaded ? null : _save,
+              ),
             ),
           const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: compactLayout
           ? null
-          : FloatingActionButton.extended(
-              onPressed: _isSaving || !config.isLoaded ? null : _save,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.save),
-              label: const Text(
-                'Lưu cấu hình',
-                style: TextStyle(fontWeight: FontWeight.bold),
+          : Tooltip(
+              message: !config.isLoaded
+                  ? 'Chưa có cấu hình hợp lệ để lưu'
+                  : 'Lưu cấu hình thuế',
+              child: FloatingActionButton.extended(
+                onPressed: _isSaving || !config.isLoaded ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(
+                  _isSaving ? 'Đang lưu…' : 'Lưu cấu hình',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                backgroundColor: !config.isLoaded
+                    ? c.divider
+                    : Theme.of(context).colorScheme.primary,
+                foregroundColor: !config.isLoaded
+                    ? c.textMuted
+                    : Colors.white,
+                elevation: 0,
               ),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
             ),
       body: !config.isLoaded
           ? Center(
@@ -97,10 +111,42 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                   ? const CircularProgressIndicator()
                   : Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Text(
-                        config.errorMessage ??
-                            'Không thể tải cấu hình thuế từ DB.',
-                        textAlign: TextAlign.center,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.error_outline_rounded,
+                            size: 48,
+                            color: c.textMuted,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            config.errorMessage ??
+                                'Không thể tải cấu hình thuế từ cơ sở dữ liệu.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: c.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Kiểm tra lại kết nối mạng hoặc thử tải lại cấu hình.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: c.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          FilledButton.icon(
+                            onPressed: () => ref
+                                .read(taxConfigProvider.notifier)
+                                .refresh(),
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('Thử lại'),
+                          ),
+                        ],
                       ),
                     ),
             )

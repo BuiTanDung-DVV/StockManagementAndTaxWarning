@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
 import '../utils/finance_display.dart';
 
@@ -37,6 +38,7 @@ double miniBarWidthForCount(int count) {
 // ─────────────────────────────────────────────
 class ChartCard extends StatelessWidget {
   final String title;
+  final String? subtitle;
   final Widget child;
   final double? height;
   final Widget? trailing;
@@ -44,6 +46,7 @@ class ChartCard extends StatelessWidget {
   const ChartCard({
     super.key,
     required this.title,
+    this.subtitle,
     required this.child,
     this.height,
     this.trailing,
@@ -58,7 +61,7 @@ class ChartCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: c.divider.withValues(alpha: 0.9)),
+        border: Border.all(color: c.divider),
         boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: Column(
@@ -66,17 +69,36 @@ class ChartCard extends StatelessWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: subtitle != null
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Text(
-                  title,
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: c.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: c.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: c.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
                 ),
               ),
               ?trailing,
@@ -96,6 +118,7 @@ class ChartCard extends StatelessWidget {
 class EmptyChartPlaceholder extends StatelessWidget {
   final String message;
   final IconData icon;
+  final String? assetPath;
   final String? actionLabel;
   final VoidCallback? onAction;
 
@@ -103,6 +126,7 @@ class EmptyChartPlaceholder extends StatelessWidget {
     super.key,
     required this.message,
     this.icon = Icons.bar_chart_rounded,
+    this.assetPath,
     this.actionLabel,
     this.onAction,
   });
@@ -129,11 +153,17 @@ class EmptyChartPlaceholder extends StatelessWidget {
               color: theme.colorScheme.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 28,
-              color: theme.colorScheme.primary.withValues(alpha: 0.5),
-            ),
+            child: assetPath != null
+                ? AppAssetIcon(
+                    assetPath: assetPath!,
+                    size: 28,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                  )
+                : Icon(
+                    icon,
+                    size: 28,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                  ),
           ),
           const SizedBox(height: 14),
           Text(

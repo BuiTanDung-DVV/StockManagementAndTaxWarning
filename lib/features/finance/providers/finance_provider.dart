@@ -441,5 +441,9 @@ final purchasesNoInvoiceProvider =
     });
 
 final taxObligationsProvider = FutureProvider<Map<String, dynamic>>((ref) {
+  final shopState = ref.watch(shopProvider);
+  if (shopState.isAllShops || shopState.currentShopId == null) {
+    return {'items': <dynamic>[]};
+  }
   return ref.watch(financeRepoProvider).getTaxObligations();
 });

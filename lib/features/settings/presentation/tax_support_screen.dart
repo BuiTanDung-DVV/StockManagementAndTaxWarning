@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../finance/providers/tax_reference_provider.dart';
+import '../providers/shop_provider.dart';
 
 IconData _taxLinkIcon(String iconKey) => switch (iconKey) {
   'support' => Icons.support_agent_outlined,
@@ -24,6 +25,50 @@ class TaxSupportScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
+    final shopState = ref.watch(shopProvider);
+    final hasFinance = shopState.isOwner || shopState.hasPermission('finance');
+
+    if (!hasFinance) {
+      return Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+          leading: Navigator.of(context).canPop()
+              ? AppNavigationBackLeading(
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
+          title: const Text('Hỗ trợ Thuế'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_outline, size: 48, color: c.textMuted),
+                const SizedBox(height: 16),
+                Text(
+                  'Tài khoản chưa được phân quyền truy cập kênh hỗ trợ thuế.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: c.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Vui lòng liên hệ quản trị viên hoặc chủ cửa hàng để được cấp quyền tài chính.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: c.textSecondary, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final referenceAsync = ref.watch(taxReferenceDataProvider);
     if (referenceAsync.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -43,9 +88,26 @@ class TaxSupportScreen extends ConsumerWidget {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(
-              'Không thể tải liên kết hỗ trợ từ DB: ${referenceAsync.error}',
-              textAlign: TextAlign.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.cloud_off_outlined, size: 48, color: c.textMuted),
+                const SizedBox(height: 16),
+                Text(
+                  'Chưa thể tải dữ liệu liên kết hỗ trợ thuế từ máy chủ.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: c.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => ref.refresh(taxReferenceDataProvider),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('Thử lại'),
+                ),
+              ],
             ),
           ),
         ),

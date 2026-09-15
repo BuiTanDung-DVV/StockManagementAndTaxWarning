@@ -168,10 +168,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path.startsWith('/purchases-no-invoice') ||
             path.startsWith('/invoice-scans') ||
             path.startsWith('/tax-calculator') ||
+            path.startsWith('/tax-estimate') ||
             path.startsWith('/expense-ledger') ||
             path.startsWith('/tax-obligations') ||
             path.startsWith('/salary-ledger') ||
             path.startsWith('/tax-declaration') ||
+            path.startsWith('/tax-support') ||
             path.startsWith('/transactions')) {
           return shopState.hasPermission('finance');
         }
@@ -204,6 +206,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (path.startsWith('/shop-profile') ||
             path.startsWith('/payment-config') ||
             path.startsWith('/tax-config') ||
+            path.startsWith('/activity-logs') ||
+            path.startsWith('/settings/ai-knowledge') ||
             path.startsWith('/settings/receipt-template') ||
             path.startsWith('/settings/shipping-carriers')) {
           return shopState.hasPermission('settings');

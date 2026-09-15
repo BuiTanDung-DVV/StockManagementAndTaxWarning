@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/auth_scaffold.dart';
 import '../../../core/widgets/password_visibility_button.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
@@ -30,35 +30,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
 
-  bool _fullNameHasFocus = false;
-  bool _emailHasFocus = false;
-  bool _passwordHasFocus = false;
-  bool _confirmPasswordHasFocus = false;
-
   bool _obscure = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
   String? _error;
   final String _registrationAccountType = 'PERSONAL';
-
-  @override
-  void initState() {
-    super.initState();
-    _fullNameFocus.addListener(
-      () => setState(() => _fullNameHasFocus = _fullNameFocus.hasFocus),
-    );
-    _emailFocus.addListener(
-      () => setState(() => _emailHasFocus = _emailFocus.hasFocus),
-    );
-    _passwordFocus.addListener(
-      () => setState(() => _passwordHasFocus = _passwordFocus.hasFocus),
-    );
-    _confirmPasswordFocus.addListener(
-      () => setState(
-        () => _confirmPasswordHasFocus = _confirmPasswordFocus.hasFocus,
-      ),
-    );
-  }
 
   @override
   void dispose() {
@@ -203,231 +179,176 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: c.bg,
-      appBar: AppBar(
-        title: Text(
-          'Đăng Ký Tài Khoản',
-          style: GoogleFonts.manrope(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: c.textPrimary,
-          ),
+    return AuthScaffold(
+      canPop: true,
+      onPop: () => context.canPop() ? context.pop() : context.go('/login'),
+      title: 'Tạo tài khoản mới',
+      subtitle:
+          'Vai trò và thông tin cửa hàng sẽ được thiết lập ở bước tiếp theo.',
+      footer: Center(
+        child: TextButton(
+          onPressed: () => context.go('/login'),
+          child: const Text('Đã có tài khoản? Đăng nhập ngay'),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(onPressed: context.pop)
-            : null,
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: LayoutBuilder(
-              builder: (context, viewportConstraints) {
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GoogleAuthButton(
+            enabled: !_isLoading,
+            isRegistration: true,
+            onIdToken: _registerWithGoogle,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(child: Divider(color: c.divider)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'HOẶC ĐĂNG KÝ BẰNG EMAIL',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: c.textMuted,
+                    letterSpacing: 0.5,
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Tạo tài khoản mới',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.manrope(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: c.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Vai trò và thông tin cửa hàng sẽ được thiết lập ở bước tiếp theo.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: c.textSecondary, fontSize: 13),
-                      ),
-                      const SizedBox(height: 24),
+                ),
+              ),
+              Expanded(child: Divider(color: c.divider)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
 
-                      GoogleAuthButton(
-                        enabled: !_isLoading,
-                        isRegistration: true,
-                        onIdToken: _registerWithGoogle,
-                      ),
-                      const SizedBox(height: 32),
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: c.divider)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'HOẶC ĐĂNG KÝ BẰNG EMAIL',
-                              style: GoogleFonts.manrope(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: c.textMuted,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: c.divider)),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Full Name Input
-                      _buildGlowingField(
-                        controller: _fullNameCtrl,
-                        focusNode: _fullNameFocus,
-                        hasFocus: _fullNameHasFocus,
-                        hintText: 'Họ và tên của bạn',
-                        icon: Icons.person_outline_rounded,
-                        c: c,
-                        theme: theme,
-                        onChanged: (_) => _onFieldChanged(),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Email Input
-                      _buildGlowingField(
-                        controller: _emailCtrl,
-                        focusNode: _emailFocus,
-                        hasFocus: _emailHasFocus,
-                        hintText: 'Địa chỉ Email (Gmail)',
-                        icon: Icons.email_outlined,
-                        c: c,
-                        theme: theme,
-                        onChanged: (_) => _onFieldChanged(),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Password Input
-                      _buildGlowingField(
-                        controller: _passwordCtrl,
-                        focusNode: _passwordFocus,
-                        hasFocus: _passwordHasFocus,
-                        hintText: 'Mật khẩu',
-                        icon: Icons.lock_outline_rounded,
-                        c: c,
-                        theme: theme,
-                        obscureText: _obscure,
-                        onChanged: (_) => _onFieldChanged(),
-                        suffixIcon: PasswordVisibilityButton(
-                          obscureText: _obscure,
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                        ),
-                      ),
-                      _buildPasswordStrengthMeter(c),
-
-                      // Confirm Password Input
-                      _buildGlowingField(
-                        controller: _confirmPasswordCtrl,
-                        focusNode: _confirmPasswordFocus,
-                        hasFocus: _confirmPasswordHasFocus,
-                        hintText: 'Xác nhận mật khẩu',
-                        icon: Icons.lock_clock_outlined,
-                        c: c,
-                        theme: theme,
-                        obscureText: _obscureConfirm,
-                        onChanged: (_) => _onFieldChanged(),
-                        suffixIcon: PasswordVisibilityButton(
-                          obscureText: _obscureConfirm,
-                          onPressed: () => setState(
-                            () => _obscureConfirm = !_obscureConfirm,
-                          ),
-                        ),
-                      ),
-                      _buildConfirmPasswordMatchIndicator(c),
-
-                      if (_error != null) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.error_outline_rounded,
-                                color: AppColors.danger,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _error!,
-                                  style: GoogleFonts.inter(
-                                    color: AppColors.danger,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 28),
-
-                      // Submit Action
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isLoading || !_canSubmit
-                              ? null
-                              : _proceedToOtpVerification,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text(
-                                  'Đăng Ký & Nhận Mã OTP',
-                                  style: GoogleFonts.manrope(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                );
-              },
+          // Full Name Input
+          TextField(
+            controller: _fullNameCtrl,
+            focusNode: _fullNameFocus,
+            onChanged: (_) => _onFieldChanged(),
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Họ và tên *',
+              hintText: 'Họ và tên của bạn',
+              prefixIcon: Icon(Icons.person_outline_rounded),
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Email Input
+          TextField(
+            controller: _emailCtrl,
+            focusNode: _emailFocus,
+            onChanged: (_) => _onFieldChanged(),
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Địa chỉ Gmail *',
+              hintText: 'example@gmail.com',
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Password Input
+          TextField(
+            controller: _passwordCtrl,
+            focusNode: _passwordFocus,
+            obscureText: _obscure,
+            onChanged: (_) => _onFieldChanged(),
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: 'Mật khẩu *',
+              hintText: 'Ít nhất 8 ký tự',
+              prefixIcon: const Icon(Icons.lock_outline_rounded),
+              suffixIcon: PasswordVisibilityButton(
+                obscureText: _obscure,
+                onPressed: () => setState(() => _obscure = !_obscure),
+              ),
+            ),
+          ),
+          _buildPasswordStrengthMeter(c),
+
+          // Confirm Password Input
+          TextField(
+            controller: _confirmPasswordCtrl,
+            focusNode: _confirmPasswordFocus,
+            obscureText: _obscureConfirm,
+            onChanged: (_) => _onFieldChanged(),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              if (_canSubmit && !_isLoading) _proceedToOtpVerification();
+            },
+            decoration: InputDecoration(
+              labelText: 'Xác nhận mật khẩu *',
+              hintText: 'Nhập lại mật khẩu',
+              prefixIcon: const Icon(Icons.lock_clock_outlined),
+              suffixIcon: PasswordVisibilityButton(
+                obscureText: _obscureConfirm,
+                onPressed: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
+              ),
+            ),
+          ),
+          _buildConfirmPasswordMatchIndicator(c),
+
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                border: Border.all(
+                  color: AppColors.danger.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: AppColors.danger,
+                    size: 18,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+
+          // Submit Action
+          FilledButton(
+            onPressed: _isLoading || !_canSubmit
+                ? null
+                : _proceedToOtpVerification,
+            child: _isLoading
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Đăng ký & Nhận mã OTP'),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildPasswordStrengthMeter(AppThemeColors c) {
     final pass = _passwordCtrl.text;
-    if (pass.isEmpty) return const SizedBox.shrink();
+    if (pass.isEmpty) return const SizedBox(height: AppSpacing.md);
 
     final score = _calculatePasswordStrength(pass);
     Color color;
@@ -573,67 +494,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildGlowingField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required bool hasFocus,
-    required String hintText,
-    required IconData icon,
-    required AppThemeColors c,
-    required ThemeData theme,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    ValueChanged<String>? onChanged,
-  }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          if (hasFocus)
-            BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.15),
-              blurRadius: 12,
-              spreadRadius: 2,
-            ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        obscureText: obscureText,
-        onChanged: onChanged,
-        style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-        decoration: InputDecoration(
-          hintText: hintText,
-          prefixIcon: Icon(icon, color: c.textMuted, size: 20),
-          suffixIcon: suffixIcon,
-          filled: true,
-          fillColor: c.card,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: c.divider),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: c.divider),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
-              color: theme.colorScheme.primary,
-              width: 1.5,
-            ),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-        ),
       ),
     );
   }

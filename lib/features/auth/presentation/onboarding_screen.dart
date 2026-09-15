@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart' as latlong;
 import '../../../core/assets/app_assets.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/auth_scaffold.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -196,7 +197,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
         const SizedBox(height: 18),
         SizedBox(
-          height: 286,
+          height: 312,
           child: PageView(
             controller: _introController,
             onPageChanged: (value) => setState(() => _introStep = value),
@@ -271,66 +272,70 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     required List<String> points,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: c.divider),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppAssetIcon(assetPath: asset, size: 42),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: GoogleFonts.manrope(
-              color: c.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: GoogleFonts.inter(
-              color: c.textSecondary,
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...points.map(
-            (point) => Padding(
-              padding: const EdgeInsets.only(bottom: 7),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    margin: const EdgeInsets.only(top: 6),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      point,
-                      style: GoogleFonts.inter(
-                        color: c.textPrimary,
-                        fontSize: 12,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
-                ],
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppAssetIcon(assetPath: asset, size: 36),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: GoogleFonts.manrope(
+                color: c.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              description,
+              style: GoogleFonts.inter(
+                color: c.textSecondary,
+                fontSize: 12.5,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...points.map(
+              (point) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(top: 5),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        point,
+                        style: GoogleFonts.inter(
+                          color: c.textPrimary,
+                          fontSize: 12,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -563,687 +568,663 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final theme = Theme.of(context);
     final state = ref.watch(authProvider);
 
-    return Scaffold(
-      backgroundColor: c.bg,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildOnboardingSlides(c, theme),
-                  if (_introStep == 2) ...[
-                    const SizedBox(height: 28),
-                    Center(
-                      child: Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.1,
+    return AuthScaffold(
+      maxWidth: 680,
+      canPop: true,
+      onPop: () => context.canPop() ? context.pop() : context.go('/login'),
+      brandHeadline: 'Thiết lập tài khoản & cửa hàng của bạn.',
+      brandDescription:
+          'Chọn vai trò và sẵn sàng vận hành bán hàng, quản lý kho trên SmartStock.',
+      brandCapabilities: const [
+        'Chọn vai trò Chủ cửa hàng hoặc Nhân viên',
+        'Tạo mới hoặc kết nối cửa hàng có sẵn',
+        'Bắt đầu quản lý bán hàng và tồn kho',
+      ],
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildOnboardingSlides(c, theme),
+          if (_introStep == 2) ...[
+            const SizedBox(height: 28),
+            Center(
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.person_pin_rounded,
+                  size: 48,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Hoàn tất thông tin',
+              style: GoogleFonts.manrope(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+                color: c.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Bạn chưa hoàn thành thiết lập tài khoản. Vui lòng bổ sung các thông tin còn thiếu để tiếp tục sử dụng ứng dụng.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: c.textSecondary,
+                height: 1.45,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+
+            if (_needsUsername) ...[
+              _buildGlowingField(
+                controller: _usernameCtrl,
+                focusNode: _usernameFocus,
+                hasFocus: _usernameHasFocus,
+                labelText: 'Tên đăng nhập mới *',
+                hintText: 'VD: nguyenvan_a123',
+                icon: Icons.account_circle_outlined,
+                c: c,
+                theme: theme,
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (_needsPhone) ...[
+              _buildGlowingField(
+                controller: _phoneCtrl,
+                focusNode: _phoneFocus,
+                hasFocus: _phoneHasFocus,
+                labelText: 'Số điện thoại *',
+                hintText: 'VD: 0987654321',
+                icon: Icons.phone_android_rounded,
+                keyboardType: TextInputType.phone,
+                c: c,
+                theme: theme,
+              ),
+              const SizedBox(height: 16),
+            ],
+            _buildGlowingField(
+              controller: _fullNameCtrl,
+              focusNode: _fullNameFocus,
+              hasFocus: _fullNameHasFocus,
+              labelText: 'Họ và tên của bạn *',
+              icon: Icons.badge_outlined,
+              c: c,
+              theme: theme,
+            ),
+
+            if (_accountType == 'SHOP') ...[
+              const SizedBox(height: 16),
+              _buildGlowingField(
+                controller: _shopNameCtrl,
+                focusNode: _shopNameFocus,
+                hasFocus: _shopNameHasFocus,
+                labelText: 'Tên cửa hàng / Doanh nghiệp *',
+                icon: Icons.storefront_rounded,
+                c: c,
+                theme: theme,
+              ),
+              const SizedBox(height: 16),
+              _buildGlowingField(
+                controller: _ownerNameCtrl,
+                focusNode: _ownerNameFocus,
+                hasFocus: _ownerNameHasFocus,
+                labelText: 'Tên chủ cửa hàng / Đại diện',
+                icon: Icons.person_outline_rounded,
+                c: c,
+                theme: theme,
+              ),
+              const SizedBox(height: 16),
+              _buildGlowingField(
+                controller: _addressCtrl,
+                focusNode: _addressFocus,
+                hasFocus: _addressHasFocus,
+                labelText: 'Địa chỉ kinh doanh',
+                icon: Icons.location_on_outlined,
+                c: c,
+                theme: theme,
+                onChanged: _onAddressChanged,
+                suffixIcon: _isSearchingAddress
+                    ? Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.primary,
                           ),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.15,
+                        ),
+                      )
+                    : null,
+              ),
+              if (_addressSuggestions.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: c.card.withValues(alpha: 0.95),
+                    border: Border.all(color: c.divider),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _addressSuggestions.length,
+                      separatorBuilder: (context, index) =>
+                          Divider(height: 1, color: c.divider),
+                      itemBuilder: (context, index) {
+                        final suggestion = _addressSuggestions[index];
+                        return ListTile(
+                          leading: Icon(
+                            Icons.location_on_rounded,
+                            color: theme.colorScheme.primary,
+                            size: 20,
+                          ),
+                          title: Text(
+                            suggestion['display_name'] ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: c.textPrimary,
                             ),
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.colorScheme.primary.withValues(
-                                alpha: 0.1,
-                              ),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
+                          onTap: () {
+                            setState(() {
+                              _addressCtrl.text =
+                                  suggestion['display_name'] ?? '';
+                              _selectedLat = suggestion['lat'] != null
+                                  ? double.tryParse(
+                                      suggestion['lat'].toString(),
+                                    )
+                                  : 10.762622;
+                              _selectedLon = suggestion['lon'] != null
+                                  ? double.tryParse(
+                                      suggestion['lon'].toString(),
+                                    )
+                                  : 106.660172;
+                              _addressSuggestions = [];
+                            });
+                            FocusScope.of(context).unfocus();
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              if (_selectedLat != null && _selectedLon != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.04),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.map_rounded,
+                            color: theme.colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Bản đồ vị trí',
+                            style: GoogleFonts.manrope(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: c.textPrimary,
                             ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.person_pin_rounded,
-                          size: 48,
-                          color: theme.colorScheme.primary,
-                        ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Hoàn tất thông tin',
-                      style: GoogleFonts.manrope(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                        color: c.textPrimary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Bạn chưa hoàn thành thiết lập tài khoản. Vui lòng bổ sung các thông tin còn thiếu để tiếp tục sử dụng ứng dụng.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: c.textSecondary,
-                        height: 1.45,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-
-                    if (_needsUsername) ...[
-                      _buildGlowingField(
-                        controller: _usernameCtrl,
-                        focusNode: _usernameFocus,
-                        hasFocus: _usernameHasFocus,
-                        labelText: 'Tên đăng nhập mới *',
-                        hintText: 'VD: nguyenvan_a123',
-                        icon: Icons.account_circle_outlined,
-                        c: c,
-                        theme: theme,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    if (_needsPhone) ...[
-                      _buildGlowingField(
-                        controller: _phoneCtrl,
-                        focusNode: _phoneFocus,
-                        hasFocus: _phoneHasFocus,
-                        labelText: 'Số điện thoại *',
-                        hintText: 'VD: 0987654321',
-                        icon: Icons.phone_android_rounded,
-                        keyboardType: TextInputType.phone,
-                        c: c,
-                        theme: theme,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    _buildGlowingField(
-                      controller: _fullNameCtrl,
-                      focusNode: _fullNameFocus,
-                      hasFocus: _fullNameHasFocus,
-                      labelText: 'Họ và tên của bạn *',
-                      icon: Icons.badge_outlined,
-                      c: c,
-                      theme: theme,
-                    ),
-
-                    if (_accountType == 'SHOP') ...[
-                      const SizedBox(height: 16),
-                      _buildGlowingField(
-                        controller: _shopNameCtrl,
-                        focusNode: _shopNameFocus,
-                        hasFocus: _shopNameHasFocus,
-                        labelText: 'Tên cửa hàng / Doanh nghiệp *',
-                        icon: Icons.storefront_rounded,
-                        c: c,
-                        theme: theme,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildGlowingField(
-                        controller: _ownerNameCtrl,
-                        focusNode: _ownerNameFocus,
-                        hasFocus: _ownerNameHasFocus,
-                        labelText: 'Tên chủ cửa hàng / Đại diện',
-                        icon: Icons.person_outline_rounded,
-                        c: c,
-                        theme: theme,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildGlowingField(
-                        controller: _addressCtrl,
-                        focusNode: _addressFocus,
-                        hasFocus: _addressHasFocus,
-                        labelText: 'Địa chỉ kinh doanh',
-                        icon: Icons.location_on_outlined,
-                        c: c,
-                        theme: theme,
-                        onChanged: _onAddressChanged,
-                        suffixIcon: _isSearchingAddress
-                            ? Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: theme.colorScheme.primary,
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: 120,
+                          width: double.infinity,
+                          color: c.card,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Positioned.fill(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        c.card,
+                                        theme.colorScheme.primary.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
                                   ),
                                 ),
-                              )
-                            : null,
-                      ),
-                      if (_addressSuggestions.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(top: 8),
-                          decoration: BoxDecoration(
-                            color: c.card.withValues(alpha: 0.95),
-                            border: Border.all(color: c.divider),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
                               ),
-                            ],
-                          ),
-                          constraints: const BoxConstraints(maxHeight: 200),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: ListView.separated(
-                              shrinkWrap: true,
-                              physics: const BouncingScrollPhysics(),
-                              itemCount: _addressSuggestions.length,
-                              separatorBuilder: (context, index) =>
-                                  Divider(height: 1, color: c.divider),
-                              itemBuilder: (context, index) {
-                                final suggestion = _addressSuggestions[index];
-                                return ListTile(
-                                  leading: Icon(
-                                    Icons.location_on_rounded,
-                                    color: theme.colorScheme.primary,
-                                    size: 20,
+                              FlutterMap(
+                                options: MapOptions(
+                                  initialCenter: latlong.LatLng(
+                                    _selectedLat!,
+                                    _selectedLon!,
                                   ),
-                                  title: Text(
-                                    suggestion['display_name'] ?? '',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: c.textPrimary,
-                                    ),
+                                  initialZoom: 15.0,
+                                  interactionOptions: const InteractionOptions(
+                                    flags:
+                                        InteractiveFlag.all &
+                                        ~InteractiveFlag.rotate,
                                   ),
-                                  onTap: () {
-                                    setState(() {
-                                      _addressCtrl.text =
-                                          suggestion['display_name'] ?? '';
-                                      _selectedLat = suggestion['lat'] != null
-                                          ? double.tryParse(
-                                              suggestion['lat'].toString(),
-                                            )
-                                          : 10.762622;
-                                      _selectedLon = suggestion['lon'] != null
-                                          ? double.tryParse(
-                                              suggestion['lon'].toString(),
-                                            )
-                                          : 106.660172;
-                                      _addressSuggestions = [];
-                                    });
-                                    FocusScope.of(context).unfocus();
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      if (_selectedLat != null && _selectedLon != null) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.04,
-                            ),
-                            border: Border.all(
-                              color: theme.colorScheme.primary.withValues(
-                                alpha: 0.15,
-                              ),
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                                ),
                                 children: [
-                                  Icon(
-                                    Icons.map_rounded,
-                                    color: theme.colorScheme.primary,
-                                    size: 20,
+                                  TileLayer(
+                                    urlTemplate:
+                                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                    userAgentPackageName:
+                                        'com.sales_stock_management.app',
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Bản đồ vị trí',
-                                    style: GoogleFonts.manrope(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: c.textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  height: 120,
-                                  width: double.infinity,
-                                  color: c.card,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      Positioned.fill(
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                c.card,
-                                                theme.colorScheme.primary
-                                                    .withValues(alpha: 0.08),
-                                              ],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                          ),
+                                  MarkerLayer(
+                                    markers: [
+                                      Marker(
+                                        point: latlong.LatLng(
+                                          _selectedLat!,
+                                          _selectedLon!,
                                         ),
-                                      ),
-                                      FlutterMap(
-                                        options: MapOptions(
-                                          initialCenter: latlong.LatLng(
-                                            _selectedLat!,
-                                            _selectedLon!,
-                                          ),
-                                          initialZoom: 15.0,
-                                          interactionOptions:
-                                              const InteractionOptions(
-                                                flags:
-                                                    InteractiveFlag.all &
-                                                    ~InteractiveFlag.rotate,
-                                              ),
+                                        width: 40,
+                                        height: 40,
+                                        child: const Icon(
+                                          Icons.location_pin,
+                                          color: AppColors.danger,
+                                          size: 36,
                                         ),
-                                        children: [
-                                          TileLayer(
-                                            urlTemplate:
-                                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                            userAgentPackageName:
-                                                'com.sales_stock_management.app',
-                                          ),
-                                          MarkerLayer(
-                                            markers: [
-                                              Marker(
-                                                point: latlong.LatLng(
-                                                  _selectedLat!,
-                                                  _selectedLon!,
-                                                ),
-                                                width: 40,
-                                                height: 40,
-                                                child: const Icon(
-                                                  Icons.location_pin,
-                                                  color: AppColors.danger,
-                                                  size: 36,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
                                       ),
                                     ],
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ] else if (_accountType == 'PERSONAL' && _needsShop) ...[
+              const SizedBox(height: 16),
+              if (_selectedShop == null) ...[
+                _buildGlowingField(
+                  controller: _shopSearchCtrl,
+                  focusNode: _shopSearchFocus,
+                  hasFocus: _shopSearchHasFocus,
+                  labelText: 'Tìm Cửa hàng / Doanh nghiệp',
+                  hintText: 'Nhập tên cửa hàng...',
+                  icon: Icons.search_rounded,
+                  c: c,
+                  theme: theme,
+                  onChanged: (val) async {
+                    if (val.trim().length > 2) {
+                      setState(() => _isSearching = true);
+                      try {
+                        final results = await ref
+                            .read(authProvider.notifier)
+                            .searchShops(val);
+                        if (mounted) {
+                          setState(() => _searchResults = results);
+                        }
+                      } catch (error) {
+                        if (mounted) {
+                          setState(() => _searchResults = []);
+                          ToastService.showError(
+                            'Không thể tải cửa hàng từ cơ sở dữ liệu',
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() => _isSearching = false);
+                        }
+                      }
+                    } else {
+                      if (mounted) {
+                        setState(() {
+                          _searchResults = [];
+                        });
+                      }
+                    }
+                  },
+                  suffixIcon: _isSearching
+                      ? Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+                if (_searchResults.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: c.card.withValues(alpha: 0.95),
+                      border: Border.all(color: c.divider),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
                       ],
-                    ] else if (_accountType == 'PERSONAL' && _needsShop) ...[
-                      const SizedBox(height: 16),
-                      if (_selectedShop == null) ...[
-                        _buildGlowingField(
-                          controller: _shopSearchCtrl,
-                          focusNode: _shopSearchFocus,
-                          hasFocus: _shopSearchHasFocus,
-                          labelText: 'Tìm Cửa hàng / Doanh nghiệp',
-                          hintText: 'Nhập tên cửa hàng...',
-                          icon: Icons.search_rounded,
-                          c: c,
-                          theme: theme,
-                          onChanged: (val) async {
-                            if (val.trim().length > 2) {
-                              setState(() => _isSearching = true);
-                              try {
-                                final results = await ref
-                                    .read(authProvider.notifier)
-                                    .searchShops(val);
-                                if (mounted) {
-                                  setState(() => _searchResults = results);
-                                }
-                              } catch (error) {
-                                if (mounted) {
-                                  setState(() => _searchResults = []);
-                                  ToastService.showError(
-                                    'Không thể tải cửa hàng từ cơ sở dữ liệu',
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _isSearching = false);
-                                }
-                              }
-                            } else {
-                              if (mounted) {
-                                setState(() {
-                                  _searchResults = [];
-                                });
-                              }
-                            }
-                          },
-                          suffixIcon: _isSearching
-                              ? Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: theme.colorScheme.primary,
+                    ),
+                    constraints: const BoxConstraints(maxHeight: 200),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: _searchResults.length,
+                        separatorBuilder: (context, index) =>
+                            Divider(height: 1, color: c.divider),
+                        itemBuilder: (context, index) {
+                          final shop = _searchResults[index];
+                          return ListTile(
+                            leading: shop['logoUrl'] != null
+                                ? Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      image: DecorationImage(
+                                        image: NetworkImage(shop['logoUrl']),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  )
+                                : Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      shop['shopName']?[0] ?? 'S',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                )
-                              : null,
-                        ),
-                        if (_searchResults.isNotEmpty)
-                          Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            decoration: BoxDecoration(
-                              color: c.card.withValues(alpha: 0.95),
-                              border: Border.all(color: c.divider),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            constraints: const BoxConstraints(maxHeight: 200),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                physics: const BouncingScrollPhysics(),
-                                itemCount: _searchResults.length,
-                                separatorBuilder: (context, index) =>
-                                    Divider(height: 1, color: c.divider),
-                                itemBuilder: (context, index) {
-                                  final shop = _searchResults[index];
-                                  return ListTile(
-                                    leading: shop['logoUrl'] != null
-                                        ? Container(
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              image: DecorationImage(
-                                                image: NetworkImage(
-                                                  shop['logoUrl'],
-                                                ),
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                          )
-                                        : Container(
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.primary
-                                                  .withValues(alpha: 0.1),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: Text(
-                                              shop['shopName']?[0] ?? 'S',
-                                              style: TextStyle(
-                                                color:
-                                                    theme.colorScheme.primary,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                    title: Text(
-                                      shop['shopName'] ?? '',
-                                      style: GoogleFonts.manrope(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                        color: c.textPrimary,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      shop['address'] ?? '',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: c.textSecondary,
-                                      ),
-                                    ),
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedShop = shop;
-                                        _searchResults = [];
-                                        _shopSearchCtrl.text =
-                                            shop['shopName'] ?? '';
-                                      });
-                                    },
-                                  );
-                                },
+                            title: Text(
+                              shop['shopName'] ?? '',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: c.textPrimary,
                               ),
                             ),
-                          ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(child: Divider(color: c.divider)),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Text(
-                                'Hoặc',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: c.textMuted,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            subtitle: Text(
+                              shop['address'] ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: c.textSecondary,
                               ),
                             ),
-                            Expanded(child: Divider(color: c.divider)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildGlowingField(
-                          controller: _shopCodeCtrl,
-                          focusNode: _shopCodeFocus,
-                          hasFocus: _shopCodeHasFocus,
-                          labelText: 'Mã cửa hàng *',
-                          hintText: 'Nhập mã 6 ký tự được cung cấp',
-                          icon: Icons.qr_code_rounded,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _submit(),
-                          c: c,
-                          theme: theme,
-                        ),
-                      ] else ...[
-                        // Shop Selected UI
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.05,
-                            ),
-                            border: Border.all(
-                              color: theme.colorScheme.primary.withValues(
-                                alpha: 0.15,
-                              ),
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              _selectedShop!['logoUrl'] != null
-                                  ? Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        image: DecorationImage(
-                                          image: NetworkImage(
-                                            _selectedShop!['logoUrl'],
-                                          ),
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    )
-                                  : Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary
-                                            .withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Text(
-                                        _selectedShop!['shopName']?[0] ?? 'S',
-                                        style: TextStyle(
-                                          color: theme.colorScheme.primary,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
-                                        ),
-                                      ),
-                                    ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _selectedShop!['shopName'] ?? '',
-                                      style: GoogleFonts.manrope(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: c.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _selectedShop!['address'] ?? '',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: c.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.close_rounded,
-                                  color: c.textMuted,
-                                ),
-                                onPressed: () => setState(() {
-                                  _selectedShop = null;
-                                  _shopCodeCtrl.clear();
-                                  _shopSearchCtrl.clear();
-                                }),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildGlowingField(
-                          controller: _shopCodeCtrl,
-                          focusNode: _shopCodeFocus,
-                          hasFocus: _shopCodeHasFocus,
-                          labelText: 'Xác thực Mã cửa hàng *',
-                          hintText: 'Nhập mã 6 ký tự được cung cấp',
-                          icon: Icons.security_rounded,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _submit(),
-                          c: c,
-                          theme: theme,
-                        ),
-                      ],
-                    ],
-
-                    if (state.error != null) ...[
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.danger.withValues(alpha: 0.15),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              color: AppColors.danger,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                state.error!,
-                                style: GoogleFonts.inter(
-                                  color: AppColors.danger,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
+                            onTap: () {
+                              setState(() {
+                                _selectedShop = shop;
+                                _searchResults = [];
+                                _shopSearchCtrl.text = shop['shopName'] ?? '';
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: c.divider)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Hoặc',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: c.textMuted,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ],
-
-                    const SizedBox(height: 36),
-                    ElevatedButton(
-                      onPressed: state.isLoading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        elevation: 0,
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: state.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
+                    ),
+                    Expanded(child: Divider(color: c.divider)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildGlowingField(
+                  controller: _shopCodeCtrl,
+                  focusNode: _shopCodeFocus,
+                  hasFocus: _shopCodeHasFocus,
+                  labelText: 'Mã cửa hàng *',
+                  hintText: 'Nhập mã 6 ký tự được cung cấp',
+                  icon: Icons.qr_code_rounded,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  c: c,
+                  theme: theme,
+                ),
+              ] else ...[
+                // Shop Selected UI
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      _selectedShop!['logoUrl'] != null
+                          ? Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                image: DecorationImage(
+                                  image: NetworkImage(
+                                    _selectedShop!['logoUrl'],
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             )
-                          : Text(
-                              _accountType == 'SHOP'
-                                  ? 'Tạo cửa hàng & Bắt đầu'
-                                  : !_needsShop
-                                  ? 'Hoàn tất & Bắt đầu'
-                                  : 'Gửi yêu cầu tham gia',
-                              style: GoogleFonts.manrope(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                          : Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                _selectedShop!['shopName']?[0] ?? 'S',
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
                               ),
                             ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedShop!['shopName'] ?? '',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: c.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _selectedShop!['address'] ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded, color: c.textMuted),
+                        onPressed: () => setState(() {
+                          _selectedShop = null;
+                          _shopCodeCtrl.clear();
+                          _shopSearchCtrl.clear();
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildGlowingField(
+                  controller: _shopCodeCtrl,
+                  focusNode: _shopCodeFocus,
+                  hasFocus: _shopCodeHasFocus,
+                  labelText: 'Xác thực Mã cửa hàng *',
+                  hintText: 'Nhập mã 6 ký tự được cung cấp',
+                  icon: Icons.security_rounded,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  c: c,
+                  theme: theme,
+                ),
+              ],
+            ],
+
+            if (state.error != null) ...[
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.danger.withValues(alpha: 0.15),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      color: AppColors.danger,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        state.error!,
+                        style: GoogleFonts.inter(
+                          color: AppColors.danger,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
-                ],
+                ),
               ),
+            ],
+
+            const SizedBox(height: 36),
+            ElevatedButton(
+              onPressed: state.isLoading ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: state.isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      _accountType == 'SHOP'
+                          ? 'Tạo cửa hàng & Bắt đầu'
+                          : !_needsShop
+                          ? 'Hoàn tất & Bắt đầu'
+                          : 'Gửi yêu cầu tham gia',
+                      style: GoogleFonts.manrope(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
             ),
-          ),
-        ),
+          ],
+        ],
       ),
     );
   }
@@ -1266,13 +1247,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.input),
         boxShadow: [
           if (hasFocus)
             BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.15),
-              blurRadius: 12,
-              spreadRadius: 2,
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+              blurRadius: 10,
+              spreadRadius: 1,
             ),
         ],
       ),
@@ -1292,15 +1273,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           filled: true,
           fillColor: c.card,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.input),
             borderSide: BorderSide(color: c.divider),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.input),
             borderSide: BorderSide(color: c.divider),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.input),
             borderSide: BorderSide(
               color: theme.colorScheme.primary,
               width: 1.5,

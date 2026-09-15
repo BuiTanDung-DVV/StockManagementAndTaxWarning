@@ -173,14 +173,17 @@ class ExcelExportService {
     return buffer.toString();
   }
 
-  /// Export Inventory Items to Excel CSV
-  static void exportInventoryToExcel(List<dynamic> products) {
-    final StringBuffer buffer = StringBuffer();
-    buffer.write('\uFEFF');
+  /// Build Inventory CSV content with UTF-8 BOM, normalized fields and formula safety
+  static String buildInventoryCsv(
+    List<dynamic> products, {
+    DateTime? exportedAt,
+  }) {
+    final exportTime = exportedAt ?? DateTime.now();
+    final StringBuffer buffer = StringBuffer('\uFEFF');
 
     buffer.writeln('BÁO CÁO KIỂM KÊ TỒN KHO - SMARTSTOCK');
     buffer.writeln(
-      'Ngày xuất: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+      'Ngày xuất: ${DateFormat('dd/MM/yyyy HH:mm').format(exportTime)}',
     );
     buffer.writeln();
 
@@ -189,25 +192,60 @@ class ExcelExportService {
     );
 
     for (final p in products) {
-      final code = p['sku'] ?? p['barcode'] ?? p['id'] ?? '';
-      final name = (p['name'] ?? '').toString().replaceAll(',', ' ');
-      final unit = p['unit'] ?? 'Cái';
-      final stock = p['stockQuantity'] ?? 0;
-      final minStock = p['minStockThreshold'] ?? 5;
-      final price =
-          num.tryParse(p['sellingPrice']?.toString() ?? '0')?.toDouble() ?? 0.0;
-      final status = stock <= 0
-          ? 'Hết hàng'
-          : (stock <= minStock ? 'Cần nhập thêm' : 'An toàn');
+      final code = _safeSpreadsheetText(
+        (p['sku'] ?? p['barcode'] ?? p['id'] ?? '').toString(),
+      );
+      final name = _safeSpreadsheetText((p['name'] ?? '').toString());
+      final unit = _safeSpreadsheetText((p['unit'] ?? 'Cái').toString());
+
+      final rawStock = p['currentStock'] ?? p['stockQuantity'] ?? p['stock'];
+      final rawMinStock = p['minStock'] ??
+          p['minimumStock'] ??
+          p['minStockThreshold'] ??
+          p['min_stock'];
+      final rawPrice =
+          p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice'];
+
+      final num? stock =
+          rawStock == null ? null : num.tryParse(rawStock.toString());
+      final num? minStock =
+          rawMinStock == null ? null : num.tryParse(rawMinStock.toString());
+      final double? price = rawPrice == null
+          ? null
+          : num.tryParse(rawPrice.toString())?.toDouble();
+
+      final String stockStr = stock != null ? stock.toString() : '';
+      final String minStockStr = minStock != null ? minStock.toString() : '';
+      final String priceStr = price != null ? price.toString() : '';
+
+      final String status;
+      if (stock == null) {
+        status = 'Chưa có số liệu';
+      } else if (stock <= 0) {
+        status = 'Hết hàng';
+      } else if (minStock != null && minStock > 0 && stock <= minStock) {
+        status = 'Cần nhập thêm';
+      } else {
+        status = 'An toàn';
+      }
 
       buffer.writeln(
-        '"$code","$name","$unit",$stock,$minStock,$price,"$status"',
+        '${_csvCell(code)},${_csvCell(name)},${_csvCell(unit)},$stockStr,$minStockStr,$priceStr,${_csvCell(status)}',
       );
     }
 
-    _downloadFile(
-      buffer.toString(),
-      'Bao_Cao_Ton_Kho_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
+    return buffer.toString();
+  }
+
+  /// Export Inventory Items to Excel CSV
+  static Future<bool> exportInventoryToExcel(
+    List<dynamic> products, {
+    DateTime? exportedAt,
+  }) {
+    final exportTime = exportedAt ?? DateTime.now();
+    return _downloadFile(
+      buildInventoryCsv(products, exportedAt: exportTime),
+      'Bao_Cao_Ton_Kho_${DateFormat('yyyyMMdd').format(exportTime)}.csv',
     );
   }
 
@@ -226,9 +264,13 @@ class ExcelExportService {
 
   static String _csvCell(String value) => '"${value.replaceAll('"', '""')}"';
 
-  static Future<bool> _downloadFile(String content, String fileName) {
-    final bytes = utf8.encode(content);
-    final uri = Uri.dataFromBytes(bytes, mimeType: 'text/csv;charset=utf-8');
-    return launchUrl(uri);
+  static Future<bool> _downloadFile(String content, String fileName) async {
+    try {
+      final bytes = utf8.encode(content);
+      final uri = Uri.dataFromBytes(bytes, mimeType: 'text/csv;charset=utf-8');
+      return await launchUrl(uri);
+    } catch (_) {
+      return false;
+    }
   }
 }
