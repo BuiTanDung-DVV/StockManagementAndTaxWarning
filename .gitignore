@@ -104,7 +104,7 @@ codegraph/
 .codex-build/
 .codex-flutter-state/
 AGENTS.md
-CODEX_GUIDE_VI.md
+docs_internal/
 
 # Deployment configs
 .vercel/
@@ -125,8 +125,6 @@ tmp*.txt
 google_client_secret_*.json
 client_secret_*.json
 
-# Local test accounts and developer-only credentials
-/TaiKhoanKiemThu.md
 
 # Local assistant/tooling context
 /.cursorrules
