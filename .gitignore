@@ -156,36 +156,8 @@ artifacts/
 smartstock-*.png
 serve-ui-preview.mjs
 
-# Automated test runs & large execution dumps
-BA_DOCUMENTS/TEST_RUNS/
-BA_DOCUMENTS/**/local/
-BA_DOCUMENTS/dashboard-insights-screenshots/
-BA_DOCUMENTS/**/*.png
-BA_DOCUMENTS/**/*.jpg
-BA_DOCUMENTS/**/*.jpeg
-BA_DOCUMENTS/**/screenshots/
-BA_DOCUMENTS/**/authenticated/
-BA_DOCUMENTS/**/v2-screenshots/
+# Automated test runs, artifacts & documents
+BA_DOCUMENTS/
+DEMO Screen/
 *.dill
 *.old
-
-# Internal working documents, test plans & audits
-BA_DOCUMENTS/ANTIGRAVITY_UI_AUDIT_*/
-BA_DOCUMENTS/FULL_APP_TEST_*/
-BA_DOCUMENTS/IMPLEMENTATION_*/
-BA_DOCUMENTS/UI_AUDIT/
-BA_DOCUMENTS/*-plan*.md
-BA_DOCUMENTS/*-feedback.md
-BA_DOCUMENTS/*-review.md
-BA_DOCUMENTS/complete-testing-*.md
-BA_DOCUMENTS/full-app-*.md
-BA_DOCUMENTS/antigravity-test-*.md
-BA_DOCUMENTS/antigravity-test-*.json
-BA_DOCUMENTS/test-shop-audit-*.json
-BA_DOCUMENTS/AUTOMATED_TEST_*.md
-BA_DOCUMENTS/DASHBOARD_*.md
-BA_DOCUMENTS/DEMO_*.md
-BA_DOCUMENTS/KE_HOACH_*.md
-BA_DOCUMENTS/THIET_KE_*.md
-BA_DOCUMENTS/UI_*.md
-DEMO Screen/

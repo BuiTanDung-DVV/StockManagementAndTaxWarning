@@ -18,7 +18,6 @@
   [Architecture](#-architecture) •
   [Tech Stack](#-tech-stack) •
   [Design System & UI/UX](#-design-system--uiux) •
-  [BA Documents & Audits](#-business-analysis-ba--quality-audits) •
   [Getting Started](#-getting-started) •
   [Testing & Verification](#-automated-testing--data-integrity) •
   [Deployment](#-deployment)
@@ -139,9 +138,7 @@ StockManagementAndTaxWarning/
 │       └── tax/                         # Tax estimates, obligations, HTKK export
 │
 ├── assets/                              # Offline fonts (Inter, Manrope), icons, Lottie
-├── BA_DOCUMENTS/                        # 50+ Business requirements, audits & specs
-├── scripts/                             # Antigravity automated visual audit scripts
-└── DEMO Screen/                         # UI Design System references & benchmark mockups
+└── scripts/                             # Verification & test isolation scripts
 ```
 
 ---
@@ -172,7 +169,7 @@ StockManagementAndTaxWarning/
 
 ## 🎨 Design System & UI/UX
 
-The application follows modern enterprise design principles outlined in [BA_DOCUMENTS/UI_COMPARISON_AND_SYSTEM_BENCHMARK.md](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/UI_COMPARISON_AND_SYSTEM_BENCHMARK.md):
+The application follows modern enterprise design principles:
 1. **Calibrated Color Palette**: Soft pastel backgrounds for metric tiles (`#E0F2FE` revenue, `#FEF3C7` inventory, `#EDE9FE` tax indicators) providing clear visual hierarchy without cognitive fatigue.
 2. **Typography**: Bundled local fonts (`Inter` and `Manrope`) guarantee offline availability and prevent Web font jumping (FOIT/FOUT).
 3. **Responsive Viewport Standard**:
@@ -180,22 +177,6 @@ The application follows modern enterprise design principles outlined in [BA_DOCU
    * **Tablet (768×1024)**: Adaptive side-sheet navigation, split screens.
    * **Desktop (1440×900)**: Multi-column layouts, data tables with frozen headers, expandable insight sidebars.
 4. **Dual-Workspace Paradigm**: Clear separation between high-speed **POS Checkout** and deep **Back-office Management**.
-
----
-
-## 📚 Business Analysis (BA) & Quality Audits
-
-The repository maintains an extensive collection of formal software engineering documentation in the [BA_DOCUMENTS/](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/) directory:
-
-* **Core Specifications:**
-  * [01_BUSINESS_REQUIREMENT_DOCUMENT_BRD.md](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/01_BUSINESS_REQUIREMENT_DOCUMENT_BRD.md) — Core business goals & legal context.
-  * [02_SYSTEM_REQUIREMENT_SPECIFICATION_SRS.md](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/02_SYSTEM_REQUIREMENT_SPECIFICATION_SRS.md) — Functional and non-functional requirements.
-  * [03_DATA_DICTIONARY_AND_SCHEMA.md](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/03_DATA_DICTIONARY_AND_SCHEMA.md) — Comprehensive database schema dictionary.
-  * [04_USER_ROLES_AND_RBAC_MATRIX.md](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/04_USER_ROLES_AND_RBAC_MATRIX.md) — Granular permission matrix across roles.
-  * [05_TAX_COMPLIANCE_GUIDELINES.md](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/05_TAX_COMPLIANCE_GUIDELINES.md) — Detailed tax rules according to Circulars 88 & 40.
-* **Design & Benchmarks:**
-  * [UI_COMPARISON_AND_SYSTEM_BENCHMARK.md](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/UI_COMPARISON_AND_SYSTEM_BENCHMARK.md) — Comparison against industry leaders (KiotViet, Sapo, Odoo).
-  * [AUTOMATED_TEST_WORKFLOW.md](file:///d:/StockManagementAndTaxWarning/BA_DOCUMENTS/AUTOMATED_TEST_WORKFLOW.md) — Specification for production visual audits.
 
 ---
 
