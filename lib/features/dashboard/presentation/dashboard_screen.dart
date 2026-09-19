@@ -422,10 +422,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         : 'Chưa phát sinh · $periodLabel';
 
     final rawCash = cashData['cashBalance'];
-    final num? parsedCash =
-        rawCash == null ? null : num.tryParse(rawCash.toString());
-    final cashBalance =
-        (hasFinance && cashAvailable && !cashHasError) ? parsedCash : null;
+    final num? parsedCash = rawCash == null
+        ? null
+        : num.tryParse(rawCash.toString());
+    final cashBalance = (hasFinance && cashAvailable && !cashHasError)
+        ? parsedCash
+        : null;
 
     final String cashValue;
     final String cashContext;
@@ -899,6 +901,7 @@ class _DashboardEqualHeightRow extends MultiChildRenderObjectWidget {
   final Widget right;
   final double spacing;
   final double? rightWidth;
+  final Object? layoutRevision;
 
   _DashboardEqualHeightRow({
     super.key,
@@ -906,6 +909,7 @@ class _DashboardEqualHeightRow extends MultiChildRenderObjectWidget {
     required this.right,
     this.spacing = AppSpacing.lg,
     this.rightWidth,
+    this.layoutRevision,
   }) : super(children: [left, right]);
 
   @override
@@ -913,6 +917,7 @@ class _DashboardEqualHeightRow extends MultiChildRenderObjectWidget {
     return _RenderDashboardEqualHeightRow(
       spacing: spacing,
       rightWidth: rightWidth,
+      layoutRevision: layoutRevision,
     );
   }
 
@@ -923,7 +928,8 @@ class _DashboardEqualHeightRow extends MultiChildRenderObjectWidget {
   ) {
     renderObject
       ..spacing = spacing
-      ..rightWidth = rightWidth;
+      ..rightWidth = rightWidth
+      ..layoutRevision = layoutRevision;
   }
 }
 
@@ -935,10 +941,15 @@ class _RenderDashboardEqualHeightRow extends RenderBox
         RenderBoxContainerDefaultsMixin<RenderBox, _EqualHeightParentData> {
   double _spacing;
   double? _rightWidth;
+  Object? _layoutRevision;
 
-  _RenderDashboardEqualHeightRow({required double spacing, double? rightWidth})
-    : _spacing = spacing,
-      _rightWidth = rightWidth;
+  _RenderDashboardEqualHeightRow({
+    required double spacing,
+    double? rightWidth,
+    Object? layoutRevision,
+  }) : _spacing = spacing,
+       _rightWidth = rightWidth,
+       _layoutRevision = layoutRevision;
 
   double get spacing => _spacing;
   set spacing(double value) {
@@ -952,6 +963,14 @@ class _RenderDashboardEqualHeightRow extends RenderBox
   set rightWidth(double? value) {
     if (_rightWidth != value) {
       _rightWidth = value;
+      markNeedsLayout();
+    }
+  }
+
+  Object? get layoutRevision => _layoutRevision;
+  set layoutRevision(Object? value) {
+    if (_layoutRevision != value) {
+      _layoutRevision = value;
       markNeedsLayout();
     }
   }
@@ -1021,16 +1040,24 @@ class _RenderDashboardEqualHeightRow extends RenderBox
       rightChild.size.height,
     );
 
-    // Pass 2: Relayout both children with tight tallest height
+    // Pass 2: Relayout both children with tight stretch constraints
+    // This forces both children to be exactly the same height
     leftChild.layout(
-      BoxConstraints.tightFor(width: allocatedLeftWidth, height: tallestHeight),
+      BoxConstraints(
+        minWidth: allocatedLeftWidth,
+        maxWidth: allocatedLeftWidth,
+        minHeight: tallestHeight,
+        maxHeight: tallestHeight,
+      ),
       parentUsesSize: true,
     );
 
     rightChild.layout(
-      BoxConstraints.tightFor(
-        width: allocatedRightWidth,
-        height: tallestHeight,
+      BoxConstraints(
+        minWidth: allocatedRightWidth,
+        maxWidth: allocatedRightWidth,
+        minHeight: tallestHeight,
+        maxHeight: tallestHeight,
       ),
       parentUsesSize: true,
     );
@@ -1134,6 +1161,8 @@ class _DashboardWorkspace extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final actionState = ref.watch(dashboardActionProvider);
+
     final chart = KeyedSubtree(
       key: const Key('dashboard-card-chart'),
       child: _DashboardChart(
@@ -1285,6 +1314,7 @@ class _DashboardWorkspace extends ConsumerWidget {
                 _DashboardEqualHeightRow(
                   key: const Key('dashboard-row-warehouse-priority-stock'),
                   spacing: AppSpacing.lg,
+                  layoutRevision: actionState,
                   left: const KeyedSubtree(
                     key: Key('dashboard-card-priority'),
                     child: DashboardPriorityList(fixedHeight: false),
@@ -1335,6 +1365,7 @@ class _DashboardWorkspace extends ConsumerWidget {
               key: const Key('dashboard-row-chart-priority'),
               spacing: AppSpacing.lg,
               rightWidth: 360,
+              layoutRevision: actionState,
               left: chart,
               right: const KeyedSubtree(
                 key: Key('dashboard-card-priority'),

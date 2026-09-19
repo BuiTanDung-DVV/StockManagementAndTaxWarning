@@ -22,7 +22,9 @@ enum BusinessType {
   static BusinessType fromSector(String? sector) {
     final normalized = sector?.trim().toUpperCase();
     if (normalized == null || normalized.isEmpty) {
-      throw const FormatException('API cấu hình thuế thiếu ngành nghề cửa hàng');
+      throw const FormatException(
+        'API cấu hình thuế thiếu ngành nghề cửa hàng',
+      );
     }
     for (final type in values) {
       if (type.sectorCode == normalized) return type;

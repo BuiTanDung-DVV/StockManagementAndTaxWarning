@@ -59,9 +59,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         automaticallyImplyLeading: false,
         leadingWidth: 60,
         leading: AppNavigationBackLeading(
-          onPressed: () => context.canPop()
-              ? context.pop()
-              : context.go(widget.returnRoute),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(widget.returnRoute),
         ),
         title: Text(
           'Chi Tiết Sản Phẩm',

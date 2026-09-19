@@ -24,6 +24,7 @@ class _FakeTaxConfigNotifier extends TaxConfigNotifier {
   @override
   Future<void> refresh() async {
     refreshed = true;
+    state = const TaxConfig.loading();
   }
 }
 
@@ -42,9 +43,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            taxConfigProvider.overrideWith(() => fakeNotifier),
-          ],
+          overrides: [taxConfigProvider.overrideWith(() => fakeNotifier)],
           child: MaterialApp(
             theme: AppTheme.lightTheme(AppColors.primary),
             home: const TaxConfigScreen(),
@@ -64,11 +63,13 @@ void main() {
       );
 
       // Verify "Thử lại" button is present and tap triggers refresh()
-      final retryButton = find.widgetWithText(ElevatedButton, 'Thử lại');
+      final retryButton = find.widgetWithText(FilledButton, 'Thử lại');
       expect(retryButton, findsOneWidget);
       await tester.tap(retryButton);
       await tester.pump();
       expect(fakeNotifier.refreshed, isTrue);
+      // Proves loading transition on retry
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
       // Verify Save button tooltip indicates config is not ready
       expect(find.byTooltip('Chưa có cấu hình hợp lệ để lưu'), findsOneWidget);

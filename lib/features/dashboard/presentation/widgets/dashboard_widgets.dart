@@ -28,7 +28,8 @@ final _currFmt = NumberFormat.currency(
 );
 
 class TaxObligationReminder extends ConsumerWidget {
-  const TaxObligationReminder({super.key});
+  final DateTime Function()? clock;
+  const TaxObligationReminder({super.key, this.clock});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,153 +44,372 @@ class TaxObligationReminder extends ConsumerWidget {
       ),
       data: (data) {
         final all = ((data['items'] as List?) ?? []);
-        final pending = all.where((t) => t['status'] != 'done').toList();
-        if (pending.isEmpty) return const SizedBox.shrink();
+        const excludedStatuses = {'done', 'paid', 'cancelled'};
+        final active = all.where((t) {
+          final s = (t['status']?.toString() ?? '').trim().toLowerCase();
+          return !excludedStatuses.contains(s);
+        }).toList();
+        if (active.isEmpty) return const SizedBox.shrink();
+
+        final now = clock?.call() ?? DateTime.now();
+        // Vietnam calendar date at this instant (UTC+7)
+        final vnNow = now.toUtc().add(const Duration(hours: 7));
+        final todayDate = DateTime.utc(vnNow.year, vnNow.month, vnNow.day);
+
+        DateTime? parseDueDate(dynamic raw) {
+          if (raw == null) return null;
+          final s = raw.toString().trim();
+          if (s.isEmpty) return null;
+
+          // Strictly match date-only YYYY-MM-DD
+          final dateOnlyMatch = RegExp(
+            r'^(\d{4})-(\d{2})-(\d{2})$',
+          ).firstMatch(s);
+          if (dateOnlyMatch != null) {
+            final y = int.tryParse(dateOnlyMatch.group(1)!);
+            final m = int.tryParse(dateOnlyMatch.group(2)!);
+            final d = int.tryParse(dateOnlyMatch.group(3)!);
+            if (y == null || m == null || d == null) return null;
+            final dt = DateTime.utc(y, m, d);
+            if (dt.year != y || dt.month != m || dt.day != d) return null;
+            return dt;
+          }
+
+          // Strictly match ISO-8601 datetime with T
+          final isoMatch = RegExp(
+            r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$',
+          ).firstMatch(s);
+          if (isoMatch != null) {
+            final y = int.tryParse(isoMatch.group(1)!);
+            final m = int.tryParse(isoMatch.group(2)!);
+            final d = int.tryParse(isoMatch.group(3)!);
+            final hh = int.tryParse(isoMatch.group(4) ?? '0') ?? 0;
+            final mm = int.tryParse(isoMatch.group(5) ?? '0') ?? 0;
+            final ss = int.tryParse(isoMatch.group(6) ?? '0') ?? 0;
+            if (y == null || m == null || d == null) return null;
+            final check = DateTime.utc(y, m, d, hh, mm, ss);
+            if (check.year != y ||
+                check.month != m ||
+                check.day != d ||
+                check.hour != hh ||
+                check.minute != mm ||
+                check.second != ss) {
+              return null;
+            }
+
+            final tz = isoMatch.group(7);
+            if (tz == null || tz.isEmpty) {
+              // Timestamp without zone: backend contract is date-only in Vietnam.
+              // Must not depend on machine TZ!
+              return DateTime.utc(y, m, d);
+            } else if (tz == 'Z') {
+              // UTC timestamp: convert to Vietnam calendar date (+7 hours)
+              final dtUtc = DateTime.utc(y, m, d, hh, mm, ss);
+              final dtVn = dtUtc.add(const Duration(hours: 7));
+              return DateTime.utc(dtVn.year, dtVn.month, dtVn.day);
+            } else {
+              // Explicit offset [+-]HH:MM or [+-]HHMM
+              final sign = tz.startsWith('-') ? -1 : 1;
+              final cleanOffset = tz.substring(1).replaceAll(':', '');
+              if (cleanOffset.length >= 2) {
+                final offsetHours =
+                    int.tryParse(cleanOffset.substring(0, 2)) ?? 0;
+                final offsetMinutes = cleanOffset.length >= 4
+                    ? (int.tryParse(cleanOffset.substring(2, 4)) ?? 0)
+                    : 0;
+                final totalOffsetMinutes =
+                    sign * (offsetHours * 60 + offsetMinutes);
+                final dtUtc = DateTime.utc(
+                  y,
+                  m,
+                  d,
+                  hh,
+                  mm,
+                  ss,
+                ).subtract(Duration(minutes: totalOffsetMinutes));
+                final dtVn = dtUtc.add(const Duration(hours: 7));
+                return DateTime.utc(dtVn.year, dtVn.month, dtVn.day);
+              }
+              return DateTime.utc(y, m, d);
+            }
+          }
+
+          return null;
+        }
+
+        int getPriority(dynamic item) {
+          final s = (item['status']?.toString() ?? '').trim().toLowerCase();
+          final d = parseDueDate(item['dueDate']);
+          final dl = d?.difference(todayDate).inDays;
+
+          if (s == 'overdue' && dl != null && dl > 0) return -9998;
+          if (dl != null && dl < 0) return -10000 + dl;
+          if (s == 'overdue' && dl == null) return -9999;
+          if (dl != null && dl == 0) return 0;
+          if (dl == null) return 1;
+          return dl + 1;
+        }
+
+        active.sort((a, b) => getPriority(a).compareTo(getPriority(b)));
+        final displayList = active.take(5).toList();
 
         return Padding(
           padding: const EdgeInsets.only(top: 14),
           child: Column(
-            children: pending.map<Widget>((t) {
-              final period = t['period'] ?? '';
-              final dueDateStr = t['dueDate']?.toString().split('T').first;
-              final vatDeclared =
-                  num.tryParse(t['vatDeclared']?.toString() ?? '0') ?? 0;
-              final vatPaid =
-                  num.tryParse(t['vatPaid']?.toString() ?? '0') ?? 0;
-              final pitDeclared =
-                  num.tryParse(t['pitDeclared']?.toString() ?? '0') ?? 0;
-              final pitPaid =
-                  num.tryParse(t['pitPaid']?.toString() ?? '0') ?? 0;
-              final vatOwed = vatDeclared - vatPaid;
-              final pitOwed = pitDeclared - pitPaid;
-              final rawTotalOwed = vatOwed + pitOwed;
-              final totalOwed = rawTotalOwed < 0 ? 0.0 : rawTotalOwed;
-              final status = t['status'] ?? 'pending';
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...displayList.map<Widget>((t) {
+                final period = t['period'] ?? '';
+                final dueCalDate = parseDueDate(t['dueDate']);
+                final dueDateStr = dueCalDate != null
+                    ? '${dueCalDate.year}-${dueCalDate.month.toString().padLeft(2, '0')}-${dueCalDate.day.toString().padLeft(2, '0')}'
+                    : null;
+                final vatDeclared =
+                    num.tryParse(t['vatDeclared']?.toString() ?? '0') ?? 0;
+                final vatPaid =
+                    num.tryParse(t['vatPaid']?.toString() ?? '0') ?? 0;
+                final pitDeclared =
+                    num.tryParse(t['pitDeclared']?.toString() ?? '0') ?? 0;
+                final pitPaid =
+                    num.tryParse(t['pitPaid']?.toString() ?? '0') ?? 0;
+                final vatOwed = vatDeclared - vatPaid;
+                final pitOwed = pitDeclared - pitPaid;
+                final rawTotalOwed = vatOwed + pitOwed;
+                final totalOwed = rawTotalOwed < 0 ? 0.0 : rawTotalOwed;
+                final status = (t['status']?.toString() ?? 'pending')
+                    .trim()
+                    .toLowerCase();
 
-              // Calculate days remaining on calendar dates
-              int? daysLeft;
-              if (dueDateStr != null) {
-                final dueDate = DateTime.tryParse(dueDateStr);
-                if (dueDate != null) {
-                  final now = DateTime.now();
-                  final todayDate = DateTime(now.year, now.month, now.day);
-                  final dueCalDate = DateTime(
-                    dueDate.year,
-                    dueDate.month,
-                    dueDate.day,
-                  );
-                  daysLeft = dueCalDate.difference(todayDate).inDays;
+                final int? daysLeft = dueCalDate?.difference(todayDate).inDays;
+
+                // Urgency color + label
+                Color urgencyColor;
+                String urgencyLabel;
+                IconData urgencyIcon;
+
+                if (status == 'overdue' && daysLeft != null && daysLeft > 0) {
+                  // Contradictory: status says overdue but dueDate is in the future
+                  urgencyColor = AppColors.warning;
+                  urgencyLabel = 'Cần đối chiếu trạng thái';
+                  urgencyIcon = Icons.help_outline_rounded;
+                } else if (daysLeft != null && daysLeft < 0) {
+                  // True overdue
+                  urgencyColor = AppColors.danger;
+                  urgencyLabel = 'Quá hạn ${-daysLeft} ngày';
+                  urgencyIcon = Icons.error_rounded;
+                } else if (status == 'overdue') {
+                  // Overdue with null or non-positive days
+                  urgencyColor = AppColors.danger;
+                  urgencyLabel = 'Quá hạn';
+                  urgencyIcon = Icons.error_rounded;
+                } else if (daysLeft != null && daysLeft == 0) {
+                  urgencyColor = AppColors.danger;
+                  urgencyLabel = 'Đến hạn hôm nay';
+                  urgencyIcon = Icons.warning_rounded;
+                } else if (daysLeft != null && daysLeft <= 7) {
+                  urgencyColor = AppColors.warning;
+                  urgencyLabel = 'Còn $daysLeft ngày';
+                  urgencyIcon = Icons.schedule_rounded;
+                } else if (daysLeft != null) {
+                  urgencyColor = AppColors.info;
+                  urgencyLabel = 'Còn $daysLeft ngày';
+                  urgencyIcon = Icons.schedule_rounded;
+                } else {
+                  // Null or invalid dueDate
+                  urgencyColor = AppColors.info;
+                  urgencyLabel = 'Chưa xác định hạn';
+                  urgencyIcon = Icons.info_outline_rounded;
                 }
-              }
 
-              // Urgency color + label
-              Color urgencyColor;
-              String urgencyLabel;
-              IconData urgencyIcon;
-              if (status == 'overdue' || (daysLeft != null && daysLeft < 0)) {
-                urgencyColor = AppColors.danger;
-                urgencyLabel =
-                    'Quá hạn${daysLeft != null ? " ${(-daysLeft)} ngày" : ""}';
-                urgencyIcon = Icons.error_rounded;
-              } else if (daysLeft != null && daysLeft == 0) {
-                urgencyColor = AppColors.danger;
-                urgencyLabel = 'Đến hạn hôm nay';
-                urgencyIcon = Icons.warning_rounded;
-              } else if (daysLeft != null && daysLeft <= 7) {
-                urgencyColor = AppColors.warning;
-                urgencyLabel = 'Còn $daysLeft ngày';
-                urgencyIcon = Icons.schedule_rounded;
-              } else if (daysLeft != null && daysLeft <= 30) {
-                urgencyColor = AppColors.info;
-                urgencyLabel = 'Còn $daysLeft ngày';
-                urgencyIcon = Icons.schedule_rounded;
-              } else {
-                urgencyColor = AppColors.info;
-                urgencyLabel = daysLeft != null
-                    ? 'Còn $daysLeft ngày'
-                    : 'Chờ nộp';
-                urgencyIcon = Icons.info_outline_rounded;
-              }
-
-              return GestureDetector(
-                onTap: () => context.push('/tax-obligations'),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: urgencyColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    border: Border.all(
-                      color: urgencyColor.withValues(alpha: 0.25),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: urgencyColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(urgencyIcon, size: 22, color: urgencyColor),
+                return GestureDetector(
+                  onTap: () => context.push('/tax-obligations'),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: urgencyColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(
+                        color: urgencyColor.withValues(alpha: 0.25),
+                        width: 1.5,
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Thuế $period',
-                              style: GoogleFonts.manrope(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: c.textPrimary,
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isNarrow = constraints.maxWidth < 460;
+                        if (isNarrow) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: urgencyColor.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          urgencyIcon,
+                                          size: 20,
+                                          color: urgencyColor,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Thuế $period',
+                                        style: GoogleFonts.manrope(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: c.textPrimary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: urgencyColor.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Text(
+                                      urgencyLabel,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: urgencyColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              'Còn phải nộp: ${_currFmt.format(totalOwed)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: c.textSecondary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            if (dueDateStr != null)
+                              const SizedBox(height: 10),
                               Text(
-                                'Hạn: $dueDateStr',
+                                'Còn phải nộp: ${_currFmt.format(totalOwed)}',
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 13,
+                                  color: c.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Hạn: ${dueDateStr ?? 'Chưa xác định'}',
+                                style: TextStyle(
+                                  fontSize: 12,
                                   color: c.textMuted,
                                 ),
                               ),
+                            ],
+                          );
+                        }
+
+                        // Wide layout
+                        return Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: urgencyColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                urgencyIcon,
+                                size: 22,
+                                color: urgencyColor,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Thuế $period',
+                                    style: GoogleFonts.manrope(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: c.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Còn phải nộp: ${_currFmt.format(totalOwed)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: c.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Hạn: ${dueDateStr ?? 'Chưa xác định'}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: c.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: urgencyColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: Text(
+                                  urgencyLabel,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: urgencyColor,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: urgencyColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          urgencyLabel,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: urgencyColor,
-                          ),
-                        ),
-                      ),
-                    ],
+                        );
+                      },
+                    ),
+                  ),
+                ); // closes GestureDetector
+              }),
+              if (active.length > 5)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () => context.push('/tax-obligations'),
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                      label: const Text('Xem tất cả'),
+                    ),
                   ),
                 ),
-              ); // closes GestureDetector
-            }).toList(),
+            ],
           ),
         );
       },
@@ -3442,7 +3662,10 @@ class _PriorityRow extends ConsumerWidget {
     };
 
     bool canNavigateTo(String path) {
-      if (shopState.isOwner) return true;
+      if (shopState.userShops.isEmpty || shopState.isOwner) return true;
+      if (path.startsWith('/products')) {
+        return shopState.hasPermission('products');
+      }
       if (path.startsWith('/inventory')) {
         return shopState.hasPermission('inventory');
       }

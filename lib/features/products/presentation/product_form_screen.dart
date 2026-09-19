@@ -66,9 +66,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
       final tagsRaw = p['tags'];
       if (tagsRaw is List) {
-        _tags = tagsRaw.map((e) => e.toString()).toList();
+        _tags = List<String>.from(tagsRaw.map((e) => e.toString()));
       } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
-        _tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
+        _tags = tagsRaw
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
       }
     }
   }

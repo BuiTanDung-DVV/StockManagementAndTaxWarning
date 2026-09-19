@@ -7,6 +7,7 @@ class ProductSelectionToolbar extends StatelessWidget {
   final VoidCallback onClearSelection;
   final Future<void> Function() onExportCsv;
   final bool isExporting;
+  final bool canExport;
 
   const ProductSelectionToolbar({
     super.key,
@@ -14,6 +15,7 @@ class ProductSelectionToolbar extends StatelessWidget {
     required this.onClearSelection,
     required this.onExportCsv,
     this.isExporting = false,
+    this.canExport = true,
   });
 
   @override
@@ -50,29 +52,31 @@ class ProductSelectionToolbar extends StatelessWidget {
         final actions = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            OutlinedButton.icon(
-              key: const Key('product-bulk-export-csv-button'),
-              onPressed: isExporting ? null : onExportCsv,
-              icon: isExporting
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.download_rounded, size: 16),
-              label: const Text('Xuất CSV'),
-              style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                side: BorderSide(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.5),
+            if (canExport) ...[
+              OutlinedButton.icon(
+                key: const Key('product-bulk-export-csv-button'),
+                onPressed: isExporting ? null : onExportCsv,
+                icon: isExporting
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_rounded, size: 16),
+                label: const Text('Xuất CSV'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  side: BorderSide(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
+              const SizedBox(width: AppSpacing.xs),
+            ],
             TextButton(
               key: const Key('product-bulk-clear-selection-button'),
               onPressed: onClearSelection,

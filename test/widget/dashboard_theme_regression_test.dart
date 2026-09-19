@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -288,4 +289,137 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'Dashboard equal height row expands when action provider resolves with long list',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final completer = Completer<DashboardActionData>();
+
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const MainShell(child: DashboardScreen()),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      final originalErrorHandler = FlutterError.onError;
+      FlutterError.onError = (details) {
+        if (details.exceptionAsString().contains('overflowed')) {
+          debugPrint(details.toString());
+        }
+        originalErrorHandler?.call(details);
+      };
+      addTearDown(() {
+        FlutterError.onError = originalErrorHandler;
+      });
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            shopProvider.overrideWith(_Shop.new),
+            salesSummaryProvider.overrideWith((ref, period) async => {}),
+            cashSummaryProvider.overrideWith((ref, period) async => {}),
+            inventoryCategoriesSummaryProvider.overrideWith((ref) async => []),
+            lowStockProvider.overrideWith((ref) async => []),
+            recentTransactionsProvider.overrideWith((_) async => []),
+            topProductsProvider.overrideWith((ref, period) async => []),
+            dashboardActionProvider.overrideWith((_) => completer.future),
+          ],
+          child: MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme(AppColors.primary),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(1.5)),
+              child: child!,
+            ),
+            routerConfig: router,
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      completer.complete(
+        DashboardActionData(
+          asOf: DateTime(2026, 9, 9),
+          items: List.generate(
+            4,
+            (index) => DashboardActionItem(
+              actionKey: 'TEST_$index',
+              severity: DashboardActionSeverity.warning,
+              priorityScore: 10,
+              title:
+                  'Action $index Title That Is Extremely Long And Will Definitely Wrap To Multiple Lines When Rendered',
+              detail:
+                  'Action $index Detail That Is Also Extremely Long And Explains Why This Needs Fixing Quickly',
+              badge: 'Warning',
+            ),
+          ),
+          healthySummary: [
+            DashboardActionItem(
+              actionKey: 'HEALTHY',
+              severity: DashboardActionSeverity.healthy,
+              priorityScore: 0,
+              title: 'Tất cả các chức năng khác hoạt động bình thường',
+              detail: 'Không có cảnh báo mới',
+              badge: 'OK',
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      Rect surface(String type) {
+        final widgets = find
+            .byWidgetPredicate((w) => w.runtimeType.toString() == type)
+            .evaluate();
+        expect(widgets, isNotEmpty, reason: 'Expected to find $type');
+        final owner = widgets.first;
+        final decorated = find
+            .descendant(
+              of: find.byWidgetPredicate((w) => w == owner.widget),
+              matching: find.byWidgetPredicate(
+                (w) => w is Container && w.decoration is BoxDecoration,
+              ),
+            )
+            .first;
+        return tester.getRect(decorated);
+      }
+
+      final rightCard = surface('DashboardPriorityList');
+      final lastActionText = tester.getRect(
+        find
+            .text(
+              'Action 3 Title That Is Extremely Long And Will Definitely Wrap To Multiple Lines When Rendered',
+            )
+            .first,
+      );
+      final footerText = tester.getRect(
+        find.text('Tất cả các chức năng khác hoạt động bình thường').first,
+      );
+
+      expect(lastActionText.bottom, lessThanOrEqualTo(rightCard.bottom));
+      expect(footerText.bottom, lessThanOrEqualTo(rightCard.bottom));
+
+      final nextRowCard = surface('DashboardSalesPerformanceCard');
+      expect(rightCard.bottom, lessThanOrEqualTo(nextRowCard.top));
+
+      final layoutError = tester.takeException();
+      if (layoutError is FlutterError) {
+        debugPrint(layoutError.toString(minLevel: DiagnosticLevel.info));
+      }
+      expect(layoutError, isNull);
+    },
+  );
 }

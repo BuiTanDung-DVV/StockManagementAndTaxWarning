@@ -199,17 +199,19 @@ class ExcelExportService {
       final unit = _safeSpreadsheetText((p['unit'] ?? 'Cái').toString());
 
       final rawStock = p['currentStock'] ?? p['stockQuantity'] ?? p['stock'];
-      final rawMinStock = p['minStock'] ??
+      final rawMinStock =
+          p['minStock'] ??
           p['minimumStock'] ??
           p['minStockThreshold'] ??
           p['min_stock'];
-      final rawPrice =
-          p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice'];
+      final rawPrice = p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice'];
 
-      final num? stock =
-          rawStock == null ? null : num.tryParse(rawStock.toString());
-      final num? minStock =
-          rawMinStock == null ? null : num.tryParse(rawMinStock.toString());
+      final num? stock = rawStock == null
+          ? null
+          : num.tryParse(rawStock.toString());
+      final num? minStock = rawMinStock == null
+          ? null
+          : num.tryParse(rawMinStock.toString());
       final double? price = rawPrice == null
           ? null
           : num.tryParse(rawPrice.toString())?.toDouble();

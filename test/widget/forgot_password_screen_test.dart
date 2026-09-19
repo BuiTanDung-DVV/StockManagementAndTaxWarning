@@ -38,13 +38,13 @@ void main() {
     final api = _FakeApiClient();
     await tester.pumpWidget(_testApp(api: api));
     await tester.enterText(find.byType(TextField).first, 'ui-test@gmail.com');
-    await tester.tap(find.text('Gửi Mã Xác Thực OTP'));
+    await tester.tap(find.text('Gửi mã xác thực'));
     await tester.pumpAndSettle();
     final fields = find.byType(TextField);
     await tester.enterText(fields.at(0), '123456');
     await tester.enterText(fields.at(1), 'TestOnly@2026');
     await tester.enterText(fields.at(2), 'different');
-    final submit = find.text('Xác Nhận Đặt Lại Mật Khẩu');
+    final submit = find.text('Xác nhận đặt lại mật khẩu');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.pump();
@@ -72,9 +72,10 @@ void main() {
 
     await tester.pumpWidget(_testApp());
 
-    expect(find.text('Khôi phục quyền truy cập an toàn.'), findsOneWidget);
-    expect(find.text('Tìm tài khoản của bạn'), findsOneWidget);
-    expect(find.textContaining('không xác nhận công khai Gmail'), findsWidgets);
+    expect(find.text('Khôi phục mật khẩu.'), findsOneWidget);
+    expect(find.text('Quên mật khẩu?'), findsOneWidget);
+    expect(find.text('Xác thực qua Gmail và OTP'), findsOneWidget);
+    expect(find.textContaining('Nếu Gmail đã được đăng ký'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -89,7 +90,7 @@ void main() {
       find.byType(TextField).first,
       'registered.user@gmail.com',
     );
-    await tester.tap(find.text('Gửi Mã Xác Thực OTP'));
+    await tester.tap(find.text('Gửi mã xác thực'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -103,7 +104,7 @@ void main() {
 
     await tester.tap(find.text('Dùng Gmail khác'));
     await tester.pump();
-    expect(find.text('Tìm tài khoản của bạn'), findsOneWidget);
+    expect(find.text('Quên mật khẩu?'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

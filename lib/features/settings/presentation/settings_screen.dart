@@ -623,9 +623,12 @@ class _SettingsProfileCard extends StatelessWidget {
 
     if (shopState.isAllShops || shopAsync == null) {
       final currentShop = shopState.userShops
-          .where((s) => parseShopRecordId(s['shopId']) == shopState.currentShopId)
+          .where(
+            (s) => parseShopRecordId(s['shopId']) == shopState.currentShopId,
+          )
           .firstOrNull;
-      final shopName = shopState.currentShopName ??
+      final shopName =
+          shopState.currentShopName ??
           currentShop?['shopName']?.toString() ??
           (shopState.currentShopId != null
               ? 'Cửa hàng #${shopState.currentShopId}'
@@ -633,7 +636,7 @@ class _SettingsProfileCard extends StatelessWidget {
       final roleName = shopState.isOwner
           ? 'Chủ sở hữu'
           : (currentShop?['role']?['name']?.toString() ??
-              (shopState.memberType == 'OWNER' ? 'Chủ sở hữu' : 'Nhân viên'));
+                (shopState.memberType == 'OWNER' ? 'Chủ sở hữu' : 'Nhân viên'));
 
       return AppCardContainer(
         child: LayoutBuilder(

@@ -36,8 +36,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String? _error;
   final String _registrationAccountType = 'PERSONAL';
 
+  bool _isPasswordFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordFocus.addListener(_onPasswordFocusChanged);
+  }
+
+  void _onPasswordFocusChanged() {
+    setState(() {
+      _isPasswordFocused = _passwordFocus.hasFocus;
+    });
+  }
+
   @override
   void dispose() {
+    _passwordFocus.removeListener(_onPasswordFocusChanged);
     _fullNameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
@@ -184,7 +199,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       onPop: () => context.canPop() ? context.pop() : context.go('/login'),
       title: 'Tạo tài khoản mới',
       subtitle:
-          'Vai trò và thông tin cửa hàng sẽ được thiết lập ở bước tiếp theo.',
+          'Nhập thông tin để tạo tài khoản và nhận mã xác thực qua Gmail.',
+      compactAuthLayout: true,
       footer: Center(
         child: TextButton(
           onPressed: () => context.go('/login'),
@@ -206,7 +222,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  'HOẶC ĐĂNG KÝ BẰNG EMAIL',
+                  'hoặc đăng ký bằng mật khẩu',
                   style: GoogleFonts.manrope(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -226,10 +242,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             focusNode: _fullNameFocus,
             onChanged: (_) => _onFieldChanged(),
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Họ và tên *',
-              hintText: 'Họ và tên của bạn',
-              prefixIcon: Icon(Icons.person_outline_rounded),
+              hintText: 'Nhập họ và tên của bạn',
+              prefixIcon: const Icon(Icons.person_outline_rounded),
+              errorText:
+                  _fullNameCtrl.text.isNotEmpty &&
+                      _fullNameCtrl.text.trim().length < 2
+                  ? 'Tối thiểu 2 ký tự'
+                  : null,
+              errorMaxLines: 2,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -241,10 +263,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             onChanged: (_) => _onFieldChanged(),
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Địa chỉ Gmail *',
-              hintText: 'example@gmail.com',
-              prefixIcon: Icon(Icons.email_outlined),
+              hintText: 'Nhập địa chỉ @gmail.com',
+              prefixIcon: const Icon(Icons.email_outlined),
+              errorText:
+                  _emailCtrl.text.isNotEmpty &&
+                      !RegExp(
+                        r'^[^\s@]+@gmail\.com$',
+                      ).hasMatch(_emailCtrl.text.trim().toLowerCase())
+                  ? 'Bắt buộc sử dụng địa chỉ @gmail.com'
+                  : null,
+              errorMaxLines: 2,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -258,7 +288,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: 'Mật khẩu *',
-              hintText: 'Ít nhất 8 ký tự',
+              hintText: 'Nhập mật khẩu',
               prefixIcon: const Icon(Icons.lock_outline_rounded),
               suffixIcon: PasswordVisibilityButton(
                 obscureText: _obscure,
@@ -267,6 +297,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
           _buildPasswordStrengthMeter(c),
+          const SizedBox(height: AppSpacing.md),
 
           // Confirm Password Input
           TextField(
@@ -339,7 +370,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       color: Colors.white,
                     ),
                   )
-                : const Text('Đăng ký & Nhận mã OTP'),
+                : const Text('Đăng ký và nhận mã'),
           ),
         ],
       ),
@@ -348,12 +379,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Widget _buildPasswordStrengthMeter(AppThemeColors c) {
     final pass = _passwordCtrl.text;
-    if (pass.isEmpty) return const SizedBox(height: AppSpacing.md);
-
     final score = _calculatePasswordStrength(pass);
+    final showDetailed = _isPasswordFocused || pass.isNotEmpty;
+
+    if (!showDetailed) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 6, bottom: 4),
+        child: Text(
+          'Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
+          style: TextStyle(color: c.textMuted, fontSize: 13, height: 1.4),
+        ),
+      );
+    }
+
     Color color;
     String label;
-    if (score <= 2) {
+    if (pass.isEmpty) {
+      color = c.textMuted;
+      label = 'Chưa nhập';
+    } else if (score <= 2) {
       color = AppColors.danger;
       label = 'Yếu';
     } else if (score == 3) {
@@ -361,14 +405,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       label = 'Trung bình';
     } else if (score == 4) {
       color = AppColors.info;
-      label = 'Mạnh';
+      label = 'Khá mạnh';
     } else {
       color = AppColors.success;
-      label = 'Cực mạnh';
+      label = 'Đạt yêu cầu';
     }
-
-    final isFocused = _passwordFocus.hasFocus;
-    final isStrongEnough = score >= 4;
 
     return Padding(
       padding: const EdgeInsets.only(top: 6, bottom: 4),
@@ -376,13 +417,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: List.generate(4, (index) {
-              final active = index < (score >= 4 ? 4 : score);
+            children: List.generate(5, (index) {
+              final active = pass.isNotEmpty && index < score;
               return Expanded(
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   height: 3,
-                  margin: EdgeInsets.only(right: index == 3 ? 0 : 4),
+                  margin: EdgeInsets.only(right: index == 4 ? 0 : 4),
                   decoration: BoxDecoration(
                     color: active ? color : c.divider.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(2),
@@ -397,19 +438,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             children: [
               Text(
                 'Độ mạnh mật khẩu:',
-                style: TextStyle(fontSize: 11, color: c.textSecondary),
+                style: TextStyle(fontSize: 12, color: c.textSecondary),
               ),
               Text(
                 label,
                 style: GoogleFonts.manrope(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: color,
+                  color: c.textPrimary,
                 ),
               ),
             ],
           ),
-          if (isFocused && !isStrongEnough) ...[
+          if (score < 5) ...[
             const SizedBox(height: 6),
             Wrap(
               spacing: 12,
@@ -440,6 +481,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
               ],
             ),
+          ] else ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: AppColors.success,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Mật khẩu đạt yêu cầu',
+                  style: GoogleFonts.manrope(
+                    color: c.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -451,17 +512,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          met
-              ? Icons.check_circle_rounded
-              : Icons.radio_button_unchecked_rounded,
-          size: 13,
+          met ? Icons.check_circle : Icons.remove_rounded,
+          size: 14,
           color: met ? AppColors.success : c.textMuted,
         ),
         const SizedBox(width: 4),
         Text(
           text,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 13,
             color: met ? c.textPrimary : c.textMuted,
             fontWeight: met ? FontWeight.w600 : FontWeight.normal,
           ),

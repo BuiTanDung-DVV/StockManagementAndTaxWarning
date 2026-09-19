@@ -137,7 +137,7 @@ class EmptyChartPlaceholder extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(AppRadius.card),

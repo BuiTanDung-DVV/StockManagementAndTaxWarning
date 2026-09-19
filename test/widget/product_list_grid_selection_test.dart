@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -46,7 +48,7 @@ void main() {
       'currentStock': 24,
       'minStock': 5,
       'unit': 'gói',
-      'tags': ['Bán chạy'],
+      'tags': <dynamic>['Bán chạy'],
     },
     {
       'id': 102,
@@ -57,7 +59,7 @@ void main() {
       'currentStock': 3,
       'minStock': 5,
       'unit': 'hộp',
-      'tags': ['Sắp hết'],
+      'tags': <dynamic>['Sắp hết'],
     },
   ];
 
@@ -86,6 +88,8 @@ void main() {
           ),
         ),
       );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
       // Starts in List mode: ListView is present
@@ -96,6 +100,8 @@ void main() {
       final gridToggle = find.byKey(const Key('product-view-mode-grid'));
       expect(gridToggle, findsOneWidget);
       await tester.tap(gridToggle);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
       // Now in Grid mode: GridView is present
@@ -105,6 +111,8 @@ void main() {
       final listToggle = find.byKey(const Key('product-view-mode-list'));
       expect(listToggle, findsOneWidget);
       await tester.tap(listToggle);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
       // Returns to List mode
@@ -138,6 +146,8 @@ void main() {
           ),
         ),
       );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
       // Initially no items selected, toolbar hidden
@@ -148,6 +158,8 @@ void main() {
       final checkbox1 = find.byKey(const Key('product-select-checkbox-101'));
       expect(checkbox1, findsOneWidget);
       await tester.tap(checkbox1);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
       // Toolbar shows "Đã chọn 1 sản phẩm"
@@ -163,6 +175,8 @@ void main() {
       );
       expect(selectAllCheckbox, findsOneWidget);
       await tester.tap(selectAllCheckbox);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
       // Toolbar shows "Đã chọn 2 sản phẩm"
@@ -174,6 +188,8 @@ void main() {
       );
       expect(clearButton, findsOneWidget);
       await tester.tap(clearButton);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
       // Toolbar cleared
@@ -200,18 +216,18 @@ void main() {
         final ownerAuthState = const AuthState(
           isLoggedIn: true,
           accountType: 'SHOP',
-          user: {
-            'id': 1,
-            'username': 'owner',
-            'fullName': 'Chủ cửa hàng',
-          },
+          user: {'id': 1, 'username': 'owner', 'fullName': 'Chủ cửa hàng'},
         );
 
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              shopProvider.overrideWith(() => _FakeShopNotifier(ownerShopState)),
-              authProvider.overrideWith(() => _FakeAuthNotifier(ownerAuthState)),
+              shopProvider.overrideWith(
+                () => _FakeShopNotifier(ownerShopState),
+              ),
+              authProvider.overrideWith(
+                () => _FakeAuthNotifier(ownerAuthState),
+              ),
               productListProvider.overrideWith(
                 (ref, args) => Future.value({
                   'items': [],
@@ -229,6 +245,8 @@ void main() {
             ),
           ),
         );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
         await tester.pumpAndSettle();
 
         // Clean empty: displays "Chưa có sản phẩm" and "Thêm sản phẩm"
@@ -274,6 +292,8 @@ void main() {
             ),
           ),
         );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
         await tester.pumpAndSettle();
 
         // Initially no quick-view panel
@@ -281,21 +301,89 @@ void main() {
 
         // Tap on first product card text
         await tester.tap(find.text('Cà phê Robusta Đắk Lắk'));
+        await tester.pump();
+        expect(tester.takeException(), isNull);
         await tester.pumpAndSettle();
 
         // Quick-view panel opens
         expect(find.text('Xem nhanh sản phẩm'), findsOneWidget);
         expect(find.text('Xem chi tiết đầy đủ'), findsOneWidget);
-        expect(find.text('Cà phê nguyên chất từ Buôn Ma Thuột'), findsOneWidget);
+        expect(
+          find.text('Cà phê nguyên chất từ Buôn Ma Thuột'),
+          findsOneWidget,
+        );
 
         // Tap close button (tooltip 'Đóng (Esc)')
         final closeBtn = find.byTooltip('Đóng (Esc)');
         expect(closeBtn, findsOneWidget);
         await tester.tap(closeBtn);
+        await tester.pump();
+        expect(tester.takeException(), isNull);
         await tester.pumpAndSettle();
 
         // Panel closed
         expect(find.text('Xem nhanh sản phẩm'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '_ProductTagsRow handles List<dynamic>, String, and null tags cleanly',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final variedTagsProducts = [
+          {
+            'id': 201,
+            'name': 'Sản phẩm tag List dynamic',
+            'sku': 'TAG-LST-01',
+            'currentStock': 10,
+            'tags': <dynamic>['Tag1', 123, 'Tag2'],
+          },
+          {
+            'id': 202,
+            'name': 'Sản phẩm tag String',
+            'sku': 'TAG-STR-02',
+            'currentStock': 5,
+            'tags': 'Hot, Mới, Sale',
+          },
+          {
+            'id': 203,
+            'name': 'Sản phẩm tag null',
+            'sku': 'TAG-NUL-03',
+            'currentStock': 20,
+            'tags': null,
+          },
+        ];
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              productListProvider.overrideWith(
+                (ref, args) => Future.value({
+                  'items': variedTagsProducts,
+                  'total': 3,
+                  'page': 1,
+                  'totalPages': 1,
+                }),
+              ),
+              availableTagsProvider.overrideWith((ref) => Future.value([])),
+              topProductsProvider.overrideWith((ref, args) => Future.value([])),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme(AppColors.primary),
+              home: const ProductListScreen(),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tag1'), findsOneWidget);
+        expect(find.text('Hot'), findsOneWidget);
+        expect(find.text('Sản phẩm tag null'), findsOneWidget);
+        expect(tester.takeException(), isNull);
       },
     );
 
@@ -324,12 +412,260 @@ void main() {
             ),
           ),
         );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
         await tester.pumpAndSettle();
 
         expect(find.text('Đã chọn 12 sản phẩm'), findsOneWidget);
         expect(find.text('Xuất CSV'), findsOneWidget);
         expect(find.text('Bỏ chọn'), findsOneWidget);
         expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'Quick-view loading state displays visible close button and can be dismissed',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final completer = Completer<Map<String, dynamic>>();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              productListProvider.overrideWith(
+                (ref, args) => Future.value({
+                  'items': dummyProducts,
+                  'total': 2,
+                  'page': 1,
+                  'totalPages': 1,
+                }),
+              ),
+              productDetailProvider(
+                101,
+              ).overrideWith((ref) => completer.future),
+              availableTagsProvider.overrideWith((ref) => Future.value([])),
+              topProductsProvider.overrideWith((ref, args) => Future.value([])),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme(AppColors.primary),
+              home: const ProductListScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap product to open quick-view
+        await tester.tap(find.text('Cà phê Robusta Đắk Lắk'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Loading is active
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Xem nhanh sản phẩm'), findsOneWidget);
+
+        // Close button is visible during loading
+        final closeBtn = find.byKey(
+          const Key('product-quick-view-close-button'),
+        );
+        expect(closeBtn, findsOneWidget);
+
+        // Can dismiss during loading
+        await tester.tap(closeBtn);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('Xem nhanh sản phẩm'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Quick-view failed detail fetch shows clear error + retry, not silent fallback',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        var retryCount = 0;
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              productListProvider.overrideWith(
+                (ref, args) => Future.value({
+                  'items': dummyProducts,
+                  'total': 2,
+                  'page': 1,
+                  'totalPages': 1,
+                }),
+              ),
+              productDetailProvider(101).overrideWith((ref) {
+                retryCount++;
+                return Future.error(Exception('Network error'));
+              }),
+              availableTagsProvider.overrideWith((ref) => Future.value([])),
+              topProductsProvider.overrideWith((ref, args) => Future.value([])),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme(AppColors.primary),
+              home: const ProductListScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap product to open quick-view
+        await tester.tap(find.text('Cà phê Robusta Đắk Lắk'));
+        await tester.pumpAndSettle();
+
+        // Shows explicit error message and retry button
+        expect(
+          find.text('Không thể tải chi tiết sản phẩm đầy đủ.'),
+          findsOneWidget,
+        );
+        final retryBtn = find.text('Thử lại');
+        expect(retryBtn, findsOneWidget);
+
+        // Visible close button is present
+        expect(
+          find.byKey(const Key('product-quick-view-close-button')),
+          findsOneWidget,
+        );
+
+        // Tapping retry triggers reload
+        expect(retryCount, greaterThanOrEqualTo(1));
+        final prevCount = retryCount;
+        await tester.tap(retryBtn);
+        await tester.pump();
+        expect(retryCount, greaterThan(prevCount));
+      },
+    );
+
+    testWidgets(
+      'Escape key dismisses quick-view and preserves list selection and state',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              productListProvider.overrideWith(
+                (ref, args) => Future.value({
+                  'items': dummyProducts,
+                  'total': 2,
+                  'page': 1,
+                  'totalPages': 1,
+                }),
+              ),
+              productDetailProvider(101).overrideWith(
+                (ref) => Future.value({
+                  ...dummyProducts[0],
+                  'description': 'Mô tả cà phê',
+                }),
+              ),
+              availableTagsProvider.overrideWith((ref) => Future.value([])),
+              topProductsProvider.overrideWith((ref, args) => Future.value([])),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme(AppColors.primary),
+              home: const ProductListScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Select first product
+        await tester.tap(find.byType(Checkbox).at(1));
+        await tester.pumpAndSettle();
+        expect(find.text('Đã chọn 1 sản phẩm'), findsOneWidget);
+
+        // Open quick-view for first product
+        await tester.tap(find.text('Cà phê Robusta Đắk Lắk'));
+        await tester.pumpAndSettle();
+        expect(find.text('Xem nhanh sản phẩm'), findsOneWidget);
+
+        // Send Escape key
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        // Quick-view closed
+        expect(find.text('Xem nhanh sản phẩm'), findsNothing);
+
+        // List selection is retained!
+        expect(find.text('Đã chọn 1 sản phẩm'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Wrong-shop global owner cannot bypass current shop permissions for add/tags/export',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        // User is global owner in authState, but in active ShopState they are EMPLOYEE with no product permissions
+        const globalOwnerAuthState = AuthState(
+          isLoggedIn: true,
+          accountType: 'PERSONAL',
+          user: {'id': 1, 'username': 'owner_user', 'isShopOwner': true},
+        );
+
+        const employeeInCurrentShopState = ShopState(
+          currentShopId: 2,
+          currentShopName: 'Chi nhánh 2',
+          memberType: 'EMPLOYEE',
+          status: 'ACTIVE',
+          permissions: {'finance': 'view'}, // No products permission
+          userShops: [
+            {'shopId': 1, 'memberType': 'OWNER', 'status': 'ACTIVE'},
+            {'shopId': 2, 'memberType': 'EMPLOYEE', 'status': 'ACTIVE'},
+          ],
+          isLoading: false,
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authProvider.overrideWith(
+                () => _FakeAuthNotifier(globalOwnerAuthState),
+              ),
+              shopProvider.overrideWith(
+                () => _FakeShopNotifier(employeeInCurrentShopState),
+              ),
+              productListProvider.overrideWith(
+                (ref, args) => Future.value({
+                  'items': dummyProducts,
+                  'total': 2,
+                  'page': 1,
+                  'totalPages': 1,
+                }),
+              ),
+              availableTagsProvider.overrideWith((ref) => Future.value([])),
+              topProductsProvider.overrideWith((ref, args) => Future.value([])),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.lightTheme(AppColors.primary),
+              home: const ProductListScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // "Thêm sản phẩm" is NOT visible
+        expect(find.text('Thêm sản phẩm'), findsNothing);
+        // "Cấu hình bộ lọc và nhãn" is NOT visible
+        expect(find.byTooltip('Cấu hình bộ lọc và nhãn'), findsNothing);
+
+        // Select a product to display selection toolbar
+        await tester.tap(find.byType(Checkbox).at(1));
+        await tester.pumpAndSettle();
+        expect(find.text('Đã chọn 1 sản phẩm'), findsOneWidget);
+
+        // "Xuất CSV" is NOT visible because user lacks product permission in this shop
+        expect(
+          find.byKey(const Key('product-bulk-export-csv-button')),
+          findsNothing,
+        );
       },
     );
   });

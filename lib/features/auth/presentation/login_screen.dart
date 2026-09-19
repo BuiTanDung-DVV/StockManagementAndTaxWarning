@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/auth_scaffold.dart';
-import '../../../core/widgets/app_version_widget.dart';
 import '../../../core/widgets/password_visibility_button.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
@@ -66,7 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return AuthScaffold(
       title: 'Đăng nhập',
       subtitle: 'Nhập thông tin tài khoản để tiếp tục làm việc.',
-      footer: const Center(child: AppVersionWidget()),
+      compactAuthLayout: true,
       body: _LoginForm(
         usernameController: _usernameController,
         passwordController: _passwordController,
@@ -123,12 +122,13 @@ class _LoginForm extends StatelessWidget {
         children: [
           TextField(
             controller: usernameController,
-            keyboardType: TextInputType.text,
+            keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            autofillHints: const [AutofillHints.username],
+            autofillHints: const [AutofillHints.email, AutofillHints.username],
             onSubmitted: (_) => passwordFocus.requestFocus(),
             decoration: const InputDecoration(
               labelText: 'Gmail hoặc tên đăng nhập',
+              hintText: 'Nhập tài khoản',
               prefixIcon: Icon(Icons.person_outline_rounded),
             ),
           ),
@@ -142,11 +142,19 @@ class _LoginForm extends StatelessWidget {
             onSubmitted: (_) => onLogin(),
             decoration: InputDecoration(
               labelText: 'Mật khẩu',
+              hintText: 'Nhập mật khẩu',
               prefixIcon: const Icon(Icons.lock_outline_rounded),
               suffixIcon: PasswordVisibilityButton(
                 obscureText: obscurePassword,
                 onPressed: onTogglePassword,
               ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onForgotPassword,
+              child: const Text('Quên mật khẩu?'),
             ),
           ),
           if (error != null) ...[
@@ -182,7 +190,7 @@ class _LoginForm extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.sm),
           FilledButton(
             onPressed: loading ? null : onLogin,
             child: loading
@@ -213,17 +221,16 @@ class _LoginForm extends StatelessWidget {
           GoogleAuthButton(enabled: !loading, onIdToken: onGoogleIdToken),
           const SizedBox(height: AppSpacing.lg),
           Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              TextButton(
-                onPressed: onForgotPassword,
-                child: const Text('Quên mật khẩu'),
+              Text(
+                'Chưa có tài khoản?',
+                style: TextStyle(color: colors.textSecondary, fontSize: 14),
               ),
               TextButton(
                 onPressed: onRegister,
-                child: const Text('Đăng ký tài khoản'),
+                child: const Text('Đăng ký ngay'),
               ),
             ],
           ),

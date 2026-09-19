@@ -28,6 +28,7 @@ class AuthScaffold extends StatelessWidget {
   final Widget? footer;
   final Widget? headerTrailing;
   final Widget? customIllustration;
+  final bool compactAuthLayout;
 
   const AuthScaffold({
     super.key,
@@ -48,34 +49,108 @@ class AuthScaffold extends StatelessWidget {
     this.footer,
     this.headerTrailing,
     this.customIllustration,
+    this.compactAuthLayout = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color authAccentTextAndBorder = isDark
+        ? const Color(0xFF2DD4BF)
+        : const Color(0xFF0F766E);
+    final Color authButtonBg = const Color(0xFF0F766E);
+
+    // Provide a local deep teal primary color theme override for auth components
+    // without affecting the whole app if global theme is mutated.
+    final localAuthTheme = Theme.of(context).copyWith(
+      colorScheme: Theme.of(
+        context,
+      ).colorScheme.copyWith(primary: authAccentTextAndBorder),
+      filledButtonTheme: FilledButtonThemeData(
+        style:
+            (Theme.of(context).filledButtonTheme.style ??
+                    FilledButton.styleFrom())
+                .copyWith(
+                  minimumSize: WidgetStateProperty.all(
+                    const Size(double.infinity, 52),
+                  ),
+                  visualDensity: VisualDensity.standard,
+                  backgroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.disabled)) {
+                      return colors.divider;
+                    }
+                    return authButtonBg;
+                  }),
+                  foregroundColor: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.disabled)) {
+                      return colors.textMuted;
+                    }
+                    return Colors.white;
+                  }),
+                ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: authAccentTextAndBorder,
+          minimumSize: const Size(64, 48), // ensure 48px touch target
+        ),
+      ),
+      inputDecorationTheme: Theme.of(context).inputDecorationTheme.copyWith(
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        constraints: const BoxConstraints(minHeight: 52),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.input),
+          borderSide: BorderSide(color: authAccentTextAndBorder, width: 1.5),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.input),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF475569) : const Color(0xFF64748B),
+          ),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.input),
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.input),
+          borderSide: const BorderSide(color: Color(0xFFE11D48)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.input),
+          borderSide: const BorderSide(color: Color(0xFFE11D48), width: 1.5),
+        ),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: colors.bg,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 960;
+        child: Theme(
+          data: compactAuthLayout ? localAuthTheme : Theme.of(context),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth >= 960;
 
-            Widget formCard({required bool isDesktop}) => AppCardContainer(
-              padding: EdgeInsets.all(
-                isDesktop ? AppSpacing.xl : AppSpacing.lg,
-              ),
-              borderRadius: AppRadius.card,
-              child: Column(
+              Widget formContent({required bool isDesktop}) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (isDesktop && canPop && onPop != null) ...[
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: AppNavigationBackButton(onPressed: onPop!),
+                  if (isDesktop) ...[
+                    SizedBox(
+                      height: 48,
+                      child: (canPop && onPop != null)
+                          ? Align(
+                              alignment: Alignment.centerLeft,
+                              child: AppNavigationBackButton(onPressed: onPop!),
+                            )
+                          : null,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: 12),
                   ],
                   if (title != null) ...[
                     Text(
@@ -88,84 +163,190 @@ class AuthScaffold extends StatelessWidget {
                       ),
                     ),
                     if (subtitle != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
+                      const SizedBox(height: 8),
                       Text(
                         subtitle!,
                         style: GoogleFonts.inter(
                           color: colors.textSecondary,
-                          fontSize: isDesktop ? 13.5 : 13,
+                          fontSize: 14,
                           height: 1.45,
                         ),
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: 24),
                   ],
                   body,
-                  if (footer != null) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    footer!,
-                  ],
+                  if (footer != null) ...[const SizedBox(height: 24), footer!],
                 ],
-              ),
-            );
-
-            if (!isDesktop) {
-              return Center(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.lg,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: maxWidth),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _MobileBrandHeader(
-                          canPop: canPop,
-                          onPop: onPop,
-                          trailing: headerTrailing,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        formCard(isDesktop: false),
-                      ],
-                    ),
-                  ),
-                ),
               );
-            }
 
-            return Row(
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: _DesktopBrandSide(
-                    headline: brandHeadline,
-                    description: brandDescription,
-                    capabilities: brandCapabilities,
-                    customIllustration: customIllustration,
-                  ),
-                ),
-                Expanded(
-                  flex: 6,
-                  child: Center(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xl,
-                        vertical: AppSpacing.lg,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: maxWidth),
-                        child: formCard(isDesktop: true),
+              Widget formCard({required bool isDesktop}) => AppCardContainer(
+                key: const Key('auth_form_card'),
+                padding: EdgeInsets.all(isDesktop ? 32.0 : 24.0),
+                borderRadius: AppRadius.card,
+                child: formContent(isDesktop: isDesktop),
+              );
+
+              if (!isDesktop) {
+                final isTablet = constraints.maxWidth >= 600;
+                final double topPadding = isTablet ? 64.0 : 24.0;
+
+                final mobileContent = Align(
+                  alignment: Alignment.topCenter,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.only(
+                      left: AppSpacing.md,
+                      right: AppSpacing.md,
+                      top: topPadding,
+                      bottom: AppSpacing.lg,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _MobileBrandHeader(
+                            canPop: canPop,
+                            onPop: onPop,
+                            trailing: headerTrailing,
+                          ),
+                          const SizedBox(height: 20),
+                          formCard(isDesktop: false),
+                        ],
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                );
+
+                if (compactAuthLayout) {
+                  return Container(
+                    key: const Key('mobile_compact_background'),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFFF1F8FA),
+                          Color(0xFFE5F1F6),
+                          Color(0xFFD6EAF2),
+                        ],
+                      ),
+                    ),
+                    child: mobileContent,
+                  );
+                }
+                return mobileContent;
+              }
+
+              if (compactAuthLayout) {
+                final desktopCardHeight =
+                    (constraints.maxHeight - AppSpacing.lg * 2)
+                        .clamp(720.0, 820.0)
+                        .toDouble();
+                return Center(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.lg,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1240),
+                      child: Container(
+                        key: const Key('unified_desktop_card'),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(color: const Color(0xFFC7E2ED)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x120F766E),
+                              blurRadius: 24,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: SizedBox(
+                          height: desktopCardHeight,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 1,
+                                child: _DesktopBrandSide(
+                                  key: const Key('unified_brand_region'),
+                                  headline: brandHeadline,
+                                  description: brandDescription,
+                                  capabilities: brandCapabilities,
+                                  customIllustration: customIllustration,
+                                  isCompact: true,
+                                  embeddedInUnifiedCard: true,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 1,
+                                child: Container(
+                                  key: const Key('unified_form_region'),
+                                  color: colors.surface,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32.0,
+                                    vertical: 32.0,
+                                  ),
+                                  alignment: Alignment.topCenter,
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 480,
+                                    ),
+                                    child: SingleChildScrollView(
+                                      physics: const BouncingScrollPhysics(),
+                                      child: formContent(isDesktop: true),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: _DesktopBrandSide(
+                      headline: brandHeadline,
+                      description: brandDescription,
+                      capabilities: brandCapabilities,
+                      customIllustration: customIllustration,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                          vertical: AppSpacing.lg,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxWidth),
+                          child: formCard(isDesktop: true),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -181,70 +362,55 @@ class _MobileBrandHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        if (canPop && onPop != null) ...[
-          AppNavigationBackButton(onPressed: onPop!),
-          const SizedBox(width: AppSpacing.xs),
-        ],
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFF0F8FA), Color(0xFFE2F0F6)],
+    return SizedBox(
+      key: const Key('auth_mobile_brand_header'),
+      height: 48,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Center Brand
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                padding: const EdgeInsets.all(4),
+                child: const AppAssetIcon(
+                  assetPath: AppAssets.parcelBox,
+                  size: 24,
+                  semanticLabel: 'SmartStock',
+                ),
               ),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFC7E2ED), width: 1.0),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0D0F766E),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
+              const SizedBox(width: 8),
+              Text(
+                'SmartStock',
+                style: GoogleFonts.manrope(
+                  color: const Color(0xFF17332F),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFFC7E2ED).withValues(alpha: 0.6),
-                    ),
-                  ),
-                  child: const AppAssetIcon(
-                    assetPath: AppAssets.parcelBox,
-                    size: 24,
-                    semanticLabel: 'SmartStock',
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'SmartStock',
-                    style: GoogleFonts.manrope(
-                      color: const Color(0xFF0F172A),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                ?trailing,
-              ],
-            ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-        ),
-      ],
+          // Left Back Button
+          if (canPop && onPop != null)
+            Positioned(
+              left: 0,
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: AppNavigationBackButton(onPressed: onPop!),
+              ),
+            ),
+          // Right Trailing
+          if (trailing != null) Positioned(right: 0, child: trailing!),
+        ],
+      ),
     );
   }
 }
@@ -254,142 +420,200 @@ class _DesktopBrandSide extends StatelessWidget {
   final String description;
   final List<String> capabilities;
   final Widget? customIllustration;
+  final bool isCompact;
+  final bool embeddedInUnifiedCard;
 
   const _DesktopBrandSide({
+    super.key,
     required this.headline,
     required this.description,
     required this.capabilities,
     this.customIllustration,
+    this.isCompact = false,
+    this.embeddedInUnifiedCard = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
-      ),
-      child: Container(
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFF1F8FA), Color(0xFFE5F1F6), Color(0xFFD6EAF2)],
+    final contentColumn = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: isCompact ? 36 : 44,
+                height: isCompact ? 36 : 44,
+                padding: EdgeInsets.all(isCompact ? 4 : 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFFC7E2ED).withValues(alpha: 0.6),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: AppAssetIcon(
+                  assetPath: AppAssets.parcelBox,
+                  size: isCompact ? 24 : 32,
+                  semanticLabel: 'SmartStock',
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'SmartStock',
+                      style: GoogleFonts.manrope(
+                        color: const Color(0xFF0F172A),
+                        fontSize: isCompact ? 18 : 20,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    Text(
+                      'Nền tảng quản lý cửa hàng chuẩn hóa',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF0F766E),
+                        fontSize: isCompact ? 11 : 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0xFFC7E2ED)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x120F766E),
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Center(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xxxl,
-              vertical: AppSpacing.xl,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(
-                              0xFFC7E2ED,
-                            ).withValues(alpha: 0.6),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const AppAssetIcon(
-                          assetPath: AppAssets.parcelBox,
-                          size: 32,
-                          semanticLabel: 'SmartStock',
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'SmartStock',
-                            style: GoogleFonts.manrope(
-                              color: const Color(0xFF0F172A),
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.4,
-                            ),
-                          ),
-                          Text(
-                            'Nền tảng quản lý cửa hàng chuẩn hóa',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF0F766E),
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    headline,
-                    style: GoogleFonts.manrope(
-                      color: const Color(0xFF0F172A),
-                      fontSize: 32,
-                      height: 1.25,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.8,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    description,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFF475569),
-                      fontSize: 14,
-                      height: 1.5,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  customIllustration ?? const _WarehouseHeroIllustration(),
-                  const SizedBox(height: AppSpacing.xl),
-                  for (final cap in capabilities)
-                    _BrandCapabilityItem(title: cap),
+        const SizedBox(height: 12),
+        Text(
+          headline,
+          style: GoogleFonts.manrope(
+            color: const Color(0xFF0F172A),
+            fontSize: isCompact ? 24 : 32,
+            height: 1.25,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.8,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          description,
+          style: GoogleFonts.inter(
+            color: const Color(0xFF475569),
+            fontSize: isCompact ? 13 : 14,
+            height: 1.5,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(height: 20),
+        customIllustration ?? const _WarehouseHeroIllustration(),
+        const SizedBox(height: 20),
+        for (final cap in capabilities) _BrandCapabilityItem(title: cap),
+      ],
+    );
+
+    return embeddedInUnifiedCard
+        ? Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFF1F8FA),
+                  Color(0xFFE5F1F6),
+                  Color(0xFFD6EAF2),
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-    );
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32.0,
+                  vertical: 32.0,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: contentColumn,
+                  ),
+                ),
+              ),
+            ),
+          )
+        : Padding(
+            padding: EdgeInsets.fromLTRB(
+              isCompact ? AppSpacing.md : AppSpacing.xl,
+              isCompact ? AppSpacing.md : AppSpacing.xl,
+              isCompact ? AppSpacing.md : AppSpacing.lg,
+              isCompact ? AppSpacing.md : AppSpacing.xl,
+            ),
+            child: Container(
+              height: isCompact ? null : double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFF1F8FA),
+                    Color(0xFFE5F1F6),
+                    Color(0xFFD6EAF2),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: const Color(0xFFC7E2ED)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x120F766E),
+                    blurRadius: 24,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: isCompact
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.lg,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 360),
+                          child: contentColumn,
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xxxl,
+                          vertical: AppSpacing.xl,
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 480),
+                          child: contentColumn,
+                        ),
+                      ),
+              ),
+            ),
+          );
   }
 }
 
@@ -399,8 +623,8 @@ class _WarehouseHeroIllustration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: const Key('auth_brand_warehouse_hero'),
       width: double.infinity,
-      height: 220,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
@@ -417,11 +641,15 @@ class _WarehouseHeroIllustration extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        AppAssets.demoWarehouse,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            const _BespokeStoreIllustration(),
+      child: AspectRatio(
+        aspectRatio: 2140 / 735,
+        child: Image.asset(
+          AppAssets.authWarehousePanoramaV2,
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          errorBuilder: (context, error, stackTrace) =>
+              const _BespokeStoreIllustration(),
+        ),
       ),
     );
   }
@@ -435,7 +663,7 @@ class _BrandCapabilityItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
           const Icon(

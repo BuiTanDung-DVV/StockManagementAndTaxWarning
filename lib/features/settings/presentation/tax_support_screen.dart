@@ -175,11 +175,7 @@ class TaxSupportScreen extends ConsumerWidget {
             SizedBox(height: 12),
             ...links.map(
               (l) => GestureDetector(
-                onTap: () => _showLinkDialog(
-                  context,
-                  l.title,
-                  l.url,
-                ),
+                onTap: () => _showLinkDialog(context, l.title, l.url),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 8),
                   padding: EdgeInsets.all(14),
@@ -192,9 +188,9 @@ class TaxSupportScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: _taxLinkColor(l.colorRole).withValues(
-                            alpha: 0.1,
-                          ),
+                          color: _taxLinkColor(
+                            l.colorRole,
+                          ).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(

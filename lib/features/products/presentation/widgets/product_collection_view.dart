@@ -91,7 +91,12 @@ class ProductCollectionView extends StatelessWidget {
         return GridView.builder(
           controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, AppSpacing.lg),
+          padding: const EdgeInsets.fromLTRB(
+            0,
+            AppSpacing.sm,
+            0,
+            AppSpacing.lg,
+          ),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: AppSpacing.sm,
@@ -158,8 +163,8 @@ class _ProductListItemCard extends StatelessWidget {
       color: isOutOfStock
           ? AppColors.danger
           : (productIsLowStock(stock, minStock)
-              ? AppColors.warning
-              : AppColors.success),
+                ? AppColors.warning
+                : AppColors.success),
     );
 
     final priceLabel = Column(
@@ -299,11 +304,7 @@ class _ProductListItemCard extends StatelessWidget {
                       if (veryCompact)
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            stockBadge,
-                            const Spacer(),
-                            priceLabel,
-                          ],
+                          children: [stockBadge, const Spacer(), priceLabel],
                         )
                       else
                         stockBadge,
@@ -385,8 +386,8 @@ class _ProductGridItemCard extends StatelessWidget {
       color: isOutOfStock
           ? AppColors.danger
           : (productIsLowStock(stock, minStock)
-              ? AppColors.warning
-              : AppColors.success),
+                ? AppColors.warning
+                : AppColors.success),
     );
 
     return Container(
@@ -553,11 +554,20 @@ class _ProductTagsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final raw = tagsRaw;
     List<String> tags = [];
-    if (tagsRaw is List) {
-      tags = tagsRaw.map((e) => e.toString()).toList();
-    } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
-      tags = tagsRaw.split(',').where((e) => e.trim().isNotEmpty).toList();
+    if (raw is Iterable) {
+      tags = [
+        for (final item in raw)
+          if (item != null && item.toString().trim().isNotEmpty)
+            item.toString().trim(),
+      ];
+    } else if (raw is String && raw.isNotEmpty) {
+      tags = raw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
 
     final minStock = TypeParser.asDouble(

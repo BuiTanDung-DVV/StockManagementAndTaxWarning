@@ -173,6 +173,53 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'auth screens support enlarged text on narrow viewport and desktop',
+    (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final targets = [
+        const LoginScreen(),
+        const RegisterScreen(),
+        const ForgotPasswordScreen(),
+      ];
+
+      for (final size in [const Size(390, 844), const Size(960, 900)]) {
+        await tester.binding.setSurfaceSize(size);
+        for (final screen in targets) {
+          await tester.pumpWidget(_app(screen, dark: true));
+          await tester.pumpAndSettle();
+
+          final scrollable = find.byType(Scrollable);
+          if (scrollable.evaluate().isNotEmpty) {
+            final textButton = find.byType(TextButton).last;
+            if (textButton.evaluate().isNotEmpty) {
+              await tester.scrollUntilVisible(
+                textButton,
+                100,
+                scrollable: scrollable.first,
+              );
+            }
+          }
+
+          // Assert floating label behavior is always
+          final textField = find.byType(TextField).first;
+          if (textField.evaluate().isNotEmpty) {
+            final theme = Theme.of(tester.element(textField));
+            expect(
+              theme.inputDecorationTheme.floatingLabelBehavior,
+              FloatingLabelBehavior.always,
+            );
+          }
+
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+        }
+      }
+      await tester.binding.setSurfaceSize(null);
+    },
+  );
   for (final entry in screens.entries) {
     testWidgets('${entry.key} fits short desktop viewport', (tester) async {
       await tester.binding.setSurfaceSize(const Size(1440, 600));
@@ -191,15 +238,74 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_app(const RegisterScreen()));
     await tester.pumpAndSettle();
-    final submit = find.widgetWithText(FilledButton, 'Đăng ký & Nhận mã OTP');
+    final submit = find.widgetWithText(FilledButton, 'Đăng ký và nhận mã');
     expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+
+    // Check new divider text
+    expect(find.text('hoặc đăng ký bằng mật khẩu'), findsOneWidget);
+
     final fields = find.byType(TextField);
     await tester.enterText(fields.at(0), 'Kiểm tra giao diện');
     await tester.enterText(fields.at(1), 'ui-test@gmail.com');
+
+    // Test password disclosure focus
+    expect(
+      find.text(
+        'Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Từ 8 ký tự'),
+      findsNothing,
+    ); // Detailed criteria should be hidden initially
+
+    await tester.tap(fields.at(2)); // Focus password
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
+      ),
+      findsNothing,
+    );
+    expect(find.text('Chưa nhập'), findsOneWidget);
+    expect(
+      find.text('Từ 8 ký tự'),
+      findsOneWidget,
+    ); // Detailed criteria shown on focus
+
+    // Test password 4/5 is not sufficient
+    await tester.enterText(
+      fields.at(2),
+      'Password123',
+    ); // No special char -> 4/5
+    await tester.enterText(
+      fields.at(3),
+      'Password123',
+    ); // Match confirm password
+    await tester.pump();
+    expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+    expect(find.text('Khá mạnh'), findsOneWidget); // Score 4 label
+    expect(find.text('Ký tự đặc biệt'), findsWidgets); // Unmet criteria visible
+
+    // Test password 5/5
     await tester.enterText(fields.at(2), 'TestOnly@2026');
+    await tester.pump();
+    expect(
+      find.text('Mật khẩu đạt yêu cầu'),
+      findsOneWidget,
+    ); // Replaces checklist
+    expect(
+      find.text('Ký tự đặc biệt'),
+      findsNothing,
+    ); // Criteria checklist hidden when 5/5
+
     await tester.enterText(fields.at(3), 'different');
     await tester.pump();
     expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+    expect(find.text('Mật khẩu xác nhận chưa khớp'), findsOneWidget);
+
     await tester.enterText(fields.at(3), 'TestOnly@2026');
     await tester.pump();
     expect(tester.widget<FilledButton>(submit).onPressed, isNotNull);
@@ -249,4 +355,104 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets(
+    'auth screens geometric assertions (header stable, input/cta sizes, divider symmetry)',
+    (tester) async {
+      for (final width in [390.0, 768.0]) {
+        tester.view.physicalSize = Size(width, 1000);
+        tester.view.devicePixelRatio = 1.0;
+
+        final Map<String, double> headerTops = {};
+
+        final screensToTest = {
+          'login': const LoginScreen(),
+          'register': const RegisterScreen(),
+          'forgot': const ForgotPasswordScreen(),
+        };
+
+        for (final entry in screensToTest.entries) {
+          await tester.pumpWidget(_app(entry.value));
+          await tester.pumpAndSettle();
+
+          // 1. Stable header/card top
+          final headerFinder = find.text('SmartStock');
+          if (headerFinder.evaluate().isNotEmpty) {
+            headerTops[entry.key] = tester.getTopLeft(headerFinder).dy;
+          }
+
+          // 2. Input and CTA same width, height and alignment
+          final ctaFinder = find.byType(FilledButton);
+          final inputFinders = find.byType(TextField);
+
+          if (ctaFinder.evaluate().isNotEmpty &&
+              inputFinders.evaluate().isNotEmpty) {
+            final ctaRect = tester.getRect(ctaFinder.first);
+            final inputRect = tester.getRect(inputFinders.first);
+
+            // Trục trái / phải
+            expect(inputRect.left, closeTo(ctaRect.left, 2.0));
+            expect(inputRect.right, closeTo(ctaRect.right, 2.0));
+            expect(inputRect.width, closeTo(ctaRect.width, 2.0));
+            expect(ctaRect.height, greaterThanOrEqualTo(52.0));
+            expect(inputRect.height, greaterThanOrEqualTo(52.0));
+          }
+
+          // 3. Divider symmetry (for login)
+          if (entry.key == 'login') {
+            final dividerFinder = find.byType(Divider);
+            if (dividerFinder.evaluate().length >= 2) {
+              final div1 = tester.getRect(dividerFinder.first);
+              final div2 = tester.getRect(dividerFinder.last);
+              expect(div1.width, closeTo(div2.width, 2.0));
+            }
+          }
+        }
+
+        // Check header top stability across 3 screens
+        if (headerTops.length == 3) {
+          expect(headerTops['login'], closeTo(headerTops['register']!, 2.0));
+          expect(headerTops['login'], closeTo(headerTops['forgot']!, 2.0));
+        }
+
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      }
+    },
+  );
+
+  testWidgets('desktop common title-Y alignment across auth screens', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final Map<String, double> titleTops = {};
+
+    final screensToTest = {
+      'login': const LoginScreen(),
+      'register': const RegisterScreen(),
+      'forgot': const ForgotPasswordScreen(),
+    };
+
+    for (final entry in screensToTest.entries) {
+      await tester.pumpWidget(_app(entry.value));
+      await tester.pumpAndSettle();
+
+      Finder specificTitleFinder;
+      if (entry.key == 'login') {
+        specificTitleFinder = find.text('Đăng nhập').first;
+      } else if (entry.key == 'register') {
+        specificTitleFinder = find.text('Tạo tài khoản mới');
+      } else {
+        specificTitleFinder = find.text('Quên mật khẩu?');
+      }
+      titleTops[entry.key] = tester.getTopLeft(specificTitleFinder).dy;
+    }
+
+    expect(titleTops['login'], closeTo(titleTops['register']!, 1.0));
+    expect(titleTops['login'], closeTo(titleTops['forgot']!, 1.0));
+  });
 }

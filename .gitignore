@@ -22,6 +22,7 @@ Thumbs.db
 # ==========================================
 # Dependencies and builds
 .dart_tool/
+.dart-local-cache/
 .dart_appdata/
 .dart_localappdata/
 .tool-home/

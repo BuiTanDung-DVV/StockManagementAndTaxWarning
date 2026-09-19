@@ -65,37 +65,40 @@ void main() {
     expect(csv, contains('"Tổng dư nợ",1500000'));
   });
 
-  test('inventory CSV normalizes fields, escapes formulas and calculates status', () {
-    final csv = ExcelExportService.buildInventoryCsv([
-      {
-        'id': 1,
-        'sku': '-SKU-001',
-        'name': 'Trà =1+1 "Ô Long"',
-        'unit': 'Hộp',
-        'currentStock': 12,
-        'minStock': 5,
-        'sellingPrice': 85000,
-      },
-      {
-        'id': 2,
-        'sku': 'SKU-002',
-        'name': 'Cà phê hòa tan',
-        'unit': 'Gói',
-        'stockQuantity': 0,
-        'minStockThreshold': 10,
-        'retailPrice': 45000,
-      },
-    ], exportedAt: DateTime(2026, 9, 14, 15, 0));
+  test(
+    'inventory CSV normalizes fields, escapes formulas and calculates status',
+    () {
+      final csv = ExcelExportService.buildInventoryCsv([
+        {
+          'id': 1,
+          'sku': '-SKU-001',
+          'name': 'Trà =1+1 "Ô Long"',
+          'unit': 'Hộp',
+          'currentStock': 12,
+          'minStock': 5,
+          'sellingPrice': 85000,
+        },
+        {
+          'id': 2,
+          'sku': 'SKU-002',
+          'name': 'Cà phê hòa tan',
+          'unit': 'Gói',
+          'stockQuantity': 0,
+          'minStockThreshold': 10,
+          'retailPrice': 45000,
+        },
+      ], exportedAt: DateTime(2026, 9, 14, 15, 0));
 
-    expect(csv.startsWith('\uFEFF'), isTrue);
-    expect(csv, contains('BÁO CÁO KIỂM KÊ TỒN KHO - SMARTSTOCK'));
-    expect(csv, contains('Ngày xuất: 14/09/2026 15:00'));
-    // Checks formula escaping
-    expect(csv, contains('"\'-SKU-001"'));
-    // Checks field normalization & status
-    expect(csv, contains('12,5,85000.0,"An toàn"'));
-    expect(csv, contains('0,10,45000.0,"Hết hàng"'));
-  });
+      expect(csv.startsWith('\uFEFF'), isTrue);
+      expect(csv, contains('BÁO CÁO KIỂM KÊ TỒN KHO - SMARTSTOCK'));
+      expect(csv, contains('Ngày xuất: 14/09/2026 15:00'));
+      // Checks formula escaping
+      expect(csv, contains('"\'-SKU-001"'));
+      // Checks field normalization & status
+      expect(csv, contains('12,5,85000.0,"An toàn"'));
+      expect(csv, contains('0,10,45000.0,"Hết hàng"'));
+    },
+  );
 
   test('inventory CSV preserves null values without fake 0s', () {
     final csv = ExcelExportService.buildInventoryCsv([
@@ -119,9 +122,11 @@ void main() {
       },
     ], exportedAt: DateTime(2026, 9, 14, 15, 0));
 
-    expect(csv, contains('"SKU-NULL","Sản phẩm mới","Cái",,,,"Chưa có số liệu"'));
+    expect(
+      csv,
+      contains('"SKU-NULL","Sản phẩm mới","Cái",,,,"Chưa có số liệu"'),
+    );
     expect(csv, contains('"\'=FORMULA"'));
     expect(csv, contains('5,10,20000.0,"Cần nhập thêm"'));
   });
 }
-

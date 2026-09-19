@@ -99,9 +99,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                 backgroundColor: !config.isLoaded
                     ? c.divider
                     : Theme.of(context).colorScheme.primary,
-                foregroundColor: !config.isLoaded
-                    ? c.textMuted
-                    : Colors.white,
+                foregroundColor: !config.isLoaded ? c.textMuted : Colors.white,
                 elevation: 0,
               ),
             ),
@@ -140,9 +138,8 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           ),
                           const SizedBox(height: 20),
                           FilledButton.icon(
-                            onPressed: () => ref
-                                .read(taxConfigProvider.notifier)
-                                .refresh(),
+                            onPressed: () =>
+                                ref.read(taxConfigProvider.notifier).refresh(),
                             icon: const Icon(Icons.refresh, size: 18),
                             label: const Text('Thử lại'),
                           ),

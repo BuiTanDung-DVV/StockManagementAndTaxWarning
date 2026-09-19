@@ -17,6 +17,7 @@ class ProductDetailsContent extends StatelessWidget {
   final VoidCallback? onViewFullDetail;
   final VoidCallback? onClose;
   final bool isQuickView;
+  final Widget? banner;
 
   const ProductDetailsContent({
     super.key,
@@ -24,6 +25,7 @@ class ProductDetailsContent extends StatelessWidget {
     this.onViewFullDetail,
     this.onClose,
     this.isQuickView = false,
+    this.banner,
   });
 
   @override
@@ -44,24 +46,31 @@ class ProductDetailsContent extends StatelessWidget {
     final description = rawDesc.isEmpty ? 'Không có mô tả' : rawDesc;
     final descIsMissing = rawDesc.isEmpty;
     final rawCost = product['costPrice'];
-    final double? costPrice =
-        rawCost != null ? TypeParser.asDouble(rawCost) : null;
+    final double? costPrice = rawCost != null
+        ? TypeParser.asDouble(rawCost)
+        : null;
     final rawSelling =
-        product['sellingPrice'] ?? product['sellPrice'] ?? product['retailPrice'];
-    final double? sellingPrice =
-        rawSelling != null ? TypeParser.asDouble(rawSelling) : null;
+        product['sellingPrice'] ??
+        product['sellPrice'] ??
+        product['retailPrice'];
+    final double? sellingPrice = rawSelling != null
+        ? TypeParser.asDouble(rawSelling)
+        : null;
     final rawWholesale = product['wholesalePrice'];
-    final double? wholesalePrice =
-        rawWholesale != null ? TypeParser.asDouble(rawWholesale) : null;
+    final double? wholesalePrice = rawWholesale != null
+        ? TypeParser.asDouble(rawWholesale)
+        : null;
     final taxRate = product['taxRate'] ?? product['tax'];
     final rawCurrentStock =
         product['currentStock'] ?? product['quantity'] ?? product['stock'];
-    final num? currentStock =
-        rawCurrentStock != null ? num.tryParse(rawCurrentStock.toString()) : null;
+    final num? currentStock = rawCurrentStock != null
+        ? num.tryParse(rawCurrentStock.toString())
+        : null;
     final rawMinStock =
         product['minStock'] ?? product['minimumStock'] ?? product['min_stock'];
-    final num? minStock =
-        rawMinStock != null ? num.tryParse(rawMinStock.toString()) : null;
+    final num? minStock = rawMinStock != null
+        ? num.tryParse(rawMinStock.toString())
+        : null;
 
     final String stockStatus;
     final Color statusColor;
@@ -97,6 +106,7 @@ class ProductDetailsContent extends StatelessWidget {
               ),
               if (onClose != null)
                 IconButton(
+                  key: const Key('product-quick-view-close-button'),
                   tooltip: 'Đóng (Esc)',
                   icon: const Icon(Icons.close_rounded, size: 20),
                   onPressed: onClose,
@@ -105,6 +115,7 @@ class ProductDetailsContent extends StatelessWidget {
           ),
           const Divider(height: 16),
         ],
+        if (banner != null) ...[banner!, const SizedBox(height: 12)],
 
         // Product Image & Name
         Center(
@@ -216,101 +227,112 @@ class ProductDetailsContent extends StatelessWidget {
         ],
 
         // General Info Section
-        _ProductDetailSection(title: 'Thông tin chung', children: [
-          _ProductDetailTile(
-            label: 'Mã SKU',
-            value: sku.isNotEmpty ? sku : 'Chưa có',
-          ),
-          _ProductDetailTile(
-            label: 'Danh mục',
-            value: category.isNotEmpty ? category : 'Chưa phân loại',
-          ),
-          _ProductDetailTile(
-            label: 'Đơn vị tính',
-            value: unit.isNotEmpty ? unit : 'Chưa có',
-          ),
-          _ProductDetailTile(
-            label: 'Mã vạch barcode',
-            value: barcode.isNotEmpty ? barcode : 'Chưa có',
-          ),
-        ]),
+        _ProductDetailSection(
+          title: 'Thông tin chung',
+          children: [
+            _ProductDetailTile(
+              label: 'Mã SKU',
+              value: sku.isNotEmpty ? sku : 'Chưa có',
+            ),
+            _ProductDetailTile(
+              label: 'Danh mục',
+              value: category.isNotEmpty ? category : 'Chưa phân loại',
+            ),
+            _ProductDetailTile(
+              label: 'Đơn vị tính',
+              value: unit.isNotEmpty ? unit : 'Chưa có',
+            ),
+            _ProductDetailTile(
+              label: 'Mã vạch barcode',
+              value: barcode.isNotEmpty ? barcode : 'Chưa có',
+            ),
+          ],
+        ),
 
         // Pricing Policy
-        _ProductDetailSection(title: 'Chính sách giá bán', children: [
-          _ProductDetailTile(
-            label: 'Giá vốn nhập',
-            value: costPrice != null && costPrice > 0
-                ? _currFmt.format(costPrice)
-                : 'Chưa có số liệu',
-          ),
-          _ProductDetailTile(
-            label: 'Giá bán lẻ',
-            value: sellingPrice != null
-                ? _currFmt.format(sellingPrice)
-                : 'Chưa có số liệu',
-          ),
-          _ProductDetailTile(
-            label: 'Giá bán sỉ',
-            value: wholesalePrice != null && wholesalePrice > 0
-                ? _currFmt.format(wholesalePrice)
-                : 'Chưa áp dụng',
-          ),
-          _ProductDetailTile(
-            label: 'Thuế suất áp dụng',
-            value: (taxRate != null && taxRate.toString().isNotEmpty)
-                ? '$taxRate%'
-                : 'Chưa cấu hình',
-          ),
-        ]),
+        _ProductDetailSection(
+          title: 'Chính sách giá bán',
+          children: [
+            _ProductDetailTile(
+              label: 'Giá vốn nhập',
+              value: costPrice != null && costPrice > 0
+                  ? _currFmt.format(costPrice)
+                  : 'Chưa có số liệu',
+            ),
+            _ProductDetailTile(
+              label: 'Giá bán lẻ',
+              value: sellingPrice != null
+                  ? _currFmt.format(sellingPrice)
+                  : 'Chưa có số liệu',
+            ),
+            _ProductDetailTile(
+              label: 'Giá bán sỉ',
+              value: wholesalePrice != null && wholesalePrice > 0
+                  ? _currFmt.format(wholesalePrice)
+                  : 'Chưa áp dụng',
+            ),
+            _ProductDetailTile(
+              label: 'Thuế suất áp dụng',
+              value: (taxRate != null && taxRate.toString().isNotEmpty)
+                  ? '$taxRate%'
+                  : 'Chưa cấu hình',
+            ),
+          ],
+        ),
 
         // Stock Section
-        _ProductDetailSection(title: 'Thông số tồn kho', children: [
-          _ProductDetailTile(
-            label: 'Tổng tồn hiện tại',
-            value: currentStock != null
-                ? '$currentStock ${unit.isNotEmpty ? unit : ''}'.trim()
-                : 'Chưa có số liệu',
-          ),
-          _ProductDetailTile(
-            label: 'Ngưỡng tối thiểu (Min)',
-            value: minStock != null
-                ? '$minStock ${unit.isNotEmpty ? unit : ''}'.trim()
-                : 'Chưa cấu hình',
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Trạng thái kho',
-                style: GoogleFonts.inter(
-                  color: c.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.2)),
-                ),
-                child: Text(
-                  stockStatus,
-                  style: GoogleFonts.manrope(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
+        _ProductDetailSection(
+          title: 'Thông số tồn kho',
+          children: [
+            _ProductDetailTile(
+              label: 'Tổng tồn hiện tại',
+              value: currentStock != null
+                  ? '$currentStock ${unit.isNotEmpty ? unit : ''}'.trim()
+                  : 'Chưa có số liệu',
+            ),
+            _ProductDetailTile(
+              label: 'Ngưỡng tối thiểu (Min)',
+              value: minStock != null
+                  ? '$minStock ${unit.isNotEmpty ? unit : ''}'.trim()
+                  : 'Chưa cấu hình',
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Trạng thái kho',
+                  style: GoogleFonts.inter(
+                    color: c.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
-          ),
-        ]),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Text(
+                    stockStatus,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -318,9 +340,13 @@ class ProductDetailsContent extends StatelessWidget {
   Widget _buildTags(dynamic tagsRaw, AppThemeColors c, ThemeData theme) {
     List<String> tags = [];
     if (tagsRaw is List) {
-      tags = tagsRaw.map((e) => e.toString()).toList();
+      tags = List<String>.from(tagsRaw.map((e) => e.toString()));
     } else if (tagsRaw is String && tagsRaw.isNotEmpty) {
-      tags = tagsRaw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      tags = tagsRaw
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
     tags = tags.where((t) => !t.toLowerCase().startsWith('sim_tag_')).toList();
     if (tags.isEmpty) return const SizedBox.shrink();
@@ -359,10 +385,7 @@ class _ProductDetailSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
 
-  const _ProductDetailSection({
-    required this.title,
-    required this.children,
-  });
+  const _ProductDetailSection({required this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -401,10 +424,7 @@ class _ProductDetailTile extends StatelessWidget {
   final String label;
   final String value;
 
-  const _ProductDetailTile({
-    required this.label,
-    required this.value,
-  });
+  const _ProductDetailTile({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
