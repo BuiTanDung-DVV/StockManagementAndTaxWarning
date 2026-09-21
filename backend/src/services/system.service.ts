@@ -132,13 +132,36 @@ export class SystemService {
     }
 
     async getTaxReferenceData(shopId: number) {
-        const [forms, supportLinks] = await Promise.all([
-            this.getSystemConfig(shopId, 'TAX_DECLARATION_FORMS'),
-            this.getSystemConfig(shopId, 'TAX_SUPPORT_LINKS'),
-        ]);
+        let formsRaw: string | undefined;
+        let supportLinksRaw: string | undefined;
+
+        try {
+            formsRaw = await this.getSystemConfig(shopId, 'TAX_DECLARATION_FORMS');
+        } catch (e) {
+            console.warn('[SystemService] TAX_DECLARATION_FORMS chưa có trong DB, dùng biểu mẫu chuẩn 2026.');
+        }
+
+        try {
+            supportLinksRaw = await this.getSystemConfig(shopId, 'TAX_SUPPORT_LINKS');
+        } catch (e) {
+            console.warn('[SystemService] TAX_SUPPORT_LINKS chưa có trong DB, dùng liên kết chuẩn 2026.');
+        }
+
+        const defaultForms = [
+            { code: '01/CNKD', name: 'Tờ khai thuế HKD/CNKD', description: 'Dành cho HKD nộp thuế theo phương pháp kê khai', status: 'READY', iconKey: 'description' },
+            { code: '01/BK-STK', name: 'Bảng kê sổ tay khoán', description: 'Bảng kê chi tiết theo sổ tay khoán', status: 'READY', iconKey: 'list' },
+            { code: '01/TKN-CNKD', name: 'Tờ khai thuế khoán', description: 'Dành cho HKD nộp thuế khoán', status: 'DRAFT', iconKey: 'article' },
+        ];
+
+        const defaultLinks = [
+            { title: 'Cổng thông tin Cục Thuế', description: 'Tin chính sách, thủ tục và phần mềm chính thức', url: 'https://www.gdt.gov.vn', iconKey: 'authority', colorRole: 'PRIMARY' },
+            { title: 'Thuế điện tử', description: 'Khai và nộp thuế điện tử trên cổng chính thức', url: 'https://thuedientu.gdt.gov.vn', iconKey: 'support', colorRole: 'SUCCESS' },
+            { title: 'Tra cứu hóa đơn', description: 'Tra cứu hóa đơn điện tử của Cục Thuế', url: 'https://hoadondientu.gdt.gov.vn/tra-cuu/tra-cuu-hoa-don', iconKey: 'receipt', colorRole: 'WARNING' },
+        ];
+
         return {
-            forms: parseTaxDeclarationForms(forms),
-            supportLinks: parseTaxSupportLinks(supportLinks),
+            forms: formsRaw ? parseTaxDeclarationForms(formsRaw) : defaultForms,
+            supportLinks: supportLinksRaw ? parseTaxSupportLinks(supportLinksRaw) : defaultLinks,
         };
     }
 

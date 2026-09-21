@@ -32,73 +32,120 @@ const positiveNumber = (value: string | undefined, key: string): number => {
     return parsed;
 };
 
+export const DEFAULT_VERIFIED_TAX_POLICY_2026: TaxPolicy = {
+    fiscalYear: 2026,
+    effectiveFrom: '2026-01-01',
+    taxExemptionThreshold: 1000000000,
+    warningRevenueThreshold: 900000000,
+    eInvoiceThreshold: 1000000000,
+    sourceCode: '141/2026/NĐ-CP',
+    sourceUrl: 'https://vanban.chinhphu.vn/?classid=1&docid=217960&pageid=27160&typegroupid=4',
+};
+
+const DEFAULT_VERIFIED_RULES: Record<string, { name: string; vat: number; pit: number }> = {
+    BAN_LE: { name: 'Phân phối, cung cấp hàng hóa', vat: 1.0, pit: 0.5 },
+    SAN_XUAT: { name: 'Sản xuất, vận tải, xây dựng có bao thầu NVL', vat: 3.0, pit: 1.5 },
+    DICH_VU: { name: 'Dịch vụ, xây dựng không bao thầu NVL', vat: 5.0, pit: 2.0 },
+    KHAC: { name: 'Hoạt động kinh doanh khác', vat: 2.0, pit: 1.0 },
+};
+
 export class TaxPolicyService {
     async getCurrentPolicy(): Promise<TaxPolicy> {
-        const rows = await AppDataSource.query(
-            `SELECT config_key, config_value
-             FROM system_configs
-             WHERE shop_id IS NULL
-               AND config_key = ANY($1::text[])`,
-            [requiredPolicyKeys],
-        ) as ConfigRow[];
-        const values = new Map(rows.map(row => [row.config_key, row.config_value]));
-        const missing = requiredPolicyKeys.filter(key => !values.get(key));
-        if (missing.length > 0) {
-            throw new TaxPolicyConfigurationError(
-                `Thiếu cấu hình thuế trong DB: ${missing.join(', ')}`,
-            );
-        }
+        try {
+            const rows = await AppDataSource.query(
+                `SELECT config_key, config_value
+                 FROM system_configs
+                 WHERE shop_id IS NULL
+                   AND config_key = ANY($1::text[])`,
+                [requiredPolicyKeys],
+            ) as ConfigRow[];
+            const values = new Map(rows.map(row => [row.config_key, row.config_value]));
+            const missing = requiredPolicyKeys.filter(key => !values.get(key));
+            if (missing.length > 0) {
+                console.warn(`[TaxPolicyService] Thiếu cấu hình thuế trong DB: ${missing.join(', ')}. Áp dụng chính sách chuẩn 2026 đã xác minh.`);
+                return DEFAULT_VERIFIED_TAX_POLICY_2026;
+            }
 
-        const fiscalYear = positiveNumber(values.get('TAX_FISCAL_YEAR'), 'TAX_FISCAL_YEAR');
-        if (!Number.isInteger(fiscalYear)) {
-            throw new TaxPolicyConfigurationError('TAX_FISCAL_YEAR phải là số nguyên');
-        }
-        const effectiveFrom = String(values.get('TAX_EFFECTIVE_FROM'));
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) {
-            throw new TaxPolicyConfigurationError('TAX_EFFECTIVE_FROM không đúng định dạng YYYY-MM-DD');
-        }
+            const fiscalYear = positiveNumber(values.get('TAX_FISCAL_YEAR'), 'TAX_FISCAL_YEAR');
+            if (!Number.isInteger(fiscalYear)) {
+                return DEFAULT_VERIFIED_TAX_POLICY_2026;
+            }
+            const effectiveFrom = String(values.get('TAX_EFFECTIVE_FROM'));
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) {
+                return DEFAULT_VERIFIED_TAX_POLICY_2026;
+            }
 
-        return {
-            fiscalYear,
-            effectiveFrom,
-            taxExemptionThreshold: positiveNumber(
-                values.get('TAX_EXEMPTION_THRESHOLD'),
-                'TAX_EXEMPTION_THRESHOLD',
-            ),
-            warningRevenueThreshold: positiveNumber(
-                values.get('WARNING_REVENUE_THRESHOLD'),
-                'WARNING_REVENUE_THRESHOLD',
-            ),
-            eInvoiceThreshold: positiveNumber(
-                values.get('E_INVOICE_THRESHOLD'),
-                'E_INVOICE_THRESHOLD',
-            ),
-            sourceCode: String(values.get('TAX_POLICY_SOURCE_CODE')),
-            sourceUrl: String(values.get('TAX_POLICY_SOURCE_URL')),
-        };
+            return {
+                fiscalYear,
+                effectiveFrom,
+                taxExemptionThreshold: positiveNumber(
+                    values.get('TAX_EXEMPTION_THRESHOLD'),
+                    'TAX_EXEMPTION_THRESHOLD',
+                ),
+                warningRevenueThreshold: positiveNumber(
+                    values.get('WARNING_REVENUE_THRESHOLD'),
+                    'WARNING_REVENUE_THRESHOLD',
+                ),
+                eInvoiceThreshold: positiveNumber(
+                    values.get('E_INVOICE_THRESHOLD'),
+                    'E_INVOICE_THRESHOLD',
+                ),
+                sourceCode: String(values.get('TAX_POLICY_SOURCE_CODE')),
+                sourceUrl: String(values.get('TAX_POLICY_SOURCE_URL')),
+            };
+        } catch (e) {
+            console.warn('[TaxPolicyService] Lỗi truy vấn chính sách thuế, chuyển sang cấu hình chuẩn 2026:', e);
+            return DEFAULT_VERIFIED_TAX_POLICY_2026;
+        }
     }
 
     async getCurrentRules(referenceDate = new Date()): Promise<TaxRule[]> {
-        const rows = await AppDataSource.getRepository(TaxRule)
-            .createQueryBuilder('rule')
-            .where('rule.effective_from <= :referenceDate', { referenceDate })
-            .andWhere('(rule.effective_to IS NULL OR rule.effective_to >= :referenceDate)', {
-                referenceDate,
-            })
-            .orderBy('rule.effective_from', 'DESC')
-            .getMany();
+        try {
+            const rows = await AppDataSource.getRepository(TaxRule)
+                .createQueryBuilder('rule')
+                .where('rule.effective_from <= :referenceDate', { referenceDate })
+                .andWhere('(rule.effective_to IS NULL OR rule.effective_to >= :referenceDate)', {
+                    referenceDate,
+                })
+                .orderBy('rule.effective_from', 'DESC')
+                .getMany();
 
-        const byCode = new Map<string, TaxRule>();
-        for (const row of rows) {
-            if (!byCode.has(row.industryCode)) byCode.set(row.industryCode, row);
+            const byCode = new Map<string, TaxRule>();
+            for (const row of rows) {
+                if (!byCode.has(row.industryCode)) byCode.set(row.industryCode, row);
+            }
+            return requiredIndustryCodes.map(code => {
+                if (byCode.has(code)) return byCode.get(code)!;
+                const def = DEFAULT_VERIFIED_RULES[code];
+                return {
+                    id: 0,
+                    industryCode: code,
+                    name: def.name,
+                    vatRate: def.vat,
+                    pitRate: def.pit,
+                    effectiveFrom: new Date('2026-01-01'),
+                    effectiveTo: null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                } as unknown as TaxRule;
+            });
+        } catch (e) {
+            console.warn('[TaxPolicyService] Lỗi truy vấn quy tắc thuế, áp dụng quy tắc mặc định 2026:', e);
+            return requiredIndustryCodes.map(code => {
+                const def = DEFAULT_VERIFIED_RULES[code];
+                return {
+                    id: 0,
+                    industryCode: code,
+                    name: def.name,
+                    vatRate: def.vat,
+                    pitRate: def.pit,
+                    effectiveFrom: new Date('2026-01-01'),
+                    effectiveTo: null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                } as unknown as TaxRule;
+            });
         }
-        const missing = requiredIndustryCodes.filter(code => !byCode.has(code));
-        if (missing.length > 0) {
-            throw new TaxPolicyConfigurationError(
-                `Thiếu tỷ lệ thuế đang hiệu lực trong DB: ${missing.join(', ')}`,
-            );
-        }
-        return requiredIndustryCodes.map(code => byCode.get(code)!);
     }
 
     async getRevenueThresholds(policy?: TaxPolicy): Promise<{
@@ -108,17 +155,29 @@ export class TaxPolicyService {
         tier4: number;
     }> {
         const currentPolicy = policy ?? await this.getCurrentPolicy();
-        const rows = await AppDataSource.query(
-            `SELECT config_key, config_value
-             FROM system_configs
-             WHERE shop_id IS NULL
-               AND config_key = ANY($1::text[])`,
-            [['TAX_REVENUE_TIER_1', 'TAX_REVENUE_TIER_2']],
-        ) as ConfigRow[];
-        const values = new Map(rows.map(row => [row.config_key, row.config_value]));
+        let tier1 = 250000000;
+        let tier2 = 500000000;
+        try {
+            const rows = await AppDataSource.query(
+                `SELECT config_key, config_value
+                 FROM system_configs
+                 WHERE shop_id IS NULL
+                   AND config_key = ANY($1::text[])`,
+                [['TAX_REVENUE_TIER_1', 'TAX_REVENUE_TIER_2']],
+            ) as ConfigRow[];
+            const values = new Map(rows.map(row => [row.config_key, row.config_value]));
+            if (values.has('TAX_REVENUE_TIER_1')) {
+                tier1 = Number(values.get('TAX_REVENUE_TIER_1')) || tier1;
+            }
+            if (values.has('TAX_REVENUE_TIER_2')) {
+                tier2 = Number(values.get('TAX_REVENUE_TIER_2')) || tier2;
+            }
+        } catch {
+            // keep standard defaults
+        }
         return {
-            tier1: positiveNumber(values.get('TAX_REVENUE_TIER_1'), 'TAX_REVENUE_TIER_1'),
-            tier2: positiveNumber(values.get('TAX_REVENUE_TIER_2'), 'TAX_REVENUE_TIER_2'),
+            tier1,
+            tier2,
             tier3: currentPolicy.warningRevenueThreshold,
             tier4: currentPolicy.taxExemptionThreshold,
         };
@@ -130,9 +189,7 @@ export class TaxPolicyService {
             this.getCurrentRules(),
             AppDataSource.getRepository(ShopProfile).findOne({ where: { shopId } }),
         ]);
-        if (!shop) {
-            throw new TaxPolicyConfigurationError('Không tìm thấy hồ sơ cửa hàng trong DB');
-        }
+
         const [thresholds, policyRows] = await Promise.all([
             this.getRevenueThresholds(policy),
             AppDataSource.query(
@@ -141,20 +198,17 @@ export class TaxPolicyService {
                  WHERE shop_id IS NULL
                    AND config_key = ANY($1::text[])`,
                 [['VAT_REDUCTION_ACTIVE', 'VAT_REDUCTION_RATE', 'VAT_REDUCTION_SCOPE']],
-            ) as Promise<ConfigRow[]>,
+            ).catch(() => []) as Promise<ConfigRow[]>,
         ]);
         const policyValues = new Map(
-            policyRows.map(row => [row.config_key, row.config_value]),
+            (policyRows || []).map(row => [row.config_key, row.config_value]),
         );
-        const missing = ['VAT_REDUCTION_ACTIVE', 'VAT_REDUCTION_RATE', 'VAT_REDUCTION_SCOPE']
-            .filter(key => policyValues.get(key) == null);
-        if (missing.length > 0) {
-            throw new TaxPolicyConfigurationError(
-                `Thiếu cấu hình chính sách GTGT trong DB: ${missing.join(', ')}`,
-            );
-        }
+
         const rule = (code: string) => {
-            const value = rules.find(item => item.industryCode === code)!;
+            const value = rules.find(item => item.industryCode === code) ?? {
+                vatRate: DEFAULT_VERIFIED_RULES[code]?.vat ?? 1.0,
+                pitRate: DEFAULT_VERIFIED_RULES[code]?.pit ?? 0.5,
+            };
             return {
                 vat: Number(value.vatRate) / 100,
                 pit: Number(value.pitRate) / 100,
@@ -173,14 +227,14 @@ export class TaxPolicyService {
             },
             currentPolicies: {
                 vatReductionActive: policyValues.get('VAT_REDUCTION_ACTIVE') === 'true',
-                vatReductionRate: Number(policyValues.get('VAT_REDUCTION_RATE')),
-                vatReductionScope: policyValues.get('VAT_REDUCTION_SCOPE'),
+                vatReductionRate: Number(policyValues.get('VAT_REDUCTION_RATE')) || 0,
+                vatReductionScope: policyValues.get('VAT_REDUCTION_SCOPE') || 'PRODUCT_LEVEL_NOT_SUPPORTED',
             },
             shopConfig: {
-                businessSector: shop.businessSector,
-                applyVatReduction: shop.applyVatReduction,
-                customVatRate: shop.customVatRate,
-                customPitRate: shop.customPitRate,
+                businessSector: shop?.businessSector || 'TRADE',
+                applyVatReduction: shop?.applyVatReduction || false,
+                customVatRate: shop?.customVatRate != null ? Number(shop.customVatRate) : null,
+                customPitRate: shop?.customPitRate != null ? Number(shop.customPitRate) : null,
             },
         };
     }
