@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/assets/app_assets.dart';
@@ -11,7 +12,6 @@ import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_ui_components.dart';
-import '../../../core/widgets/filter_bar.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/costing_provider.dart';
@@ -45,13 +45,21 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _searchQuery = '';
+  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     Future.microtask(
       () => ref.read(costingProvider.notifier).loadCostingMethod(),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -77,15 +85,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final sections = <_SettingsSectionData>[
       _SettingsSectionData(
         title: 'Tài khoản & bảo mật',
+        icon: Icons.shield_outlined,
+        iconColor: const Color(0xFF2563EB),
         entries: [
           _SettingsEntry(
             label: 'Thông tin cá nhân',
             description: 'Cập nhật hồ sơ và thông tin liên hệ của tài khoản.',
+            icon: Icons.person_outline_rounded,
+            iconColor: const Color(0xFF2563EB),
             onTap: () => context.push('/profile'),
           ),
           _SettingsEntry(
             label: 'Đổi mật khẩu',
             description: 'Thiết lập mật khẩu mới cho tài khoản đang đăng nhập.',
+            icon: Icons.lock_reset_rounded,
+            iconColor: const Color(0xFF3B82F6),
             onTap: () => context.push('/change-password'),
           ),
           if (shopState.userShops.length > 1)
@@ -93,6 +107,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Chuyển cửa hàng',
               description:
                   'Đang xem: ${shopState.currentShopName ?? 'Tất cả cửa hàng'}.',
+              icon: Icons.swap_horiz_rounded,
+              iconColor: const Color(0xFF6366F1),
               onTap: () => _showShopSwitcher(context, shopState),
             ),
         ],
@@ -100,26 +116,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (canManageStaff)
         _SettingsSectionData(
           title: 'Nhân viên & phân quyền',
+          icon: Icons.badge_outlined,
+          iconColor: const Color(0xFFD97706),
           entries: [
             _SettingsEntry(
               label: 'Danh sách nhân viên',
               description: 'Quản lý thành viên đang làm việc tại cửa hàng.',
+              icon: Icons.people_alt_outlined,
+              iconColor: const Color(0xFFD97706),
               onTap: () => context.push('/staff'),
             ),
             _SettingsEntry(
               label: 'Vai trò và quyền truy cập',
               description: 'Thiết lập phạm vi thao tác theo từng vai trò.',
+              icon: Icons.admin_panel_settings_outlined,
+              iconColor: const Color(0xFFF59E0B),
               onTap: () => context.push('/roles'),
             ),
           ],
         ),
       _SettingsSectionData(
         title: 'Hàng hóa & kho vận',
+        icon: Icons.inventory_2_outlined,
+        iconColor: const Color(0xFF0D9488),
         entries: [
           if (canManageProducts)
             _SettingsEntry(
               label: 'Danh mục sản phẩm',
               description: 'Chuẩn hóa nhóm hàng phục vụ tra cứu và báo cáo.',
+              icon: Icons.category_outlined,
+              iconColor: const Color(0xFF0D9488),
               onTap: () => context.push('/settings/product-categories'),
             ),
           if (canManageSettings)
@@ -127,6 +153,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Nhật ký hoạt động',
               description:
                   'Tra cứu thao tác quan trọng đã thực hiện trong hệ thống.',
+              icon: Icons.history_rounded,
+              iconColor: const Color(0xFF14B8A6),
               onTap: () => context.push('/activity-logs'),
             ),
           if (canManageSettings)
@@ -139,6 +167,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : costing.method == 'FIFO'
                   ? 'Đang dùng: Nhập trước – xuất trước (FIFO).'
                   : 'Đang dùng: Bình quân gia quyền (AVG).',
+              icon: Icons.calculate_outlined,
+              iconColor: const Color(0xFF0284C7),
               onTap: costing.isLoading || !costing.hasData
                   ? null
                   : () => _showCostingMethodPicker(context),
@@ -148,24 +178,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Định mức tồn tối thiểu',
               description:
                   'Thiết lập ngưỡng cảnh báo khi mặt hàng chạm mức an toàn.',
+              icon: Icons.warning_amber_rounded,
+              iconColor: const Color(0xFFE11D48),
               onTap: () => context.push('/inventory'),
             ),
         ],
       ),
       _SettingsSectionData(
         title: 'Cửa hàng & thanh toán',
+        icon: Icons.storefront_rounded,
+        iconColor: const Color(0xFF059669),
         entries: [
           if (canManageSettings)
             _SettingsEntry(
               label: 'Thông tin cửa hàng',
               description:
                   'Cập nhật tên, địa chỉ, mã số thuế và thông tin liên hệ.',
+              icon: Icons.store_outlined,
+              iconColor: const Color(0xFF059669),
               onTap: () => context.push('/shop-profile'),
             ),
           if (canManageSettings)
             _SettingsEntry(
               label: 'Ảnh QR thanh toán',
               description: 'Tải lên hoặc thay ảnh QR nhận tiền của cửa hàng.',
+              icon: Icons.qr_code_2_rounded,
+              iconColor: const Color(0xFF10B981),
               onTap: () => showShopPaymentQrDialog(context, canManage: true),
             ),
           if (canManageSettings)
@@ -173,24 +211,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Mẫu hóa đơn in',
               description:
                   'Tùy chỉnh nội dung và nhận diện trên chứng từ bán hàng.',
+              icon: Icons.receipt_long_outlined,
+              iconColor: const Color(0xFF34D399),
               onTap: () => context.push('/settings/receipt-template'),
             ),
           if (canManageSettings)
             _SettingsEntry(
               label: 'Đơn vị vận chuyển',
               description: 'Quản lý đối tác giao hàng và cấu hình vận chuyển.',
+              icon: Icons.local_shipping_outlined,
+              iconColor: const Color(0xFF059669),
               onTap: () => context.push('/settings/shipping-carriers'),
             ),
         ],
       ),
       _SettingsSectionData(
         title: 'Thuế & trợ giúp nghiệp vụ',
+        icon: Icons.account_balance_outlined,
+        iconColor: const Color(0xFF7C3AED),
         entries: [
           if (canManageSettings)
             _SettingsEntry(
               label: 'Cấu hình thuế',
               description:
                   'Thiết lập thông số dùng trong chức năng hỗ trợ tính thuế.',
+              icon: Icons.tune_rounded,
+              iconColor: const Color(0xFF7C3AED),
               onTap: () => context.push('/tax-config'),
             ),
           if (canViewFinance)
@@ -198,6 +244,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Kênh hỗ trợ thuế',
               description:
                   'Xem đầu mối và tài liệu hỗ trợ khi cần làm rõ nghiệp vụ.',
+              icon: Icons.support_agent_rounded,
+              iconColor: const Color(0xFF8B5CF6),
               onTap: () => context.push('/tax-support'),
             ),
           if (canManageSettings)
@@ -205,6 +253,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Nguồn tài liệu tham khảo',
               description:
                   'Quản lý nguồn kiến thức được dùng trong phần trợ giúp.',
+              icon: Icons.menu_book_outlined,
+              iconColor: const Color(0xFFA855F7),
               onTap: () => context.push('/settings/ai-knowledge'),
             ),
           if (canViewFinance)
@@ -212,16 +262,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: 'Cổng tra cứu Thuế điện tử',
               description:
                   'Liên kết tra cứu nghĩa vụ thuế trên thuedientu.gdt.gov.vn.',
+              icon: Icons.open_in_new_rounded,
+              iconColor: const Color(0xFF7C3AED),
               onTap: () => context.push('/tax-support'),
             ),
         ],
       ),
       _SettingsSectionData(
         title: 'Hệ thống & giao diện',
+        icon: Icons.settings_suggest_outlined,
+        iconColor: const Color(0xFF4F46E5),
         entries: [
           _SettingsEntry(
             label: 'Trung tâm thông báo',
             description: 'Xem cảnh báo vận hành và thông báo cần xử lý.',
+            icon: Icons.notifications_none_rounded,
+            iconColor: const Color(0xFF4F46E5),
             badge: notifications.unreadCount > 0
                 ? '${notifications.unreadCount} chưa đọc'
                 : null,
@@ -230,17 +286,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _SettingsEntry(
             label: 'Màu giao diện',
             description: 'Đang dùng: ${brandColor.label}.',
+            icon: Icons.palette_outlined,
+            iconColor: brandColor.color,
             onTap: () => _showBrandColorPicker(context, brandColor),
           ),
           if (shopState.isOwner)
             _SettingsEntry(
               label: 'Sao lưu và khôi phục',
               description: 'Tạo bản sao dữ liệu và khôi phục khi có sự cố.',
+              icon: Icons.cloud_sync_outlined,
+              iconColor: const Color(0xFF6366F1),
               onTap: () => context.push('/settings/backup-restore'),
             ),
           _SettingsEntry(
             label: 'Thông tin phần mềm',
             description: 'Xem phiên bản và thông tin sản phẩm.',
+            icon: Icons.info_outline_rounded,
+            iconColor: const Color(0xFF64748B),
             onTap: () => _showAbout(context),
           ),
         ],
@@ -252,6 +314,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .map(
           (section) => _SettingsSectionData(
             title: section.title,
+            icon: section.icon,
+            iconColor: section.iconColor,
             entries: section.entries.where((entry) {
               if (query.isEmpty) return true;
               return entry.label.toLowerCase().contains(query) ||
@@ -303,14 +367,110 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       : null,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                FilterBar(
-                  searchHint: 'Tìm nhanh một thiết lập',
-                  onSearchChanged: (value) {
-                    if (value != _searchQuery) {
-                      setState(() => _searchQuery = value);
-                    }
-                  },
+                Container(
+                  decoration: BoxDecoration(
+                    color: colors.card,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: colors.divider.withValues(alpha: 0.8),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      if (value != _searchQuery) {
+                        setState(() => _searchQuery = value);
+                      }
+                    },
+                    style: GoogleFonts.inter(
+                      color: colors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: InputDecoration(
+                      hintText:
+                          'Tìm nhanh một thiết lập, nhân viên, thuế, kho hàng...',
+                      hintStyle: GoogleFonts.inter(
+                        color: colors.textMuted,
+                        fontSize: 13.5,
+                      ),
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(left: 14, right: 10),
+                        child: Icon(
+                          Icons.search_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 22,
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 44,
+                        minHeight: 44,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                              color: colors.textSecondary,
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
                 ),
+                if (_searchQuery.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.filter_list_rounded,
+                          size: 16,
+                          color: colors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Tìm thấy ${filteredSections.fold<int>(0, (sum, s) => sum + s.entries.length)} thiết lập phù hợp',
+                          style: GoogleFonts.inter(
+                            color: colors.textSecondary,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                          icon: const Icon(Icons.close_rounded, size: 14),
+                          label: const Text('Xóa bộ lọc'),
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            foregroundColor: colors.textSecondary,
+                            textStyle: GoogleFonts.inter(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 if (filteredSections.isEmpty)
                   AppCardContainer(
@@ -337,18 +497,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         _SettingsSection(section: section),
                     ],
                   ),
-                const SizedBox(height: AppSpacing.lg),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
+                const SizedBox(height: AppSpacing.xl),
+                Center(
+                  child: OutlinedButton.icon(
                     onPressed: () => _confirmLogout(context),
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: const Text('Đăng xuất tài khoản'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.danger,
                       side: BorderSide(
-                        color: AppColors.danger.withValues(alpha: 0.55),
+                        color: AppColors.danger.withValues(alpha: 0.35),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Đăng xuất tài khoản'),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xxl),
@@ -902,20 +1069,31 @@ class _SettingsProfileCard extends StatelessWidget {
 
 class _SettingsSectionData {
   final String title;
+  final IconData icon;
+  final Color iconColor;
   final List<_SettingsEntry> entries;
 
-  const _SettingsSectionData({required this.title, required this.entries});
+  const _SettingsSectionData({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.entries,
+  });
 }
 
 class _SettingsEntry {
   final String label;
   final String description;
+  final IconData icon;
+  final Color? iconColor;
   final String? badge;
   final VoidCallback? onTap;
 
   const _SettingsEntry({
     required this.label,
     required this.description,
+    required this.icon,
+    this.iconColor,
     this.badge,
     required this.onTap,
   });
@@ -929,34 +1107,96 @@ class _SettingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    return AppCardContainer(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: Text(
-              section.title,
-              style: TextStyle(
-                color: colors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.divider.withValues(alpha: 0.7)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Section Header
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 14,
+              ),
+              decoration: BoxDecoration(
+                color: colors.card,
+                border: Border(
+                  bottom: BorderSide(
+                    color: colors.divider.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: section.iconColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      section.icon,
+                      color: section.iconColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      section.title,
+                      style: GoogleFonts.manrope(
+                        color: colors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 3.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.bg,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colors.divider.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    child: Text(
+                      '${section.entries.length} mục',
+                      style: GoogleFonts.inter(
+                        color: colors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          Divider(height: 1, color: colors.divider),
-          for (var index = 0; index < section.entries.length; index++)
-            _SettingsActionRow(
-              entry: section.entries[index],
-              showDivider: index < section.entries.length - 1,
-            ),
-        ],
+
+            // Entries List
+            for (var index = 0; index < section.entries.length; index++)
+              _SettingsActionRow(
+                entry: section.entries[index],
+                showDivider: index < section.entries.length - 1,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -971,66 +1211,97 @@ class _SettingsActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    return InkWell(
-      onTap: entry.onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          border: showDivider
-              ? Border(bottom: BorderSide(color: colors.divider))
-              : null,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.label,
-                    style: TextStyle(
-                      color: entry.onTap == null
-                          ? colors.textMuted
-                          : colors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+    final iconColor = entry.iconColor ?? colors.textSecondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: entry.onTap,
+        hoverColor: AppColors.primary.withValues(alpha: 0.04),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 13,
+          ),
+          decoration: BoxDecoration(
+            border: showDivider
+                ? Border(
+                    bottom: BorderSide(
+                      color: colors.divider.withValues(alpha: 0.5),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxs),
-                  Text(
-                    entry.description,
-                    style: TextStyle(
-                      color: colors.textSecondary,
-                      fontSize: 11,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            if (entry.badge != null)
-              AppStatusBadge(
-                label: entry.badge!,
-                color: Theme.of(context).colorScheme.primary,
-              )
-            else if (entry.onTap == null)
-              Text(
-                'Đang tải',
-                style: TextStyle(
-                  color: colors.textMuted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  )
+                : null,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.09),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              )
-            else
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 20,
-                color: colors.textMuted,
+                child: Icon(entry.icon, size: 20, color: iconColor),
               ),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.label,
+                      style: GoogleFonts.manrope(
+                        color: entry.onTap == null
+                            ? colors.textMuted
+                            : colors.textPrimary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      entry.description,
+                      style: GoogleFonts.inter(
+                        color: colors.textSecondary,
+                        fontSize: 11.5,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (entry.badge != null)
+                AppStatusBadge(
+                  label: entry.badge!,
+                  color: Theme.of(context).colorScheme.primary,
+                )
+              else if (entry.onTap == null)
+                Text(
+                  'Đang tải',
+                  style: GoogleFonts.inter(
+                    color: colors.textMuted,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+              else
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: colors.bg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: colors.textMuted,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
