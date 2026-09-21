@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
@@ -94,32 +95,9 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
-                const SizedBox(height: 12),
-                Text(
-                  'Không tải được dữ liệu báo cáo\n$e',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    color: AppColors.danger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(xntReportProvider),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Thử lại'),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
+            child: AppInlineError(
+              message: 'Không tải được dữ liệu báo cáo. Vui lòng thử lại sau.',
+              onRetry: () => ref.invalidate(xntReportProvider),
             ),
           ),
         ),
@@ -140,230 +118,237 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
           final exportedSkuCount = summary['exportedSkuCount'] ?? 0;
           final closingSkuCount = summary['closingSkuCount'] ?? 0;
 
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Period label styled like a premium badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.date_range_rounded,
-                        size: 14,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Kỳ báo cáo: $_from → $_to',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Các thẻ đếm SKU, không cộng lẫn số lượng khác đơn vị tính.
-                LayoutBuilder(
-                  builder: (context, constraints) => GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: constraints.maxWidth < 680 ? 2 : 4,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: constraints.maxWidth < 680 ? 2.35 : 1.9,
-                    children: [
-                      _MiniCard(
-                        'SKU có tồn đầu',
-                        '$openingSkuCount',
-                        AppColors.info,
-                      ),
-                      _MiniCard(
-                        'SKU có nhập',
-                        '$importedSkuCount',
-                        AppColors.success,
-                      ),
-                      _MiniCard(
-                        'SKU có xuất',
-                        '$exportedSkuCount',
-                        AppColors.warning,
-                      ),
-                      _MiniCard(
-                        'SKU còn tồn',
-                        '$closingSkuCount',
-                        AppColors.primary,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Title
-                Text(
-                  'Chi tiết sản phẩm',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: c.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                if (items.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        'Không có dữ liệu phát sinh trong kỳ',
-                        style: GoogleFonts.inter(
-                          color: c.textSecondary,
-                          fontSize: 13,
-                        ),
-                      ),
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(xntReportProvider);
+              ref.invalidate(slowMovingProvider);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Period label styled like a premium badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                  )
-                else
-                  LayoutBuilder(
-                    builder: (context, constraints) =>
-                        xntUsesCardLayout(constraints.maxWidth)
-                        ? _XntProductCards(items: pageItems)
-                        : _XntProductTable(items: pageItems),
-                  ),
-                if (items.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  AppPaginationBar(
-                    currentPage: currentPage,
-                    totalPages: totalPages,
-                    totalItems: items.length,
-                    itemLabel: 'sản phẩm',
-                    onPageChanged: (page) => setState(() => _page = page),
-                  ),
-                ],
-                const SizedBox(height: 24),
-
-                // Slow-moving warnings
-                Text(
-                  'Cảnh báo hàng chậm luân chuyển',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.warning,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                slowAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Text(
-                    'Lỗi: $e',
-                    style: const TextStyle(color: AppColors.danger),
-                  ),
-                  data: (slowItems) {
-                    if (slowItems.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Text(
-                          'Không có sản phẩm chậm luân chuyển nào được phát hiện.',
-                          style: GoogleFonts.inter(
-                            color: c.textSecondary,
-                            fontSize: 13,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.date_range_rounded,
+                          size: 14,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Kỳ báo cáo: $_from → $_to',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      );
-                    }
-                    return Column(
-                      children: slowItems.take(5).map<Widget>((item) {
-                        final name =
-                            item['productName'] ?? item['name'] ?? 'SP';
-                        final qty =
-                            item['quantity'] ?? item['currentStock'] ?? 0;
-                        final unit = item['unit']?.toString() ?? 'đơn vị';
-                        final days =
-                            item['daysUnsold'] ??
-                            item['daysSinceLastSale'] ??
-                            0;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: c.card,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppColors.warning.withValues(alpha: 0.2),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Các thẻ đếm SKU, không cộng lẫn số lượng khác đơn vị tính.
+                  LayoutBuilder(
+                    builder: (context, constraints) => GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: constraints.maxWidth < 680 ? 2 : 4,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: constraints.maxWidth < 680 ? 2.35 : 1.9,
+                      children: [
+                        _MiniCard(
+                          'SKU có tồn đầu',
+                          '$openingSkuCount',
+                          AppColors.info,
+                        ),
+                        _MiniCard(
+                          'SKU có nhập',
+                          '$importedSkuCount',
+                          AppColors.success,
+                        ),
+                        _MiniCard(
+                          'SKU có xuất',
+                          '$exportedSkuCount',
+                          AppColors.warning,
+                        ),
+                        _MiniCard(
+                          'SKU còn tồn',
+                          '$closingSkuCount',
+                          AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Title
+                  Text(
+                    'Chi tiết sản phẩm',
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (items.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: AppEmpty(
+                          visual: AppEmptyVisual.document,
+                          message: 'Không có dữ liệu phát sinh trong kỳ',
+                          subtitle:
+                              'Thử chọn khoảng thời gian khác hoặc kiểm tra lại các phát sinh nhập xuất kho.',
+                        ),
+                      ),
+                    )
+                  else
+                    LayoutBuilder(
+                      builder: (context, constraints) =>
+                          xntUsesCardLayout(constraints.maxWidth)
+                          ? _XntProductCards(items: pageItems)
+                          : _XntProductTable(items: pageItems),
+                    ),
+                  if (items.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    AppPaginationBar(
+                      currentPage: currentPage,
+                      totalPages: totalPages,
+                      totalItems: items.length,
+                      itemLabel: 'sản phẩm',
+                      onPageChanged: (page) => setState(() => _page = page),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+
+                  // Slow-moving warnings
+                  Text(
+                    'Cảnh báo hàng chậm luân chuyển',
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  slowAsync.when(
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => AppInlineError(
+                      message:
+                          'Không tải được cảnh báo hàng chậm luân chuyển. Vui lòng thử lại sau.',
+                      onRetry: () => ref.invalidate(slowMovingProvider),
+                    ),
+                    data: (slowItems) {
+                      if (slowItems.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            'Không có sản phẩm chậm luân chuyển nào được phát hiện.',
+                            style: GoogleFonts.inter(
+                              color: c.textSecondary,
+                              fontSize: 13,
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      name,
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                        color: c.textPrimary,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Tồn vướng kho: ${formatXntQuantity(qty)} $unit',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        color: c.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warning.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '$days ngày đọng',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.warning,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         );
-                      }).toList(),
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-              ],
+                      }
+                      return Column(
+                        children: slowItems.take(5).map<Widget>((item) {
+                          final name =
+                              item['productName'] ?? item['name'] ?? 'SP';
+                          final qty =
+                              item['quantity'] ?? item['currentStock'] ?? 0;
+                          final unit = item['unit']?.toString() ?? 'đơn vị';
+                          final days =
+                              item['daysUnsold'] ??
+                              item['daysSinceLastSale'] ??
+                              0;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: c.card,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: AppColors.warning.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                          color: c.textPrimary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Tồn vướng kho: ${formatXntQuantity(qty)} $unit',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: c.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.warning.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '$days ngày đọng',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.warning,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           );
         },

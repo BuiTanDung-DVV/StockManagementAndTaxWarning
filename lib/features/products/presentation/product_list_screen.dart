@@ -242,7 +242,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Lỗi khi xuất file: $e'),
+          content: const Text(
+            'Không thể xuất file danh sách sản phẩm. Vui lòng thử lại sau.',
+          ),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -483,75 +485,91 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       final hasActiveFilter =
                           searchQuery.isNotEmpty || tagQuery.isNotEmpty;
                       if (hasActiveFilter) {
-                        return Center(
-                          child: Padding(
+                        return RefreshIndicator(
+                          onRefresh: () async =>
+                              ref.invalidate(productListProvider),
+                          child: ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.all(AppSpacing.xl),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const AppEmpty(
-                                  visual: AppEmptyVisual.inventory,
-                                  message: 'Không tìm thấy sản phẩm',
-                                  subtitle:
-                                      'Không có sản phẩm nào khớp với bộ lọc hiện tại.',
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                OutlinedButton.icon(
-                                  key: const Key(
-                                    'product-clear-filters-button',
+                            children: [
+                              const SizedBox(height: 60),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const AppEmpty(
+                                    visual: AppEmptyVisual.inventory,
+                                    message: 'Không tìm thấy sản phẩm',
+                                    subtitle:
+                                        'Không có sản phẩm nào khớp với bộ lọc hiện tại.',
                                   ),
-                                  onPressed: () {
-                                    ref
-                                        .read(
-                                          _productSearchQueryProvider.notifier,
-                                        )
-                                        .set('');
-                                    ref
-                                        .read(
-                                          _productTagFilterProvider.notifier,
-                                        )
-                                        .set('');
-                                    setState(() {
-                                      _page = 1;
-                                      _selectedProductIds.clear();
-                                    });
-                                  },
-                                  icon: const Icon(
-                                    Icons.filter_alt_off_rounded,
-                                    size: 18,
+                                  const SizedBox(height: AppSpacing.md),
+                                  OutlinedButton.icon(
+                                    key: const Key(
+                                      'product-clear-filters-button',
+                                    ),
+                                    onPressed: () {
+                                      ref
+                                          .read(
+                                            _productSearchQueryProvider
+                                                .notifier,
+                                          )
+                                          .set('');
+                                      ref
+                                          .read(
+                                            _productTagFilterProvider.notifier,
+                                          )
+                                          .set('');
+                                      setState(() {
+                                        _page = 1;
+                                        _selectedProductIds.clear();
+                                      });
+                                    },
+                                    icon: const Icon(
+                                      Icons.filter_alt_off_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Xóa bộ lọc'),
                                   ),
-                                  label: const Text('Xóa bộ lọc'),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            ],
                           ),
                         );
                       }
 
-                      return Center(
-                        child: Padding(
+                      return RefreshIndicator(
+                        onRefresh: () async =>
+                            ref.invalidate(productListProvider),
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.all(AppSpacing.xl),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const AppEmpty(
-                                visual: AppEmptyVisual.inventory,
-                                message: 'Chưa có sản phẩm',
-                                subtitle:
-                                    'Hãy thêm sản phẩm đầu tiên để bắt đầu quản lý kho và bán hàng.',
-                              ),
-                              if (canCreateProduct) ...[
-                                const SizedBox(height: AppSpacing.md),
-                                ElevatedButton.icon(
-                                  key: const Key('product-empty-add-button'),
-                                  onPressed: () =>
-                                      context.push('/products/form'),
-                                  icon: const Icon(Icons.add_rounded, size: 18),
-                                  label: const Text('Thêm sản phẩm'),
+                          children: [
+                            const SizedBox(height: 60),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const AppEmpty(
+                                  visual: AppEmptyVisual.inventory,
+                                  message: 'Chưa có sản phẩm',
+                                  subtitle:
+                                      'Hãy thêm sản phẩm đầu tiên để bắt đầu quản lý kho và bán hàng.',
                                 ),
+                                if (canCreateProduct) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  ElevatedButton.icon(
+                                    key: const Key('product-empty-add-button'),
+                                    onPressed: () =>
+                                        context.push('/products/form'),
+                                    icon: const Icon(
+                                      Icons.add_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Thêm sản phẩm'),
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       );
                     }
@@ -713,7 +731,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                     ),
                   ),
                   error: (e, _) => AppError(
-                    message: 'Lỗi tải dữ liệu: $e',
+                    message:
+                        'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.',
                     onRetry: () => ref.invalidate(productListProvider),
                   ),
                 ),

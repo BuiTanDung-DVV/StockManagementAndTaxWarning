@@ -254,7 +254,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                             isSubmitting = false;
                             errorMessage = e is ApiException
                                 ? e.message
-                                : 'Lỗi: $e';
+                                : 'Thao tác thất bại. Vui lòng thử lại sau.';
                           });
                         }
                       },
@@ -289,6 +289,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
         );
       },
     );
+    usernameCtrl.dispose();
 
     if (result == true) {
       if (!mounted) return;
@@ -328,13 +329,21 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          'Không thể xử lý yêu cầu. Vui lòng thử lại sau.',
+        );
       }
     }
   }
 
   Future<void> _changeRole(Map<String, dynamic> member) async {
-    int? selectedRoleId = (member['role'] as Map?)?['id'] as int?;
+    int? selectedRoleId;
+    final dynamic rawRole = member['role'];
+    if (rawRole is Map) {
+      selectedRoleId = rawRole['id'] as int?;
+    } else if (member['roleId'] != null) {
+      selectedRoleId = int.tryParse(member['roleId'].toString());
+    }
     final result = await showDialog<int?>(
       context: context,
       builder: (ctx) {
@@ -447,7 +456,9 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          'Không thể cập nhật vai trò. Vui lòng thử lại sau.',
+        );
       }
     }
   }
@@ -473,7 +484,9 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          'Không thể xóa nhân viên. Vui lòng thử lại sau.',
+        );
       }
     }
   }
@@ -569,63 +582,71 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
               ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  // Tab 1: Active members
-                  RefreshIndicator(
-                    onRefresh: _load,
-                    child: _members.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: const [
-                              SizedBox(height: 100),
-                              AppEmpty(
-                                visual: AppEmptyVisual.people,
-                                message: 'Chưa có nhân viên nào',
-                                subtitle:
-                                    'Nhấn "Thêm nhân viên" để thêm trực tiếp',
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1040),
+                  child: TabBarView(
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      // Tab 1: Active members
+                      RefreshIndicator(
+                        onRefresh: _load,
+                        child: _members.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: const [
+                                  SizedBox(height: 100),
+                                  AppEmpty(
+                                    visual: AppEmptyVisual.people,
+                                    message: 'Chưa có nhân viên nào',
+                                    subtitle:
+                                        'Nhấn "Thêm nhân viên" để thêm trực tiếp',
+                                  ),
+                                ],
+                              )
+                            : ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _members.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (_, i) =>
+                                    _buildMemberCard(_members[i], c, theme),
                               ),
-                            ],
-                          )
-                        : ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _members.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (_, i) =>
-                                _buildMemberCard(_members[i], c, theme),
-                          ),
-                  ),
+                      ),
 
-                  // Tab 2: Pending requests
-                  RefreshIndicator(
-                    onRefresh: _load,
-                    child: _pendingMembers.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: const [
-                              SizedBox(height: 100),
-                              AppEmpty(
-                                visual: AppEmptyVisual.people,
-                                message: 'Không có yêu cầu chờ duyệt',
-                                subtitle:
-                                    'Nhân viên mới điền mã shop sẽ xuất hiện tại đây',
+                      // Tab 2: Pending requests
+                      RefreshIndicator(
+                        onRefresh: _load,
+                        child: _pendingMembers.isEmpty
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: const [
+                                  SizedBox(height: 100),
+                                  AppEmpty(
+                                    visual: AppEmptyVisual.people,
+                                    message: 'Không có yêu cầu chờ duyệt',
+                                    subtitle:
+                                        'Nhân viên mới điền mã shop sẽ xuất hiện tại đây',
+                                  ),
+                                ],
+                              )
+                            : ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _pendingMembers.length,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (_, i) => _buildPendingCard(
+                                  _pendingMembers[i],
+                                  c,
+                                  theme,
+                                ),
                               ),
-                            ],
-                          )
-                        : ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _pendingMembers.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (_, i) =>
-                                _buildPendingCard(_pendingMembers[i], c, theme),
-                          ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
       ),
     );
@@ -637,9 +658,29 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
     ThemeData theme,
   ) {
     final isOwner = m['memberType'] == 'OWNER';
-    final roleName = isOwner
-        ? 'Chủ shop'
-        : ((m['role'] as Map?)?['name'] ?? 'Chưa gán role');
+    final dynamic rawRole = m['role'];
+    final String roleName;
+    if (isOwner) {
+      roleName = 'Chủ shop';
+    } else if (rawRole is Map) {
+      roleName = rawRole['name']?.toString() ?? 'Chưa gán role';
+    } else if (m['roleName'] != null && m['roleName'].toString().isNotEmpty) {
+      roleName = m['roleName'].toString();
+    } else if (rawRole is String && rawRole.isNotEmpty) {
+      roleName = rawRole;
+    } else {
+      roleName = 'Chưa gán role';
+    }
+    final String? staffHandle;
+    if (m['username'] != null && m['username'].toString().trim().isNotEmpty) {
+      staffHandle = '@${m['username']}';
+    } else if (m['phone'] != null && m['phone'].toString().trim().isNotEmpty) {
+      staffHandle = 'SĐT: ${m['phone']}';
+    } else if (m['email'] != null && m['email'].toString().trim().isNotEmpty) {
+      staffHandle = m['email'].toString();
+    } else {
+      staffHandle = null;
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -678,11 +719,15 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                     color: c.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '@${m['username'] ?? ''}',
-                  style: GoogleFonts.inter(fontSize: 12, color: c.textMuted),
-                ),
+                if (staffHandle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    staffHandle,
+                    style: GoogleFonts.inter(fontSize: 12, color: c.textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -733,6 +778,16 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
     AppThemeColors c,
     ThemeData theme,
   ) {
+    final String? pendingHandle;
+    if (m['username'] != null && m['username'].toString().trim().isNotEmpty) {
+      pendingHandle = '@${m['username']}';
+    } else if (m['phone'] != null && m['phone'].toString().trim().isNotEmpty) {
+      pendingHandle = 'SĐT: ${m['phone']}';
+    } else if (m['email'] != null && m['email'].toString().trim().isNotEmpty) {
+      pendingHandle = m['email'].toString();
+    } else {
+      pendingHandle = null;
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -780,13 +835,15 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '@${m['username'] ?? ''}',
-                  style: GoogleFonts.inter(fontSize: 12, color: c.textMuted),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (pendingHandle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    pendingHandle,
+                    style: GoogleFonts.inter(fontSize: 12, color: c.textMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 if (m['shopName'] != null) ...[
                   const SizedBox(height: 6),
                   Container(
@@ -1095,9 +1152,14 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          existing == null
+              ? 'Không thể tạo vai trò. Vui lòng thử lại sau.'
+              : 'Không thể cập nhật vai trò. Vui lòng thử lại sau.',
+        );
       }
     }
+    nameCtrl.dispose();
   }
 
   Future<void> _deleteRole(Map<String, dynamic> role) async {
@@ -1120,7 +1182,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _loading = false);
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError('Không thể xóa vai trò. Vui lòng thử lại sau.');
       }
     }
   }
@@ -1182,14 +1244,24 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _roles.isEmpty
-          ? const AppEmpty(
-              visual: AppEmptyVisual.people,
-              message: 'Chưa có vai trò nào',
-              subtitle: 'Tạo vai trò để phân quyền nhân viên',
+          ? RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 100),
+                  AppEmpty(
+                    visual: AppEmptyVisual.people,
+                    message: 'Chưa có vai trò nào',
+                    subtitle: 'Tạo vai trò để phân quyền nhân viên',
+                  ),
+                ],
+              ),
             )
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 itemCount: _roles.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),

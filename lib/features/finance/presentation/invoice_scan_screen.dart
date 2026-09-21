@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/responsive_layout.dart';
@@ -52,82 +54,122 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
             Expanded(
               child: scans.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (_, _) => Center(
-                  child: OutlinedButton(
-                    onPressed: () =>
-                        ref.invalidate(invoiceScanListProvider(page)),
-                    child: const Text('Chưa tải được danh sách · Thử lại'),
+                error: (e, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: AppInlineError(
+                      message:
+                          'Không thể tải danh sách phiếu quét. Vui lòng thử lại sau.',
+                      onRetry: () =>
+                          ref.invalidate(invoiceScanListProvider(page)),
+                    ),
                   ),
                 ),
                 data: (data) {
                   final items = data['items'] as List? ?? const [];
                   if (items.isEmpty) {
-                    return Center(
-                      child: FilledButton.icon(
-                        onPressed: _pick,
-                        icon: const Icon(Icons.add_a_photo_outlined),
-                        label: const Text('Quét hóa đơn đầu tiên'),
+                    return RefreshIndicator(
+                      onRefresh: () async =>
+                          ref.invalidate(invoiceScanListProvider(page)),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) =>
+                            SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
+                                child: Center(
+                                  child: FilledButton.icon(
+                                    onPressed: _pick,
+                                    icon: const Icon(
+                                      Icons.add_a_photo_outlined,
+                                    ),
+                                    label: const Text('Quét hóa đơn đầu tiên'),
+                                  ),
+                                ),
+                              ),
+                            ),
                       ),
                     );
                   }
-                  return Column(
-                    children: [
-                      Expanded(
-                        child: ListView.separated(
-                          itemCount: items.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: AppSpacing.sm),
-                          itemBuilder: (_, index) {
-                            final item = Map<String, dynamic>.from(
-                              items[index],
-                            );
-                            return AppCardContainer(
-                              child: ListTile(
-                                onTap: () => context.push(
-                                  '/invoice-scans/${item['id']}',
-                                ),
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    item['imageUrl'].toString(),
-                                    width: 52,
-                                    height: 52,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => const SizedBox(
-                                      width: 52,
-                                      child: Icon(Icons.receipt_long_outlined),
-                                    ),
+                  return RefreshIndicator(
+                    onRefresh: () async =>
+                        ref.invalidate(invoiceScanListProvider(page)),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: items.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: AppSpacing.sm),
+                            itemBuilder: (_, index) {
+                              final item = Map<String, dynamic>.from(
+                                items[index],
+                              );
+                              final imgUrl = item['imageUrl']?.toString() ?? '';
+                              final hasImg =
+                                  imgUrl.isNotEmpty && imgUrl != 'null';
+                              return AppCardContainer(
+                                child: ListTile(
+                                  onTap: () => context.push(
+                                    '/invoice-scans/${item['id']}',
                                   ),
+                                  leading: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: hasImg
+                                        ? Image.network(
+                                            imgUrl,
+                                            width: 52,
+                                            height: 52,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, _, _) =>
+                                                const SizedBox(
+                                                  width: 52,
+                                                  child: Icon(
+                                                    Icons.receipt_long_outlined,
+                                                  ),
+                                                ),
+                                          )
+                                        : const SizedBox(
+                                            width: 52,
+                                            child: Icon(
+                                              Icons.receipt_long_outlined,
+                                            ),
+                                          ),
+                                  ),
+                                  title: Text(
+                                    item['scanCode']?.toString() ??
+                                        'Phiếu quét',
+                                  ),
+                                  subtitle: Text(_status(item)),
+                                  trailing: const Icon(Icons.chevron_right),
                                 ),
-                                title: Text(
-                                  item['scanCode']?.toString() ?? 'Phiếu quét',
-                                ),
-                                subtitle: Text(_status(item)),
-                                trailing: const Icon(Icons.chevron_right),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text('Trang $page/${data['totalPages'] ?? 1}'),
-                          IconButton(
-                            onPressed: page > 1
-                                ? () => setState(() => page--)
-                                : null,
-                            icon: const Icon(Icons.chevron_left),
-                          ),
-                          IconButton(
-                            onPressed: page < (data['totalPages'] ?? 1)
-                                ? () => setState(() => page++)
-                                : null,
-                            icon: const Icon(Icons.chevron_right),
-                          ),
-                        ],
-                      ),
-                    ],
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text('Trang $page/${data['totalPages'] ?? 1}'),
+                            IconButton(
+                              onPressed: page > 1
+                                  ? () => setState(() => page--)
+                                  : null,
+                              icon: const Icon(Icons.chevron_left),
+                            ),
+                            IconButton(
+                              onPressed: page < (data['totalPages'] ?? 1)
+                                  ? () => setState(() => page++)
+                                  : null,
+                              icon: const Icon(Icons.chevron_right),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -147,8 +189,31 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
   };
 
   Future<void> _pick() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Chụp ảnh hóa đơn'),
+              subtitle: const Text('Dùng máy ảnh chụp trực tiếp'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Chọn ảnh từ thư viện'),
+              subtitle: const Text('Tải ảnh hóa đơn có sẵn từ máy'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
     final file = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
+      source: source,
       imageQuality: 92,
     );
     if (file == null) return;
@@ -171,7 +236,11 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
       ref.invalidate(invoiceScanListProvider(page));
       if (mounted) context.push('/invoice-scans/${scan['id']}');
     } catch (error) {
-      ToastService.showError(error.toString());
+      ToastService.showError(
+        error is ApiException
+            ? error.message
+            : 'Không thể tải lên hóa đơn để quét. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => uploading = false);
     }

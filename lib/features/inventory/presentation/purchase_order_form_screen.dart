@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -31,7 +32,7 @@ class _PoItem {
     priceCtrl.dispose();
   }
 
-  double get unitPrice => double.tryParse(priceCtrl.text) ?? 0;
+  double get unitPrice => parseCurrency(priceCtrl.text);
   double get subtotal => quantity * unitPrice;
 }
 
@@ -104,15 +105,24 @@ class _PurchaseOrderFormScreenState
       }
       for (var i in _items) {
         if (i.productId == null) {
-          ToastService.showError(
-            'Vui lòng chọn sản phẩm cho tất cả các dòng!',
-          );
+          ToastService.showError('Vui lòng chọn sản phẩm cho tất cả các dòng!');
           return;
         }
         if (i.quantity <= 0) {
           ToastService.showError('Số lượng sản phẩm nhập phải lớn hơn 0!');
           return;
         }
+        if (i.unitPrice < 0) {
+          ToastService.showError('Đơn giá nhập hàng không thể là số âm!');
+          return;
+        }
+      }
+      final selectedProductIds = _items.map((item) => item.productId).toList();
+      if (selectedProductIds.toSet().length != selectedProductIds.length) {
+        ToastService.showError(
+          'Mỗi sản phẩm chỉ được xuất hiện một lần trong đơn nhập hàng.',
+        );
+        return;
       }
       setState(() => _currentStep = 2);
     }
@@ -145,9 +155,10 @@ class _PurchaseOrderFormScreenState
 
       await ref.read(inventoryRepoProvider).createPurchaseOrder(payload);
       ref.invalidate(purchaseOrdersProvider);
-      ref.invalidate(stockProvider(null));
-      ref.invalidate(stockPageProvider(null));
-      ref.invalidate(productListProvider((page: 1, search: null, tag: null)));
+      ref.invalidate(stockProvider);
+      ref.invalidate(stockPageProvider);
+      ref.invalidate(productListProvider);
+      ref.invalidate(inventoryMovementsProvider);
       ref.invalidate(lowStockProvider);
 
       if (mounted) {
@@ -156,7 +167,9 @@ class _PurchaseOrderFormScreenState
       }
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          'Không thể tạo đơn nhập hàng. Vui lòng thử lại sau.',
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -191,36 +204,41 @@ class _PurchaseOrderFormScreenState
         ),
         centerTitle: true,
       ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            // Elegant Steps Indicator
-            _buildStepsHeader(c, theme),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Elegant Steps Indicator
+                _buildStepsHeader(c, theme),
 
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _buildCurrentStepView(
-                    c,
-                    theme,
-                    suppliersAsync,
-                    productsAsync,
-                    warehousesAsync,
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _buildCurrentStepView(
+                        c,
+                        theme,
+                        suppliersAsync,
+                        productsAsync,
+                        warehousesAsync,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-            // Bottom Buttons Bar
-            _buildBottomActionBar(c, theme),
-          ],
+                // Bottom Buttons Bar
+                _buildBottomActionBar(c, theme),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -447,9 +465,9 @@ class _PurchaseOrderFormScreenState
                   );
                 },
                 loading: () => const LinearProgressIndicator(),
-                error: (e, _) => Text(
-                  'Lỗi tải NCC: $e',
-                  style: const TextStyle(color: AppColors.danger),
+                error: (e, _) => const Text(
+                  'Không thể tải nhà cung cấp. Vui lòng thử lại.',
+                  style: TextStyle(color: AppColors.danger),
                 ),
               ),
               const SizedBox(height: 14),

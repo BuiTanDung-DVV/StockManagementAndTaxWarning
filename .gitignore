@@ -136,6 +136,7 @@ client_secret_*.json
 /backend/get_latest_otp.js
 /backend/get_otps.js
 /backend/scratch_otp.js
+/backend/scripts/
 
 # Local browser/debug output
 /chrome_error.txt

@@ -5,6 +5,7 @@ import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_page_header.dart';
@@ -161,8 +162,12 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         customMimeType: 'application/gzip',
       );
       ToastService.showSuccess('Đã tạo và tải bản sao dữ liệu');
-    } catch (error) {
-      ToastService.showError(error.toString());
+    } on ApiException catch (error) {
+      ToastService.showError(error.message);
+    } catch (_) {
+      ToastService.showError(
+        'Không thể tạo bản sao lưu dữ liệu. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -183,8 +188,12 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           .read(settingsOperationsRepositoryProvider)
           .validateBackup(bytes, password);
       if (mounted) setState(() => _preview = data);
-    } catch (error) {
-      ToastService.showError(error.toString());
+    } on ApiException catch (error) {
+      ToastService.showError(error.message);
+    } catch (_) {
+      ToastService.showError(
+        'Không thể kiểm tra file sao lưu. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -205,8 +214,12 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         });
       }
       ToastService.showSuccess('Khôi phục hoàn tất');
-    } catch (error) {
-      ToastService.showError(error.toString());
+    } on ApiException catch (error) {
+      ToastService.showError(error.message);
+    } catch (_) {
+      ToastService.showError(
+        'Không thể khôi phục dữ liệu. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -222,8 +235,12 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           .rollback(_rollbackId!, password);
       if (mounted) setState(() => _rollbackId = null);
       ToastService.showSuccess('Đã hoàn tác dữ liệu');
-    } catch (error) {
-      ToastService.showError(error.toString());
+    } on ApiException catch (error) {
+      ToastService.showError(error.message);
+    } catch (_) {
+      ToastService.showError(
+        'Không thể hoàn tác dữ liệu. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }

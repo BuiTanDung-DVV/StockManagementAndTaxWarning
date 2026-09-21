@@ -584,9 +584,7 @@ class _InventoryAbcProductRow extends StatelessWidget {
         child: InkWell(
           onTap: productId == null
               ? null
-              : () => context.go(
-                  '/products/$productId?from=inventory',
-                ),
+              : () => context.go('/products/$productId?from=inventory'),
           borderRadius: BorderRadius.circular(AppRadius.control),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -948,7 +946,11 @@ int? inventoryIssueProductId(dynamic item) {
 num inventoryIssueQuantity(dynamic item) {
   if (item is! Map) return 0;
   final value =
-      item['currentQuantity'] ?? item['quantity'] ?? item['currentStock'] ?? 0;
+      item['currentQuantity'] ??
+      item['quantity'] ??
+      item['currentStock'] ??
+      item['stock'] ??
+      0;
   return value is num ? value : num.tryParse(value.toString()) ?? 0;
 }
 
@@ -969,8 +971,16 @@ String inventoryLowStockStatus(dynamic item) {
   var totalSkuCount = 0;
   for (final item in items) {
     if (item is! Map) continue;
-    totalValue += (item['value'] as num?)?.toDouble() ?? 0;
-    totalSkuCount += (item['skuCount'] as num?)?.toInt() ?? 0;
+    final rawVal = item['value'] ?? item['stockValue'] ?? item['totalValue'];
+    final rawSkus = item['skuCount'] ?? item['productCount'] ?? item['count'];
+    totalValue +=
+        (rawVal as num?)?.toDouble() ??
+        num.tryParse(rawVal?.toString() ?? '')?.toDouble() ??
+        0.0;
+    totalSkuCount +=
+        (rawSkus as num?)?.toInt() ??
+        int.tryParse(rawSkus?.toString() ?? '') ??
+        0;
   }
   return (totalValue: totalValue, totalSkuCount: totalSkuCount);
 }
@@ -1631,6 +1641,8 @@ class _CategoryDistribution extends StatelessWidget {
                   .map<double>(
                     (item) =>
                         (item['value'] ??
+                                item['stockValue'] ??
+                                item['totalValue'] ??
                                 item['quantity'] ??
                                 item['count'] ??
                                 0)

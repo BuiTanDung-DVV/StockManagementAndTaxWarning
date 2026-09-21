@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/system_provider.dart';
@@ -54,21 +55,32 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
             fallback: items.length,
           );
           if (items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            return RefreshIndicator(
+              onRefresh: () async => ref.invalidate(activityLogsProvider),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  Icon(
-                    Icons.history_toggle_off_rounded,
-                    size: 64,
-                    color: c.textMuted.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Chưa có nhật ký hoạt động',
-                    style: GoogleFonts.inter(
-                      color: c.textSecondary,
-                      fontWeight: FontWeight.w500,
+                  SizedBox(
+                    height: MediaQuery.sizeOf(context).height * 0.6,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.history_toggle_off_rounded,
+                            size: 64,
+                            color: c.textMuted.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Chưa có nhật ký hoạt động',
+                            style: GoogleFonts.inter(
+                              color: c.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -316,9 +328,12 @@ class _ActivityLogScreenState extends ConsumerState<ActivityLogScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text(
-            'Lỗi: $e',
-            style: const TextStyle(color: AppColors.danger),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppInlineError(
+              message: 'Không thể tải nhật ký hoạt động. Vui lòng thử lại sau.',
+              onRetry: () => ref.invalidate(activityLogsProvider(_page)),
+            ),
           ),
         ),
       ),

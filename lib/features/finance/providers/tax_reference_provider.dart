@@ -76,9 +76,8 @@ class TaxReferenceData {
     final supportLinks = (json['supportLinks'] as List? ?? const [])
         .whereType<Map>()
         .map(
-          (item) => TaxSupportLinkReference.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+          (item) =>
+              TaxSupportLinkReference.fromJson(Map<String, dynamic>.from(item)),
         )
         .where((item) => item.title.isNotEmpty && item.url.isNotEmpty)
         .toList(growable: false);

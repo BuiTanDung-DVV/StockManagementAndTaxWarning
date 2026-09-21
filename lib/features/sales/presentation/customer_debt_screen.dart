@@ -9,6 +9,7 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/excel_export_service.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
@@ -317,6 +318,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
               final status = DropdownButtonFormField<String>(
                 key: ValueKey('debt-status-$_status'),
                 initialValue: _status,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Trạng thái'),
                 items: const [
                   DropdownMenuItem(value: 'ALL', child: Text('Tất cả')),
@@ -335,6 +337,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
               final sort = DropdownButtonFormField<String>(
                 key: ValueKey('debt-sort-$_sort'),
                 initialValue: _sort,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Sắp xếp'),
                 items: const [
                   DropdownMenuItem(
@@ -357,6 +360,17 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                 },
               );
 
+              if (constraints.maxWidth < 560) {
+                return Column(
+                  children: [
+                    search,
+                    const SizedBox(height: AppSpacing.sm),
+                    status,
+                    const SizedBox(height: AppSpacing.sm),
+                    sort,
+                  ],
+                );
+              }
               if (constraints.maxWidth < 720) {
                 return Column(
                   children: [
@@ -453,7 +467,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                     children: [
                       _buildPageHeader(),
                       AppFillGrid(
-                        minItemWidth: 190,
+                        minItemWidth: 155,
                         maxColumns: 4,
                         itemHeight: 96,
                         children: [
@@ -701,9 +715,21 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                 const SizedBox(height: AppSpacing.lg),
                 TextField(
                   controller: controller,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
+                  decoration: InputDecoration(
                     labelText: 'Số tiền thu lần này (VNĐ)',
+                    helperText: controller.text.trim().isNotEmpty
+                        ? _debtCurrencyFormat.format(
+                            parseCurrency(controller.text),
+                          )
+                        : null,
+                    helperStyle: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -735,7 +761,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
             ),
             FilledButton(
               onPressed: () {
-                final paid = double.tryParse(controller.text) ?? 0;
+                final paid = parseCurrency(controller.text);
                 if (paid <= 0 || paid > remaining) {
                   ToastService.showError(
                     'Số tiền phải lớn hơn 0 và không vượt quá số nợ còn lại.',
@@ -780,9 +806,11 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
       ToastService.showSuccess(
         'Đã ghi nhận thu ${_debtCurrencyFormat.format(paid)}.',
       );
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
-      ToastService.showError('Không thể ghi nhận thu nợ: $error');
+      ToastService.showError(
+        'Không thể ghi nhận thu nợ. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) {
         setState(() => _isRecordingPayment = false);

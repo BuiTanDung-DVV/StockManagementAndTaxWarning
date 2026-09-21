@@ -510,12 +510,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   ) {
     if (previous <= 0) return null;
     final change = ((current - previous) / previous) * 100;
-    final direction = change >= 0 ? 'Tăng' : 'Giảm';
-    final symbol = change >= 0 ? '▲' : '▼';
+    if (change.abs() < 0.05) {
+      return _MetricComparison(
+        label: '— 0,0% so với kỳ trước',
+        semanticLabel: 'Không đổi so với kỳ $previousLabel',
+        isNeutral: true,
+      );
+    }
+    final direction = change > 0 ? 'Tăng' : 'Giảm';
+    final symbol = change > 0 ? '▲' : '▼';
     final formattedChange = NumberFormat('0.0', 'vi_VN').format(change.abs());
     return _MetricComparison(
       label: '$symbol $formattedChange% so với kỳ trước',
       semanticLabel: '$direction $formattedChange% so với kỳ $previousLabel',
+      isNeutral: false,
     );
   }
 }
@@ -2061,34 +2069,34 @@ class _MetricSurfaceStyle {
   });
 }
 
-_MetricSurfaceStyle _getMetricSurface(String label) {
+_MetricSurfaceStyle _getMetricSurface(String label, AppThemeColors colors) {
   if (label.contains('Doanh thu')) {
-    return const _MetricSurfaceStyle(
-      background: Color(0xFFF0FDFA),
-      border: Color(0xFFCCFBF1),
-      iconBg: Color(0xFFCCFBF1),
-      iconColor: Color(0xFF0F766E),
+    return _MetricSurfaceStyle(
+      background: colors.card,
+      border: colors.divider,
+      iconBg: AppColors.primary.withValues(alpha: 0.1),
+      iconColor: AppColors.primary,
     );
   } else if (label.contains('Lợi nhuận')) {
-    return const _MetricSurfaceStyle(
-      background: Color(0xFFF0FDF4),
-      border: Color(0xFFDCFCE7),
-      iconBg: Color(0xFFDCFCE7),
-      iconColor: Color(0xFF16A34A),
+    return _MetricSurfaceStyle(
+      background: colors.card,
+      border: colors.divider,
+      iconBg: AppColors.success.withValues(alpha: 0.1),
+      iconColor: AppColors.success,
     );
   } else if (label.contains('quỹ') || label.contains('tiền')) {
-    return const _MetricSurfaceStyle(
-      background: Color(0xFFF0F9FF),
-      border: Color(0xFFE0F2FE),
-      iconBg: Color(0xFFE0F2FE),
-      iconColor: Color(0xFF0284C7),
+    return _MetricSurfaceStyle(
+      background: colors.card,
+      border: colors.divider,
+      iconBg: AppColors.info.withValues(alpha: 0.1),
+      iconColor: AppColors.info,
     );
   } else {
-    return const _MetricSurfaceStyle(
-      background: Color(0xFFF8FAFC),
-      border: Color(0xFFE2E8F0),
-      iconBg: Color(0xFFF1F5F9),
-      iconColor: Color(0xFF475569),
+    return _MetricSurfaceStyle(
+      background: colors.card,
+      border: colors.divider,
+      iconBg: colors.cardAlt,
+      iconColor: colors.textSecondary,
     );
   }
 }
@@ -2104,6 +2112,7 @@ class _DashboardMetricStrip extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final colors = AppThemeColors.of(context);
         final isDesktop = constraints.maxWidth >= 960;
         final isTablet =
             constraints.maxWidth >= 600 && constraints.maxWidth < 960;
@@ -2119,7 +2128,7 @@ class _DashboardMetricStrip extends StatelessWidget {
                     flex: i == 0 ? 28 : 24,
                     child: _PastelMetricCard(
                       metric: metrics[i],
-                      surface: _getMetricSurface(metrics[i].label),
+                      surface: _getMetricSurface(metrics[i].label, colors),
                       isPrimary: i == 0,
                     ),
                   ),
@@ -2145,13 +2154,13 @@ class _DashboardMetricStrip extends StatelessWidget {
                 spacing: AppSpacing.md,
                 left: _PastelMetricCard(
                   metric: first,
-                  surface: _getMetricSurface(first.label),
+                  surface: _getMetricSurface(first.label, colors),
                   isPrimary: false,
                 ),
                 right: second != null
                     ? _PastelMetricCard(
                         metric: second,
-                        surface: _getMetricSurface(second.label),
+                        surface: _getMetricSurface(second.label, colors),
                         isPrimary: false,
                       )
                     : const SizedBox.shrink(),
@@ -2624,10 +2633,19 @@ class _ComparisonBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isPositive
-        ? AppColors.success.withValues(alpha: 0.12)
-        : AppColors.danger.withValues(alpha: 0.12);
-    final textColor = isPositive ? AppColors.success : AppColors.danger;
+    final colors = AppThemeColors.of(context);
+    final Color bg;
+    final Color textColor;
+    if (comparison.isNeutral) {
+      bg = colors.cardAlt;
+      textColor = colors.textMuted;
+    } else if (isPositive) {
+      bg = AppColors.success.withValues(alpha: 0.12);
+      textColor = AppColors.success;
+    } else {
+      bg = AppColors.danger.withValues(alpha: 0.12);
+      textColor = AppColors.danger;
+    }
 
     return Tooltip(
       message: comparison.semanticLabel,
@@ -2716,8 +2734,13 @@ class _DashboardMetric {
 class _MetricComparison {
   final String label;
   final String semanticLabel;
+  final bool isNeutral;
 
-  const _MetricComparison({required this.label, required this.semanticLabel});
+  const _MetricComparison({
+    required this.label,
+    required this.semanticLabel,
+    this.isNeutral = false,
+  });
 }
 
 class _DashboardPeriods {

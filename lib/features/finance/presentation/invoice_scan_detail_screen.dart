@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/responsive_layout.dart';
@@ -37,11 +40,15 @@ class _InvoiceScanDetailScreenState
         maxWidth: 1100,
         child: async.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, _) => Center(
-            child: OutlinedButton(
-              onPressed: () =>
-                  ref.invalidate(invoiceScanDetailProvider(widget.id)),
-              child: const Text('Thử tải lại'),
+          error: (e, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: AppInlineError(
+                message:
+                    'Không tải được chi tiết phiếu quét. Vui lòng thử lại sau.',
+                onRetry: () =>
+                    ref.invalidate(invoiceScanDetailProvider(widget.id)),
+              ),
             ),
           ),
           data: (scan) {
@@ -52,74 +59,107 @@ class _InvoiceScanDetailScreenState
               );
             }
             final confirmed = scan['status'] == 'CONFIRMED';
-            return ListView(
-              children: [
-                AppPageHeader(
-                  title: 'Kiểm tra hóa đơn quét',
-                  subtitle: confirmed
-                      ? 'Đã tạo hóa đơn đầu vào.'
-                      : 'Mọi kết quả OCR đều cần được đối chiếu với ảnh.',
-                  showBackButton: true,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (scan['errorMessage'] != null)
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: .1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(child: Text(scan['errorMessage'].toString())),
-                        if (!confirmed)
-                          TextButton(
-                            onPressed: saving ? null : _retry,
-                            child: const Text('Thử OCR lại'),
-                          ),
-                      ],
-                    ),
+            return RefreshIndicator(
+              onRefresh: () async =>
+                  ref.invalidate(invoiceScanDetailProvider(widget.id)),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  AppPageHeader(
+                    title: 'Kiểm tra hóa đơn quét',
+                    subtitle: confirmed
+                        ? 'Đã tạo hóa đơn đầu vào.'
+                        : 'Mọi kết quả OCR đều cần được đối chiếu với ảnh.',
+                    showBackButton: true,
                   ),
-                const SizedBox(height: AppSpacing.md),
-                LayoutBuilder(
-                  builder: (_, constraints) {
-                    final image = AppCardContainer(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Image.network(
-                          scan['imageUrl'].toString(),
-                          height: constraints.maxWidth >= 760 ? 520 : 280,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => const SizedBox(
-                            height: 220,
-                            child: Center(
-                              child: Icon(Icons.broken_image_outlined),
-                            ),
-                          ),
-                        ),
+                  const SizedBox(height: AppSpacing.md),
+                  if (scan['errorMessage'] != null)
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: .1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                    final form = _form(confirmed);
-                    return constraints.maxWidth >= 760
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: image),
-                              const SizedBox(width: AppSpacing.md),
-                              Expanded(child: form),
-                            ],
-                          )
-                        : Column(
-                            children: [
-                              image,
-                              const SizedBox(height: AppSpacing.md),
-                              form,
-                            ],
-                          );
-                  },
-                ),
-                const SizedBox(height: AppSpacing.xl),
-              ],
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(scan['errorMessage'].toString()),
+                          ),
+                          if (!confirmed)
+                            TextButton(
+                              onPressed: saving ? null : _retry,
+                              child: const Text('Thử OCR lại'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final rawUrl = scan['imageUrl']?.toString() ?? '';
+                      final hasValidUrl = rawUrl.isNotEmpty && rawUrl != 'null';
+                      final image = AppCardContainer(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: hasValidUrl
+                              ? Image.network(
+                                  rawUrl,
+                                  height: constraints.maxWidth >= 760
+                                      ? 520
+                                      : 280,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, _, _) => const SizedBox(
+                                    height: 220,
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.broken_image_outlined,
+                                        size: 48,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : const SizedBox(
+                                  height: 220,
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.image_not_supported_outlined,
+                                          size: 48,
+                                          color: Colors.grey,
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text('Không có ảnh hóa đơn quét'),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      );
+                      final form = _form(confirmed);
+                      return constraints.maxWidth >= 760
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: image),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(child: form),
+                              ],
+                            )
+                          : Column(
+                              children: [
+                                image,
+                                const SizedBox(height: AppSpacing.md),
+                                form,
+                              ],
+                            );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
             );
           },
         ),
@@ -141,7 +181,29 @@ class _InvoiceScanDetailScreenState
           TextField(
             controller: date,
             enabled: !confirmed,
-            decoration: const InputDecoration(labelText: 'Ngày YYYY-MM-DD *'),
+            decoration: InputDecoration(
+              labelText: 'Ngày YYYY-MM-DD *',
+              suffixIcon: confirmed
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      tooltip: 'Chọn ngày hóa đơn',
+                      onPressed: () async {
+                        final now = DateTime.now();
+                        final initial =
+                            DateTime.tryParse(date.text.trim()) ?? now;
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: initial,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          date.text = picked.toIso8601String().split('T').first;
+                        }
+                      },
+                    ),
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -190,6 +252,16 @@ class _InvoiceScanDetailScreenState
                       decoration: const InputDecoration(labelText: 'Đơn giá'),
                     ),
                   ),
+                  if (!confirmed && items.length > 1)
+                    IconButton(
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: AppColors.danger,
+                        size: 20,
+                      ),
+                      tooltip: 'Xóa dòng',
+                      onPressed: () => _removeItem(entry.key),
+                    ),
                 ],
               ),
             ),
@@ -269,10 +341,59 @@ class _InvoiceScanDetailScreenState
     if (notify && mounted) setState(() {});
   }
 
+  void _removeItem(int index) {
+    if (items.length <= 1) return;
+    final removed = items.removeAt(index);
+    for (final c in removed.values) {
+      c.dispose();
+    }
+    if (mounted) setState(() {});
+  }
+
   Future<void> _confirm() async {
+    final invoiceNumber = number.text.trim();
+    if (invoiceNumber.isEmpty) {
+      ToastService.showError('Vui lòng nhập số hóa đơn');
+      return;
+    }
+
+    final invoiceDate = date.text.trim();
+    if (invoiceDate.isEmpty) {
+      ToastService.showError('Vui lòng nhập ngày hóa đơn');
+      return;
+    }
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(invoiceDate)) {
+      ToastService.showError('Ngày hóa đơn phải đúng định dạng YYYY-MM-DD');
+      return;
+    }
+
+    final partnerName = partner.text.trim();
+    if (partnerName.isEmpty) {
+      ToastService.showError('Vui lòng nhập tên đối tác');
+      return;
+    }
+
+    if (items.isEmpty) {
+      ToastService.showError('Hóa đơn phải có ít nhất một dòng hàng');
+      return;
+    }
+
+    for (var i = 0; i < items.length; i++) {
+      final itemName = items[i]['name']!.text.trim();
+      if (itemName.isEmpty) {
+        ToastService.showError('Dòng ${i + 1} chưa có tên sản phẩm');
+        return;
+      }
+      final qty = asDouble(items[i]['qty']!.text);
+      if (qty <= 0) {
+        ToastService.showError('Số lượng dòng ${i + 1} phải lớn hơn 0');
+        return;
+      }
+    }
+
     final rows = items.map((item) {
-      final qty = num.tryParse(item['qty']!.text) ?? 0,
-          price = num.tryParse(item['price']!.text) ?? 0;
+      final qty = asDouble(item['qty']!.text, fallback: 1);
+      final price = parseCurrency(item['price']!.text);
       return {
         'itemName': item['name']!.text.trim(),
         'unit': 'Cái',
@@ -283,23 +404,45 @@ class _InvoiceScanDetailScreenState
         'taxAmount': 0,
       };
     }).toList();
+
+    final subtotalVal = parseCurrency(subtotal.text);
+    final taxVal = parseCurrency(tax.text);
+    var totalVal = parseCurrency(total.text);
+    final calculatedTotal = rows.fold<double>(
+      0,
+      (s, r) => s + (r['subtotal'] as num).toDouble(),
+    );
+
+    if (totalVal <= 0) {
+      totalVal = subtotalVal > 0 ? subtotalVal + taxVal : calculatedTotal;
+    }
+
+    if (totalVal <= 0) {
+      ToastService.showError('Tổng tiền hóa đơn phải lớn hơn 0');
+      return;
+    }
+
     setState(() => saving = true);
     try {
       await ref.read(invoiceScanRepositoryProvider).confirm(widget.id, {
-        'invoiceNumber': number.text.trim(),
-        'invoiceDate': date.text.trim(),
-        'partnerName': partner.text.trim(),
+        'invoiceNumber': invoiceNumber,
+        'invoiceDate': invoiceDate,
+        'partnerName': partnerName,
         'partnerTaxCode': taxCode.text.trim(),
         'items': rows,
-        'subtotal': num.tryParse(subtotal.text) ?? 0,
-        'taxAmount': num.tryParse(tax.text) ?? 0,
-        'totalAmount': num.tryParse(total.text) ?? 0,
+        'subtotal': subtotalVal > 0 ? subtotalVal : calculatedTotal,
+        'taxAmount': taxVal,
+        'totalAmount': totalVal,
         'confidence': 1,
       });
       ref.invalidate(invoiceScanDetailProvider(widget.id));
       ToastService.showSuccess('Đã tạo hóa đơn đầu vào');
     } catch (error) {
-      ToastService.showError(error.toString());
+      ToastService.showError(
+        error is ApiException
+            ? error.message
+            : 'Không thể lưu hóa đơn đầu vào. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -327,7 +470,11 @@ class _InvoiceScanDetailScreenState
       ref.invalidate(invoiceScanListProvider);
       ToastService.showSuccess('Đã đọc lại ảnh; vui lòng kiểm tra kết quả');
     } catch (error) {
-      ToastService.showError(error.toString());
+      ToastService.showError(
+        error is ApiException
+            ? error.message
+            : 'Không thể đọc lại ảnh hóa đơn. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => saving = false);
     }

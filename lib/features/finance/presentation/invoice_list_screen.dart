@@ -101,7 +101,19 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
       ),
       body: invAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: AppInlineError(
+              message: 'Không thể tải danh sách hóa đơn. Vui lòng thử lại sau.',
+              onRetry: () async {
+                ref.invalidate(invoiceListProvider);
+                ref.invalidate(invoiceSummaryProvider);
+                ref.invalidate(invoiceReconciliationProvider);
+              },
+            ),
+          ),
+        ),
         data: (data) {
           final items = (data['items'] as List?) ?? [];
           final currentPage = paginationValue(data, 'page', fallback: _page);
@@ -112,254 +124,268 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
             fallback: items.length,
           );
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.only(top: 16, bottom: 100),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Legal Disclaimer
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 24),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                      border: Border.all(
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(invoiceListProvider);
+              ref.invalidate(invoiceSummaryProvider);
+              ref.invalidate(invoiceReconciliationProvider);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: 16, bottom: 100),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Legal Disclaimer
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
                         color: theme.colorScheme.primary.withValues(
-                          alpha: 0.15,
+                          alpha: 0.05,
                         ),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.15,
+                          ),
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline_rounded,
-                          color: theme.colorScheme.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Tính năng lưu trữ số hóa Hóa đơn điện tử nội bộ. Ứng dụng không tự phát hành hóa đơn GTGT.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: c.textSecondary,
-                              height: 1.4,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: theme.colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Tính năng lưu trữ số hóa Hóa đơn điện tử nội bộ. Ứng dụng không tự phát hành hóa đơn GTGT.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: c.textSecondary,
+                                height: 1.4,
+                              ),
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Các số VAT dưới đây chỉ dùng để đối chiếu dữ liệu hóa đơn, không thay thế nghĩa vụ thuế trên tờ khai.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: c.textSecondary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Summary Metrics - Taste-Skill: Left-aligned, no heavy cards
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'Đối chiếu VAT · $periodLabel',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  summaryAsync.when(
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, _) => const SizedBox(),
+                    data: (summary) {
+                      final vatIn = asNum(summary['vatIn']);
+                      final vatOut = asNum(summary['vatOut']);
+                      final vatOwed = asNum(summary['vatOwed']);
+                      final vatCredit = asNum(summary['vatCredit']);
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: AppFillGrid(
+                          minItemWidth: 180,
+                          maxColumns: 3,
+                          itemHeight: 92,
+                          children: [
+                            _buildMetricItem(
+                              'VAT đầu vào',
+                              _fmt(vatIn),
+                              AppColors.success,
+                              c,
+                              theme,
+                            ),
+                            _buildMetricItem(
+                              'VAT đầu ra',
+                              _fmt(vatOut),
+                              AppColors.danger,
+                              c,
+                              theme,
+                            ),
+                            _buildMetricItem(
+                              vatOwed > 0
+                                  ? 'Chênh lệch đầu ra − đầu vào'
+                                  : 'Chênh lệch đầu vào − đầu ra',
+                              _fmt(vatOwed > 0 ? vatOwed : vatCredit),
+                              vatOwed > 0
+                                  ? AppColors.danger
+                                  : AppColors.success,
+                              c,
+                              theme,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: reconciliationAsync.when(
+                      loading: () => const _InvoiceQualityLoading(),
+                      error: (_, _) => const _InvoiceQualityUnavailable(),
+                      data: (response) {
+                        final firstDate = DateTime.tryParse(
+                          response['from']?.toString() ?? '',
+                        );
+                        final lastDate = DateTime.tryParse(
+                          response['to']?.toString() ?? '',
+                        );
+                        final qualityPeriodLabel =
+                            firstDate != null && lastDate != null
+                            ? reportingCompactRangeLabel(firstDate, lastDate)
+                            : 'Toàn bộ dữ liệu';
+                        return _InvoiceQualityPanel(
+                          quality: InvoiceDataQuality.fromResponse(response),
+                          periodLabel: qualityPeriodLabel,
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // List header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _showAllPeriods
+                              ? 'Danh sách hóa đơn · Toàn bộ'
+                              : 'Danh sách hóa đơn · $periodLabel',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: c.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '$totalItems bản ghi',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: c.textMuted,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'Các số VAT dưới đây chỉ dùng để đối chiếu dữ liệu hóa đơn, không thay thế nghĩa vụ thuế trên tờ khai.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: c.textSecondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Summary Metrics - Taste-Skill: Left-aligned, no heavy cards
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'Đối chiếu VAT · $periodLabel',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                summaryAsync.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, _) => const SizedBox(),
-                  data: (summary) {
-                    final vatIn = asNum(summary['vatIn']);
-                    final vatOut = asNum(summary['vatOut']);
-                    final vatOwed = asNum(summary['vatOwed']);
-                    final vatCredit = asNum(summary['vatCredit']);
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: AppFillGrid(
-                        minItemWidth: 180,
-                        maxColumns: 3,
-                        itemHeight: 92,
-                        children: [
-                          _buildMetricItem(
-                            'VAT đầu vào',
-                            _fmt(vatIn),
-                            AppColors.success,
-                            c,
-                            theme,
-                          ),
-                          _buildMetricItem(
-                            'VAT đầu ra',
-                            _fmt(vatOut),
-                            AppColors.danger,
-                            c,
-                            theme,
-                          ),
-                          _buildMetricItem(
-                            vatOwed > 0
-                                ? 'Chênh lệch đầu ra − đầu vào'
-                                : 'Chênh lệch đầu vào − đầu ra',
-                            _fmt(vatOwed > 0 ? vatOwed : vatCredit),
-                            vatOwed > 0 ? AppColors.danger : AppColors.success,
-                            c,
-                            theme,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: reconciliationAsync.when(
-                    loading: () => const _InvoiceQualityLoading(),
-                    error: (_, _) => const _InvoiceQualityUnavailable(),
-                    data: (response) {
-                      final firstDate = DateTime.tryParse(
-                        response['from']?.toString() ?? '',
-                      );
-                      final lastDate = DateTime.tryParse(
-                        response['to']?.toString() ?? '',
-                      );
-                      final qualityPeriodLabel =
-                          firstDate != null && lastDate != null
-                          ? reportingCompactRangeLabel(firstDate, lastDate)
-                          : 'Toàn bộ dữ liệu';
-                      return _InvoiceQualityPanel(
-                        quality: InvoiceDataQuality.fromResponse(response),
-                        periodLabel: qualityPeriodLabel,
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // List header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        _showAllPeriods
-                            ? 'Danh sách hóa đơn · Toàn bộ'
-                            : 'Danh sách hóa đơn · $periodLabel',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: c.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        '$totalItems bản ghi',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: c.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: InvoiceListFilters(
-                    periodLabel: periodLabel,
-                    showAllPeriods: _showAllPeriods,
-                    type: _type,
-                    onPeriodChanged: (showAll) => setState(() {
-                      _showAllPeriods = showAll;
-                      _page = 1;
-                    }),
-                    onTypeChanged: (type) => setState(() {
-                      _type = type;
-                      _page = 1;
-                    }),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                if (items.isEmpty)
-                  AppEmpty(
-                    visual: AppEmptyVisual.document,
-                    message: _showAllPeriods
-                        ? 'Chưa có hóa đơn nào'
-                        : 'Chưa có hóa đơn trong $periodLabel',
-                    subtitle: _showAllPeriods
-                        ? null
-                        : 'Chuyển sang “Toàn bộ thời gian” để xem dữ liệu các kỳ trước.',
-                    action: canEdit
-                        ? ElevatedButton.icon(
-                            icon: const Icon(Icons.receipt),
-                            label: const Text('Thêm hóa đơn'),
-                            onPressed: () => _showAddDialog(context, ref),
-                          )
-                        : null,
-                  )
-                else
-                  // Taste-Skill: Flat List
-                  Container(
-                    decoration: BoxDecoration(
-                      color: c.card,
-                      border: Border(
-                        top: BorderSide(
-                          color: c.divider.withValues(alpha: 0.5),
-                        ),
-                        bottom: BorderSide(
-                          color: c.divider.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ),
-                    child: ListView.separated(
-                      padding: EdgeInsets.zero,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: items.length,
-                      separatorBuilder: (_, _) =>
-                          Divider(height: 1, color: c.divider),
-                      itemBuilder: (_, i) {
-                        final inv = Map<String, dynamic>.from(items[i] as Map);
-                        return _InvoiceTile(
-                          invoice: inv,
-                          formatter: _fmt,
-                          onEdit: !canEdit || invoiceIsLinked(inv)
-                              ? null
-                              : () => _showEditDialog(context, ref, inv),
-                          onDelete: !canEdit || invoiceIsLinked(inv)
-                              ? null
-                              : () => _confirmDelete(context, ref, inv['id']),
-                        );
-                      },
-                    ),
-                  ),
-                if (items.isNotEmpty)
+                  const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: AppPaginationBar(
-                      currentPage: currentPage,
-                      totalPages: totalPages,
-                      totalItems: totalItems,
-                      itemLabel: 'hóa đơn',
-                      onPageChanged: (page) => setState(() => _page = page),
+                    child: InvoiceListFilters(
+                      periodLabel: periodLabel,
+                      showAllPeriods: _showAllPeriods,
+                      type: _type,
+                      onPeriodChanged: (showAll) => setState(() {
+                        _showAllPeriods = showAll;
+                        _page = 1;
+                      }),
+                      onTypeChanged: (type) => setState(() {
+                        _type = type;
+                        _page = 1;
+                      }),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 12),
+
+                  if (items.isEmpty)
+                    AppEmpty(
+                      visual: AppEmptyVisual.document,
+                      message: _showAllPeriods
+                          ? 'Chưa có hóa đơn nào'
+                          : 'Chưa có hóa đơn trong $periodLabel',
+                      subtitle: _showAllPeriods
+                          ? null
+                          : 'Chuyển sang “Toàn bộ thời gian” để xem dữ liệu các kỳ trước.',
+                      action: canEdit
+                          ? ElevatedButton.icon(
+                              icon: const Icon(Icons.receipt),
+                              label: const Text('Thêm hóa đơn'),
+                              onPressed: () => _showAddDialog(context, ref),
+                            )
+                          : null,
+                    )
+                  else
+                    // Taste-Skill: Flat List
+                    Container(
+                      decoration: BoxDecoration(
+                        color: c.card,
+                        border: Border(
+                          top: BorderSide(
+                            color: c.divider.withValues(alpha: 0.5),
+                          ),
+                          bottom: BorderSide(
+                            color: c.divider.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                      child: ListView.separated(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: items.length,
+                        separatorBuilder: (_, _) =>
+                            Divider(height: 1, color: c.divider),
+                        itemBuilder: (_, i) {
+                          final inv = Map<String, dynamic>.from(
+                            items[i] as Map,
+                          );
+                          return _InvoiceTile(
+                            invoice: inv,
+                            formatter: _fmt,
+                            onEdit: !canEdit || invoiceIsLinked(inv)
+                                ? null
+                                : () => _showEditDialog(context, ref, inv),
+                            onDelete: !canEdit || invoiceIsLinked(inv)
+                                ? null
+                                : () => _confirmDelete(context, ref, inv['id']),
+                          );
+                        },
+                      ),
+                    ),
+                  if (items.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: AppPaginationBar(
+                        currentPage: currentPage,
+                        totalPages: totalPages,
+                        totalItems: totalItems,
+                        itemLabel: 'hóa đơn',
+                        onPageChanged: (page) => setState(() => _page = page),
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
         },
@@ -483,7 +509,9 @@ class _InvoiceListScreenState extends ConsumerState<InvoiceListScreen> {
           ref.invalidate(invoiceSummaryProvider);
           ref.invalidate(invoiceReconciliationProvider);
         } catch (e) {
-          ToastService.showError('Lỗi: $e');
+          ToastService.showError(
+            'Không thể xóa hóa đơn. Vui lòng thử lại sau.',
+          );
         }
       }
     });

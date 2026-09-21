@@ -20,8 +20,10 @@ class TaxService {
         params: {'period': period, 'year': year},
       );
       return data as Map<String, dynamic>;
-    } catch (e) {
-      throw Exception('Không thể lấy lịch sử thuế: $e');
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      throw Exception('Không thể lấy dữ liệu ước tính thuế');
     }
   }
 
@@ -43,8 +45,11 @@ class TaxService {
       if (!launched) {
         throw Exception('Trình duyệt đã chặn tải xuống');
       }
+    } on ApiException {
+      rethrow;
     } catch (e) {
-      throw Exception('Không thể tải file: $e');
+      if (e is Exception) rethrow;
+      throw Exception('Không thể tải file XML');
     }
   }
 }

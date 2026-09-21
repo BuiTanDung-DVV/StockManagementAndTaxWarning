@@ -471,7 +471,7 @@ class _ShellUtilityHeader extends StatelessWidget {
               if (showAiRestore) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.aiMascot,
-                  semanticLabel: 'Hiển thị nút AI',
+                  semanticLabel: 'Trợ lý AI SmartStock',
                   onPressed: onRestoreAi,
                   preserveAssetColor: true,
                 ),
@@ -519,7 +519,7 @@ class _ShellUtilityHeader extends StatelessWidget {
               if (showAiRestore) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.aiMascot,
-                  semanticLabel: 'Hiển thị nút AI',
+                  semanticLabel: 'Trợ lý AI SmartStock',
                   onPressed: onRestoreAi,
                   preserveAssetColor: true,
                 ),

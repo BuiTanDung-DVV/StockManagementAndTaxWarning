@@ -53,7 +53,9 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       final repo = ref.read(customerRepoProvider);
       final data = {
         'name': _nameCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim().isEmpty
+            ? null
+            : _phoneCtrl.text.replaceAll(RegExp(r'\D'), ''),
         'email': _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         'address': _addressCtrl.text.trim().isEmpty
             ? null
@@ -78,7 +80,11 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          _isEdit
+              ? 'Không thể cập nhật khách hàng. Vui lòng thử lại sau.'
+              : 'Không thể thêm khách hàng mới. Vui lòng thử lại sau.',
+        );
       }
     }
     if (mounted) setState(() => _saving = false);
@@ -128,6 +134,14 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                   HugeIcons.strokeRoundedCall02,
                   c,
                   keyboardType: TextInputType.phone,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final digits = v.replaceAll(RegExp(r'\D'), '');
+                    if (digits.length != 10 || !digits.startsWith('0')) {
+                      return 'Số điện thoại phải gồm 10 số (bắt đầu bằng 0)';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 _field(
@@ -136,6 +150,15 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                   HugeIcons.strokeRoundedMail01,
                   c,
                   keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    if (!RegExp(
+                      r'^[\w\.-]+@[\w\.-]+\.\w{2,}$',
+                    ).hasMatch(v.trim())) {
+                      return 'Email không đúng định dạng';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 AddressInputField(
@@ -150,6 +173,14 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                   _taxCodeCtrl,
                   HugeIcons.strokeRoundedInvoice01,
                   c,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final trimmed = v.trim();
+                    if (!RegExp(r'^\d{10}(-\d{3}|\d{3})?$').hasMatch(trimmed)) {
+                      return 'Mã số thuế gồm 10 hoặc 13 số';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
                 _field(

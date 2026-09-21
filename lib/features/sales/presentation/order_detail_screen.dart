@@ -5,11 +5,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/sales_provider.dart';
 import '../../settings/providers/system_provider.dart';
+import '../../settings/providers/shop_provider.dart';
 import '../services/receipt_pdf_service.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -25,6 +28,11 @@ class OrderDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
+    final memberType = ref.watch(shopProvider).memberType?.toUpperCase();
+    final canReturn =
+        memberType == 'OWNER' ||
+        memberType == 'MANAGER' ||
+        memberType == 'STORE_MANAGER';
     final orderAsync = ref.watch(salesDetailProvider(id));
 
     return Scaffold(
@@ -64,8 +72,10 @@ class OrderDetailScreen extends ConsumerWidget {
                   onLayout: (_) async => bytes,
                   name: 'phieu-ban-hang-$id.pdf',
                 );
-              } catch (error) {
-                ToastService.showError('Chưa thể tạo phiếu in: $error');
+              } catch (_) {
+                ToastService.showError(
+                  'Chưa thể tạo phiếu in. Vui lòng thử lại sau.',
+                );
               }
             },
             tooltip: 'In phiếu tính tiền',
@@ -143,613 +153,701 @@ class OrderDetailScreen extends ConsumerWidget {
             paymentColor = AppColors.danger;
           }
 
-          return Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Order general info bento-style card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: c.card,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: c.divider.withValues(alpha: 0.5),
-                          ),
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1040),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        ref.invalidate(salesDetailProvider(id));
+                      },
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
                         ),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _InfoRow('Mã đơn hàng', orderCode, c),
-                            if (createdAt != null && createdAt.isNotEmpty)
-                              _InfoRow(
-                                'Thời gian tạo',
-                                _formatDate(createdAt),
-                                c,
+                            // Order general info bento-style card
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: c.card,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: c.divider.withValues(alpha: 0.5),
+                                ),
                               ),
-                            _InfoRow('Khách hàng', customerName, c),
-                            if (order['notes'] != null &&
-                                order['notes'].toString().isNotEmpty)
-                              _InfoRow('Ghi chú', order['notes'].toString(), c),
-
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Trạng thái đơn',
-                                  style: GoogleFonts.inter(
-                                    color: c.textSecondary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: statusColor.withValues(alpha: 0.2),
+                              child: Column(
+                                children: [
+                                  _InfoRow('Mã đơn hàng', orderCode, c),
+                                  if (createdAt != null && createdAt.isNotEmpty)
+                                    _InfoRow(
+                                      'Thời gian tạo',
+                                      _formatDate(createdAt),
+                                      c,
                                     ),
-                                  ),
-                                  child: Text(
-                                    statusLabel,
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: statusColor,
+                                  _InfoRow('Khách hàng', customerName, c),
+                                  if (order['notes'] != null &&
+                                      order['notes'].toString().isNotEmpty)
+                                    _InfoRow(
+                                      'Ghi chú',
+                                      order['notes'].toString(),
+                                      c,
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Thanh toán',
-                                  style: GoogleFonts.inter(
-                                    color: c.textSecondary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: paymentColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: paymentColor.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    paymentLabel,
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: paymentColor,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
 
-                      Text(
-                        'Danh sách sản phẩm mua',
-                        style: GoogleFonts.manrope(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: c.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (items.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Text(
-                            'Không có sản phẩm nào trong đơn hàng.',
-                            style: GoogleFonts.inter(
-                              color: c.textSecondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                        )
-                      else
-                        ...items.map((raw) {
-                          final it = raw as Map;
-                          final name =
-                              (it['productName'] ??
-                                      it['product']?['name'] ??
-                                      'Sản phẩm không tên')
-                                  .toString();
-                          final qty =
-                              double.tryParse(
-                                it['quantity']?.toString() ?? '0',
-                              ) ??
-                              0.0;
-                          final unitPrice =
-                              double.tryParse(
-                                it['unitPrice']?.toString() ?? '0',
-                              ) ??
-                              0.0;
-                          final subtotal =
-                              double.tryParse(
-                                it['subtotal']?.toString() ?? '0',
-                              ) ??
-                              (qty * unitPrice);
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: c.card,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: c.divider.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        name,
+                                        'Trạng thái đơn',
                                         style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: c.textPrimary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'SL: ${qty.toStringAsFixed(qty % 1 == 0 ? 0 : 2)} x ${_currFmt.format(unitPrice)}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
                                           color: c.textSecondary,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: statusColor.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: statusColor.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          statusLabel,
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: statusColor,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  _currFmt.format(subtotal),
-                                  style: GoogleFonts.manrope(
-                                    fontWeight: FontWeight.bold,
-                                    color: c.textPrimary,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-
-                      // Hiển thị phần trả hàng nếu có
-                      if (order['returns'] != null &&
-                          (order['returns'] as List).isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.danger.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.assignment_return_rounded,
-                                    color: AppColors.danger,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Thông tin Trả Hàng',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.danger,
-                                    ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Thanh toán',
+                                        style: GoogleFonts.inter(
+                                          color: c.textSecondary,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: paymentColor.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: paymentColor.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          paymentLabel,
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: paymentColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 12),
-                              ...((order['returns'] as List).map((ret) {
-                                final rMap = ret as Map;
-                                final refundAmt =
+                            ),
+                            const SizedBox(height: 24),
+
+                            Text(
+                              'Danh sách sản phẩm mua',
+                              style: GoogleFonts.manrope(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: c.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            if (items.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                child: Text(
+                                  'Không có sản phẩm nào trong đơn hàng.',
+                                  style: GoogleFonts.inter(
+                                    color: c.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              )
+                            else
+                              ...items.map((raw) {
+                                final it = raw as Map;
+                                final name =
+                                    (it['productName'] ??
+                                            it['product']?['name'] ??
+                                            'Sản phẩm không tên')
+                                        .toString();
+                                final qty =
                                     double.tryParse(
-                                      rMap['refundAmount']?.toString() ?? '0',
+                                      it['quantity']?.toString() ?? '0',
                                     ) ??
                                     0.0;
-                                final retCode = (rMap['returnCode'] ?? '')
-                                    .toString();
-                                final retReason = (rMap['reason'] ?? '')
-                                    .toString();
-                                final returnId = rMap['id'];
+                                final unitPrice =
+                                    double.tryParse(
+                                      it['unitPrice']?.toString() ?? '0',
+                                    ) ??
+                                    0.0;
+                                final subtotal =
+                                    double.tryParse(
+                                      it['subtotal']?.toString() ?? '0',
+                                    ) ??
+                                    (qty * unitPrice);
+
                                 return Container(
-                                  margin: const EdgeInsets.only(top: 8),
-                                  decoration: BoxDecoration(
-                                    color: c.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: c.divider),
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
                                   ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(12),
-                                      onTap: returnId == null
-                                          ? null
-                                          : () => context.push(
-                                              '/sales/returns/$returnId',
-                                              extra: ret,
-                                            ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: c.card,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: c.divider.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            _InfoRow(
-                                              'Mã phiếu trả',
-                                              retCode,
-                                              c,
+                                            Text(
+                                              name,
+                                              style: GoogleFonts.inter(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                                color: c.textPrimary,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                            _InfoRow(
-                                              'Tiền hoàn lại',
-                                              _currFmt.format(refundAmt),
-                                              c,
-                                            ),
-                                            if (retReason.isNotEmpty)
-                                              _InfoRow('Lý do', retReason, c),
-                                            const SizedBox(height: 4),
-                                            Align(
-                                              alignment: Alignment.centerRight,
-                                              child: Text(
-                                                'Bấm để xem chi tiết',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 10,
-                                                  color: c.textMuted,
-                                                ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'SL: ${qty.toStringAsFixed(qty % 1 == 0 ? 0 : 2)} x ${_currFmt.format(unitPrice)}',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                color: c.textSecondary,
+                                                fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                );
-                              })),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-
-                      // Cost Summary details ledger card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: c.card,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: c.divider.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            if (double.tryParse(
-                                      order['discountAmount']?.toString() ??
-                                          order['discount_amount']
-                                              ?.toString() ??
-                                          '0',
-                                    ) !=
-                                    null &&
-                                (double.tryParse(
-                                          order['discountAmount']?.toString() ??
-                                              order['discount_amount']
-                                                  ?.toString() ??
-                                              '0',
-                                        ) ??
-                                        0.0) >
-                                    0) ...[
-                              _InfoRow(
-                                'Tạm tính',
-                                _currFmt.format(
-                                  double.tryParse(
-                                        order['subtotal']?.toString() ?? '0',
-                                      ) ??
-                                      totalAmount,
-                                ),
-                                c,
-                              ),
-                              _InfoRow(
-                                'Chiết khấu',
-                                '-${_currFmt.format(double.tryParse(order['discountAmount']?.toString() ?? order['discount_amount']?.toString() ?? '0') ?? 0.0)}',
-                                c,
-                              ),
-                            ],
-                            _InfoRow(
-                              'Tổng tiền thanh toán',
-                              _currFmt.format(totalAmount),
-                              c,
-                            ),
-                            _InfoRow(
-                              'Khách đã thanh toán',
-                              _currFmt.format(paidAmount),
-                              c,
-                            ),
-                            Divider(height: 20, color: c.divider),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Dư nợ còn lại',
-                                  style: GoogleFonts.manrope(
-                                    color: remaining > 0
-                                        ? AppColors.danger
-                                        : AppColors.success,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  _currFmt.format(remaining),
-                                  style: GoogleFonts.manrope(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 18,
-                                    color: remaining > 0
-                                        ? AppColors.danger
-                                        : AppColors.success,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Payment history log ledger
-                      if ((order['payments'] as List?)?.isNotEmpty == true) ...[
-                        const SizedBox(height: 24),
-                        Text(
-                          'Lịch sử giao dịch thanh toán',
-                          style: GoogleFonts.manrope(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: c.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...(order['payments'] as List).map((p) {
-                          final pMap = p as Map;
-                          final amt =
-                              double.tryParse(
-                                pMap['amount']?.toString() ?? '0',
-                              ) ??
-                              0.0;
-                          final method = (pMap['method'] ?? 'CASH').toString();
-                          final paidAt = (pMap['paidAt'] ?? pMap['paid_at'])
-                              ?.toString();
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: c.surface.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: c.divider.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.success.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.check_circle_outline_rounded,
-                                    size: 18,
-                                    color: AppColors.success,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
+                                      const SizedBox(width: 12),
                                       Text(
-                                        '+${_currFmt.format(amt)}',
+                                        _currFmt.format(subtotal),
                                         style: GoogleFonts.manrope(
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.success,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${_paymentMethodLabel(method)}${paidAt != null ? ' • ${_formatDate(paidAt)}' : ''}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color: c.textSecondary,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.bold,
+                                          color: c.textPrimary,
+                                          fontSize: 14,
                                         ),
                                       ),
                                     ],
                                   ),
+                                );
+                              }),
+
+                            // Hiển thị phần trả hàng nếu có
+                            if (order['returns'] != null &&
+                                (order['returns'] as List).isNotEmpty) ...[
+                              const SizedBox(height: 20),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.danger.withValues(
+                                    alpha: 0.05,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: AppColors.danger.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                  ),
                                 ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.assignment_return_rounded,
+                                          color: AppColors.danger,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Thông tin Trả Hàng',
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.danger,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    ...((order['returns'] as List).map((ret) {
+                                      final rMap = ret as Map;
+                                      final refundAmt =
+                                          double.tryParse(
+                                            rMap['refundAmount']?.toString() ??
+                                                '0',
+                                          ) ??
+                                          0.0;
+                                      final retCode = (rMap['returnCode'] ?? '')
+                                          .toString();
+                                      final retReason = (rMap['reason'] ?? '')
+                                          .toString();
+                                      final returnId = rMap['id'];
+                                      return Container(
+                                        margin: const EdgeInsets.only(top: 8),
+                                        decoration: BoxDecoration(
+                                          color: c.surface,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(color: c.divider),
+                                        ),
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            onTap: returnId == null
+                                                ? null
+                                                : () => context.push(
+                                                    '/sales/returns/$returnId',
+                                                    extra: ret,
+                                                  ),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(12),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  _InfoRow(
+                                                    'Mã phiếu trả',
+                                                    retCode,
+                                                    c,
+                                                  ),
+                                                  _InfoRow(
+                                                    'Tiền hoàn lại',
+                                                    _currFmt.format(refundAmt),
+                                                    c,
+                                                  ),
+                                                  if (retReason.isNotEmpty)
+                                                    _InfoRow(
+                                                      'Lý do',
+                                                      retReason,
+                                                      c,
+                                                    ),
+                                                  const SizedBox(height: 4),
+                                                  Align(
+                                                    alignment:
+                                                        Alignment.centerRight,
+                                                    child: Text(
+                                                      'Bấm để xem chi tiết',
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 10,
+                                                        color: c.textMuted,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    })),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 20),
+
+                            // Cost Summary details ledger card
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: c.card,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: c.divider.withValues(alpha: 0.5),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  if (double.tryParse(
+                                            order['discountAmount']
+                                                    ?.toString() ??
+                                                order['discount_amount']
+                                                    ?.toString() ??
+                                                '0',
+                                          ) !=
+                                          null &&
+                                      (double.tryParse(
+                                                order['discountAmount']
+                                                        ?.toString() ??
+                                                    order['discount_amount']
+                                                        ?.toString() ??
+                                                    '0',
+                                              ) ??
+                                              0.0) >
+                                          0) ...[
+                                    _InfoRow(
+                                      'Tạm tính',
+                                      _currFmt.format(
+                                        double.tryParse(
+                                              order['subtotal']?.toString() ??
+                                                  '0',
+                                            ) ??
+                                            totalAmount,
+                                      ),
+                                      c,
+                                    ),
+                                    _InfoRow(
+                                      'Chiết khấu',
+                                      '-${_currFmt.format(double.tryParse(order['discountAmount']?.toString() ?? order['discount_amount']?.toString() ?? '0') ?? 0.0)}',
+                                      c,
+                                    ),
+                                  ],
+                                  _InfoRow(
+                                    'Tổng tiền thanh toán',
+                                    _currFmt.format(totalAmount),
+                                    c,
+                                  ),
+                                  _InfoRow(
+                                    'Khách đã thanh toán',
+                                    _currFmt.format(paidAmount),
+                                    c,
+                                  ),
+                                  Divider(height: 20, color: c.divider),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Dư nợ còn lại',
+                                        style: GoogleFonts.manrope(
+                                          color: remaining > 0
+                                              ? AppColors.danger
+                                              : AppColors.success,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        _currFmt.format(remaining),
+                                        style: GoogleFonts.manrope(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 18,
+                                          color: remaining > 0
+                                              ? AppColors.danger
+                                              : AppColors.success,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Payment history log ledger
+                            if ((order['payments'] as List?)?.isNotEmpty ==
+                                true) ...[
+                              const SizedBox(height: 24),
+                              Text(
+                                'Lịch sử giao dịch thanh toán',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: c.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ...(order['payments'] as List).map((p) {
+                                final pMap = p as Map;
+                                final amt =
+                                    double.tryParse(
+                                      pMap['amount']?.toString() ?? '0',
+                                    ) ??
+                                    0.0;
+                                final method = (pMap['method'] ?? 'CASH')
+                                    .toString();
+                                final paidAt =
+                                    (pMap['paidAt'] ?? pMap['paid_at'])
+                                        ?.toString();
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: c.surface.withValues(alpha: 0.5),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: c.divider.withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.success.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_circle_outline_rounded,
+                                          size: 18,
+                                          color: AppColors.success,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '+${_currFmt.format(amt)}',
+                                              style: GoogleFonts.manrope(
+                                                fontWeight: FontWeight.w800,
+                                                color: AppColors.success,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${_paymentMethodLabel(method)}${paidAt != null ? ' • ${_formatDate(paidAt)}' : ''}',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                color: c.textSecondary,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                            const SizedBox(height: 100),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Bottom floating visual control sheet
+                  if (!isCancelled)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: c.card,
+                        border: Border(
+                          top: BorderSide(
+                            color: c.divider.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, -4),
+                          ),
+                        ],
+                      ),
+                      child: SafeArea(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (order['shippingCarrierId'] != null ||
+                                    order['shippingCarrier'] != null) ...[
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _showDeliveryDialog(
+                                        context,
+                                        ref,
+                                        id,
+                                        order,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.local_shipping_outlined,
+                                      ),
+                                      label: Text(
+                                        'Giao hàng · ${_deliveryLabel(order['deliveryStatus']?.toString())}',
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                                if (!isFullyPaid)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _showPaymentDialog(
+                                        context,
+                                        ref,
+                                        id,
+                                        remaining,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.payment_rounded,
+                                        size: 18,
+                                        color: Colors.white,
+                                      ),
+                                      label: Text(
+                                        'Thanh toán ngay (${_currFmt.format(remaining)})',
+                                        style: GoogleFonts.manrope(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.success,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (status == 'DELIVERED' ||
+                                    status == 'COMPLETED' ||
+                                    isFullyPaid) ...[
+                                  if (!isFullyPaid) const SizedBox(height: 10),
+                                  if (!isReturned)
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        onPressed: canReturn
+                                            ? () => _showReturnDialog(
+                                                context,
+                                                ref,
+                                                id,
+                                                items,
+                                                Map<String, dynamic>.from(
+                                                  order,
+                                                ),
+                                              )
+                                            : () {
+                                                ToastService.showError(
+                                                  'Chỉ Quản lý hoặc Chủ cửa hàng mới có quyền tạo yêu cầu trả hàng.',
+                                                );
+                                              },
+                                        icon: Icon(
+                                          canReturn
+                                              ? Icons.assignment_return_rounded
+                                              : Icons.lock_outline_rounded,
+                                          size: 18,
+                                          color: canReturn
+                                              ? AppColors.danger
+                                              : c.textMuted,
+                                        ),
+                                        label: Text(
+                                          canReturn
+                                              ? 'Yêu Cầu Trả Hàng'
+                                              : 'Yêu Cầu Trả Hàng (Cần quyền Quản lý)',
+                                          style: GoogleFonts.manrope(
+                                            color: canReturn
+                                                ? AppColors.danger
+                                                : c.textMuted,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side: BorderSide(
+                                            color: canReturn
+                                                ? AppColors.danger
+                                                : c.divider,
+                                            width: 1.5,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ],
                             ),
-                          );
-                        }),
-                      ],
-                      const SizedBox(height: 100),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Bottom floating visual control sheet
-              if (!isCancelled)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    border: Border(
-                      top: BorderSide(color: c.divider.withValues(alpha: 0.4)),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, -4),
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (order['shippingCarrierId'] != null ||
-                            order['shippingCarrier'] != null) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  _showDeliveryDialog(context, ref, id, order),
-                              icon: const Icon(Icons.local_shipping_outlined),
-                              label: Text(
-                                'Giao hàng · ${_deliveryLabel(order['deliveryStatus']?.toString())}',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                        if (!isFullyPaid)
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () => _showPaymentDialog(
-                                context,
-                                ref,
-                                id,
-                                remaining,
-                              ),
-                              icon: const Icon(
-                                Icons.payment_rounded,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                              label: Text(
-                                'Thanh toán ngay (${_currFmt.format(remaining)})',
-                                style: GoogleFonts.manrope(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.success,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (status == 'DELIVERED' ||
-                            status == 'COMPLETED' ||
-                            isFullyPaid) ...[
-                          if (!isFullyPaid) const SizedBox(height: 10),
-                          if (!isReturned)
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _showReturnDialog(
-                                  context,
-                                  ref,
-                                  id,
-                                  items,
-                                  Map<String, dynamic>.from(order),
-                                ),
-                                icon: const Icon(
-                                  Icons.assignment_return_rounded,
-                                  size: 18,
-                                  color: AppColors.danger,
-                                ),
-                                label: Text(
-                                  'Yêu Cầu Trả Hàng',
-                                  style: GoogleFonts.manrope(
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(
-                                    color: AppColors.danger,
-                                    width: 1.5,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ],
                     ),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -876,8 +974,12 @@ class OrderDetailScreen extends ConsumerWidget {
           'deliveryStatus': status,
         });
         ref.invalidate(salesDetailProvider(orderId));
-      } catch (error) {
-        ToastService.showError(error.toString());
+      } on ApiException catch (error) {
+        ToastService.showError(error.message);
+      } catch (_) {
+        ToastService.showError(
+          'Không thể cập nhật vận chuyển. Vui lòng thử lại sau.',
+        );
       }
     }
     tracking.dispose();
@@ -958,11 +1060,21 @@ void _showPaymentDialog(
             const SizedBox(height: 6),
             TextField(
               controller: amountCtrl,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+              onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 hintText: 'Nhập số tiền',
                 suffixText: '₫',
+                helperText: parseCurrency(amountCtrl.text) > 0
+                    ? _currFmt.format(parseCurrency(amountCtrl.text))
+                    : null,
+                helperStyle: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
                 filled: true,
                 fillColor: c.inputFill,
                 border: OutlineInputBorder(
@@ -1082,7 +1194,7 @@ void _showPaymentDialog(
                   flex: 2,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      final amount = double.tryParse(amountCtrl.text) ?? 0;
+                      final amount = parseCurrency(amountCtrl.text);
                       if (amount <= 0) {
                         setState(
                           () => errorMessage =
@@ -1113,9 +1225,11 @@ void _showPaymentDialog(
                             'Đã thanh toán ${_currFmt.format(amount)}',
                           );
                         }
-                      } catch (e) {
+                      } catch (_) {
                         if (context.mounted) {
-                          ToastService.showError('Lỗi: $e');
+                          ToastService.showError(
+                            'Thanh toán thất bại. Vui lòng kiểm tra lại.',
+                          );
                         }
                       }
                     },
@@ -1146,7 +1260,10 @@ void _showPaymentDialog(
         ),
       ),
     ),
-  );
+  ).then((_) {
+    amountCtrl.dispose();
+    notesCtrl.dispose();
+  });
 }
 
 void _showReturnDialog(
@@ -1365,7 +1482,7 @@ void _showReturnDialog(
                   flex: 2,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      final amount = double.tryParse(amountCtrl.text) ?? 0;
+                      final amount = parseCurrency(amountCtrl.text);
                       final expectedRefund = selectedRefund();
                       if ((amount - expectedRefund).abs() > 0.01) {
                         setState(
@@ -1415,8 +1532,10 @@ void _showReturnDialog(
                         ToastService.showSuccess(
                           'Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)}',
                         );
-                      } catch (e) {
-                        ToastService.showError('Lỗi: $e');
+                      } catch (_) {
+                        ToastService.showError(
+                          'Không thể thực hiện trả hàng. Vui lòng thử lại sau.',
+                        );
                       }
                     },
                     icon: const Icon(
@@ -1446,7 +1565,10 @@ void _showReturnDialog(
         ),
       ),
     ),
-  );
+  ).then((_) {
+    amountCtrl.dispose();
+    reasonCtrl.dispose();
+  });
 }
 
 String _paymentMethodLabel(String method) {

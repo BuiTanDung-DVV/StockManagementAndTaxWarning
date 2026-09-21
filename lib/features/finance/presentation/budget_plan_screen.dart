@@ -28,28 +28,56 @@ class BudgetPlanScreen extends ConsumerWidget {
       ),
       body: budgetAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppInlineError(
+              message:
+                  'Không thể tải kế hoạch ngân sách. Vui lòng thử lại sau.',
+              onRetry: () => ref.invalidate(budgetPlansProvider),
+            ),
+          ),
+        ),
         data: (items) {
           if (items.isEmpty) {
-            return const AppEmpty(
-              visual: AppEmptyVisual.finance,
-              message: 'Chưa có kế hoạch ngân sách nào',
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(budgetPlansProvider);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: 420,
+                  child: const Center(
+                    child: AppEmpty(
+                      visual: AppEmptyVisual.finance,
+                      message: 'Chưa có kế hoạch ngân sách nào',
+                    ),
+                  ),
+                ),
+              ),
             );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            itemBuilder: (_, i) {
-              final item = items[i];
-              return Card(
-                color: c.card,
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  title: Text(item['name'] ?? 'Kế hoạch ${i + 1}'),
-                  subtitle: Text(item['description'] ?? ''),
-                ),
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(budgetPlansProvider);
             },
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              itemBuilder: (_, i) {
+                final item = items[i];
+                return Card(
+                  color: c.card,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    title: Text(item['name'] ?? 'Kế hoạch ${i + 1}'),
+                    subtitle: Text(item['description'] ?? ''),
+                  ),
+                );
+              },
+            ),
           );
         },
       ),

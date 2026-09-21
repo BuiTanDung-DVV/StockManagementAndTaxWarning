@@ -126,173 +126,180 @@ class TaxSupportScreen extends ConsumerWidget {
             : null,
         title: const Text('Hỗ trợ Thuế'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Info banner
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(14),
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(taxReferenceDataProvider),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Info banner
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.help_center, size: 30, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Trung tâm Hỗ trợ Thuế',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Tổng hợp kênh hỗ trợ từ Tổng cục Thuế cho HKD',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.help_center, size: 30, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 20),
+
+              // Online resources
+              Text(
+                'Cổng thông tin trực tuyến',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+              ...links.map(
+                (l) => GestureDetector(
+                  onTap: () => _showLinkDialog(context, l.title, l.url),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          'Trung tâm Hỗ trợ Thuế',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: _taxLinkColor(
+                              l.colorRole,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            _taxLinkIcon(l.iconKey),
+                            size: 20,
+                            color: _taxLinkColor(l.colorRole),
                           ),
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Tổng hợp kênh hỗ trợ từ Tổng cục Thuế cho HKD',
-                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l.title,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                l.description,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: c.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        Icon(Icons.open_in_new, size: 16, color: c.textMuted),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Online resources
-            Text(
-              'Cổng thông tin trực tuyến',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 12),
-            ...links.map(
-              (l) => GestureDetector(
-                onTap: () => _showLinkDialog(context, l.title, l.url),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: _taxLinkColor(
-                            l.colorRole,
-                          ).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          _taxLinkIcon(l.iconKey),
-                          size: 20,
-                          color: _taxLinkColor(l.colorRole),
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l.title,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Text(
-                              l.description,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: c.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.open_in_new, size: 16, color: c.textMuted),
-                    ],
-                  ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.info.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.info.withValues(alpha: 0.24),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.info.withValues(alpha: 0.24),
+                  ),
                 ),
-              ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline, size: 20, color: AppColors.info),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Số điện thoại hỗ trợ có thể thay đổi theo địa phương. Hãy tra cứu cơ quan thuế quản lý trực tiếp trên cổng chính thức trước khi liên hệ.',
-                      style: TextStyle(fontSize: 12, height: 1.45),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: AppColors.info),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Số điện thoại hỗ trợ có thể thay đổi theo địa phương. Hãy tra cứu cơ quan thuế quản lý trực tiếp trên cổng chính thức trước khi liên hệ.',
+                        style: TextStyle(fontSize: 12, height: 1.45),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Safe-use reminder
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.warning.withValues(alpha: 0.3),
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.gavel, size: 18, color: AppColors.warning),
-                      SizedBox(width: 8),
-                      Text(
-                        'Lưu ý khi tra cứu',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: AppColors.warning,
+
+              const SizedBox(height: 16),
+
+              // Safe-use reminder
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.gavel, size: 18, color: AppColors.warning),
+                        SizedBox(width: 8),
+                        Text(
+                          'Lưu ý khi tra cứu',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: AppColors.warning,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  _RightItem('Chỉ mở liên kết thuộc tên miền chính thức'),
-                  _RightItem('Không cung cấp mật khẩu, OTP cho người khác'),
-                  _RightItem(
-                    'Kiểm tra biểu mẫu và thời hạn trên cổng Cục Thuế',
-                  ),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    _RightItem('Chỉ mở liên kết thuộc tên miền chính thức'),
+                    _RightItem('Không cung cấp mật khẩu, OTP cho người khác'),
+                    _RightItem(
+                      'Kiểm tra biểu mẫu và thời hạn trên cổng Cục Thuế',
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -339,15 +346,26 @@ class TaxSupportScreen extends ConsumerWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      final opened = await launchUrl(
-                        Uri.parse(url),
-                        mode: LaunchMode.externalApplication,
-                      );
-                      if (!opened) {
-                        ToastService.showError('Không thể mở liên kết');
-                        return;
+                      try {
+                        final uri = Uri.tryParse(url);
+                        if (uri == null) {
+                          ToastService.showError(
+                            'Địa chỉ liên kết không hợp lệ',
+                          );
+                          return;
+                        }
+                        final opened = await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                        if (!opened) {
+                          ToastService.showError('Không thể mở liên kết');
+                          return;
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      } catch (_) {
+                        ToastService.showError('Không thể mở trình duyệt');
                       }
-                      if (ctx.mounted) Navigator.pop(ctx);
                     },
                     icon: const Icon(Icons.open_in_browser, size: 16),
                     label: Text('Mở trình duyệt'),

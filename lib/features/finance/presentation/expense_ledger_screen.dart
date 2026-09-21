@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
@@ -50,20 +51,42 @@ class ExpenseLedgerScreen extends ConsumerWidget {
       ),
       body: expAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppInlineError(
+              message:
+                  'Không thể tải sổ theo dõi chi phí. Vui lòng thử lại sau.',
+              onRetry: () => ref.invalidate(expensesByCategoryProvider),
+            ),
+          ),
+        ),
         data: (data) {
           final categories = (data['categories'] as List?) ?? [];
           final total = asNum(data['total']);
           final recentItems = (data['recentItems'] as List?) ?? [];
 
           if (categories.isEmpty && recentItems.isEmpty) {
-            return AppEmpty(
-              visual: AppEmptyVisual.finance,
-              message: 'Chưa có chi phí nào',
-              action: ElevatedButton.icon(
-                icon: const Icon(Icons.money_off),
-                label: const Text('Thêm chi phí'),
-                onPressed: () => _showAddExpenseDialog(context, ref),
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(expensesByCategoryProvider);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: 420,
+                  child: Center(
+                    child: AppEmpty(
+                      visual: AppEmptyVisual.finance,
+                      message: 'Chưa có chi phí nào',
+                      action: ElevatedButton.icon(
+                        icon: const Icon(Icons.money_off),
+                        label: const Text('Thêm chi phí'),
+                        onPressed: () => _showAddExpenseDialog(context, ref),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             );
           }
@@ -77,141 +100,73 @@ class ExpenseLedgerScreen extends ConsumerWidget {
             const Color(0xFFEC4899),
           ];
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Tổng chi phí tháng này',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _fmt(total),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ChartCard(
-                  title: 'Tỷ trọng chi phí',
-                  height: 220,
-                  child: MiniDonutChart(
-                    segments: categories.asMap().entries.map((e) {
-                      final c = e.value;
-                      final color = catColors[e.key % catColors.length];
-                      final amount = asNum(c['amount']);
-                      return DonutSegment(
-                        financeCategoryLabel(c['category']?.toString()),
-                        amount.toDouble(),
-                        color,
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Theo danh mục',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                ...categories.asMap().entries.map<Widget>((entry) {
-                  final c = entry.value;
-                  final color = catColors[entry.key % catColors.length];
-                  final amount = asNum(c['amount']);
-                  final pct = total > 0
-                      ? (amount / total * 100).toStringAsFixed(1)
-                      : '0';
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.all(12),
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(expensesByCategoryProvider);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppThemeColors.of(context).card,
-                      borderRadius: BorderRadius.circular(10),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Container(
-                          width: 4,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                        const Text(
+                          'Tổng chi phí tháng này',
+                          style: TextStyle(color: Colors.white54, fontSize: 12),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                financeCategoryLabel(c['category']?.toString()),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
-                                '${c['count']} giao dịch',
-                                style: TextStyle(
-                                  color: AppThemeColors.of(
-                                    context,
-                                  ).textSecondary,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 4),
+                        Text(
+                          _fmt(total),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              _fmt(amount),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: color,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              '$pct%',
-                              style: TextStyle(
-                                color: AppThemeColors.of(context).textSecondary,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
-                  );
-                }),
-                if (recentItems.isNotEmpty) ...[
+                  ),
+                  const SizedBox(height: 16),
+                  ChartCard(
+                    title: 'Tỷ trọng chi phí',
+                    height: 220,
+                    child: MiniDonutChart(
+                      segments: categories.asMap().entries.map((e) {
+                        final c = e.value;
+                        final color = catColors[e.key % catColors.length];
+                        final amount = asNum(c['amount']);
+                        return DonutSegment(
+                          financeCategoryLabel(c['category']?.toString()),
+                          amount.toDouble(),
+                          color,
+                        );
+                      }).toList(),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Giao dịch gần đây',
+                    'Theo danh mục',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
-                  ...recentItems.map<Widget>(
-                    (t) => Container(
+                  ...categories.asMap().entries.map<Widget>((entry) {
+                    final c = entry.value;
+                    final color = catColors[entry.key % catColors.length];
+                    final amount = asNum(c['amount']);
+                    final pct = total > 0
+                        ? (amount / total * 100).toStringAsFixed(1)
+                        : '0';
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -219,27 +174,54 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          Container(
+                            width: 4,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  financeCategoryLabel(
+                                    c['category']?.toString(),
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  '${c['count']} giao dịch',
+                                  style: TextStyle(
+                                    color: AppThemeColors.of(
+                                      context,
+                                    ).textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                t['counterparty'] ??
-                                    financeCategoryLabel(
-                                      t['category']?.toString(),
-                                    ),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
+                                _fmt(amount),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: color,
                                   fontSize: 13,
                                 ),
                               ),
                               Text(
-                                t['transactionDate']
-                                        ?.toString()
-                                        .split('T')
-                                        .first ??
-                                    '',
+                                '$pct%',
                                 style: TextStyle(
                                   color: AppThemeColors.of(
                                     context,
@@ -249,20 +231,74 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          Text(
-                            _fmt(asNum(t['amount'])),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.danger,
-                              fontSize: 13,
-                            ),
-                          ),
                         ],
                       ),
+                    );
+                  }),
+                  if (recentItems.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Giao dịch gần đây',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    ...recentItems.map<Widget>(
+                      (t) => Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppThemeColors.of(context).card,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  t['counterparty'] ??
+                                      financeCategoryLabel(
+                                        t['category']?.toString(),
+                                      ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  t['transactionDate']
+                                          ?.toString()
+                                          .split('T')
+                                          .first ??
+                                      '',
+                                  style: TextStyle(
+                                    color: AppThemeColors.of(
+                                      context,
+                                    ).textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              _fmt(asNum(t['amount'])),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.danger,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           );
         },
@@ -285,58 +321,109 @@ class ExpenseLedgerScreen extends ConsumerWidget {
     String category = 'OTHER';
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Thêm chi phí'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: category,
-              items: const [
-                DropdownMenuItem(value: 'SALARY', child: Text('Lương')),
-                DropdownMenuItem(value: 'RENT', child: Text('Tiền thuê')),
-                DropdownMenuItem(value: 'UTILITIES', child: Text('Tiện ích')),
-                DropdownMenuItem(value: 'PURCHASE', child: Text('Mua hàng')),
-                DropdownMenuItem(value: 'OTHER', child: Text('Khác')),
-              ],
-              onChanged: (v) => category = v ?? 'OTHER',
-              decoration: const InputDecoration(labelText: 'Danh mục'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final parsed = parseCurrency(amountC.text);
+          return AlertDialog(
+            title: const Text('Thêm chi phí'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: category,
+                    items: const [
+                      DropdownMenuItem(value: 'SALARY', child: Text('Lương')),
+                      DropdownMenuItem(value: 'RENT', child: Text('Tiền thuê')),
+                      DropdownMenuItem(
+                        value: 'UTILITIES',
+                        child: Text('Tiện ích'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'PURCHASE',
+                        child: Text('Mua hàng'),
+                      ),
+                      DropdownMenuItem(value: 'OTHER', child: Text('Khác')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setDialogState(() => category = v);
+                      }
+                    },
+                    decoration: const InputDecoration(labelText: 'Danh mục'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: amountC,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Số tiền *',
+                      hintText: 'Nhập số tiền chi...',
+                      suffixText: '₫',
+                      helperText: parsed > 0 ? _fmt(parsed) : null,
+                      helperStyle: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: noteC,
+                    decoration: const InputDecoration(
+                      labelText: 'Ghi chú',
+                      hintText: 'Nhập nội dung chi phí...',
+                    ),
+                  ),
+                ],
+              ),
             ),
-            TextField(
-              controller: amountC,
-              decoration: const InputDecoration(labelText: 'Số tiền'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: noteC,
-              decoration: const InputDecoration(labelText: 'Ghi chú'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await ref.read(financeRepoProvider).createTransaction({
-                'type': 'EXPENSE',
-                'category': category,
-                'amount': double.tryParse(amountC.text) ?? 0,
-                'transactionDate': DateTime.now()
-                    .toIso8601String()
-                    .split('T')
-                    .first,
-                'notes': noteC.text,
-              });
-              ref.invalidate(expensesByCategoryProvider);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final amount = parseCurrency(amountC.text);
+                  if (amount <= 0) {
+                    ToastService.showError('Số tiền chi phí phải lớn hơn 0');
+                    return;
+                  }
+                  try {
+                    await ref.read(financeRepoProvider).createTransaction({
+                      'type': 'EXPENSE',
+                      'category': category,
+                      'amount': amount,
+                      'transactionDate': DateTime.now()
+                          .toIso8601String()
+                          .split('T')
+                          .first,
+                      'notes': noteC.text.trim(),
+                    });
+                    ref.invalidate(expensesByCategoryProvider);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    ToastService.showSuccess(
+                      'Đã thêm khoản chi phí thành công',
+                    );
+                  } catch (e) {
+                    ToastService.showError(
+                      'Không thể thêm khoản chi phí. Vui lòng thử lại sau.',
+                    );
+                  }
+                },
+                child: const Text('Lưu'),
+              ),
+            ],
+          );
+        },
       ),
-    );
+    ).whenComplete(() {
+      amountC.dispose();
+      noteC.dispose();
+    });
   }
 }

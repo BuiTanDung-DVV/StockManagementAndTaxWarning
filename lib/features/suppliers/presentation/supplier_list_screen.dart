@@ -205,7 +205,8 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
                 },
                 loading: () => const ShimmerList(),
                 error: (error, _) => AppError(
-                  message: 'Không thể tải danh sách nhà cung cấp: $error',
+                  message:
+                      'Không thể tải danh sách nhà cung cấp. Vui lòng thử lại sau.',
                   onRetry: () => ref.invalidate(supplierListProvider),
                 ),
               ),
@@ -237,14 +238,29 @@ class _SupplierTableHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(flex: 4, child: Text('NHÀ CUNG CẤP', style: style)),
-          Expanded(flex: 3, child: Text('THÔNG TIN THUẾ', style: style)),
+          Expanded(
+            flex: 4,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Text('NHÀ CUNG CẤP', style: style),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Text('THÔNG TIN THUẾ', style: style),
+            ),
+          ),
           Expanded(
             flex: 2,
-            child: Text(
-              'HẠN THANH TOÁN',
-              textAlign: TextAlign.right,
-              style: style,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Text(
+                'HẠN THANH TOÁN',
+                textAlign: TextAlign.right,
+                style: style,
+              ),
             ),
           ),
           const SizedBox(width: 76),
@@ -288,48 +304,60 @@ class _DesktopSupplierRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Expanded(flex: 4, child: _SupplierIdentity(supplier: supplier)),
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _SupplierIdentity(supplier: supplier),
+              ),
+            ),
             Expanded(
               flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    taxCode.isEmpty ? 'Chưa cập nhật MST' : 'MST: $taxCode',
-                    style: TextStyle(
-                      color: taxCode.isEmpty
-                          ? colors.textMuted
-                          : colors.textPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if ((supplier['email']?.toString() ?? '').isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.xxs),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      supplier['email'].toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      taxCode.isEmpty ? 'Chưa cập nhật MST' : 'MST: $taxCode',
                       style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: 11,
+                        color: taxCode.isEmpty
+                            ? colors.textMuted
+                            : colors.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if ((supplier['email']?.toString() ?? '').isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        supplier['email'].toString(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
             Expanded(
               flex: 2,
-              child: Text(
-                paymentTerm == null || paymentTerm.toString().isEmpty
-                    ? '—'
-                    : '${paymentTerm.toString()} ngày',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  color: colors.textPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  paymentTerm == null || paymentTerm.toString().isEmpty
+                      ? '—'
+                      : '${paymentTerm.toString()} ngày',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),

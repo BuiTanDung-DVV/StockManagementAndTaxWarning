@@ -778,7 +778,10 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
     final barGroups = <BarChartGroupData>[];
     double barWidth;
     double bSpace;
-    if (maxLen <= 7) {
+    if (maxLen <= 2) {
+      barWidth = isMobile ? 22.0 : 36.0;
+      bSpace = isMobile ? 12.0 : 20.0;
+    } else if (maxLen <= 7) {
       barWidth = isMobile ? 14.0 : 20.0;
       bSpace = isMobile ? 8.0 : 12.0;
     } else {
@@ -1181,6 +1184,9 @@ double dashboardChartGroupWidth(
   final length = currentData.length > previousData.length
       ? currentData.length
       : previousData.length;
+  if (length <= 2) {
+    return isMobile ? 88 : 118;
+  }
   var usesMonthAndYear = false;
   for (var index = 0; index < length; index++) {
     if (dashboardChartPeriodLabel(currentData, previousData, index).length >=
@@ -1206,13 +1212,13 @@ class TopProductsChart extends StatelessWidget {
 
   String _formatAmount(double amount) {
     if (amount >= 1000000000) {
-      return '${(amount / 1000000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}T đ';
+      return '${(amount / 1000000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')} tỷ ₫';
     } else if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}M đ';
+      return '${(amount / 1000000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')} tr ₫';
     } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')}K đ';
+      return '${(amount / 1000).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')} k ₫';
     }
-    return '${amount.toStringAsFixed(0)} đ';
+    return '${amount.toStringAsFixed(0)} ₫';
   }
 
   @override
@@ -3541,7 +3547,7 @@ class _NoUrgentActions extends StatelessWidget {
                 Text(
                   hasVerifiedSummary
                       ? 'Không có việc cần xử lý ngay'
-                      : 'Không có dữ liệu theo quyền hiện tại',
+                      : 'Không có việc khẩn cấp cần xử lý',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: colors.textPrimary,
@@ -3551,7 +3557,7 @@ class _NoUrgentActions extends StatelessWidget {
                 Text(
                   hasVerifiedSummary
                       ? 'Các trạng thái đã xác minh được tổng hợp bên dưới.'
-                      : 'Action Center chỉ hiển thị nhóm dữ liệu bạn được phép xem.',
+                      : 'Tất cả chỉ số vận hành, tồn kho và đơn hàng đều đang trong ngưỡng an toàn.',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),

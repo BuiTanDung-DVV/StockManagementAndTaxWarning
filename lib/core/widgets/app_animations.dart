@@ -133,10 +133,7 @@ class AppEmpty extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (action != null) ...[
-                      const SizedBox(width: 8),
-                      action!,
-                    ],
+                    if (action != null) ...[const SizedBox(width: 8), action!],
                   ],
                 ),
               ),

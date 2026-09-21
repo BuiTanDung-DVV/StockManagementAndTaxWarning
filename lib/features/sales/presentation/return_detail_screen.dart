@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 
 final _currFmt = NumberFormat.currency(
@@ -59,142 +61,190 @@ class ReturnDetailScreen extends ConsumerWidget {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // General Info
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-              ),
-              child: Column(
-                children: [
-                  _buildInfoRow('Mã trả hàng', returnCode.toString(), c),
-                  if (dateLabel.isNotEmpty)
-                    _buildInfoRow('Thời gian', dateLabel, c),
-                  _buildInfoRow('Lý do', reason, c, isMultiLine: true),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Tiền hoàn lại',
-                        style: GoogleFonts.inter(
-                          color: c.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      Text(
-                        _currFmt.format(refundedAmount),
-                        style: GoogleFonts.manrope(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
+      body: returnInfo.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: AppEmpty(
+                  visual: AppEmptyVisual.sales,
+                  message: 'Không tìm thấy thông tin phiếu trả hàng',
+                  subtitle:
+                      'Dữ liệu phiếu trả hàng không tồn tại hoặc phiên làm việc đã kết thúc.',
+                  action: FilledButton(
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/sales');
+                      }
+                    },
+                    child: const Text('Quay lại danh sách đơn hàng'),
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Danh sách sản phẩm trả',
-              style: GoogleFonts.manrope(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (returnItems.isEmpty)
-              Text(
-                'Không có thông tin sản phẩm cụ thể.',
-                style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13),
-              )
-            else
-              ...returnItems.map((item) {
-                final itemName =
-                    item['product']?['name'] ??
-                    item['productName'] ??
-                    'Sản phẩm ${item['productId'] ?? ''}';
-                final qty = asDouble(item['quantity']);
-                final unitPrice = asDouble(
-                  item['unitPrice'] ?? item['price'] ?? 0,
-                );
-                final subtotal = qty * unitPrice;
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
+            )
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
+                    horizontal: 16,
+                    vertical: 14,
                   ),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-                  ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
+                      // General Info
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: c.divider.withValues(alpha: 0.5),
+                          ),
+                        ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              itemName,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: c.textPrimary,
-                              ),
+                            _buildInfoRow(
+                              'Mã trả hàng',
+                              returnCode.toString(),
+                              c,
                             ),
-                            const SizedBox(height: 2),
-                            if (unitPrice > 0)
-                              Text(
-                                'SL: $qty x ${_currFmt.format(unitPrice)}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: c.textSecondary,
-                                  fontWeight: FontWeight.w500,
+                            if (dateLabel.isNotEmpty)
+                              _buildInfoRow('Thời gian', dateLabel, c),
+                            _buildInfoRow(
+                              'Lý do',
+                              reason,
+                              c,
+                              isMultiLine: true,
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Tiền hoàn lại',
+                                  style: GoogleFonts.inter(
+                                    color: c.textSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              )
-                            else
-                              Text(
-                                'SL: $qty',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: c.textSecondary,
-                                  fontWeight: FontWeight.w500,
+                                Text(
+                                  _currFmt.format(refundedAmount),
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.primary,
+                                  ),
                                 ),
-                              ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      if (unitPrice > 0)
-                        Text(
-                          _currFmt.format(subtotal),
-                          style: GoogleFonts.manrope(
-                            fontWeight: FontWeight.bold,
-                            color: c.textPrimary,
-                            fontSize: 14,
-                          ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Danh sách sản phẩm trả',
+                        style: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: c.textPrimary,
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (returnItems.isEmpty)
+                        Text(
+                          'Không có thông tin sản phẩm cụ thể.',
+                          style: GoogleFonts.inter(
+                            color: c.textSecondary,
+                            fontSize: 13,
+                          ),
+                        )
+                      else
+                        ...returnItems.map((item) {
+                          final itemName =
+                              item['product']?['name'] ??
+                              item['productName'] ??
+                              'Sản phẩm ${item['productId'] ?? ''}';
+                          final qty = asDouble(item['quantity']);
+                          final unitPrice = asDouble(
+                            item['unitPrice'] ?? item['price'] ?? 0,
+                          );
+                          final subtotal = qty * unitPrice;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: c.card,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: c.divider.withValues(alpha: 0.5),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        itemName,
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: c.textPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      if (unitPrice > 0)
+                                        Text(
+                                          'SL: $qty x ${_currFmt.format(unitPrice)}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: c.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        )
+                                      else
+                                        Text(
+                                          'SL: $qty',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: c.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                if (unitPrice > 0)
+                                  Text(
+                                    _currFmt.format(subtotal),
+                                    style: GoogleFonts.manrope(
+                                      fontWeight: FontWeight.bold,
+                                      color: c.textPrimary,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }),
+                      const SizedBox(height: 40),
                     ],
                   ),
-                );
-              }),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
+                ),
+              ),
+            ),
     );
   }
 

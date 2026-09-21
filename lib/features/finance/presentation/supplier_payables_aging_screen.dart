@@ -274,7 +274,7 @@ class _SupplierPriorityPanel extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '${index + 1}. ${supplier['supplierName'] ?? 'Chưa xác định'}',
+                                    '${index + 1}. ${supplier['supplierName'] ?? supplier['name'] ?? supplier['supplier']?['name'] ?? 'Chưa xác định'}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -387,7 +387,10 @@ class _PayableDesktopRow extends StatelessWidget {
           Expanded(
             flex: 4,
             child: Text(
-              item['supplierName']?.toString() ?? 'Chưa xác định',
+              item['supplierName']?.toString() ??
+                  item['name']?.toString() ??
+                  item['supplier']?['name']?.toString() ??
+                  'Chưa xác định',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w700),
@@ -453,7 +456,10 @@ class _PayableMobileCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  item['supplierName']?.toString() ?? 'Chưa xác định',
+                  item['supplierName']?.toString() ??
+                      item['name']?.toString() ??
+                      item['supplier']?['name']?.toString() ??
+                      'Chưa xác định',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w700),

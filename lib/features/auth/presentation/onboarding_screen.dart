@@ -241,7 +241,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: const Text('Quay lại'),
               )
             else
-              const SizedBox(width: 84),
+              TextButton(
+                onPressed: () => _goToIntroStep(2),
+                child: const Text('Bỏ qua'),
+              ),
             const Spacer(),
             if (_introStep < 2)
               FilledButton(

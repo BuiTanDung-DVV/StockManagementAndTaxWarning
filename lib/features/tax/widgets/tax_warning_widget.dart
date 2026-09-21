@@ -116,8 +116,9 @@ class TaxWarningWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
+              color: c.surface.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: c.divider.withValues(alpha: 0.5)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,

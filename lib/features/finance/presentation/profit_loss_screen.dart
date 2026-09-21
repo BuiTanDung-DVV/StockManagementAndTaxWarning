@@ -97,11 +97,24 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
         data: (data) {
           final current = _Pnl.fromMap(data);
           if (current.isEmpty) {
-            return const AppEmpty(
-              visual: AppEmptyVisual.finance,
-              message: 'Chưa có dữ liệu doanh thu và chi phí trong kỳ',
-              subtitle:
-                  'Ghi nhận bán hàng và chi phí để lập báo cáo kết quả kinh doanh.',
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(profitLossProvider);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: 420,
+                  child: const Center(
+                    child: AppEmpty(
+                      visual: AppEmptyVisual.finance,
+                      message: 'Chưa có dữ liệu doanh thu và chi phí trong kỳ',
+                      subtitle:
+                          'Ghi nhận bán hàng và chi phí để lập báo cáo kết quả kinh doanh.',
+                    ),
+                  ),
+                ),
+              ),
             );
           }
           return previousAsync.when(
@@ -120,109 +133,116 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
     bool comparing = false,
     bool comparisonError = false,
   }) {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: AppResponsiveContent(
-        maxWidth: 1320,
-        verticalPadding: AppSpacing.lg,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ReportHeading(
-              currentPeriod: _period(_range),
-              previousPeriod: _period(_previousRange),
-              onChange: _pickDateRange,
-            ),
-            if (comparisonError) ...[
-              const SizedBox(height: 8),
-              AppInlineError(
-                message:
-                    'Không tải được kỳ trước. Số liệu kỳ hiện tại vẫn được giữ nguyên.',
-                onRetry: () => ref.invalidate(
-                  profitLossProvider((
-                    from: _key(_previousRange.start),
-                    to: _key(_previousRange.end),
-                  )),
-                ),
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(profitLossProvider);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: AppResponsiveContent(
+          maxWidth: 1320,
+          verticalPadding: AppSpacing.lg,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ReportHeading(
+                currentPeriod: _period(_range),
+                previousPeriod: _period(_previousRange),
+                onChange: _pickDateRange,
               ),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-            AppFillGrid(
-              minItemWidth: 220,
-              maxColumns: 3,
-              itemHeight: 126,
-              children: [
-                _Metric(
-                  title: 'Doanh thu thuần',
-                  value: current.revenue,
-                  previous: previous?.revenue,
-                  loading: comparing,
-                  color: AppColors.primary,
-                  asset: AppAssets.revenue,
-                  formatter: _money,
-                ),
-                _Metric(
-                  title: 'Lợi nhuận gộp',
-                  value: current.grossProfit,
-                  previous: previous?.grossProfit,
-                  loading: comparing,
-                  color: current.grossProfit >= 0
-                      ? AppColors.success
-                      : AppColors.danger,
-                  asset: AppAssets.profit,
-                  ratio: current.grossMargin,
-                  formatter: _money,
-                ),
-                _Metric(
-                  title: current.netProfit >= 0 ? 'Lợi nhuận ròng' : 'Lỗ ròng',
-                  value: current.netProfit,
-                  previous: previous?.netProfit,
-                  loading: comparing,
-                  color: current.netProfit >= 0
-                      ? AppColors.success
-                      : AppColors.danger,
-                  asset: AppAssets.profit,
-                  ratio: current.netMargin,
-                  formatter: _money,
+              if (comparisonError) ...[
+                const SizedBox(height: 8),
+                AppInlineError(
+                  message:
+                      'Không tải được kỳ trước. Số liệu kỳ hiện tại vẫn được giữ nguyên.',
+                  onRetry: () => ref.invalidate(
+                    profitLossProvider((
+                      from: _key(_previousRange.start),
+                      to: _key(_previousRange.end),
+                    )),
+                  ),
                 ),
               ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final statement = _Statement(
-                  current: current,
-                  previous: previous,
-                  formatter: _money,
-                );
-                final calculation = _Calculation(
-                  values: current,
-                  formatter: _money,
-                );
-                if (constraints.maxWidth < 980) {
-                  return Column(
-                    children: [
-                      statement,
-                      const SizedBox(height: AppSpacing.lg),
-                      calculation,
-                    ],
-                  );
-                }
-                return IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(flex: 7, child: statement),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(flex: 4, child: calculation),
-                    ],
+              const SizedBox(height: AppSpacing.lg),
+              AppFillGrid(
+                minItemWidth: 220,
+                maxColumns: 3,
+                itemHeight: 126,
+                children: [
+                  _Metric(
+                    title: 'Doanh thu thuần',
+                    value: current.revenue,
+                    previous: previous?.revenue,
+                    loading: comparing,
+                    color: AppColors.primary,
+                    asset: AppAssets.revenue,
+                    formatter: _money,
                   ),
-                );
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const _AccountingNote(),
-          ],
+                  _Metric(
+                    title: 'Lợi nhuận gộp',
+                    value: current.grossProfit,
+                    previous: previous?.grossProfit,
+                    loading: comparing,
+                    color: current.grossProfit >= 0
+                        ? AppColors.success
+                        : AppColors.danger,
+                    asset: AppAssets.profit,
+                    ratio: current.grossMargin,
+                    formatter: _money,
+                  ),
+                  _Metric(
+                    title: current.netProfit >= 0
+                        ? 'Lợi nhuận ròng'
+                        : 'Lỗ ròng',
+                    value: current.netProfit,
+                    previous: previous?.netProfit,
+                    loading: comparing,
+                    color: current.netProfit >= 0
+                        ? AppColors.success
+                        : AppColors.danger,
+                    asset: AppAssets.profit,
+                    ratio: current.netMargin,
+                    formatter: _money,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final statement = _Statement(
+                    current: current,
+                    previous: previous,
+                    formatter: _money,
+                  );
+                  final calculation = _Calculation(
+                    values: current,
+                    formatter: _money,
+                  );
+                  if (constraints.maxWidth < 980) {
+                    return Column(
+                      children: [
+                        statement,
+                        const SizedBox(height: AppSpacing.lg),
+                        calculation,
+                      ],
+                    );
+                  }
+                  return IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(flex: 7, child: statement),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(flex: 4, child: calculation),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const _AccountingNote(),
+            ],
+          ),
         ),
       ),
     );

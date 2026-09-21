@@ -91,7 +91,15 @@ app.use('/api', apiRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
-  res.status(500).json({ success: false, message: 'Internal server error' });
+  const status =
+    typeof err?.status === 'number'
+      ? err.status
+      : typeof err?.statusCode === 'number'
+        ? err.statusCode
+        : 500;
+  const message =
+    status < 500 && err?.message ? err.message : 'Internal server error';
+  res.status(status).json({ success: false, message });
 });
 
 if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {

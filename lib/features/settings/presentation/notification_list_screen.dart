@@ -53,9 +53,14 @@ class _NotificationListScreenState
         ],
       ),
       body: actionable
-          ? const SingleChildScrollView(
-              padding: EdgeInsets.all(16),
-              child: DashboardPriorityList(showViewAll: false),
+          ? RefreshIndicator(
+              onRefresh: () async =>
+                  ref.read(notificationProvider.notifier).loadNotifications(),
+              child: const SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.all(16),
+                child: DashboardPriorityList(showViewAll: false),
+              ),
             )
           : notif.isLoading && notif.items.isEmpty
           ? const Center(child: CircularProgressIndicator())
@@ -72,24 +77,37 @@ class _NotificationListScreenState
               ),
             )
           : notif.items.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.notifications_none, size: 64, color: c.textMuted),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Không có thông báo',
-                    style: TextStyle(color: c.textSecondary, fontSize: 16),
+          ? RefreshIndicator(
+              onRefresh: () async =>
+                  ref.read(notificationProvider.notifier).loadNotifications(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: const SizedBox(
+                  height: 360,
+                  child: Center(
+                    child: AppEmpty(
+                      message: 'Không có thông báo',
+                      subtitle: 'Hiện tại bạn không có thông báo mới nào.',
+                    ),
                   ),
-                ],
+                ),
               ),
             )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: notif.items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => _buildNotifCard(notif.items[i], c),
+          : RefreshIndicator(
+              onRefresh: () async =>
+                  ref.read(notificationProvider.notifier).loadNotifications(),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 860),
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: notif.items.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) => _buildNotifCard(notif.items[i], c),
+                  ),
+                ),
+              ),
             ),
     );
   }
@@ -100,15 +118,35 @@ class _NotificationListScreenState
     IconData icon;
     Color iconColor;
     switch (type) {
+      case 'INVENTORY_LOW':
+      case 'STOCK_LOW':
+      case 'OUT_OF_STOCK':
+      case 'EXPIRED':
+        icon = Icons.inventory_2_outlined;
+        iconColor = AppColors.danger;
+      case 'DEBT_REMINDER':
+      case 'DEBT_OVERDUE':
+      case 'PAYMENT_PENDING':
+        icon = Icons.account_balance_wallet_outlined;
+        iconColor = AppColors.warning;
+      case 'SALES_MILESTONE':
+      case 'TARGET_REACHED':
+      case 'ORDER_COMPLETED':
+        icon = Icons.trending_up_rounded;
+        iconColor = AppColors.success;
+      case 'TAX_ALERT':
+      case 'TAX_WARNING':
+        icon = Icons.receipt_long_outlined;
+        iconColor = AppColors.danger;
       case 'SHOP_INVITE':
-        icon = Icons.store_mall_directory;
+        icon = Icons.store_mall_directory_outlined;
         iconColor = AppColors.primary;
       case 'ROLE_CHANGE':
-        icon = Icons.swap_horiz;
+        icon = Icons.swap_horiz_rounded;
         iconColor = AppColors.info;
       default:
-        icon = Icons.notifications;
-        iconColor = AppColors.warning;
+        icon = Icons.notifications_outlined;
+        iconColor = AppColors.primary;
     }
 
     return GestureDetector(

@@ -189,80 +189,92 @@ class _TransactionDetailView extends ConsumerWidget {
                 ),
               ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Amount header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: c.card,
-                shape: BoxShape.circle,
-                border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-              ),
-              child: Icon(
-                isIncome
-                    ? Icons.arrow_downward_rounded
-                    : Icons.arrow_upward_rounded,
-                size: 40,
-                color: isIncome ? AppColors.success : AppColors.danger,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '${isIncome ? '+' : '-'}${_currFmt.format(amount)}',
-              style: GoogleFonts.manrope(
-                fontWeight: FontWeight.bold,
-                fontSize: 32,
-                color: isIncome ? AppColors.success : AppColors.danger,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isIncome ? 'Giao dịch thu tiền' : 'Giao dịch chi tiền',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: c.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-              ),
-              child: Column(
-                children: [
-                  _buildInfoRow(
-                    'Loại giao dịch',
-                    isIncome ? 'Thu' : 'Chi',
-                    c,
-                    valueColor: isIncome ? AppColors.success : AppColors.danger,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Amount header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: c.divider.withValues(alpha: 0.5)),
                   ),
-                  _buildInfoRow('Phương thức', paymentMethod, c),
-                  if (dateLabel.isNotEmpty)
-                    _buildInfoRow('Thời gian', dateLabel, c),
-                  if (counterparty.isNotEmpty)
-                    _buildInfoRow('Đối tác', counterparty, c),
-                  if (isLinked)
-                    _buildInfoRow(
-                      'Nguồn dữ liệu',
-                      'Tự động từ chứng từ gốc',
-                      c,
-                    ),
-                  const Divider(height: 24),
-                  _buildInfoRow('Ghi chú', description, c, isMultiLine: true),
-                ],
-              ),
+                  child: Icon(
+                    isIncome
+                        ? Icons.arrow_downward_rounded
+                        : Icons.arrow_upward_rounded,
+                    size: 40,
+                    color: isIncome ? AppColors.success : AppColors.danger,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '${isIncome ? '+' : '-'}${_currFmt.format(amount)}',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                    color: isIncome ? AppColors.success : AppColors.danger,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isIncome ? 'Giao dịch thu tiền' : 'Giao dịch chi tiền',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: c.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Info Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: c.divider.withValues(alpha: 0.5)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildInfoRow(
+                        'Loại giao dịch',
+                        isIncome ? 'Thu' : 'Chi',
+                        c,
+                        valueColor: isIncome
+                            ? AppColors.success
+                            : AppColors.danger,
+                      ),
+                      _buildInfoRow('Phương thức', paymentMethod, c),
+                      if (dateLabel.isNotEmpty)
+                        _buildInfoRow('Thời gian', dateLabel, c),
+                      if (counterparty.isNotEmpty)
+                        _buildInfoRow('Đối tác', counterparty, c),
+                      if (isLinked)
+                        _buildInfoRow(
+                          'Nguồn dữ liệu',
+                          'Tự động từ chứng từ gốc',
+                          c,
+                        ),
+                      const Divider(height: 24),
+                      _buildInfoRow(
+                        'Ghi chú',
+                        description,
+                        c,
+                        isMultiLine: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -331,90 +343,142 @@ class _TransactionDetailView extends ConsumerWidget {
       text: financeTransactionDescription(trans),
     );
     String payMethod = trans['paymentMethod']?.toString() ?? 'CASH';
+    bool isSubmitting = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sửa giao dịch'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: type,
-                items: const [
-                  DropdownMenuItem(value: 'INCOME', child: Text('Thu tiền')),
-                  DropdownMenuItem(value: 'EXPENSE', child: Text('Chi tiền')),
-                ],
-                onChanged: (v) => type = v ?? 'INCOME',
-                decoration: const InputDecoration(labelText: 'Loại'),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: amountC,
-                decoration: const InputDecoration(labelText: 'Số tiền'),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: payMethod == 'Chuyển khoản'
-                    ? 'TRANSFER'
-                    : (payMethod == 'Tiền mặt' ? 'CASH' : payMethod),
-                items: const [
-                  DropdownMenuItem(value: 'CASH', child: Text('Tiền mặt')),
-                  DropdownMenuItem(
-                    value: 'TRANSFER',
-                    child: Text('Chuyển khoản'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          final parsedAmt = parseCurrency(amountC.text);
+
+          return AlertDialog(
+            title: const Text('Sửa giao dịch'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: type,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'INCOME',
+                        child: Text('Thu tiền'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'EXPENSE',
+                        child: Text('Chi tiền'),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => type = v ?? 'INCOME'),
+                    decoration: const InputDecoration(labelText: 'Loại'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amountC,
+                    decoration: InputDecoration(
+                      labelText: 'Số tiền *',
+                      suffixText: '₫',
+                      helperText: parsedAmt > 0
+                          ? _currFmt.format(parsedAmt)
+                          : null,
+                      helperStyle: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: payMethod == 'Chuyển khoản'
+                        ? 'TRANSFER'
+                        : (payMethod == 'Tiền mặt' ? 'CASH' : payMethod),
+                    items: const [
+                      DropdownMenuItem(value: 'CASH', child: Text('Tiền mặt')),
+                      DropdownMenuItem(
+                        value: 'TRANSFER',
+                        child: Text('Chuyển khoản'),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setDialogState(() => payMethod = v ?? 'CASH'),
+                    decoration: const InputDecoration(labelText: 'Phương thức'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: cpartyC,
+                    decoration: const InputDecoration(labelText: 'Đối tác'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descC,
+                    decoration: const InputDecoration(labelText: 'Ghi chú'),
                   ),
                 ],
-                onChanged: (v) => payMethod = v ?? 'CASH',
-                decoration: const InputDecoration(labelText: 'Phương thức'),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: cpartyC,
-                decoration: const InputDecoration(labelText: 'Đối tác'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                child: const Text('Hủy'),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descC,
-                decoration: const InputDecoration(labelText: 'Ghi chú'),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final amt = parseCurrency(amountC.text);
+                        if (amt <= 0) {
+                          ToastService.showError('Số tiền phải > 0');
+                          return;
+                        }
+                        setDialogState(() => isSubmitting = true);
+                        try {
+                          await ref
+                              .read(financeRepoProvider)
+                              .updateTransaction(transId, {
+                                'type': type,
+                                'amount': amt,
+                                'paymentMethod': payMethod,
+                                'counterparty': cpartyC.text.trim(),
+                                'description': descC.text.trim(),
+                              });
+                          ref.invalidate(transactionsProvider);
+                          ref.invalidate(cashSummaryProvider);
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx); // close dialog
+                            Navigator.pop(context); // close screen
+                            ToastService.showSuccess('Cập nhật thành công');
+                          }
+                        } catch (e) {
+                          ToastService.showError(
+                            'Không thể cập nhật giao dịch. Vui lòng thử lại sau.',
+                          );
+                          if (dialogCtx.mounted) {
+                            setDialogState(() => isSubmitting = false);
+                          }
+                        }
+                      },
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Cập nhật'),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final amt = double.tryParse(amountC.text) ?? 0;
-              if (amt <= 0) {
-                ToastService.showError('Số tiền phải > 0');
-                return;
-              }
-              await ref.read(financeRepoProvider).updateTransaction(transId, {
-                'type': type,
-                'amount': amt,
-                'paymentMethod': payMethod,
-                'counterparty': cpartyC.text.trim(),
-                'description': descC.text.trim(),
-              });
-              ref.invalidate(transactionsProvider);
-              ref.invalidate(cashSummaryProvider);
-              if (ctx.mounted) {
-                Navigator.pop(ctx); // close dialog
-                Navigator.pop(context); // close screen
-                ToastService.showSuccess('Cập nhật thành công');
-              }
-            },
-            child: const Text('Cập nhật'),
-          ),
-        ],
+          );
+        },
       ),
-    );
+    ).then((_) {
+      amountC.dispose();
+      cpartyC.dispose();
+      descC.dispose();
+    });
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
@@ -438,7 +502,9 @@ class _TransactionDetailView extends ConsumerWidget {
           ref.invalidate(cashSummaryProvider);
           if (context.mounted) Navigator.pop(context);
         } catch (e) {
-          ToastService.showError('Lỗi: $e');
+          ToastService.showError(
+            'Không thể xóa giao dịch. Vui lòng thử lại sau.',
+          );
         }
       }
     });

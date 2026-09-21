@@ -56,7 +56,9 @@ class SystemRepository {
       contentType,
     );
     final objectKey = uploaded['objectKey']?.toString() ?? '';
-    if (objectKey.isEmpty) throw ApiException('Máy chủ không trả về định danh QR');
+    if (objectKey.isEmpty) {
+      throw ApiException('Máy chủ không trả về định danh QR');
+    }
     final confirmed = Map<String, dynamic>.from(
       await _api.post(
         '/shop-payment-qr/confirm',

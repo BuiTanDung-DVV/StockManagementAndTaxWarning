@@ -38,30 +38,27 @@ class _FakeApiClient extends ApiClient {
 }
 
 void main() {
-  test(
-    'uploads product image through backend then confirms it',
-    () async {
-      final api = _FakeApiClient();
-      final repository = ProductRepository(api);
-      final bytes = Uint8List.fromList([1, 2, 3, 4]);
+  test('uploads product image through backend then confirms it', () async {
+    final api = _FakeApiClient();
+    final repository = ProductRepository(api);
+    final bytes = Uint8List.fromList([1, 2, 3, 4]);
 
-      final result = await repository.uploadProductImage(
-        fileName: 'san-pham.webp',
-        contentType: 'image/webp',
-        bytes: bytes,
-      );
+    final result = await repository.uploadProductImage(
+      fileName: 'san-pham.webp',
+      contentType: 'image/webp',
+      bytes: bytes,
+    );
 
-      expect(api.calls, [
-        '/products/image-upload',
-        '/products/image-upload/confirm',
-      ]);
-      expect(api.uploadedBytes, bytes);
-      expect(api.uploadedContentType, 'image/webp');
-      expect(
-        result['imageUrl'],
-        'https://res.cloudinary.com/demo/image/upload/'
-        'v1/smartstock/shops/1/products/test.webp',
-      );
-    },
-  );
+    expect(api.calls, [
+      '/products/image-upload',
+      '/products/image-upload/confirm',
+    ]);
+    expect(api.uploadedBytes, bytes);
+    expect(api.uploadedContentType, 'image/webp');
+    expect(
+      result['imageUrl'],
+      'https://res.cloudinary.com/demo/image/upload/'
+      'v1/smartstock/shops/1/products/test.webp',
+    );
+  });
 }

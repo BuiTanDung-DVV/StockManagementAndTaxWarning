@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_page_header.dart';
@@ -86,74 +87,101 @@ class _ProductCategoryManagementScreenState
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return _StateMessage(
-                      icon: Icons.cloud_off_outlined,
-                      title: 'Chưa tải được danh mục',
-                      message: snapshot.error.toString(),
-                      onRetry: _reload,
+                    return RefreshIndicator(
+                      onRefresh: () async => _reload(),
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Container(
+                          height: 360,
+                          alignment: Alignment.center,
+                          child: _StateMessage(
+                            icon: Icons.cloud_off_outlined,
+                            title: 'Chưa tải được danh mục',
+                            message: snapshot.error.toString(),
+                            onRetry: _reload,
+                          ),
+                        ),
+                      ),
                     );
                   }
                   final items = snapshot.data ?? const [];
                   if (items.isEmpty) {
-                    return _StateMessage(
-                      icon: Icons.category_outlined,
-                      title: 'Chưa có danh mục phù hợp',
-                      message: 'Tạo danh mục đầu tiên để phân nhóm sản phẩm.',
-                      onRetry: () => _edit(),
-                      retryLabel: 'Tạo danh mục',
+                    return RefreshIndicator(
+                      onRefresh: () async => _reload(),
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Container(
+                          height: 360,
+                          alignment: Alignment.center,
+                          child: _StateMessage(
+                            icon: Icons.category_outlined,
+                            title: 'Chưa có danh mục phù hợp',
+                            message:
+                                'Tạo danh mục đầu tiên để phân nhóm sản phẩm.',
+                            onRetry: () => _edit(),
+                            retryLabel: 'Tạo danh mục',
+                          ),
+                        ),
+                      ),
                     );
                   }
-                  return ListView.separated(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xl),
-                    itemCount: items.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, index) {
-                      final item = Map<String, dynamic>.from(items[index]);
-                      final active = item['isActive'] != false;
-                      final count = NumberFormatHelper.integer(
-                        item['productCount'],
-                      );
-                      return AppCardContainer(
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.xxs,
-                          ),
-                          leading: CircleAvatar(
-                            child: Icon(
-                              active
-                                  ? Icons.category_outlined
-                                  : Icons.pause_circle_outline,
+                  return RefreshIndicator(
+                    onRefresh: () async => _reload(),
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+                      itemCount: items.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (context, index) {
+                        final item = Map<String, dynamic>.from(items[index]);
+                        final active = item['isActive'] != false;
+                        final count = NumberFormatHelper.integer(
+                          item['productCount'],
+                        );
+                        return AppCardContainer(
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.xxs,
                             ),
+                            leading: CircleAvatar(
+                              child: Icon(
+                                active
+                                    ? Icons.category_outlined
+                                    : Icons.pause_circle_outline,
+                              ),
+                            ),
+                            title: Text(
+                              item['name']?.toString() ?? 'Danh mục',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${item['description']?.toString().trim().isNotEmpty == true ? '${item['description']} · ' : ''}$count sản phẩm đang dùng${active ? '' : ' · Đã ngừng sử dụng'}',
+                            ),
+                            trailing: active
+                                ? PopupMenuButton<String>(
+                                    onSelected: (value) => value == 'edit'
+                                        ? _edit(item)
+                                        : _deactivate(item, items),
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Chỉnh sửa'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'deactivate',
+                                        child: Text('Ngừng sử dụng'),
+                                      ),
+                                    ],
+                                  )
+                                : const Chip(label: Text('Ngừng dùng')),
                           ),
-                          title: Text(
-                            item['name']?.toString() ?? 'Danh mục',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          subtitle: Text(
-                            '${item['description']?.toString().trim().isNotEmpty == true ? '${item['description']} · ' : ''}$count sản phẩm đang dùng${active ? '' : ' · Đã ngừng sử dụng'}',
-                          ),
-                          trailing: active
-                              ? PopupMenuButton<String>(
-                                  onSelected: (value) => value == 'edit'
-                                      ? _edit(item)
-                                      : _deactivate(item, items),
-                                  itemBuilder: (_) => const [
-                                    PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('Chỉnh sửa'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'deactivate',
-                                      child: Text('Ngừng sử dụng'),
-                                    ),
-                                  ],
-                                )
-                              : const Chip(label: Text('Ngừng dùng')),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   );
                 },
               ),
@@ -200,7 +228,10 @@ class _ProductCategoryManagementScreenState
           ),
           FilledButton(
             onPressed: () async {
-              if (name.trim().isEmpty) return;
+              if (name.trim().isEmpty) {
+                ToastService.showError('Vui lòng nhập tên danh mục');
+                return;
+              }
               try {
                 final repo = ref.read(settingsOperationsRepositoryProvider);
                 final data = {
@@ -213,8 +244,14 @@ class _ProductCategoryManagementScreenState
                   await repo.updateCategory(item['id'] as int, data);
                 }
                 if (dialogContext.mounted) Navigator.pop(dialogContext, true);
-              } catch (error) {
-                ToastService.showError(error.toString());
+              } on ApiException catch (error) {
+                ToastService.showError(error.message);
+              } catch (_) {
+                ToastService.showError(
+                  item == null
+                      ? 'Không thể tạo danh mục. Vui lòng thử lại sau.'
+                      : 'Không thể cập nhật danh mục. Vui lòng thử lại sau.',
+                );
               }
             },
             child: const Text('Lưu'),
@@ -296,8 +333,12 @@ class _ProductCategoryManagementScreenState
             replacementCategoryId: replacement,
           );
       _reload();
-    } catch (error) {
-      ToastService.showError(error.toString());
+    } on ApiException catch (error) {
+      ToastService.showError(error.message);
+    } catch (_) {
+      ToastService.showError(
+        'Không thể vô hiệu hóa danh mục. Vui lòng thử lại sau.',
+      );
     }
   }
 }

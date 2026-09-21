@@ -5,8 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../settings/providers/tax_config_provider.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../settings/providers/tax_config_provider.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -61,11 +62,58 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
         body: Center(
           child: config.isLoading
               ? const CircularProgressIndicator()
-              : Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    config.errorMessage ?? 'Không thể tải cấu hình thuế từ DB.',
-                    textAlign: TextAlign.center,
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Container(
+                    margin: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      border: Border.all(color: c.divider),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.rule_folder_outlined,
+                          size: 48,
+                          color: c.textMuted,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Chưa tải được cấu hình thuế',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: c.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          config.errorMessage ??
+                              'Hệ thống chưa kết nối được cơ sở dữ liệu để lấy thông số thuế của cửa hàng.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: c.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () =>
+                              ref.read(taxConfigProvider.notifier).refresh(),
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('Thử tải lại'),
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
         ),
@@ -105,565 +153,605 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
         centerTitle: true,
         actions: [featureGuideButton(context, 'tax_calculator')],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Current config display (Glassmorphic Banner)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  width: 1,
-                ),
-              ),
-              child: Row(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: RefreshIndicator(
+            onRefresh: () async =>
+                ref.read(taxConfigProvider.notifier).refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Current config display (Glassmorphic Banner)
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.15,
+                        ),
+                        width: 1,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.business_center_rounded,
-                      size: 18,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(
-                          config.businessType.label,
-                          style: GoogleFonts.manrope(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.12,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.business_center_rounded,
+                            size: 18,
                             color: theme.colorScheme.primary,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Tỷ suất: GTGT ${(config.effectiveVatRate * 100).toStringAsFixed(1)}% • TNCN ${(config.effectivePitRate * 100).toStringAsFixed(1)}%',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: c.textSecondary,
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                config.businessType.label,
+                                style: GoogleFonts.manrope(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Tỷ suất: GTGT ${(config.effectiveVatRate * 100).toStringAsFixed(1)}% • TNCN ${(config.effectivePitRate * 100).toStringAsFixed(1)}%',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: c.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-            // Method selector
-            Text(
-              'Phương pháp tính',
-              style: GoogleFonts.manrope(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _MethodTab(
-                    'Trực tiếp DT',
-                    _method == 0,
-                    () => setState(() => _method = 0),
+                  // Method selector
+                  Text(
+                    'Phương pháp tính',
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _MethodTab(
-                    'Thu nhập CT',
-                    _method == 1,
-                    () => setState(() => _method = 1),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Revenue input
-            Text(
-              'Doanh thu nhập vào',
-              style: GoogleFonts.manrope(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: GoogleFonts.manrope(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: c.textPrimary,
-              ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: c.card,
-                hintText: 'Nhập số tiền doanh thu (VNĐ)',
-                prefixIcon: Icon(
-                  Icons.payments_rounded,
-                  color: theme.colorScheme.primary,
-                ),
-                suffixText: 'VNĐ',
-                suffixStyle: GoogleFonts.manrope(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: c.divider.withValues(alpha: 0.6),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.primary,
-                    width: 2,
-                  ),
-                ),
-              ),
-              onChanged: (v) =>
-                  setState(() => _revenue = double.tryParse(v) ?? 0),
-            ),
-            const SizedBox(height: 24),
-
-            // Dynamic Milestone Warning Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: c.divider.withValues(alpha: 0.5),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                  const SizedBox(height: 10),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: thresholds
-                              .getColor(_revenue)
-                              .withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.radar_rounded,
-                          size: 16,
-                          color: thresholds.getColor(_revenue),
+                      Expanded(
+                        child: _MethodTab(
+                          'Trực tiếp DT',
+                          _method == 0,
+                          () => setState(() => _method = 0),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Cảnh báo ngưỡng doanh thu ${config.fiscalYear}',
-                        style: GoogleFonts.manrope(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: c.textPrimary,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _MethodTab(
+                          'Thu nhập CT',
+                          _method == 1,
+                          () => setState(() => _method = 1),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                  // Interactive double progress track
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final trackWidth = constraints.maxWidth;
-                      return Column(
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              // Base Track
-                              Container(
-                                height: 10,
-                                width: trackWidth,
-                                decoration: BoxDecoration(
-                                  color: c.surface,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              // Glowing Progress fill
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                height: 10,
-                                width: trackWidth * progressRatio,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      theme.colorScheme.primary,
-                                      thresholds.getColor(_revenue),
-                                    ],
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: thresholds
-                                          .getColor(_revenue)
-                                          .withValues(alpha: 0.35),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Internal warning at 90% of the legal threshold.
-                              Positioned(
-                                left: trackWidth * milestone1Ratio - 6,
-                                top: -3,
-                                child: Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: _revenue >= thresholds.tier3
-                                        ? AppColors.warning
-                                        : c.textMuted.withValues(alpha: 0.5),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2.5,
-                                    ),
-                                    boxShadow: [
-                                      if (_revenue >= thresholds.tier3)
-                                        BoxShadow(
-                                          color: AppColors.warning.withValues(
-                                            alpha: 0.5,
-                                          ),
-                                          blurRadius: 6,
-                                          spreadRadius: 1,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              // Milestone 2 Node (1B)
-                              Positioned(
-                                left: trackWidth * milestone2Ratio - 6,
-                                top: -3,
-                                child: Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: _revenue >= thresholds.tier4
-                                        ? AppColors.danger
-                                        : c.textMuted.withValues(alpha: 0.5),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2.5,
-                                    ),
-                                    boxShadow: [
-                                      if (_revenue >= thresholds.tier4)
-                                        BoxShadow(
-                                          color: AppColors.danger.withValues(
-                                            alpha: 0.5,
-                                          ),
-                                          blurRadius: 6,
-                                          spreadRadius: 1,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Milestone Labels
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '0',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: c.textMuted,
-                                ),
-                              ),
-                              Expanded(
-                                child: Container(
-                                  alignment: Alignment.centerLeft,
-                                  padding: EdgeInsets.only(
-                                    left: trackWidth * milestone1Ratio - 35,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _compactMoney(thresholds.tier3),
-                                        style: GoogleFonts.manrope(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: _revenue >= thresholds.tier3
-                                              ? AppColors.warning
-                                              : c.textSecondary,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Cảnh báo 90%',
-                                        style: TextStyle(
-                                          fontSize: 8,
-                                          color: c.textMuted,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: EdgeInsets.only(
-                                  right:
-                                      trackWidth * (1.0 - milestone2Ratio) - 22,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      _compactMoney(thresholds.tier4),
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: _revenue >= thresholds.tier4
-                                            ? AppColors.danger
-                                            : c.textSecondary,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Bắt buộc HĐĐT',
-                                      style: TextStyle(
-                                        fontSize: 8,
-                                        color: c.textMuted,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
+                  // Revenue input
+                  Text(
+                    'Doanh thu nhập vào',
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Text warning advisory
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: thresholds
-                          .getColor(_revenue)
-                          .withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: thresholds
-                            .getColor(_revenue)
-                            .withValues(alpha: 0.15),
-                        width: 1,
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                    ],
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: c.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: c.card,
+                      hintText: 'Nhập số tiền doanh thu (VNĐ)',
+                      helperText: _revenue > 0
+                          ? 'Đang tính cho: ${_currFmt.format(_revenue)}'
+                          : null,
+                      helperStyle: GoogleFonts.manrope(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.payments_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
+                      suffixText: 'VNĐ',
+                      suffixStyle: GoogleFonts.manrope(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(
+                          color: c.divider.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 2,
+                        ),
                       ),
                     ),
+                    onChanged: (v) =>
+                        setState(() => _revenue = parseCurrency(v)),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Dynamic Milestone Warning Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: c.divider.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Ngưỡng hiện tại: ${thresholds.getTierLabel(_revenue)}',
-                          style: GoogleFonts.manrope(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: thresholds.getColor(_revenue),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: thresholds
+                                    .getColor(_revenue)
+                                    .withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.radar_rounded,
+                                size: 16,
+                                color: thresholds.getColor(_revenue),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Cảnh báo ngưỡng doanh thu ${config.fiscalYear}',
+                              style: GoogleFonts.manrope(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: c.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Interactive double progress track
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final trackWidth = constraints.maxWidth;
+                            return Column(
+                              children: [
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    // Base Track
+                                    Container(
+                                      height: 10,
+                                      width: trackWidth,
+                                      decoration: BoxDecoration(
+                                        color: c.surface,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    // Glowing Progress fill
+                                    AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
+                                      height: 10,
+                                      width: trackWidth * progressRatio,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(10),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            theme.colorScheme.primary,
+                                            thresholds.getColor(_revenue),
+                                          ],
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: thresholds
+                                                .getColor(_revenue)
+                                                .withValues(alpha: 0.35),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Internal warning at 90% of the legal threshold.
+                                    Positioned(
+                                      left: trackWidth * milestone1Ratio - 6,
+                                      top: -3,
+                                      child: Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: BoxDecoration(
+                                          color: _revenue >= thresholds.tier3
+                                              ? AppColors.warning
+                                              : c.textMuted.withValues(
+                                                  alpha: 0.5,
+                                                ),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2.5,
+                                          ),
+                                          boxShadow: [
+                                            if (_revenue >= thresholds.tier3)
+                                              BoxShadow(
+                                                color: AppColors.warning
+                                                    .withValues(alpha: 0.5),
+                                                blurRadius: 6,
+                                                spreadRadius: 1,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    // Milestone 2 Node (1B)
+                                    Positioned(
+                                      left: trackWidth * milestone2Ratio - 6,
+                                      top: -3,
+                                      child: Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: BoxDecoration(
+                                          color: _revenue >= thresholds.tier4
+                                              ? AppColors.danger
+                                              : c.textMuted.withValues(
+                                                  alpha: 0.5,
+                                                ),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2.5,
+                                          ),
+                                          boxShadow: [
+                                            if (_revenue >= thresholds.tier4)
+                                              BoxShadow(
+                                                color: AppColors.danger
+                                                    .withValues(alpha: 0.5),
+                                                blurRadius: 6,
+                                                spreadRadius: 1,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // Milestone Labels
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '0',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: c.textMuted,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        alignment: Alignment.centerLeft,
+                                        padding: EdgeInsets.only(
+                                          left:
+                                              trackWidth * milestone1Ratio - 35,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _compactMoney(thresholds.tier3),
+                                              style: GoogleFonts.manrope(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    _revenue >= thresholds.tier3
+                                                    ? AppColors.warning
+                                                    : c.textSecondary,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Cảnh báo 90%',
+                                              style: TextStyle(
+                                                fontSize: 8,
+                                                color: c.textMuted,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: EdgeInsets.only(
+                                        right:
+                                            trackWidth *
+                                                (1.0 - milestone2Ratio) -
+                                            22,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            _compactMoney(thresholds.tier4),
+                                            style: GoogleFonts.manrope(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  _revenue >= thresholds.tier4
+                                                  ? AppColors.danger
+                                                  : c.textSecondary,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Bắt buộc HĐĐT',
+                                            style: TextStyle(
+                                              fontSize: 8,
+                                              color: c.textMuted,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Text warning advisory
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: thresholds
+                                .getColor(_revenue)
+                                .withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: thresholds
+                                  .getColor(_revenue)
+                                  .withValues(alpha: 0.15),
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Ngưỡng hiện tại: ${thresholds.getTierLabel(_revenue)}',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: thresholds.getColor(_revenue),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                thresholds.getObligation(_revenue),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: c.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 12),
                         Text(
-                          thresholds.getObligation(_revenue),
+                          'Doanh thu tiếp theo cần lưu ý: ${_currFmt.format(thresholds.getNextThreshold(_revenue))}',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: c.textSecondary,
+                            fontSize: 11,
+                            color: c.textMuted,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
+
+                  // Tax breakdown list (Sleek Ledger style)
                   Text(
-                    'Doanh thu tiếp theo cần lưu ý: ${_currFmt.format(thresholds.getNextThreshold(_revenue))}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: c.textMuted,
-                      fontWeight: FontWeight.w500,
+                    'Chi tiết thuế phải nộp',
+                    style: GoogleFonts.manrope(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Tax breakdown list (Sleek Ledger style)
-            Text(
-              'Chi tiết thuế phải nộp',
-              style: GoogleFonts.manrope(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: c.divider.withValues(alpha: 0.5),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  _TaxRow(
-                    'Doanh thu kê khai',
-                    _currFmt.format(_revenue),
-                    c.textPrimary,
-                    isBold: true,
-                  ),
-                  Divider(color: c.divider.withValues(alpha: 0.4), height: 24),
-                  _TaxRow(
-                    'Thuế GTGT (${(config.effectiveVatRate * 100).toStringAsFixed(1)}%)',
-                    _currFmt.format(vat),
-                    AppColors.warning,
-                  ),
-                  if (config.vatReduction20) ...[
-                    const SizedBox(height: 4),
-                    _TaxRow(
-                      '  └ Miễn giảm 20% (NQ 204)',
-                      '−${_currFmt.format(config.effectiveVatRate * _revenue * 0.2)}',
-                      AppColors.success,
-                      isItalic: true,
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  _TaxRow(
-                    'Thuế TNCN (${(config.effectivePitRate * 100).toStringAsFixed(1)}%)',
-                    _currFmt.format(pit),
-                    AppColors.info,
-                  ),
-                  Divider(color: c.divider.withValues(alpha: 0.4), height: 24),
-                  _TaxRow(
-                    'TỔNG THUẾ PHẢI NỘP',
-                    _currFmt.format(total),
-                    AppColors.danger,
-                    isBold: true,
                   ),
                   const SizedBox(height: 12),
-                  _TaxRow(
-                    'Thu nhập còn lại sau thuế',
-                    _currFmt.format(afterTax),
-                    AppColors.success,
-                    isBold: true,
-                  ),
-                ],
-              ),
-            ),
 
-            // E-Invoice Advisory Tag
-            if (_revenue > 0) ...[
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color:
-                      (thresholds.canUseInvoice(_revenue)
-                              ? AppColors.success
-                              : AppColors.warning)
-                          .withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color:
-                        (thresholds.canUseInvoice(_revenue)
-                                ? AppColors.success
-                                : AppColors.warning)
-                            .withValues(alpha: 0.25),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      thresholds.canUseInvoice(_revenue)
-                          ? Icons.verified_user_rounded
-                          : Icons.info_outline_rounded,
-                      size: 20,
-                      color: thresholds.canUseInvoice(_revenue)
-                          ? AppColors.success
-                          : AppColors.warning,
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: c.divider.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        thresholds.mustUseEInvoice(_revenue)
-                            ? 'Doanh thu năm trên ${_compactMoney(thresholds.tier4)} thuộc diện phải áp dụng hóa đơn điện tử theo ${config.policySourceCode}.'
-                            : thresholds.canUseInvoice(_revenue)
-                            ? 'Có thể đăng ký sử dụng HĐĐT tự nguyện nếu đáp ứng điều kiện; chưa thuộc diện bắt buộc theo ngưỡng doanh thu.'
-                            : 'Chưa xác định điều kiện sử dụng HĐĐT.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: thresholds.canUseInvoice(_revenue)
-                              ? AppColors.success
-                              : AppColors.warning,
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
+                    child: Column(
+                      children: [
+                        _TaxRow(
+                          'Doanh thu kê khai',
+                          _currFmt.format(_revenue),
+                          c.textPrimary,
+                          isBold: true,
                         ),
+                        Divider(
+                          color: c.divider.withValues(alpha: 0.4),
+                          height: 24,
+                        ),
+                        _TaxRow(
+                          'Thuế GTGT (${(config.effectiveVatRate * 100).toStringAsFixed(1)}%)',
+                          _currFmt.format(vat),
+                          AppColors.warning,
+                        ),
+                        if (config.vatReduction20) ...[
+                          const SizedBox(height: 4),
+                          _TaxRow(
+                            '  └ Miễn giảm 20% (NQ 204)',
+                            '−${_currFmt.format(config.effectiveVatRate * _revenue * 0.2)}',
+                            AppColors.success,
+                            isItalic: true,
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        _TaxRow(
+                          'Thuế TNCN (${(config.effectivePitRate * 100).toStringAsFixed(1)}%)',
+                          _currFmt.format(pit),
+                          AppColors.info,
+                        ),
+                        Divider(
+                          color: c.divider.withValues(alpha: 0.4),
+                          height: 24,
+                        ),
+                        _TaxRow(
+                          'TỔNG THUẾ PHẢI NỘP',
+                          _currFmt.format(total),
+                          AppColors.danger,
+                          isBold: true,
+                        ),
+                        const SizedBox(height: 12),
+                        _TaxRow(
+                          'Thu nhập còn lại sau thuế',
+                          _currFmt.format(afterTax),
+                          AppColors.success,
+                          isBold: true,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // E-Invoice Advisory Tag
+                  if (_revenue > 0) ...[
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color:
+                            (thresholds.canUseInvoice(_revenue)
+                                    ? AppColors.success
+                                    : AppColors.warning)
+                                .withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color:
+                              (thresholds.canUseInvoice(_revenue)
+                                      ? AppColors.success
+                                      : AppColors.warning)
+                                  .withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            thresholds.canUseInvoice(_revenue)
+                                ? Icons.verified_user_rounded
+                                : Icons.info_outline_rounded,
+                            size: 20,
+                            color: thresholds.canUseInvoice(_revenue)
+                                ? AppColors.success
+                                : AppColors.warning,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              thresholds.mustUseEInvoice(_revenue)
+                                  ? 'Doanh thu năm trên ${_compactMoney(thresholds.tier4)} thuộc diện phải áp dụng hóa đơn điện tử theo ${config.policySourceCode}.'
+                                  : thresholds.canUseInvoice(_revenue)
+                                  ? 'Có thể đăng ký sử dụng HĐĐT tự nguyện nếu đáp ứng điều kiện; chưa thuộc diện bắt buộc theo ngưỡng doanh thu.'
+                                  : 'Chưa xác định điều kiện sử dụng HĐĐT.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: thresholds.canUseInvoice(_revenue)
+                                    ? AppColors.success
+                                    : AppColors.warning,
+                                fontWeight: FontWeight.w600,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
+                  const SizedBox(height: 24),
+                ],
               ),
-            ],
-            const SizedBox(height: 24),
-          ],
+            ),
+          ),
         ),
       ),
     );

@@ -12,9 +12,6 @@ void main() {
     expect(source, contains('_errorMessage ='));
     expect(source, contains('AppInlineError('));
     expect(source, contains('onRetry: _fetchEstimate'));
-    expect(
-      source,
-      contains('Không thể tải báo cáo của kỳ đã chọn.'),
-    );
+    expect(source, contains('Không thể tải báo cáo của kỳ đã chọn.'));
   });
 }

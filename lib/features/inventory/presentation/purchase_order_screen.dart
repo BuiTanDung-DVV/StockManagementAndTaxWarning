@@ -37,10 +37,15 @@ class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
     final theme = Theme.of(context);
     final poAsync = ref.watch(purchaseOrdersProvider(_page));
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
-    void openForm() => Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()),
-    );
+    Future<void> openForm() async {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PurchaseOrderFormScreen()),
+      );
+      if (mounted) {
+        ref.invalidate(purchaseOrdersProvider);
+      }
+    }
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -63,19 +68,18 @@ class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
         centerTitle: true,
         actions: [
           featureGuideButton(context, 'purchase_order'),
-          if (compactLayout)
-            AppPrimaryHeaderAction(
+          if (!compactLayout)
+            AppPrimaryPageAction(
               label: 'Tạo đơn nhập',
               assetPath: AppAssets.add,
-              heroTag: 'purchase-order-add-compact',
               onPressed: openForm,
             ),
           const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: compactLayout
-          ? null
-          : FloatingActionButton.extended(
+          ? FloatingActionButton.extended(
+              heroTag: 'purchase-order-add-fab',
               onPressed: openForm,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -95,38 +99,17 @@ class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
                 ),
               ),
               backgroundColor: AppColors.primary,
-            ),
+            )
+          : null,
       body: poAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
-                const SizedBox(height: 12),
-                Text(
-                  'Không tải được danh sách đơn hàng\n$e',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    color: AppColors.danger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(purchaseOrdersProvider),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Thử lại'),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
+            child: AppInlineError(
+              message:
+                  'Không tải được danh sách đơn hàng. Vui lòng thử lại sau.',
+              onRetry: () => ref.invalidate(purchaseOrdersProvider),
             ),
           ),
         ),
@@ -140,163 +123,229 @@ class _PurchaseOrderScreenState extends ConsumerState<PurchaseOrderScreen> {
             fallback: items.length,
           );
           if (items.isEmpty) {
-            return const AppEmpty(
-              visual: AppEmptyVisual.document,
-              message: 'Chưa có đơn mua hàng nào được tạo',
+            return RefreshIndicator(
+              onRefresh: () async =>
+                  ref.refresh(purchaseOrdersProvider(_page).future),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 120),
+                  AppEmpty(
+                    visual: AppEmptyVisual.document,
+                    message: 'Chưa có đơn mua hàng nào được tạo',
+                  ),
+                ],
+              ),
             );
           }
-          return Container(
-            color: c.card,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              physics: const BouncingScrollPhysics(),
-              itemCount: items.length + 1,
-              separatorBuilder: (_, _) =>
-                  Divider(height: 1, color: c.divider.withValues(alpha: 0.5)),
-              itemBuilder: (_, i) {
-                if (i == items.length) {
-                  return AppPaginationBar(
-                    currentPage: currentPage,
-                    totalPages: totalPages,
-                    totalItems: totalItems,
-                    itemLabel: 'đơn nhập hàng',
-                    onPageChanged: (page) => setState(() => _page = page),
-                  );
-                }
-                final po = items[i] as Map;
-                final code =
-                    po['orderCode'] ?? po['code'] ?? 'PO-${po['id'] ?? i}';
-                final supplierName =
-                    po['supplier']?['name'] ??
-                    po['supplierName'] ??
-                    'Không rõ nhà cung cấp';
-                final totalAmount = asDouble(po['totalAmount']);
-                final orderDate =
-                    po['orderDate']?.toString().split('T').first ?? '';
-                final invoiceNumber = po['invoiceNumber'] ?? '';
-                final status = (po['status'] ?? '').toString().toUpperCase();
-
-                Color statusColor;
-                String statusLabel;
-                switch (status) {
-                  case 'COMPLETED':
-                    statusColor = AppColors.success;
-                    statusLabel = 'Hoàn thành';
-                    break;
-                  case 'CANCELLED':
-                    statusColor = AppColors.danger;
-                    statusLabel = 'Đã hủy';
-                    break;
-                  case 'PENDING':
-                    statusColor = AppColors.warning;
-                    statusLabel = 'Chờ xử lý';
-                    break;
-                  default:
-                    statusColor = AppColors.info;
-                    statusLabel = status.isNotEmpty ? status : 'N/A';
-                }
-
-                return GestureDetector(
-                  onTap: () =>
-                      context.push('/purchase-orders/detail', extra: po),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth >= 720;
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1040),
                   child: Container(
-                    color: Colors.transparent,
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.info.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(
-                              Icons.move_to_inbox_rounded,
-                              color: AppColors.info,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
+                    margin: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? 16 : 0,
+                      vertical: isDesktop ? 16 : 0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(isDesktop ? 20 : 0),
+                      border: isDesktop
+                          ? Border.all(color: c.divider.withValues(alpha: 0.5))
+                          : null,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: RefreshIndicator(
+                      onRefresh: () async =>
+                          ref.refresh(purchaseOrdersProvider(_page).future),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        itemCount: items.length + 1,
+                        separatorBuilder: (_, _) => Divider(
+                          height: 1,
+                          color: c.divider.withValues(alpha: 0.5),
+                        ),
+                        itemBuilder: (_, i) {
+                          if (i == items.length) {
+                            return AppPaginationBar(
+                              currentPage: currentPage,
+                              totalPages: totalPages,
+                              totalItems: totalItems,
+                              itemLabel: 'đơn nhập hàng',
+                              onPageChanged: (page) =>
+                                  setState(() => _page = page),
+                            );
+                          }
+                          final po = items[i] as Map;
+                          final code =
+                              po['orderCode'] ??
+                              po['code'] ??
+                              'PO-${po['id'] ?? i}';
+                          final supplierName =
+                              po['supplier']?['name'] ??
+                              po['supplierName'] ??
+                              'Không rõ nhà cung cấp';
+                          final totalAmount = asDouble(po['totalAmount']);
+                          final orderDate =
+                              po['orderDate']?.toString().split('T').first ??
+                              '';
+                          final invoiceNumber = po['invoiceNumber'] ?? '';
+                          final status = (po['status'] ?? '')
+                              .toString()
+                              .toUpperCase();
+
+                          Color statusColor;
+                          String statusLabel;
+                          switch (status) {
+                            case 'COMPLETED':
+                              statusColor = AppColors.success;
+                              statusLabel = 'Hoàn thành';
+                              break;
+                            case 'CANCELLED':
+                              statusColor = AppColors.danger;
+                              statusLabel = 'Đã hủy';
+                              break;
+                            case 'PENDING':
+                              statusColor = AppColors.warning;
+                              statusLabel = 'Chờ xử lý';
+                              break;
+                            default:
+                              statusColor = AppColors.info;
+                              statusLabel = status.isNotEmpty ? status : 'N/A';
+                          }
+
+                          return GestureDetector(
+                            onTap: () async {
+                              await context.push(
+                                '/purchase-orders/detail',
+                                extra: po,
+                              );
+                              if (mounted) {
+                                ref.invalidate(purchaseOrdersProvider);
+                              }
+                            },
+                            child: Container(
+                              color: Colors.transparent,
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Row(
                                   children: [
-                                    Text(
-                                      code.toString(),
-                                      style: GoogleFonts.manrope(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: c.textPrimary,
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.info.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Icon(
+                                        Icons.move_to_inbox_rounded,
+                                        color: AppColors.info,
+                                        size: 20,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  code.toString(),
+                                                  style: GoogleFonts.manrope(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                    color: c.textPrimary,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: statusColor.withValues(
+                                                    alpha: 0.1,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  statusLabel,
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: statusColor,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'NCC: $supplierName',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: c.textSecondary,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${orderDate.isNotEmpty ? orderDate : ''}${invoiceNumber.isNotEmpty ? ' • HĐ: $invoiceNumber' : ''}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              color: c.textMuted,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: statusColor.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        statusLabel,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: statusColor,
-                                        ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      _currFmt.format(totalAmount),
+                                      style: GoogleFonts.manrope(
+                                        fontWeight: FontWeight.w800,
+                                        color: theme.colorScheme.primary,
+                                        fontSize: 14,
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'NCC: $supplierName',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: c.textSecondary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${orderDate.isNotEmpty ? orderDate : ''}${invoiceNumber.isNotEmpty ? ' • HĐ: $invoiceNumber' : ''}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    color: c.textMuted,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            _currFmt.format(totalAmount),
-                            style: GoogleFonts.manrope(
-                              fontWeight: FontWeight.w800,
-                              color: theme.colorScheme.primary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           );
         },
       ),

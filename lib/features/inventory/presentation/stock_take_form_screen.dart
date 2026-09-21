@@ -69,9 +69,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       final warehousesAsync = ref.read(warehousesProvider);
       final hasWarehouses = (warehousesAsync.value?.isNotEmpty ?? false);
       if (_warehouseId == null && hasWarehouses) {
-        ToastService.showSuccess(
-          'Vui lòng chọn kho kiểm kê trước khi tiếp tục!',
-        );
+        ToastService.showError('Vui lòng chọn kho kiểm kê trước khi tiếp tục!');
         return;
       }
       if (!hasWarehouses) {
@@ -80,15 +78,17 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
       if (_items.isEmpty) {
-        ToastService.showSuccess(
-          'Vui lòng thêm ít nhất 1 sản phẩm để kiểm kê!',
-        );
+        ToastService.showError('Vui lòng thêm ít nhất 1 sản phẩm để kiểm kê!');
         return;
       }
       for (var i in _items) {
         if (i.productId == null) {
-          ToastService.showSuccess(
-            'Vui lòng chọn sản phẩm cho tất cả các dòng!',
+          ToastService.showError('Vui lòng chọn sản phẩm cho tất cả các dòng!');
+          return;
+        }
+        if (i.actualQty < 0) {
+          ToastService.showError(
+            'Số lượng kiểm kê thực tế không thể là số âm!',
           );
           return;
         }
@@ -134,9 +134,11 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       };
 
       await ref.read(inventoryRepoProvider).createStockTake(payload);
-      ref.invalidate(stockProvider(null)); // Refresh stock list
-      ref.invalidate(stockPageProvider(null));
-      ref.invalidate(lowStockProvider); // Refresh low-stock warning
+      ref.invalidate(stockTakesProvider);
+      ref.invalidate(stockProvider);
+      ref.invalidate(stockPageProvider);
+      ref.invalidate(lowStockProvider);
+      ref.invalidate(inventoryMovementsProvider);
 
       if (mounted) {
         ToastService.showSuccess('Lưu phiếu kiểm kê thành công!');
@@ -144,7 +146,9 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          'Không thể lưu phiếu kiểm kê. Vui lòng thử lại sau.',
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -191,33 +195,38 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
         centerTitle: true,
         elevation: 0,
       ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            // Elegant Steps Progress Header
-            _buildStepsHeader(c, theme),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Elegant Steps Progress Header
+                _buildStepsHeader(c, theme),
 
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.all(18),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _buildCurrentStepView(
-                    c,
-                    theme,
-                    warehousesAsync,
-                    productsAsync,
-                    stockMap,
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.all(18),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _buildCurrentStepView(
+                        c,
+                        theme,
+                        warehousesAsync,
+                        productsAsync,
+                        stockMap,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-            // Bottom Action Navigation Bar
-            _buildBottomActionBar(c, theme),
-          ],
+                // Bottom Action Navigation Bar
+                _buildBottomActionBar(c, theme),
+              ],
+            ),
+          ),
         ),
       ),
     );

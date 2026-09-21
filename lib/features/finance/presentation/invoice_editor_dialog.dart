@@ -453,9 +453,18 @@ class _InvoiceLineControllers {
         ),
       );
 
-  int? get parsedQuantity => int.tryParse(quantity.text.trim());
-  double? get parsedUnitPrice => double.tryParse(unitPrice.text.trim());
-  double? get parsedTaxRate => double.tryParse(taxRate.text.trim());
+  int? get parsedQuantity {
+    final raw = quantity.text.trim();
+    if (raw.isEmpty) return null;
+    final parsed = parseQuantity(raw, fallback: -1);
+    if (parsed <= 0) return null;
+    return parsed.toInt();
+  }
+
+  double? get parsedUnitPrice => parseCurrency(unitPrice.text.trim());
+  double? get parsedTaxRate => double.tryParse(
+    taxRate.text.trim().replaceAll('%', '').replaceAll(',', '.'),
+  );
   double get subtotal =>
       (parsedQuantity ?? 0) *
       (parsedUnitPrice ?? 0).clamp(0, double.infinity).toDouble();

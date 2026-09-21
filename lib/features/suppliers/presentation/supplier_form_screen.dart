@@ -55,7 +55,9 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
       final repo = ref.read(supplierRepoProvider);
       final data = {
         'name': _nameCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim().isEmpty
+            ? null
+            : _phoneCtrl.text.replaceAll(RegExp(r'\D'), ''),
         'email': _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         'address': _addressCtrl.text.trim().isEmpty
             ? null
@@ -71,6 +73,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
       };
       if (_isEdit) {
         await repo.update(widget.supplier!['id'], data);
+        ref.invalidate(supplierDetailProvider(widget.supplier!['id']));
       } else {
         await repo.create(data);
       }
@@ -85,7 +88,11 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          _isEdit
+              ? 'Không thể cập nhật nhà cung cấp. Vui lòng thử lại sau.'
+              : 'Không thể thêm nhà cung cấp. Vui lòng thử lại sau.',
+        );
       }
     }
     if (mounted) setState(() => _saving = false);
@@ -148,6 +155,14 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                   c,
                   theme,
                   keyboardType: TextInputType.phone,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final digits = v.replaceAll(RegExp(r'\D'), '');
+                    if (digits.length != 10 || !digits.startsWith('0')) {
+                      return 'Số điện thoại phải gồm 10 số (bắt đầu bằng 0)';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 12),
                 _field(
@@ -157,6 +172,15 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                   c,
                   theme,
                   keyboardType: TextInputType.emailAddress,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    if (!RegExp(
+                      r'^[\w\.-]+@[\w\.-]+\.\w{2,}$',
+                    ).hasMatch(v.trim())) {
+                      return 'Email không đúng định dạng';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 12),
                 AddressInputField(
@@ -172,6 +196,14 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                   HugeIcons.strokeRoundedInvoice01,
                   c,
                   theme,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final trimmed = v.trim();
+                    if (!RegExp(r'^\d{10}(-\d{3}|\d{3})?$').hasMatch(trimmed)) {
+                      return 'Mã số thuế gồm 10 hoặc 13 số';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 12),
                 _field(

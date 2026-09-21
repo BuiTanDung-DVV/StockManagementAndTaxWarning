@@ -7,6 +7,7 @@ import '../../../core/widgets/app_primary_floating_action.dart';
 import '../providers/tax_config_provider.dart';
 
 import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/responsive_layout.dart';
 
 String _moneyThreshold(double value) {
   if (value >= 1000000000 && value % 1000000000 == 0) {
@@ -36,7 +37,9 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
       ToastService.showSuccess('Đã lưu cấu hình thuế thành công!');
     } catch (e) {
       if (!mounted) return;
-      ToastService.showError('Lưu thất bại: $e');
+      ToastService.showError(
+        'Không thể lưu cấu hình thuế. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -147,180 +150,198 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                       ),
                     ),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Info card
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.info.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: AppColors.info,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Tỷ lệ và ngưỡng được tải từ DB theo ${config.policySourceCode ?? 'văn bản đang hiệu lực'}.',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.info,
-                            ),
+          : RefreshIndicator(
+              onRefresh: () async =>
+                  ref.read(taxConfigProvider.notifier).refresh(),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: AppResponsiveContent(
+                  maxWidth: 900,
+                  verticalPadding: AppSpacing.md,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Info card
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.info.withValues(alpha: 0.3),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Business type selector
-                  Text(
-                    'Ngành nghề kinh doanh',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  ...BusinessType.values.map(
-                    (type) => _BusinessTypeCard(
-                      type: type,
-                      rates: config.ratesFor(type)!,
-                      isSelected: config.businessType == type,
-                      onTap: () => ref
-                          .read(taxConfigProvider.notifier)
-                          .setBusinessType(type),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Current rates display
-                  Text(
-                    'Thuế suất áp dụng',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _RateCard(
-                          'Thuế GTGT',
-                          '${(config.effectiveVatRate * 100).toStringAsFixed(1)}%',
-                          AppColors.primary,
-                          null,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: AppColors.info,
+                              size: 20,
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Tỷ lệ và ngưỡng được tải từ DB theo ${config.policySourceCode ?? 'văn bản đang hiệu lực'}.',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.info,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _RateCard(
-                          'Thuế TNCN',
-                          '${(config.effectivePitRate * 100).toStringAsFixed(1)}%',
-                          AppColors.success,
-                          null,
+                      const SizedBox(height: 20),
+
+                      // Business type selector
+                      Text(
+                        'Ngành nghề kinh doanh',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...BusinessType.values.map(
+                        (type) => _BusinessTypeCard(
+                          type: type,
+                          rates: config.ratesFor(type)!,
+                          isSelected: config.businessType == type,
+                          onTap: () => ref
+                              .read(taxConfigProvider.notifier)
+                              .setBusinessType(type),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Current rates display
+                      Text(
+                        'Thuế suất áp dụng',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _RateCard(
+                              'Thuế GTGT',
+                              '${(config.effectiveVatRate * 100).toStringAsFixed(1)}%',
+                              AppColors.primary,
+                              null,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _RateCard(
+                              'Thuế TNCN',
+                              '${(config.effectivePitRate * 100).toStringAsFixed(1)}%',
+                              AppColors.success,
+                              null,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // VAT reduction toggle
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: c.divider),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.discount,
+                                color: AppColors.warning,
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Giảm 20% tỷ lệ GTGT',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Chưa tự động áp dụng vì cần xác định theo từng nhóm hàng hóa/dịch vụ.',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: c.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              value: false,
+                              onChanged: null,
+                              activeThumbColor: AppColors.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Revenue thresholds info
+                      Text(
+                        'Ngưỡng doanh thu & Nghĩa vụ',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _ThresholdRow(
+                        '< ${_moneyThreshold(config.thresholds!.tier3)}',
+                        'Dưới mức cảnh báo nội bộ',
+                        AppColors.success,
+                      ),
+                      _ThresholdRow(
+                        '${_moneyThreshold(config.thresholds!.tier3)} - ${_moneyThreshold(config.thresholds!.tier4)}',
+                        'Sắp chạm ngưỡng hiện hành',
+                        AppColors.warning,
+                      ),
+                      _ThresholdRow(
+                        '≤ ${_moneyThreshold(config.thresholds!.tier4)}',
+                        'Không phải nộp GTGT, TNCN',
+                        AppColors.info,
+                      ),
+                      _ThresholdRow(
+                        '> ${_moneyThreshold(config.thresholds!.tier4)}',
+                        'Kê khai và áp dụng HĐĐT',
+                        AppColors.danger,
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // VAT reduction toggle
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: c.card,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.warning.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.discount,
-                            color: AppColors.warning,
-                            size: 20,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Giảm 20% tỷ lệ GTGT',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              Text(
-                                'Chưa tự động áp dụng vì cần xác định theo từng nhóm hàng hóa/dịch vụ.',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: c.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Switch(
-                          value: false,
-                          onChanged: null,
-                          activeThumbColor: AppColors.primary,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Revenue thresholds info
-                  Text(
-                    'Ngưỡng doanh thu & Nghĩa vụ',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  _ThresholdRow(
-                    '< ${_moneyThreshold(config.thresholds!.tier3)}',
-                    'Dưới mức cảnh báo nội bộ',
-                    AppColors.success,
-                  ),
-                  _ThresholdRow(
-                    '${_moneyThreshold(config.thresholds!.tier3)} - ${_moneyThreshold(config.thresholds!.tier4)}',
-                    'Sắp chạm ngưỡng hiện hành',
-                    AppColors.warning,
-                  ),
-                  _ThresholdRow(
-                    '≤ ${_moneyThreshold(config.thresholds!.tier4)}',
-                    'Không phải nộp GTGT, TNCN',
-                    AppColors.info,
-                  ),
-                  _ThresholdRow(
-                    '> ${_moneyThreshold(config.thresholds!.tier4)}',
-                    'Kê khai và áp dụng HĐĐT',
-                    AppColors.danger,
-                  ),
-                ],
+                ),
               ),
             ),
     );

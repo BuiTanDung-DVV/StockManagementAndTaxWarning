@@ -9,6 +9,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/cloudinary_image.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/utils/parse_utils.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
@@ -102,175 +104,225 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       ),
       body: customerAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
+        error: (e, _) {
+          final errStr = e.toString().replaceFirst(
+            RegExp(r'^Exception:\s*'),
+            '',
+          );
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: AppInlineError(
+                message: errStr.isNotEmpty
+                    ? errStr
+                    : 'Không thể tải thông tin khách hàng. Vui lòng thử lại sau.',
+                onRetry: () =>
+                    ref.invalidate(customerDetailProvider(widget.id)),
+              ),
+            ),
+          );
+        },
         data: (c) {
           final name = c['name'] ?? 'Khách hàng ${widget.id}';
           final phone = c['phone'] ?? '';
           final email = c['email'] ?? '';
           final address = c['address'] ?? '';
           final customerType = c['customerType'] ?? 'RETAIL';
-          final balance = num.tryParse(c['balance']?.toString() ?? '') ?? 0;
-          final creditLimit =
-              num.tryParse(c['creditLimit']?.toString() ?? '') ?? 0;
+          final balance = asDouble(
+            c['totalDebt'] ?? c['balance'] ?? c['debt'] ?? c['currentDebt'],
+          );
+          final creditLimit = asDouble(c['creditLimit'] ?? c['credit_limit']);
 
-          return SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  child: Text(
-                    name.isNotEmpty ? name[0] : '?',
-                    style: TextStyle(
-                      fontSize: 24,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (customerType.isNotEmpty)
-                  Container(
-                    margin: EdgeInsets.only(top: 4),
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      customerType,
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 24),
-                _Card([
-                  if (phone.isNotEmpty) _Row('SĐT', phone),
-                  if (email.isNotEmpty) _Row('Email', email),
-                  if (address.isNotEmpty) _Row('Địa chỉ', address),
-                  _Row('Mã KH', c['code'] ?? ''),
-                  if (c['taxCode'] != null) _Row('MST', c['taxCode']),
-                ]),
-                const SizedBox(height: 12),
-                _Card([
-                  _Row('Công nợ', _currFmt.format(balance)),
-                  _Row('Hạn mức tín dụng', _currFmt.format(creditLimit)),
-                ]),
-                const SizedBox(height: 12),
-                if (phone.isEmpty && email.isEmpty && address.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Thông tin liên hệ chưa được cập nhật',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                  ),
-
-                const SizedBox(height: 16),
-                _EvidenceSection(
-                  evidenceAsync: evidenceAsync,
-                  uploading: _uploadingEvidence,
-                  onAdd: () => _pickAndUploadEvidence(receivablesAsync),
-                  onDelete: _confirmDeleteEvidence,
-                ),
-                const SizedBox(height: 20),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Lịch sử đơn hàng',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ordersAsync.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (e, _) => Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text('Lỗi: $e'),
-                  ),
-                  data: (d) {
-                    final items = (d['items'] as List?) ?? [];
-                    final currentPage = paginationValue(
-                      d,
-                      'page',
-                      fallback: _ordersPage,
-                    );
-                    final totalPages = paginationValue(
-                      d,
-                      'totalPages',
-                      fallback: 1,
-                    );
-                    final totalItems = paginationValue(
-                      d,
-                      'total',
-                      fallback: items.length,
-                    );
-                    if (items.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text(
-                          'Chưa có đơn hàng',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(customerDetailProvider(widget.id));
+              ref.invalidate(customerReceivablesProvider(widget.id));
+              ref.invalidate(customerEvidenceProvider(widget.id));
+              ref.invalidate(salesListProvider);
+            },
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.15,
                         ),
-                      );
-                    }
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: items.length + 1,
-                      itemBuilder: (_, i) {
-                        if (i == items.length) {
-                          return AppPaginationBar(
-                            currentPage: currentPage,
-                            totalPages: totalPages,
-                            totalItems: totalItems,
-                            itemLabel: 'đơn hàng',
-                            onPageChanged: (page) =>
-                                setState(() => _ordersPage = page),
-                          );
-                        }
-                        final order = items[i];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            title: Text(order['orderCode'] ?? ''),
-                            subtitle: Text(
-                              order['orderDate']?.toString().substring(0, 10) ??
-                                  '',
-                            ),
-                            trailing: Text(
-                              _currFmt.format(
-                                num.tryParse(
-                                      order['totalAmount']?.toString() ?? '0',
-                                    ) ??
-                                    0,
-                              ),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
+                        child: Text(
+                          name.isNotEmpty ? name[0] : '?',
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (customerType.isNotEmpty)
+                        Container(
+                          margin: EdgeInsets.only(top: 4),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            customerType,
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        );
-                      },
-                    );
-                  },
+                        ),
+                      const SizedBox(height: 24),
+                      _Card([
+                        if (phone.isNotEmpty) _Row('SĐT', phone),
+                        if (email.isNotEmpty) _Row('Email', email),
+                        if (address.isNotEmpty) _Row('Địa chỉ', address),
+                        _Row('Mã KH', c['code'] ?? ''),
+                        if (c['taxCode'] != null) _Row('MST', c['taxCode']),
+                      ]),
+                      const SizedBox(height: 12),
+                      _Card([
+                        _Row('Công nợ', _currFmt.format(balance)),
+                        _Row('Hạn mức tín dụng', _currFmt.format(creditLimit)),
+                      ]),
+                      const SizedBox(height: 12),
+                      if (phone.isEmpty && email.isEmpty && address.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(
+                            'Thông tin liên hệ chưa được cập nhật',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        ),
+
+                      const SizedBox(height: 16),
+                      _EvidenceSection(
+                        evidenceAsync: evidenceAsync,
+                        uploading: _uploadingEvidence,
+                        onAdd: () => _pickAndUploadEvidence(receivablesAsync),
+                        onDelete: _confirmDeleteEvidence,
+                      ),
+                      const SizedBox(height: 20),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Lịch sử đơn hàng',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ordersAsync.when(
+                        loading: () => const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                        error: (e, _) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: AppInlineError(
+                            message:
+                                'Không thể tải lịch sử đơn hàng. Vui lòng thử lại sau.',
+                            onRetry: () => ref.invalidate(salesListProvider),
+                          ),
+                        ),
+                        data: (d) {
+                          final items = (d['items'] as List?) ?? [];
+                          final currentPage = paginationValue(
+                            d,
+                            'page',
+                            fallback: _ordersPage,
+                          );
+                          final totalPages = paginationValue(
+                            d,
+                            'totalPages',
+                            fallback: 1,
+                          );
+                          final totalItems = paginationValue(
+                            d,
+                            'total',
+                            fallback: items.length,
+                          );
+                          if (items.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: AppEmpty(
+                                visual: AppEmptyVisual.sales,
+                                message: 'Chưa có đơn hàng',
+                                subtitle:
+                                    'Khách hàng chưa có lịch sử mua hàng nào.',
+                              ),
+                            );
+                          }
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: items.length + 1,
+                            itemBuilder: (_, i) {
+                              if (i == items.length) {
+                                return AppPaginationBar(
+                                  currentPage: currentPage,
+                                  totalPages: totalPages,
+                                  totalItems: totalItems,
+                                  itemLabel: 'đơn hàng',
+                                  onPageChanged: (page) =>
+                                      setState(() => _ordersPage = page),
+                                );
+                              }
+                              final order = items[i];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  title: Text(order['orderCode'] ?? ''),
+                                  subtitle: Text(
+                                    order['orderDate']?.toString().substring(
+                                          0,
+                                          10,
+                                        ) ??
+                                        '',
+                                  ),
+                                  trailing: Text(
+                                    _currFmt.format(
+                                      num.tryParse(
+                                            order['totalAmount']?.toString() ??
+                                                '0',
+                                          ) ??
+                                          0,
+                                    ),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -494,9 +546,14 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 BotToast.showText(text: 'Xóa khách hàng thành công');
                 ref.invalidate(customerListProvider);
                 if (context.mounted) context.pop();
-              } catch (e) {
+              } on ApiException catch (e) {
                 cancel();
-                BotToast.showText(text: 'Lỗi: $e');
+                BotToast.showText(text: e.message);
+              } catch (_) {
+                cancel();
+                BotToast.showText(
+                  text: 'Không thể xóa khách hàng. Vui lòng thử lại sau.',
+                );
               }
             },
             child: const Text('Xóa', style: TextStyle(color: Colors.white)),

@@ -3,6 +3,7 @@ import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/tax_config_provider.dart';
@@ -23,11 +24,20 @@ IconData _taxFormIcon(String iconKey) => switch (iconKey) {
   _ => Icons.description_outlined,
 };
 
-class TaxDeclarationScreen extends ConsumerWidget {
+class TaxDeclarationScreen extends ConsumerStatefulWidget {
   const TaxDeclarationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TaxDeclarationScreen> createState() =>
+      _TaxDeclarationScreenState();
+}
+
+class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
+  double? _manualRevenue;
+  bool _useManualRevenue = false;
+
+  @override
+  Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final config = ref.watch(taxConfigProvider);
     if (!config.isLoaded) {
@@ -121,13 +131,63 @@ class TaxDeclarationScreen extends ConsumerWidget {
     }
     if (referenceAsync.hasError) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Kê khai thuế')),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+          leading: Navigator.of(context).canPop()
+              ? AppNavigationBackLeading(
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
+          title: const Text('Kê khai thuế'),
+        ),
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Không thể tải danh mục biểu mẫu từ DB: ${referenceAsync.error}',
-              textAlign: TextAlign.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Container(
+              margin: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: c.card,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                border: Border.all(color: c.divider),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Không thể tải danh mục biểu mẫu từ máy chủ',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.manrope(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: c.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${referenceAsync.error}',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.danger,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => ref.invalidate(taxReferenceDataProvider),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Thử lại kết nối'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -157,19 +217,149 @@ class TaxDeclarationScreen extends ConsumerWidget {
         title: const Text('Kê khai thuế'),
         actions: [featureGuideButton(context, 'tax_declaration')],
       ),
-      body: plAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
-        data: (plData) {
-          final revenue = ((plData['revenue'] as num?) ?? 0).toDouble();
-          final vat = config.calculateVat(revenue);
-          final pit = config.calculatePit(revenue);
+      body: _useManualRevenue && _manualRevenue != null
+          ? _buildDeclarationContent(
+              context,
+              config,
+              forms,
+              now,
+              _manualRevenue!,
+              isDraft: true,
+            )
+          : plAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 48,
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Không thể tải số liệu doanh thu trong kỳ',
+                        style: GoogleFonts.manrope(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: c.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Hệ thống chưa kết nối được số liệu kế toán tự động. Bạn có thể thử tải lại hoặc nhập doanh thu ước tính để lập tờ khai nháp ngay.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: c.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => ref.invalidate(profitLossProvider),
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: const Text('Thử lại'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _promptManualRevenue(context),
+                            icon: const Icon(Icons.edit_note_rounded, size: 18),
+                            label: const Text('Lập tờ khai nháp ước tính'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              data: (plData) {
+                final revenue = ((plData['revenue'] as num?) ?? 0).toDouble();
+                return _buildDeclarationContent(
+                  context,
+                  config,
+                  forms,
+                  now,
+                  revenue,
+                  isDraft: false,
+                );
+              },
+            ),
+    );
+  }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+  Widget _buildDeclarationContent(
+    BuildContext context,
+    TaxConfig config,
+    List<TaxDeclarationFormReference> forms,
+    DateTime now,
+    double revenue, {
+    required bool isDraft,
+  }) {
+    final c = AppThemeColors.of(context);
+    final vat = config.calculateVat(revenue);
+    final pit = config.calculatePit(revenue);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 860),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(profitLossProvider);
+            ref.invalidate(taxConfigProvider);
+            ref.invalidate(taxReferenceDataProvider);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (isDraft)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 18,
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Đang sử dụng doanh thu ước tính nháp (${_currFmt.format(revenue)}).',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: c.textPrimary,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _promptManualRevenue(context),
+                          child: const Text('Thay đổi'),
+                        ),
+                      ],
+                    ),
+                  ),
                 // Summary card
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -180,9 +370,12 @@ class TaxDeclarationScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Tóm tắt kỳ kê khai',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      Text(
+                        'Tóm tắt kỳ kê khai (Tháng ${now.month}/${now.year})',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -481,8 +674,62 @@ class TaxDeclarationScreen extends ConsumerWidget {
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _promptManualRevenue(BuildContext context) {
+    final ctrl = TextEditingController(
+      text: _manualRevenue != null && _manualRevenue! > 0
+          ? _manualRevenue!.toStringAsFixed(0)
+          : '50000000',
+    );
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Nhập doanh thu ước tính'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Nhập số tiền doanh thu tháng này để hệ thống tạm tính thuế GTGT, TNCN và xem biểu mẫu tờ khai nháp:',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Doanh thu trong kỳ (VNĐ)',
+                suffixText: '₫',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final val = double.tryParse(
+                ctrl.text.replaceAll('.', '').replaceAll(',', '').trim(),
+              );
+              if (val != null && val >= 0) {
+                setState(() {
+                  _manualRevenue = val;
+                  _useManualRevenue = true;
+                });
+                Navigator.pop(dialogCtx);
+              }
+            },
+            child: const Text('Áp dụng'),
+          ),
+        ],
       ),
     );
   }
@@ -528,7 +775,7 @@ class TaxDeclarationScreen extends ConsumerWidget {
     } catch (error) {
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        ToastService.showError('Không thể kết xuất XML: $error');
+        ToastService.showError('Không thể kết xuất XML. Vui lòng thử lại sau.');
       }
     }
   }

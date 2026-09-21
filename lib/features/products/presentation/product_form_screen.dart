@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/utils/cloudinary_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,6 +78,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     }
   }
 
+  double _parsePrice(String text) => parseCurrency(text);
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -84,7 +87,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     try {
       final repo = ref.read(productRepoProvider);
       final name = _nameCtrl.text.trim();
-      final sellingPrice = double.tryParse(_sellPriceCtrl.text.trim()) ?? 0;
+      final sellingPrice = _parsePrice(_sellPriceCtrl.text);
 
       if (name.isEmpty) {
         ToastService.showError('Vui lòng nhập tên sản phẩm');
@@ -120,9 +123,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             ? null
             : _barcodeCtrl.text.trim(),
         'unit': _unitCtrl.text.trim().isEmpty ? 'Cái' : _unitCtrl.text.trim(),
-        'costPrice': double.tryParse(_costPriceCtrl.text.trim()) ?? 0,
+        'costPrice': _parsePrice(_costPriceCtrl.text),
         'sellingPrice': sellingPrice,
-        'wholesalePrice': double.tryParse(_wholesalePriceCtrl.text.trim()) ?? 0,
+        'wholesalePrice': _parsePrice(_wholesalePriceCtrl.text),
         'minStock': int.tryParse(_minStockCtrl.text.trim()) ?? 0,
         'description': _descCtrl.text.trim(),
         'tags': _tags,
@@ -138,7 +141,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       }
 
       if (!mounted) return;
-      ref.invalidate(productListProvider((page: 1, search: null, tag: null)));
+      ref.invalidate(productListProvider);
+      ref.invalidate(productOptionsProvider);
+      if (_isEdit) {
+        ref.invalidate(productDetailProvider(widget.product!['id']));
+      }
       ToastService.showSuccess(
         _isEdit ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!',
       );
@@ -158,7 +165,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         if (e is ApiException) {
           ToastService.showError(e.message);
         } else {
-          ToastService.showError('Lỗi: $e');
+          ToastService.showError(
+            !_isEdit
+                ? 'Không thể tạo sản phẩm mới. Vui lòng thử lại sau.'
+                : 'Không thể cập nhật thông tin sản phẩm. Vui lòng thử lại sau.',
+          );
         }
       }
       if (mounted) {
@@ -265,187 +276,194 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildImagePicker(c, theme),
-              const SizedBox(height: 20),
-
-              _sectionHeader('Thông tin cơ bản', theme, c),
-              const SizedBox(height: 12),
-              _field(
-                'Tên sản phẩm *',
-                _nameCtrl,
-                HugeIcons.strokeRoundedPackage,
-                c,
-                theme,
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Vui lòng nhập tên sản phẩm'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              Row(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _field(
-                      'Mã SKU',
-                      _skuCtrl,
-                      HugeIcons.strokeRoundedTag01,
-                      c,
-                      theme,
-                    ),
+                  _buildImagePicker(c, theme),
+                  const SizedBox(height: 20),
+
+                  _sectionHeader('Thông tin cơ bản', theme, c),
+                  const SizedBox(height: 12),
+                  _field(
+                    'Tên sản phẩm *',
+                    _nameCtrl,
+                    HugeIcons.strokeRoundedPackage,
+                    c,
+                    theme,
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Vui lòng nhập tên sản phẩm'
+                        : null,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _field(
-                      'Mã vạch',
-                      _barcodeCtrl,
-                      HugeIcons.strokeRoundedBarCode01,
-                      c,
-                      theme,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _field(
-                'Đơn vị tính',
-                _unitCtrl,
-                HugeIcons.strokeRoundedRuler,
-                c,
-                theme,
-                hint: 'VD: Cái, Kg, Hộp, Lon',
-              ),
-
-              const SizedBox(height: 24),
-              _sectionHeader('Thiết lập giá bán', theme, c),
-              const SizedBox(height: 12),
-              _field(
-                'Giá vốn nhập hàng',
-                _costPriceCtrl,
-                HugeIcons.strokeRoundedCoinsDollar,
-                c,
-                theme,
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _field(
-                      'Giá bán lẻ *',
-                      _sellPriceCtrl,
-                      HugeIcons.strokeRoundedMoney01,
-                      c,
-                      theme,
-                      keyboardType: TextInputType.number,
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Bắt buộc' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _field(
-                      'Giá bán sỉ',
-                      _wholesalePriceCtrl,
-                      HugeIcons.strokeRoundedMoney01,
-                      c,
-                      theme,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-              _sectionHeader('Cấu hình kho hàng', theme, c),
-              const SizedBox(height: 12),
-              _field(
-                _isEdit ? 'Tồn kho hiện tại (chỉ xem)' : 'Tồn kho ban đầu',
-                _currentStockCtrl,
-                HugeIcons.strokeRoundedPackageSearch,
-                c,
-                theme,
-                keyboardType: TextInputType.number,
-                enabled: !_isEdit,
-                hint: _isEdit
-                    ? 'Điều chỉnh bằng kiểm kê hoặc nhập hàng'
-                    : 'Số lượng tồn khi bắt đầu sử dụng',
-              ),
-              const SizedBox(height: 12),
-              _field(
-                'Ngưỡng báo động tối thiểu',
-                _minStockCtrl,
-                HugeIcons.strokeRoundedWarehouse,
-                c,
-                theme,
-                keyboardType: TextInputType.number,
-                hint: 'Cảnh báo khi dưới mức này',
-              ),
-
-              const SizedBox(height: 24),
-              _sectionHeader('Mô tả bổ sung', theme, c),
-              const SizedBox(height: 12),
-              _field(
-                'Mô tả chi tiết sản phẩm',
-                _descCtrl,
-                HugeIcons.strokeRoundedTextAlignLeft,
-                c,
-                theme,
-                maxLines: 3,
-              ),
-
-              const SizedBox(height: 24),
-              _sectionHeader('Gắn nhãn (Tags)', theme, c),
-              const SizedBox(height: 12),
-              _buildTagEditor(c, theme),
-
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const HugeIcon(
-                          icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                          color: Colors.white,
-                          size: 18,
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _field(
+                          'Mã SKU',
+                          _skuCtrl,
+                          HugeIcons.strokeRoundedTag01,
+                          c,
+                          theme,
                         ),
-                  label: Text(
-                    _saving
-                        ? (_uploadingImage
-                              ? 'Đang tải ảnh...'
-                              : 'Đang lưu lại...')
-                        : (_isEdit ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm Mới'),
-                    style: GoogleFonts.manrope(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          'Mã vạch',
+                          _barcodeCtrl,
+                          HugeIcons.strokeRoundedBarCode01,
+                          c,
+                          theme,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _field(
+                    'Đơn vị tính',
+                    _unitCtrl,
+                    HugeIcons.strokeRoundedRuler,
+                    c,
+                    theme,
+                    hint: 'VD: Cái, Kg, Hộp, Lon',
+                  ),
+
+                  const SizedBox(height: 24),
+                  _sectionHeader('Thiết lập giá bán', theme, c),
+                  const SizedBox(height: 12),
+                  _field(
+                    'Giá vốn nhập hàng',
+                    _costPriceCtrl,
+                    HugeIcons.strokeRoundedCoinsDollar,
+                    c,
+                    theme,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _field(
+                          'Giá bán lẻ *',
+                          _sellPriceCtrl,
+                          HugeIcons.strokeRoundedMoney01,
+                          c,
+                          theme,
+                          keyboardType: TextInputType.number,
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Bắt buộc' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          'Giá bán sỉ',
+                          _wholesalePriceCtrl,
+                          HugeIcons.strokeRoundedMoney01,
+                          c,
+                          theme,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  _sectionHeader('Cấu hình kho hàng', theme, c),
+                  const SizedBox(height: 12),
+                  _field(
+                    _isEdit ? 'Tồn kho hiện tại (chỉ xem)' : 'Tồn kho ban đầu',
+                    _currentStockCtrl,
+                    HugeIcons.strokeRoundedPackageSearch,
+                    c,
+                    theme,
+                    keyboardType: TextInputType.number,
+                    enabled: !_isEdit,
+                    hint: _isEdit
+                        ? 'Điều chỉnh bằng kiểm kê hoặc nhập hàng'
+                        : 'Số lượng tồn khi bắt đầu sử dụng',
+                  ),
+                  const SizedBox(height: 12),
+                  _field(
+                    'Ngưỡng báo động tối thiểu',
+                    _minStockCtrl,
+                    HugeIcons.strokeRoundedWarehouse,
+                    c,
+                    theme,
+                    keyboardType: TextInputType.number,
+                    hint: 'Cảnh báo khi dưới mức này',
+                  ),
+
+                  const SizedBox(height: 24),
+                  _sectionHeader('Mô tả bổ sung', theme, c),
+                  const SizedBox(height: 12),
+                  _field(
+                    'Mô tả chi tiết sản phẩm',
+                    _descCtrl,
+                    HugeIcons.strokeRoundedTextAlignLeft,
+                    c,
+                    theme,
+                    maxLines: 3,
+                  ),
+
+                  const SizedBox(height: 24),
+                  _sectionHeader('Gắn nhãn (Tags)', theme, c),
+                  const SizedBox(height: 12),
+                  _buildTagEditor(c, theme),
+
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _saving ? null : _save,
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const HugeIcon(
+                              icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                      label: Text(
+                        _saving
+                            ? (_uploadingImage
+                                  ? 'Đang tải ảnh...'
+                                  : 'Đang lưu lại...')
+                            : (_isEdit
+                                  ? 'Cập Nhật Sản Phẩm'
+                                  : 'Thêm Sản Phẩm Mới'),
+                        style: GoogleFonts.manrope(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
         ),
       ),

@@ -227,17 +227,32 @@ class MiniAreaChart extends StatelessWidget {
       return const EmptyChartPlaceholder(message: 'Chưa có dữ liệu');
     }
 
-    final spots1 = data1
-        .asMap()
-        .entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value))
-        .toList();
-    final spots2 = data2
-        .asMap()
-        .entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value))
-        .toList();
-    final maxLen = data1.length > data2.length ? data1.length : data2.length;
+    final spots1 = <FlSpot>[];
+    final spots2 = <FlSpot>[];
+    final List<String>? effectiveXLabels;
+
+    if (data1.length == 1 && data2.length == 1) {
+      // Khi chỉ có 1 mốc phát sinh trong kỳ, mở rộng 2 điểm (mốc 0 đến mốc phát sinh)
+      // để LineChart và AreaChart vẽ được đường nét diện tích mượt mà, không bị đứt đoạn thành 2 chấm đơn độc.
+      spots1.add(const FlSpot(0, 0));
+      spots1.add(FlSpot(1, data1[0]));
+      spots2.add(const FlSpot(0, 0));
+      spots2.add(FlSpot(1, data2[0]));
+      effectiveXLabels = xLabels != null && xLabels!.isNotEmpty
+          ? ['Đầu kỳ', xLabels![0]]
+          : null;
+    } else {
+      spots1.addAll(
+        data1.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)),
+      );
+      spots2.addAll(
+        data2.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)),
+      );
+      effectiveXLabels = xLabels;
+    }
+    final maxLen = spots1.length > spots2.length
+        ? spots1.length
+        : spots2.length;
     double maxY = 0;
     for (final v in data1) {
       if (v > maxY) maxY = v;
@@ -290,14 +305,14 @@ class MiniAreaChart extends StatelessWidget {
                     ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
-                        showTitles: xLabels != null,
+                        showTitles: effectiveXLabels != null,
                         reservedSize: 22,
                         interval: labelInterval,
                         getTitlesWidget: (v, m) {
                           final idx = v.round();
-                          if (xLabels == null ||
+                          if (effectiveXLabels == null ||
                               idx < 0 ||
-                              idx >= xLabels!.length) {
+                              idx >= effectiveXLabels.length) {
                             return const SizedBox.shrink();
                           }
                           return Padding(
@@ -306,7 +321,7 @@ class MiniAreaChart extends StatelessWidget {
                               meta: m,
                               space: 6,
                               child: Text(
-                                xLabels![idx],
+                                effectiveXLabels[idx],
                                 style: TextStyle(
                                   color: c.textMuted,
                                   fontSize: 9,

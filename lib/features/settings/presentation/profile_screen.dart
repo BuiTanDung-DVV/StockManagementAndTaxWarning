@@ -88,7 +88,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          'Không thể cập nhật thông tin cá nhân. Vui lòng thử lại sau.',
+        );
       }
     }
     setState(() => _saving = false);
@@ -126,9 +128,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
         leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.pop(context),
-              )
+            ? AppNavigationBackLeading(onPressed: () => Navigator.pop(context))
             : null,
       ),
       body: _loading

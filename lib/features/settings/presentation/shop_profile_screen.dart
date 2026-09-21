@@ -81,7 +81,9 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          'Không thể cập nhật thông tin cửa hàng. Vui lòng thử lại sau.',
+        );
       }
     }
     if (mounted) setState(() => _saving = false);
@@ -116,150 +118,205 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
             : null,
         title: const Text('Thông tin cửa hàng'),
       ),
-      body: _loading
-          ? const ShimmerList(count: 6)
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Thông tin cửa hàng ──
-                    _SectionHeader(
-                      icon: HugeIcons.strokeRoundedStore01,
-                      title: 'Thông tin cơ bản',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'Tên cửa hàng *',
-                      _shopNameCtrl,
-                      HugeIcons.strokeRoundedStore01,
-                      c,
-                      validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Vui lòng nhập tên shop'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'Số điện thoại',
-                      _phoneCtrl,
-                      HugeIcons.strokeRoundedCall02,
-                      c,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-                    AddressInputField(
-                      label: 'Địa chỉ',
-                      initialValue: _addressCtrl.text,
-                      colors: c,
-                      onChanged: (v) => _addressCtrl.text = v,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'Email',
-                      _emailCtrl,
-                      HugeIcons.strokeRoundedMail01,
-                      c,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'Website',
-                      _websiteCtrl,
-                      HugeIcons.strokeRoundedGlobe02,
-                      c,
-                      keyboardType: TextInputType.url,
-                    ),
-
-                    const SizedBox(height: 24),
-                    // ── Thông tin pháp lý ──
-                    _SectionHeader(
-                      icon: HugeIcons.strokeRoundedLicenseDraft,
-                      title: 'Thông tin pháp lý (HKD)',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'Mã số thuế',
-                      _taxCodeCtrl,
-                      HugeIcons.strokeRoundedInvoice01,
-                      c,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'Tên chủ hộ kinh doanh',
-                      _ownerNameCtrl,
-                      HugeIcons.strokeRoundedUser,
-                      c,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'CCCD / CMND chủ hộ',
-                      _ownerIdCtrl,
-                      HugeIcons.strokeRoundedId,
-                      c,
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'Số GPKD',
-                      _bizLicenseCtrl,
-                      HugeIcons.strokeRoundedLicenseDraft,
-                      c,
-                    ),
-
-                    const SizedBox(height: 24),
-                    // ── Khác ──
-                    _SectionHeader(
-                      icon: HugeIcons.strokeRoundedInvoice03,
-                      title: 'Chứng từ',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildField(
-                      'Chân hóa đơn',
-                      _receiptFooterCtrl,
-                      HugeIcons.strokeRoundedTextFootnote,
-                      c,
-                      maxLines: 3,
-                      hint: 'VD: Cảm ơn quý khách! Hẹn gặp lại.',
-                    ),
-
-                    const SizedBox(height: 32),
-                    // ── Save button ──
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _saving ? null : _save,
-                        icon: _saving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const HugeIcon(
-                                icon: HugeIcons.strokeRoundedCheckmarkCircle02,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                        label: Text(_saving ? 'Đang lưu...' : 'Lưu thay đổi'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: _loading
+              ? const ShimmerList(count: 6)
+              : RefreshIndicator(
+                  onRefresh: _loadProfile,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Thông tin cửa hàng ──
+                          _SectionHeader(
+                            icon: HugeIcons.strokeRoundedStore01,
+                            title: 'Thông tin cơ bản',
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'Tên cửa hàng *',
+                            _shopNameCtrl,
+                            HugeIcons.strokeRoundedStore01,
+                            c,
+                            validator: (v) => v == null || v.trim().isEmpty
+                                ? 'Vui lòng nhập tên shop'
+                                : null,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'Số điện thoại',
+                            _phoneCtrl,
+                            HugeIcons.strokeRoundedCall02,
+                            c,
+                            keyboardType: TextInputType.phone,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null;
+                              final digits = v.trim().replaceAll(
+                                RegExp(r'\D'),
+                                '',
+                              );
+                              if (!RegExp(r'^0\d{9}$').hasMatch(digits)) {
+                                return 'Số điện thoại phải gồm 10 chữ số (bắt đầu bằng số 0)';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          AddressInputField(
+                            label: 'Địa chỉ',
+                            initialValue: _addressCtrl.text,
+                            colors: c,
+                            onChanged: (v) => _addressCtrl.text = v,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'Email',
+                            _emailCtrl,
+                            HugeIcons.strokeRoundedMail01,
+                            c,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null;
+                              if (!RegExp(
+                                r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,4}$',
+                              ).hasMatch(v.trim())) {
+                                return 'Địa chỉ email không hợp lệ';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'Website',
+                            _websiteCtrl,
+                            HugeIcons.strokeRoundedGlobe02,
+                            c,
+                            keyboardType: TextInputType.url,
+                          ),
+
+                          const SizedBox(height: 24),
+                          // ── Thông tin pháp lý ──
+                          _SectionHeader(
+                            icon: HugeIcons.strokeRoundedLicenseDraft,
+                            title: 'Thông tin pháp lý (HKD)',
+                          ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'Mã số thuế',
+                            _taxCodeCtrl,
+                            HugeIcons.strokeRoundedInvoice01,
+                            c,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null;
+                              final trimmed = v.trim();
+                              if (!RegExp(
+                                r'^\d{10}(-\d{3})?$',
+                              ).hasMatch(trimmed)) {
+                                return 'Mã số thuế gồm 10 chữ số (hoặc 13 số: xxxxxxxxxx-xxx)';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'Tên chủ hộ kinh doanh',
+                            _ownerNameCtrl,
+                            HugeIcons.strokeRoundedUser,
+                            c,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'CCCD / CMND chủ hộ',
+                            _ownerIdCtrl,
+                            HugeIcons.strokeRoundedId,
+                            c,
+                            keyboardType: TextInputType.number,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return null;
+                              final digits = v.trim().replaceAll(
+                                RegExp(r'\D'),
+                                '',
+                              );
+                              if (digits.length != 9 && digits.length != 12) {
+                                return 'Số CCCD/CMND phải gồm 9 hoặc 12 chữ số';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'Số GPKD',
+                            _bizLicenseCtrl,
+                            HugeIcons.strokeRoundedLicenseDraft,
+                            c,
+                          ),
+
+                          const SizedBox(height: 24),
+                          // ── Khác ──
+                          _SectionHeader(
+                            icon: HugeIcons.strokeRoundedInvoice03,
+                            title: 'Chứng từ',
+                          ),
+                          const SizedBox(height: 12),
+                          _buildField(
+                            'Chân hóa đơn',
+                            _receiptFooterCtrl,
+                            HugeIcons.strokeRoundedTextFootnote,
+                            c,
+                            maxLines: 3,
+                            hint: 'VD: Cảm ơn quý khách! Hẹn gặp lại.',
+                          ),
+
+                          const SizedBox(height: 32),
+                          // ── Save button ──
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _saving ? null : _save,
+                              icon: _saving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const HugeIcon(
+                                      icon: HugeIcons
+                                          .strokeRoundedCheckmarkCircle02,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                              label: Text(
+                                _saving ? 'Đang lưu...' : 'Lưu thay đổi',
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
-              ),
-            ),
+        ),
+      ),
     );
   }
 

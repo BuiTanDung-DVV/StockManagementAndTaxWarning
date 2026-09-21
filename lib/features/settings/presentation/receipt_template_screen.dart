@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:printing/printing.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_page_header.dart';
@@ -95,103 +96,140 @@ class _ReceiptTemplateScreenState extends ConsumerState<ReceiptTemplateScreen> {
                       child: const Text('Thử tải lại'),
                     ),
             )
-          : ListView(
-              children: [
-                AppPageHeader(
-                  title: 'Mẫu phiếu in',
-                  subtitle:
-                      'Thiết lập nội dung cho phiếu bán hàng 80mm hoặc A4.',
-                  showBackButton: true,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppCardContainer(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment(
-                              value: '80mm',
-                              label: Text('Khổ 80mm'),
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                children: [
+                  AppPageHeader(
+                    title: 'Mẫu phiếu in',
+                    subtitle:
+                        'Thiết lập nội dung cho phiếu bán hàng 80mm hoặc A4.',
+                    showBackButton: true,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppCardContainer(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SegmentedButton<String>(
+                            segments: const [
+                              ButtonSegment(
+                                value: '80mm',
+                                label: Text('Khổ 80mm'),
+                              ),
+                              ButtonSegment(value: 'A4', label: Text('Khổ A4')),
+                            ],
+                            selected: {_paperSize},
+                            onSelectionChanged: (value) =>
+                                setState(() => _paperSize = value.first),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          TextField(
+                            controller: _title,
+                            maxLength: 100,
+                            decoration: const InputDecoration(
+                              labelText: 'Tiêu đề *',
+                              hintText: 'VD: PHIẾU BÁN HÀNG',
                             ),
-                            ButtonSegment(value: 'A4', label: Text('Khổ A4')),
-                          ],
-                          selected: {_paperSize},
-                          onSelectionChanged: (value) =>
-                              setState(() => _paperSize = value.first),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        TextField(
-                          controller: _title,
-                          maxLength: 100,
-                          decoration: const InputDecoration(
-                            labelText: 'Tiêu đề',
                           ),
-                        ),
-                        TextField(
-                          controller: _footer,
-                          maxLength: 500,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
-                            labelText: 'Chân trang',
+                          TextField(
+                            controller: _footer,
+                            maxLength: 500,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              labelText: 'Chân trang',
+                              hintText: 'VD: Cảm ơn quý khách! Hẹn gặp lại.',
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.xs,
-                          children: _flags.entries
-                              .map(
-                                (entry) => FilterChip(
-                                  selected: entry.value,
-                                  label: Text(_labels[entry.key]!),
-                                  onSelected: (value) =>
-                                      setState(() => _flags[entry.key] = value),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.xs,
+                            children: _flags.entries
+                                .map(
+                                  (entry) => FilterChip(
+                                    selected: entry.value,
+                                    label: Text(_labels[entry.key]!),
+                                    onSelected: (value) => setState(
+                                      () => _flags[entry.key] = value,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              FilledButton.icon(
+                                onPressed: _saving ? null : _save,
+                                icon: _saving
+                                    ? const SizedBox.square(
+                                        dimension: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.save_outlined),
+                                label: const Text('Lưu cấu hình'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: _preview,
+                                icon: const Icon(Icons.preview_outlined),
+                                label: const Text('Xem trước PDF'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.sm),
+                            decoration: BoxDecoration(
+                              color: AppColors.info.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.control,
+                              ),
+                              border: Border.all(
+                                color: AppColors.info.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: AppColors.info,
                                 ),
-                              )
-                              .toList(),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: [
-                            FilledButton.icon(
-                              onPressed: _saving ? null : _save,
-                              icon: _saving
-                                  ? const SizedBox.square(
-                                      dimension: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.save_outlined),
-                              label: const Text('Lưu cấu hình'),
+                                SizedBox(width: AppSpacing.xs),
+                                Expanded(
+                                  child: Text(
+                                    'Lưu ý: Phiếu bán hàng nội bộ không thay thế hóa đơn điện tử hợp pháp theo Nghị định 123/2020/NĐ-CP.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.info,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            OutlinedButton.icon(
-                              onPressed: _preview,
-                              icon: const Icon(Icons.preview_outlined),
-                              label: const Text('Xem trước PDF'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        const Text(
-                          'Lưu ý: Phiếu bán hàng không thay thế hóa đơn điện tử hợp pháp.',
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
     ),
   );
 
   Future<void> _save() async {
-    if (_title.text.trim().isEmpty) return;
+    if (_title.text.trim().isEmpty) {
+      ToastService.showError('Vui lòng nhập tiêu đề mẫu phiếu in');
+      return;
+    }
     setState(() => _saving = true);
     try {
       final profile = await ref
@@ -199,8 +237,12 @@ class _ReceiptTemplateScreenState extends ConsumerState<ReceiptTemplateScreen> {
           .saveReceiptConfig(_config);
       if (mounted) setState(() => _profile = profile);
       ToastService.showSuccess('Đã lưu mẫu phiếu in');
-    } catch (error) {
-      ToastService.showError(error.toString());
+    } on ApiException catch (error) {
+      ToastService.showError(error.message);
+    } catch (_) {
+      ToastService.showError(
+        'Không thể lưu mẫu phiếu in. Vui lòng thử lại sau.',
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }

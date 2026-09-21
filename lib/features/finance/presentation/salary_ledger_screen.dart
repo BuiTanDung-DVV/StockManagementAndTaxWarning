@@ -71,7 +71,15 @@ class _SalaryLedgerScreenState extends ConsumerState<SalaryLedgerScreen> {
       ),
       body: txAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppInlineError(
+              message: 'Không thể tải sổ theo dõi lương. Vui lòng thử lại sau.',
+              onRetry: () => ref.invalidate(transactionsProvider),
+            ),
+          ),
+        ),
         data: (data) {
           final items = (data['items'] as List?) ?? [];
           final totalSalary = asNum(data['filteredAmountTotal']);
@@ -249,58 +257,125 @@ class _SalaryLedgerScreenState extends ConsumerState<SalaryLedgerScreen> {
     final nameC = TextEditingController();
     final amountC = TextEditingController();
     final notesC = TextEditingController();
+    bool isSubmitting = false;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Thêm chi lương'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameC,
-              decoration: const InputDecoration(labelText: 'Tên nhân viên'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          final parsedAmount = parseCurrency(amountC.text);
+
+          return AlertDialog(
+            title: const Text('Thêm chi lương'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameC,
+                    decoration: const InputDecoration(
+                      labelText: 'Tên nhân viên *',
+                      hintText: 'Nhập họ tên nhân viên',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountC,
+                    decoration: InputDecoration(
+                      labelText: 'Số tiền *',
+                      hintText: 'Ví dụ: 10.000.000',
+                      suffixText: '₫',
+                      helperText: parsedAmount > 0 ? _fmt(parsedAmount) : null,
+                      helperStyle: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesC,
+                    decoration: const InputDecoration(
+                      labelText: 'Ghi chú',
+                      hintText: 'Lương tháng hoặc tạm ứng...',
+                    ),
+                  ),
+                ],
+              ),
             ),
-            TextField(
-              controller: amountC,
-              decoration: const InputDecoration(labelText: 'Số tiền'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: notesC,
-              decoration: const InputDecoration(labelText: 'Ghi chú'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final amount = double.tryParse(amountC.text) ?? 0;
-              if (amount <= 0) {
-                ToastService.showError('Vui lòng nhập số tiền hợp lệ (> 0)');
-                return;
-              }
-              await ref.read(financeRepoProvider).createTransaction({
-                'type': 'EXPENSE',
-                'category': 'SALARY',
-                'counterparty': nameC.text,
-                'amount': amount,
-                'notes': notesC.text.isEmpty ? 'Chi lương' : notesC.text,
-                'transactionDate': DateTime.now()
-                    .toIso8601String()
-                    .split('T')
-                    .first,
-              });
-              ref.invalidate(transactionsProvider);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final empName = nameC.text.trim();
+                        if (empName.isEmpty) {
+                          ToastService.showError('Vui lòng nhập tên nhân viên');
+                          return;
+                        }
+                        final amount = parseCurrency(amountC.text);
+                        if (amount <= 0) {
+                          ToastService.showError(
+                            'Vui lòng nhập số tiền hợp lệ (> 0)',
+                          );
+                          return;
+                        }
+
+                        setDialogState(() => isSubmitting = true);
+                        try {
+                          await ref
+                              .read(financeRepoProvider)
+                              .createTransaction({
+                                'type': 'EXPENSE',
+                                'category': 'SALARY',
+                                'counterparty': empName,
+                                'amount': amount,
+                                'notes': notesC.text.trim().isEmpty
+                                    ? 'Chi lương'
+                                    : notesC.text.trim(),
+                                'transactionDate': DateTime.now()
+                                    .toIso8601String()
+                                    .split('T')
+                                    .first,
+                              });
+                          ref.invalidate(transactionsProvider);
+                          ToastService.showSuccess(
+                            'Đã ghi nhận chi lương cho $empName',
+                          );
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        } catch (e) {
+                          ToastService.showError(
+                            'Không thể thêm chi lương. Vui lòng thử lại sau.',
+                          );
+                          if (dialogCtx.mounted) {
+                            setDialogState(() => isSubmitting = false);
+                          }
+                        }
+                      },
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Lưu'),
+              ),
+            ],
+          );
+        },
       ),
-    );
+    ).then((_) {
+      nameC.dispose();
+      amountC.dispose();
+      notesC.dispose();
+    });
   }
 }

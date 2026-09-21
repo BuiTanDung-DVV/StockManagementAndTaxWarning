@@ -6,6 +6,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/parse_utils.dart';
+import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/chart_widgets.dart';
@@ -64,13 +66,27 @@ class CashflowForecastScreen extends ConsumerWidget {
       body: forecastAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
-          child: Text('Lỗi: $e', style: TextStyle(color: AppColors.danger)),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppInlineError(
+              message:
+                  'Không thể tải dữ liệu dự báo dòng tiền. Vui lòng thử lại sau.',
+              onRetry: () => ref.invalidate(forecastsProvider),
+            ),
+          ),
         ),
         data: (forecasts) {
           return budgetAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(
-              child: Text('Lỗi: $e', style: TextStyle(color: AppColors.danger)),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: AppInlineError(
+                  message:
+                      'Không thể tải dữ liệu ngân sách. Vui lòng thử lại sau.',
+                  onRetry: () => ref.invalidate(budgetPlansProvider),
+                ),
+              ),
             ),
             data: (budgets) {
               if (forecasts.isEmpty && budgets.isEmpty) {
@@ -856,19 +872,20 @@ class CashflowForecastScreen extends ConsumerWidget {
             ElevatedButton(
               onPressed: () async {
                 final name = nameC.text.trim();
-                final plannedIncome = double.tryParse(incomeC.text);
-                final plannedExpense = double.tryParse(expenseC.text);
-                if (name.isEmpty ||
-                    plannedIncome == null ||
-                    plannedIncome < 0 ||
-                    plannedExpense == null ||
-                    plannedExpense < 0 ||
-                    startDate.isAfter(endDate)) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Vui lòng kiểm tra tên, ngày và số tiền'),
-                    ),
+                if (name.isEmpty) {
+                  ToastService.showError('Vui lòng nhập tên kế hoạch');
+                  return;
+                }
+                if (startDate.isAfter(endDate)) {
+                  ToastService.showError(
+                    'Ngày bắt đầu không được sau ngày kết thúc',
                   );
+                  return;
+                }
+                final plannedIncome = parseCurrency(incomeC.text);
+                final plannedExpense = parseCurrency(expenseC.text);
+                if (plannedIncome < 0 || plannedExpense < 0) {
+                  ToastService.showError('Số tiền kế hoạch không được âm');
                   return;
                 }
                 try {
@@ -881,13 +898,14 @@ class CashflowForecastScreen extends ConsumerWidget {
                     'plannedExpense': plannedExpense,
                   });
                   ref.invalidate(budgetPlansProvider);
-                  if (dialogContext.mounted) Navigator.pop(dialogContext);
-                } catch (error) {
                   if (dialogContext.mounted) {
-                    ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      SnackBar(content: Text('Không thể lưu: $error')),
-                    );
+                    Navigator.pop(dialogContext);
+                    ToastService.showSuccess('Đã lưu kế hoạch ngân sách');
                   }
+                } catch (error) {
+                  ToastService.showError(
+                    'Không thể lưu kế hoạch ngân sách. Vui lòng thử lại sau.',
+                  );
                 }
               },
               child: const Text('Lưu kế hoạch'),
@@ -1025,8 +1043,12 @@ class CashflowForecastScreen extends ConsumerWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                final income = double.tryParse(incomeC.text) ?? 0;
-                final expense = double.tryParse(expenseC.text) ?? 0;
+                final income = parseCurrency(incomeC.text);
+                final expense = parseCurrency(expenseC.text);
+                if (income < 0 || expense < 0) {
+                  ToastService.showError('Số tiền dự báo không được âm');
+                  return;
+                }
                 try {
                   await ref.read(financeRepoProvider).createForecast({
                     'forecastDate': selectedDate
@@ -1038,17 +1060,14 @@ class CashflowForecastScreen extends ConsumerWidget {
                     'expectedBalance': income - expense,
                   });
                   ref.invalidate(forecastsProvider);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                } catch (e) {
                   if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(
-                        content: Text('Lỗi: $e'),
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: AppColors.danger,
-                      ),
-                    );
+                    Navigator.pop(ctx);
+                    ToastService.showSuccess('Đã lưu dự báo dòng tiền');
                   }
+                } catch (e) {
+                  ToastService.showError(
+                    'Không thể lưu dự báo dòng tiền. Vui lòng thử lại sau.',
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(

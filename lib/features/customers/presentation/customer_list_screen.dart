@@ -212,7 +212,8 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                 },
                 loading: () => const ShimmerList(),
                 error: (error, _) => AppError(
-                  message: 'Không thể tải danh sách khách hàng: $error',
+                  message:
+                      'Không thể tải danh sách khách hàng. Vui lòng thử lại sau.',
                   onRetry: () => ref.invalidate(customerListProvider),
                 ),
               ),
@@ -271,7 +272,9 @@ class _DesktopCustomerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final debt = asDouble(customer['totalDebt'] ?? customer['balance']);
+    final debt = asDouble(
+      customer['totalDebt'] ?? customer['balance'] ?? customer['debt'],
+    );
     final tags = _customerTags(customer, debt);
 
     return InkWell(
@@ -343,7 +346,9 @@ class _MobileCustomerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final debt = asDouble(customer['totalDebt'] ?? customer['balance']);
+    final debt = asDouble(
+      customer['totalDebt'] ?? customer['balance'] ?? customer['debt'],
+    );
     final tags = _customerTags(customer, debt);
 
     return Material(
@@ -493,6 +498,10 @@ List<String> _customerTags(Map<String, dynamic> customer, double debt) {
     );
   }
 
+  final group = customer['customerGroup']?.toString().trim();
+  if (group != null && group.isNotEmpty && !tags.contains(group)) {
+    tags.add(group);
+  }
   if (customer['customerType'] == 'VIP' && !tags.contains('VIP')) {
     tags.insert(0, 'VIP');
   }
@@ -509,8 +518,9 @@ List<String> _customerTags(Map<String, dynamic> customer, double debt) {
 
 Color _customerTagColor(String tag, BuildContext context) {
   if (tag == 'Đang nợ') return AppColors.danger;
-  if (tag == 'VIP') return AppColors.warning;
+  if (tag.contains('VIP')) return AppColors.warning;
   if (tag == 'Mới') return AppColors.info;
+  if (tag == 'Bán buôn' || tag == 'Đại lý') return AppColors.primary;
   return Theme.of(context).colorScheme.primary;
 }
 

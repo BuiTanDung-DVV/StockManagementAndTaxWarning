@@ -8,6 +8,8 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/product_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
+import '../../../core/utils/parse_utils.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
@@ -91,161 +93,184 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       ),
       body: detailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
-                const SizedBox(height: 12),
-                Text(
-                  'Không thể tải thông tin sản phẩm.\n'
-                  'Sản phẩm có thể đã bị xóa hoặc bạn không có quyền xem.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    color: AppColors.danger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+        error: (e, _) {
+          final errStr = e.toString();
+          final userMessage = errStr.contains('Sản phẩm không tồn tại')
+              ? 'Không thể tải thông tin sản phẩm: Sản phẩm không tồn tại'
+              : 'Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.';
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppInlineError(
+                    message: userMessage,
+                    onRetry: () => ref.invalidate(productDetailProvider(id)),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(productDetailProvider(id)),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Thử lại'),
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextButton(
+                    onPressed: () => context.go(widget.returnRoute),
+                    child: const Text('Quay lại danh sách'),
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => context.go(widget.returnRoute),
-                  child: const Text('Quay lại danh sách'),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
         data: (p) {
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ProductDetailsContent(product: p),
-                const SizedBox(height: 20),
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(productDetailProvider(id));
+              ref.invalidate(
+                inventoryMovementsProvider((
+                  productId: id,
+                  page: _movementPage,
+                )),
+              );
+            },
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ProductDetailsContent(product: p),
+                      const SizedBox(height: 20),
 
-                // Info Section: Inventory Movements
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
-                  child: Text(
-                    'Lịch sử xuất nhập',
-                    style: GoogleFonts.manrope(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                ),
-                movementsAsync.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (e, _) => Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text('Lỗi tải lịch sử: $e'),
-                  ),
-                  data: (data) {
-                    final items = (data['items'] as List?) ?? [];
-                    final currentPage = paginationValue(
-                      data,
-                      'page',
-                      fallback: _movementPage,
-                    );
-                    final totalPages = paginationValue(
-                      data,
-                      'totalPages',
-                      fallback: 1,
-                    );
-                    final totalItems = paginationValue(
-                      data,
-                      'total',
-                      fallback: items.length,
-                    );
-                    if (items.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
+                      // Info Section: Inventory Movements
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
                         child: Text(
-                          'Chưa có phát sinh tồn kho.',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
+                          'Lịch sử xuất nhập',
+                          style: GoogleFonts.manrope(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: c.textPrimary,
+                          ),
                         ),
-                      );
-                    }
-                    return ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: items.length + 1,
-                      separatorBuilder: (_, _) =>
-                          Divider(color: c.divider.withValues(alpha: 0.3)),
-                      itemBuilder: (_, i) {
-                        if (i == items.length) {
-                          return AppPaginationBar(
-                            currentPage: currentPage,
-                            totalPages: totalPages,
-                            totalItems: totalItems,
-                            itemLabel: 'phát sinh kho',
-                            onPageChanged: (page) =>
-                                setState(() => _movementPage = page),
+                      ),
+                      movementsAsync.when(
+                        loading: () => const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                        error: (e, _) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: AppInlineError(
+                            message:
+                                'Không thể tải lịch sử xuất nhập kho. Vui lòng thử lại.',
+                            onRetry: () => ref.invalidate(
+                              inventoryMovementsProvider((
+                                productId: id,
+                                page: _movementPage,
+                              )),
+                            ),
+                          ),
+                        ),
+                        data: (data) {
+                          final items = (data['items'] as List?) ?? [];
+                          final currentPage = paginationValue(
+                            data,
+                            'page',
+                            fallback: _movementPage,
                           );
-                        }
-                        final m = items[i];
-                        final isOut = m['movementType'] == 'OUT';
-                        final qty = NumberFormat('#,###').format(
-                          num.tryParse(m['quantity']?.toString() ?? '0') ?? 0,
-                        );
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            m['notes'] ?? m['referenceType'] ?? 'Không rõ',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 13,
-                              color: c.textPrimary,
+                          final totalPages = paginationValue(
+                            data,
+                            'totalPages',
+                            fallback: 1,
+                          );
+                          final totalItems = paginationValue(
+                            data,
+                            'total',
+                            fallback: items.length,
+                          );
+                          if (items.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: AppEmpty(
+                                visual: AppEmptyVisual.inventory,
+                                message: 'Chưa có phát sinh tồn kho',
+                                subtitle:
+                                    'Lịch sử nhập, xuất, kiểm kê của sản phẩm sẽ hiển thị tại đây.',
+                              ),
+                            );
+                          }
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: items.length + 1,
+                            separatorBuilder: (_, _) => Divider(
+                              color: c.divider.withValues(alpha: 0.3),
                             ),
-                          ),
-                          subtitle: Text(
-                            m['createdAt']
-                                    ?.toString()
-                                    .substring(0, 16)
-                                    .replaceFirst('T', ' ') ??
-                                '',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: c.textSecondary,
-                            ),
-                          ),
-                          trailing: Text(
-                            '${isOut ? '-' : '+'}$qty',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: isOut
-                                  ? AppColors.danger
-                                  : AppColors.success,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+                            itemBuilder: (_, i) {
+                              if (i == items.length) {
+                                return AppPaginationBar(
+                                  currentPage: currentPage,
+                                  totalPages: totalPages,
+                                  totalItems: totalItems,
+                                  itemLabel: 'phát sinh kho',
+                                  onPageChanged: (page) =>
+                                      setState(() => _movementPage = page),
+                                );
+                              }
+                              final m = items[i];
+                              final isOut = m['movementType'] == 'OUT';
+                              final parsedQty = parseQuantity(m['quantity']);
+                              final qty = parsedQty % 1 == 0
+                                  ? NumberFormat(
+                                      '#,###',
+                                    ).format(parsedQty.toInt())
+                                  : NumberFormat('#,###.##').format(parsedQty);
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  m['notes'] ??
+                                      m['referenceType'] ??
+                                      'Không rõ',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                    color: c.textPrimary,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  m['createdAt']
+                                          ?.toString()
+                                          .substring(0, 16)
+                                          .replaceFirst('T', ' ') ??
+                                      '',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: c.textSecondary,
+                                  ),
+                                ),
+                                trailing: Text(
+                                  '${isOut ? '-' : '+'}$qty',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: isOut
+                                        ? AppColors.danger
+                                        : AppColors.success,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
           );
         },

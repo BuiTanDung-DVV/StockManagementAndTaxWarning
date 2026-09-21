@@ -143,6 +143,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ? null
                   : () => _showCostingMethodPicker(context),
             ),
+          if (canManageProducts)
+            _SettingsEntry(
+              label: 'Định mức tồn tối thiểu',
+              description:
+                  'Thiết lập ngưỡng cảnh báo khi mặt hàng chạm mức an toàn.',
+              onTap: () => context.push('/inventory'),
+            ),
         ],
       ),
       _SettingsSectionData(
@@ -200,6 +207,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   'Quản lý nguồn kiến thức được dùng trong phần trợ giúp.',
               onTap: () => context.push('/settings/ai-knowledge'),
             ),
+          if (canViewFinance)
+            _SettingsEntry(
+              label: 'Cổng tra cứu Thuế điện tử',
+              description:
+                  'Liên kết tra cứu nghĩa vụ thuế trên thuedientu.gdt.gov.vn.',
+              onTap: () => context.push('/tax-support'),
+            ),
         ],
       ),
       _SettingsSectionData(
@@ -251,85 +265,95 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       backgroundColor: colors.bg,
-      body: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: AppResponsiveContent(
-          maxWidth: 1200,
-          verticalPadding: AppSpacing.lg,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppPageHeader(
-                title: 'Cài đặt hệ thống',
-                subtitle:
-                    'Quản lý tài khoản, cửa hàng, phân quyền và các cấu hình nghiệp vụ.',
-                dense: true,
-                action: featureGuideButton(context, 'settings'),
-                compactAction: featureGuideButton(context, 'settings'),
-              ),
-              _SettingsProfileCard(
-                shopAsync: shopAsync,
-                user: auth.user,
-                shopState: shopState,
-                onOpenProfile: () => context.push('/profile'),
-                onSwitchShop: shopState.userShops.length > 1
-                    ? () => _showShopSwitcher(context, shopState)
-                    : null,
-                onRetry: shopAsync != null
-                    ? () => ref.refresh(shopProfileProvider)
-                    : null,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilterBar(
-                searchHint: 'Tìm nhanh một thiết lập',
-                onSearchChanged: (value) {
-                  if (value != _searchQuery) {
-                    setState(() => _searchQuery = value);
-                  }
-                },
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              if (filteredSections.isEmpty)
-                AppCardContainer(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.xl,
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Không tìm thấy thiết lập phù hợp.',
-                        style: TextStyle(color: colors.textSecondary),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(shopProfileProvider);
+          await Future.wait([
+            ref.read(costingProvider.notifier).loadCostingMethod(),
+            ref.read(notificationProvider.notifier).loadNotifications(),
+            ref.read(shopProvider.notifier).loadUserShops(),
+          ]);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: AppResponsiveContent(
+            maxWidth: 1200,
+            verticalPadding: AppSpacing.lg,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppPageHeader(
+                  title: 'Cài đặt hệ thống',
+                  subtitle:
+                      'Quản lý tài khoản, cửa hàng, phân quyền và các cấu hình nghiệp vụ.',
+                  dense: true,
+                  action: featureGuideButton(context, 'settings'),
+                  compactAction: featureGuideButton(context, 'settings'),
+                ),
+                _SettingsProfileCard(
+                  shopAsync: shopAsync,
+                  user: auth.user,
+                  shopState: shopState,
+                  onOpenProfile: () => context.push('/profile'),
+                  onSwitchShop: shopState.userShops.length > 1
+                      ? () => _showShopSwitcher(context, shopState)
+                      : null,
+                  onRetry: shopAsync != null
+                      ? () => ref.refresh(shopProfileProvider)
+                      : null,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                FilterBar(
+                  searchHint: 'Tìm nhanh một thiết lập',
+                  onSearchChanged: (value) {
+                    if (value != _searchQuery) {
+                      setState(() => _searchQuery = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                if (filteredSections.isEmpty)
+                  AppCardContainer(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.xl,
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Không tìm thấy thiết lập phù hợp.',
+                          style: TextStyle(color: colors.textSecondary),
+                        ),
                       ),
                     ),
+                  )
+                else
+                  AppFillGrid(
+                    minItemWidth: 420,
+                    maxColumns: 2,
+                    spacing: AppSpacing.md,
+                    runSpacing: AppSpacing.md,
+                    children: [
+                      for (final section in filteredSections)
+                        _SettingsSection(section: section),
+                    ],
                   ),
-                )
-              else
-                AppFillGrid(
-                  minItemWidth: 420,
-                  maxColumns: 2,
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.md,
-                  children: [
-                    for (final section in filteredSections)
-                      _SettingsSection(section: section),
-                  ],
-                ),
-              const SizedBox(height: AppSpacing.lg),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => _confirmLogout(context),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    side: BorderSide(
-                      color: AppColors.danger.withValues(alpha: 0.55),
+                const SizedBox(height: AppSpacing.lg),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => _confirmLogout(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.danger,
+                      side: BorderSide(
+                        color: AppColors.danger.withValues(alpha: 0.55),
+                      ),
                     ),
+                    child: const Text('Đăng xuất tài khoản'),
                   ),
-                  child: const Text('Đăng xuất tài khoản'),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-            ],
+                const SizedBox(height: AppSpacing.xxl),
+              ],
+            ),
           ),
         ),
       ),
@@ -560,7 +584,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     BuildContext sheetContext,
     String method,
   ) async {
+    final currentMethod = ref.read(costingProvider).method;
     Navigator.pop(sheetContext);
+    if (method == currentMethod) return;
+
+    final confirmed = await AppConfirmModal.show(
+      context,
+      title: 'Đổi phương pháp tính giá vốn',
+      message:
+          'Theo chế độ kế toán và Thông tư 88/2021/TT-BTC, phương pháp tính giá vốn cần áp dụng nhất quán trong niên độ kế toán. Thay đổi giữa kỳ có thể ảnh hưởng đến giá trị tồn kho và lợi nhuận.\n\nBạn có chắc chắn muốn chuyển sang ${method == 'FIFO' ? 'Nhập trước – xuất trước (FIFO)' : 'Bình quân gia quyền (AVG)'}?',
+      confirmText: 'Xác nhận thay đổi',
+      cancelText: 'Hủy bỏ',
+    );
+    if (confirmed != true) return;
+
     final success = await ref
         .read(costingProvider.notifier)
         .updateCostingMethod(method);
@@ -978,16 +1015,20 @@ class _SettingsActionRow extends StatelessWidget {
                 label: entry.badge!,
                 color: Theme.of(context).colorScheme.primary,
               )
-            else
+            else if (entry.onTap == null)
               Text(
-                entry.onTap == null ? 'Đang tải' : 'Mở',
+                'Đang tải',
                 style: TextStyle(
-                  color: entry.onTap == null
-                      ? colors.textMuted
-                      : Theme.of(context).colorScheme.primary,
+                  color: colors.textMuted,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
+              )
+            else
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: colors.textMuted,
               ),
           ],
         ),

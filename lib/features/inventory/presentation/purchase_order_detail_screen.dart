@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/inventory_provider.dart';
@@ -24,6 +25,42 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
+
+    if (purchaseOrder.isEmpty) {
+      return Scaffold(
+        backgroundColor: c.bg,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+          leading: Navigator.of(context).canPop()
+              ? AppNavigationBackLeading(
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
+          title: Text(
+            'Chi Tiết Đơn Nhập',
+            style: GoogleFonts.manrope(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: c.textPrimary,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: AppEmpty(
+            visual: AppEmptyVisual.document,
+            message: 'Không tìm thấy thông tin đơn nhập hàng',
+            subtitle: 'Dữ liệu đơn hàng không tồn tại hoặc đã bị xóa.',
+            action: ElevatedButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Quay lại'),
+            ),
+          ),
+        ),
+      );
+    }
 
     final poItems = (purchaseOrder['items'] as List?) ?? [];
     final code =
@@ -88,173 +125,200 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // General Info
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-              ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(purchaseOrdersProvider);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('Mã đơn hàng', code.toString(), c),
-                  if (orderDate.isNotEmpty)
-                    _buildInfoRow('Ngày nhập hàng', orderDate, c),
-                  _buildInfoRow('Nhà cung cấp', supplierName, c),
-                  if (invoiceNumber.isNotEmpty)
-                    _buildInfoRow('Số hóa đơn', invoiceNumber, c),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Trạng thái',
-                        style: GoogleFonts.inter(
-                          color: c.textSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
+                  // General Info
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: c.divider.withValues(alpha: 0.5),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: statusColor.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Text(
-                          statusLabel,
-                          style: GoogleFonts.manrope(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: statusColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Danh sách sản phẩm',
-              style: GoogleFonts.manrope(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (poItems.isEmpty)
-              Text(
-                'Không có sản phẩm nào.',
-                style: GoogleFonts.inter(color: c.textSecondary, fontSize: 13),
-              )
-            else
-              ...poItems.map((item) {
-                final itemName =
-                    item['product']?['name'] ??
-                    'Sản phẩm ${item['productId'] ?? ''}';
-                final qty = asDouble(item['quantity']);
-                final unitPrice = asDouble(item['unitPrice']);
-                final subtotal = asDouble(
-                  item['subtotal'] ?? (qty * unitPrice),
-                );
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    child: Column(
+                      children: [
+                        _buildInfoRow('Mã đơn hàng', code.toString(), c),
+                        if (orderDate.isNotEmpty)
+                          _buildInfoRow('Ngày nhập hàng', orderDate, c),
+                        _buildInfoRow('Nhà cung cấp', supplierName, c),
+                        if (invoiceNumber.isNotEmpty)
+                          _buildInfoRow('Số hóa đơn', invoiceNumber, c),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              itemName,
+                              'Trạng thái',
                               style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
+                                color: c.textSecondary,
                                 fontSize: 13,
-                                color: c.textPrimary,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'SL: $qty x ${_currFmt.format(unitPrice)}',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: c.textSecondary,
-                                fontWeight: FontWeight.w500,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: statusColor.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                statusLabel,
+                                style: GoogleFonts.manrope(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _currFmt.format(subtotal),
-                        style: GoogleFonts.manrope(
-                          fontWeight: FontWeight.bold,
-                          color: c.textPrimary,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: c.divider.withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Tổng tiền thanh toán',
-                    style: GoogleFonts.inter(
-                      color: c.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 24),
                   Text(
-                    _currFmt.format(totalAmount),
+                    'Danh sách sản phẩm',
                     style: GoogleFonts.manrope(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                      color: theme.colorScheme.primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: c.textPrimary,
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  if (poItems.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: AppEmpty(
+                        visual: AppEmptyVisual.inventory,
+                        message: 'Đơn nhập không có sản phẩm nào',
+                        subtitle:
+                            'Vui lòng kiểm tra lại chi tiết các mặt hàng trong đơn.',
+                      ),
+                    )
+                  else
+                    ...poItems.map((item) {
+                      final itemName =
+                          item['product']?['name'] ??
+                          item['productName'] ??
+                          item['name'] ??
+                          'Sản phẩm ${item['productId'] ?? ''}';
+                      final qty = asDouble(item['quantity']);
+                      final qtyStr = (qty % 1 == 0)
+                          ? qty.toInt().toString()
+                          : qty.toString();
+                      final unitPrice = asDouble(item['unitPrice']);
+                      final subtotal = asDouble(
+                        item['subtotal'] ?? (qty * unitPrice),
+                      );
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: c.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: c.divider.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    itemName,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: c.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'SL: $qtyStr x ${_currFmt.format(unitPrice)}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: c.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              _currFmt.format(subtotal),
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.bold,
+                                color: c.textPrimary,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: c.divider.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Tổng tiền thanh toán',
+                          style: GoogleFonts.inter(
+                            color: c.textSecondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          _currFmt.format(totalAmount),
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
-            const SizedBox(height: 100),
-          ],
+          ),
         ),
       ),
       bottomSheet: status == 'PENDING'
@@ -274,62 +338,141 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                 ],
               ),
               child: SafeArea(
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final bool? confirm = await AppConfirmModal.show(
-                        context,
-                        title: 'Xác nhận duyệt',
-                        message:
-                            'Bạn có chắc chắn muốn duyệt nhập kho đơn hàng này? Số lượng tồn kho sẽ được cộng thêm và không thể hoàn tác.',
-                        confirmText: 'Duyệt',
-                        cancelText: 'Hủy',
-                      );
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1040),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final bool? confirm = await AppConfirmModal.show(
+                                context,
+                                title: 'Xác nhận hủy đơn',
+                                message:
+                                    'Bạn có chắc chắn muốn hủy đơn nhập hàng này? Đơn sẽ chuyển sang trạng thái Đã hủy.',
+                                confirmText: 'Hủy đơn',
+                                cancelText: 'Quay lại',
+                              );
 
-                      if (confirm == true) {
-                        try {
-                          final poId = purchaseOrder['id'] is int
-                              ? purchaseOrder['id']
-                              : int.tryParse(
-                                      purchaseOrder['id']?.toString() ?? '0',
-                                    ) ??
-                                    0;
-                          await ref
-                              .read(inventoryRepoProvider)
-                              .updatePurchaseOrder(poId, {
-                                'status': 'COMPLETED',
-                              });
-                          ToastService.showSuccess(
-                            'Đã duyệt nhập kho thành công',
-                          );
-                          ref.invalidate(purchaseOrdersProvider);
-                          if (context.mounted) {
-                            Navigator.pop(context); // Go back after success
-                          }
-                        } catch (e) {
-                          ToastService.showError('Lỗi khi duyệt nhập kho: $e');
-                        }
-                      }
-                    },
-                    icon: const Icon(
-                      Icons.check_circle_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                    label: Text(
-                      'Duyệt Nhập Kho',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                              if (confirm == true) {
+                                try {
+                                  final poId = purchaseOrder['id'] is int
+                                      ? purchaseOrder['id']
+                                      : int.tryParse(
+                                              purchaseOrder['id']?.toString() ??
+                                                  '0',
+                                            ) ??
+                                            0;
+                                  await ref
+                                      .read(inventoryRepoProvider)
+                                      .updatePurchaseOrder(poId, {
+                                        'status': 'CANCELLED',
+                                      });
+                                  ToastService.showSuccess(
+                                    'Đã hủy đơn nhập hàng',
+                                  );
+                                  ref.invalidate(purchaseOrdersProvider);
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                  }
+                                } catch (e) {
+                                  ToastService.showError(
+                                    'Không thể hủy đơn hàng. Vui lòng thử lại sau.',
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(
+                              Icons.cancel_outlined,
+                              size: 18,
+                              color: AppColors.danger,
+                            ),
+                            label: Text(
+                              'Hủy đơn',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.danger,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.danger),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              final bool? confirm = await AppConfirmModal.show(
+                                context,
+                                title: 'Xác nhận duyệt',
+                                message:
+                                    'Bạn có chắc chắn muốn duyệt nhập kho đơn hàng này? Số lượng tồn kho sẽ được cộng thêm và không thể hoàn tác.',
+                                confirmText: 'Duyệt',
+                                cancelText: 'Hủy',
+                              );
+
+                              if (confirm == true) {
+                                try {
+                                  final poId = purchaseOrder['id'] is int
+                                      ? purchaseOrder['id']
+                                      : int.tryParse(
+                                              purchaseOrder['id']?.toString() ??
+                                                  '0',
+                                            ) ??
+                                            0;
+                                  await ref
+                                      .read(inventoryRepoProvider)
+                                      .updatePurchaseOrder(poId, {
+                                        'status': 'COMPLETED',
+                                      });
+                                  ToastService.showSuccess(
+                                    'Đã duyệt nhập kho thành công',
+                                  );
+                                  ref.invalidate(purchaseOrdersProvider);
+                                  ref.invalidate(stockProvider);
+                                  ref.invalidate(stockPageProvider);
+                                  ref.invalidate(inventoryMovementsProvider);
+                                  ref.invalidate(lowStockProvider);
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                  }
+                                } catch (e) {
+                                  ToastService.showError(
+                                    'Không thể duyệt nhập kho. Vui lòng thử lại sau.',
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(
+                              Icons.check_circle_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              'Duyệt Nhập Kho',
+                              style: GoogleFonts.manrope(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -373,29 +516,31 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final poId = purchaseOrder['id'] is int
         ? purchaseOrder['id']
         : int.tryParse(purchaseOrder['id']?.toString() ?? '0') ?? 0;
 
-    AppConfirmModal.show(
+    final bool? confirm = await AppConfirmModal.show(
       context,
       title: 'Xóa đơn nhập',
       message:
           'Bạn có chắc chắn muốn xóa đơn nhập này? Dữ liệu không thể khôi phục.',
       confirmText: 'Xóa',
       cancelText: 'Hủy',
-    ).then((confirm) async {
-      if (confirm == true) {
-        try {
-          await ref.read(inventoryRepoProvider).deletePurchaseOrder(poId);
-          ToastService.showSuccess('Xóa đơn nhập thành công');
-          ref.invalidate(purchaseOrdersProvider);
-          if (context.mounted) Navigator.pop(context);
-        } catch (e) {
-          ToastService.showError('Lỗi: $e');
-        }
+    );
+
+    if (confirm == true) {
+      try {
+        await ref.read(inventoryRepoProvider).deletePurchaseOrder(poId);
+        ToastService.showSuccess('Xóa đơn nhập thành công');
+        ref.invalidate(purchaseOrdersProvider);
+        if (context.mounted) Navigator.pop(context);
+      } catch (e) {
+        ToastService.showError(
+          'Không thể xóa đơn nhập hàng. Vui lòng thử lại sau.',
+        );
       }
-    });
+    }
   }
 }

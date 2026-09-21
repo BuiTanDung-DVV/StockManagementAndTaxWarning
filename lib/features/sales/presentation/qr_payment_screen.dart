@@ -89,7 +89,9 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError(
+          'Không thể xác nhận thanh toán. Vui lòng thử lại sau.',
+        );
       }
     } finally {
       if (mounted) setState(() => _confirming = false);
@@ -114,7 +116,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
       if (mounted) Navigator.of(context).pop(false);
     } catch (e) {
       if (mounted) {
-        ToastService.showError('Lỗi: $e');
+        ToastService.showError('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
       }
     }
   }
@@ -132,26 +134,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
 
   void _copyToClipboard(String label, String text) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text('Đã sao chép $label thành công!'),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        backgroundColor: AppColors.success,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    ToastService.showSuccess('Đã sao chép $label thành công');
   }
 
   @override
@@ -245,308 +228,334 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
         centerTitle: true,
         actions: [featureGuideButton(context, 'qr_payment')],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Amount display card (Glassmorphic)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.04),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'Số tiền cần thanh toán',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: c.textSecondary,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Amount display card (Glassmorphic)
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                      width: 1.5,
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SelectableText(
-                        _currFmt.format(widget.totalAmount),
-                        style: GoogleFonts.manrope(
-                          fontSize: 34,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.04,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(
-                          Icons.copy_rounded,
-                          size: 20,
-                          color: theme.colorScheme.primary,
-                        ),
-                        onPressed: () => _copyToClipboard(
-                          'số tiền',
-                          widget.totalAmount.toInt().toString(),
-                        ),
-                        tooltip: 'Sao chép số tiền',
-                        splashRadius: 24,
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_rounded,
-                          size: 14,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Mã đơn: ${widget.orderCode}',
-                          style: GoogleFonts.manrope(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // QR Code display container
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.grey.shade200, width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'Quét mã VietQR tự động nhập liệu',
-                    style: GoogleFonts.manrope(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: const Color(0xFF1E293B), // High contrast slate-800
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withValues(
-                          alpha: 0.15,
-                        ),
-                        width: 2,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        _qrUrl,
-                        width: 240,
-                        height: 240,
-                        loadingBuilder: (_, child, progress) => progress == null
-                            ? child
-                            : const SizedBox(
-                                width: 240,
-                                height: 240,
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 3,
-                                  ),
-                                ),
-                              ),
-                        errorBuilder: (_, e, s) => SizedBox(
-                          width: 240,
-                          height: 240,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.error_outline_rounded,
-                                  color: AppColors.danger,
-                                  size: 48,
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Không tải được mã QR\nKiểm tra lại cấu hình NH',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: c.textSecondary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Số tiền cần thanh toán',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: c.textSecondary,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  InkWell(
-                    onTap: () => _copyToClipboard(
-                      'nội dung chuyển khoản',
-                      widget.orderCode,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0,
-                        vertical: 4.0,
-                      ),
-                      child: Row(
+                      const SizedBox(height: 10),
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.copy_rounded,
-                            size: 14,
-                            color: c.textSecondary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Nội dung CK: ${widget.orderCode}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: c.textSecondary,
-                              fontWeight: FontWeight.w600,
+                          SelectableText(
+                            _currFmt.format(widget.totalAmount),
+                            style: GoogleFonts.manrope(
+                              fontSize: 34,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(
+                              Icons.copy_rounded,
+                              size: 20,
+                              color: theme.colorScheme.primary,
+                            ),
+                            onPressed: () => _copyToClipboard(
+                              'số tiền',
+                              widget.totalAmount.toInt().toString(),
+                            ),
+                            tooltip: 'Sao chép số tiền',
+                            splashRadius: 24,
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.08,
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.receipt_long_rounded,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Mã đơn: ${widget.orderCode}',
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // QR Code display container
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.grey.shade200, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Quét mã VietQR tự động nhập liệu',
+                        style: GoogleFonts.manrope(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: const Color(
+                            0xFF1E293B,
+                          ), // High contrast slate-800
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.15,
+                            ),
+                            width: 2,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            _qrUrl,
+                            width: 240,
+                            height: 240,
+                            loadingBuilder: (_, child, progress) =>
+                                progress == null
+                                ? child
+                                : const SizedBox(
+                                    width: 240,
+                                    height: 240,
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                      ),
+                                    ),
+                                  ),
+                            errorBuilder: (_, e, s) => SizedBox(
+                              width: 240,
+                              height: 240,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.error_outline_rounded,
+                                      color: AppColors.danger,
+                                      size: 48,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Không tải được mã QR\nKiểm tra lại cấu hình NH',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: c.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      InkWell(
+                        onTap: () => _copyToClipboard(
+                          'nội dung chuyển khoản',
+                          widget.orderCode,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.copy_rounded,
+                                size: 14,
+                                color: c.textSecondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Nội dung CK: ${widget.orderCode}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: c.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Bank details card
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: c.divider.withValues(alpha: 0.5),
+                      width: 1,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Bank details card
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: c.card,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: c.divider.withValues(alpha: 0.5),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  _infoRow('Ngân hàng', widget.bankId, c, isBold: true),
-                  Divider(height: 24, color: c.divider.withValues(alpha: 0.5)),
-                  _infoRow('Số tài khoản', widget.accountNo, c, canCopy: true),
-                  Divider(height: 24, color: c.divider.withValues(alpha: 0.5)),
-                  _infoRow('Chủ tài khoản', widget.accountName, c),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Action Buttons
-            SizedBox(
-              height: 56,
-              child: ElevatedButton.icon(
-                onPressed: _confirming ? null : _confirmPayment,
-                icon: _confirming
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.check_circle_rounded, size: 22),
-                label: Text(
-                  _confirming ? 'ĐANG XÁC NHẬN...' : 'ĐÃ NHẬN TIỀN',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                  child: Column(
+                    children: [
+                      _infoRow('Ngân hàng', widget.bankId, c, isBold: true),
+                      Divider(
+                        height: 24,
+                        color: c.divider.withValues(alpha: 0.5),
+                      ),
+                      _infoRow(
+                        'Số tài khoản',
+                        widget.accountNo,
+                        c,
+                        canCopy: true,
+                      ),
+                      Divider(
+                        height: 24,
+                        color: c.divider.withValues(alpha: 0.5),
+                      ),
+                      _infoRow('Chủ tài khoản', widget.accountName, c),
+                    ],
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  foregroundColor: Colors.white,
-                  shadowColor: AppColors.success.withValues(alpha: 0.3),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+
+                const SizedBox(height: 32),
+
+                // Action Buttons
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _confirming ? null : _confirmPayment,
+                    icon: _confirming
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check_circle_rounded, size: 22),
+                    label: Text(
+                      _confirming ? 'ĐANG XÁC NHẬN...' : 'ĐÃ NHẬN TIỀN',
+                      style: GoogleFonts.manrope(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      foregroundColor: Colors.white,
+                      shadowColor: AppColors.success.withValues(alpha: 0.3),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-            OutlinedButton.icon(
-              onPressed: _cancelOrder,
-              icon: const Icon(
-                Icons.cancel_outlined,
-                size: 20,
-                color: AppColors.danger,
-              ),
-              label: Text(
-                'Hủy đơn hàng này',
-                style: GoogleFonts.manrope(
-                  color: AppColors.danger,
-                  fontWeight: FontWeight.bold,
+                OutlinedButton.icon(
+                  onPressed: _cancelOrder,
+                  icon: const Icon(
+                    Icons.cancel_outlined,
+                    size: 20,
+                    color: AppColors.danger,
+                  ),
+                  label: Text(
+                    'Hủy đơn hàng này',
+                    style: GoogleFonts.manrope(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.danger, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
                 ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.danger, width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

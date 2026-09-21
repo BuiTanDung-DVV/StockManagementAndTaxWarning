@@ -231,7 +231,9 @@ class _QrPreview extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: displayText!));
+                      await Clipboard.setData(
+                        ClipboardData(text: displayText!),
+                      );
                       if (context.mounted) {
                         ToastService.showSuccess('Đã sao chép thông tin QR');
                       }

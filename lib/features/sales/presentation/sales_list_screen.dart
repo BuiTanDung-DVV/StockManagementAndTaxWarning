@@ -10,6 +10,7 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
+import '../../../core/widgets/app_badge.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
@@ -48,8 +49,20 @@ int salesListTotalItems(Map<String, dynamic> data) {
 }
 
 String salesOrderDateLabel(Object? value) {
-  final parsed = DateTime.tryParse(value?.toString() ?? '');
-  if (parsed == null) return 'Chưa rõ ngày';
+  if (value == null) return 'Chưa rõ ngày';
+  final str = value.toString().trim();
+  if (str.isEmpty || str.toLowerCase() == 'null') return 'Chưa rõ ngày';
+  final parsed = DateTime.tryParse(str);
+  if (parsed == null) {
+    final asNum = num.tryParse(str);
+    if (asNum != null && asNum > 1000000000) {
+      final dt = asNum > 1000000000000
+          ? DateTime.fromMillisecondsSinceEpoch(asNum.toInt())
+          : DateTime.fromMillisecondsSinceEpoch(asNum.toInt() * 1000);
+      return DateFormat('dd/MM/yyyy').format(dt.toLocal());
+    }
+    return 'Chưa rõ ngày';
+  }
   return DateFormat('dd/MM/yyyy').format(parsed.toLocal());
 }
 
@@ -1349,15 +1362,61 @@ class _SalesTableHeader extends StatelessWidget {
         children: [
           Expanded(
             flex: 2,
-            child: Text(showShopName ? 'Mã đơn / Cửa hàng' : 'Mã đơn'),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Text(
+                showShopName ? 'Mã đơn / Cửa hàng' : 'Mã đơn',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
-          const Expanded(flex: 3, child: Text('Khách hàng')),
-          const Expanded(flex: 2, child: Text('Ngày giao dịch')),
-          const Expanded(flex: 2, child: Text('Thanh toán')),
-          const Expanded(flex: 2, child: Text('Trạng thái')),
+          const Expanded(
+            flex: 3,
+            child: Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Text(
+                'Khách hàng',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
           const Expanded(
             flex: 2,
-            child: Text('Tổng tiền', textAlign: TextAlign.right),
+            child: Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Text(
+                'Ngày giao dịch',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          const Expanded(
+            flex: 2,
+            child: Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Text(
+                'Thanh toán',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          const Expanded(
+            flex: 2,
+            child: Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Text(
+                'Trạng thái',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          const Expanded(
+            flex: 2,
+            child: Text(
+              'Tổng tiền',
+              textAlign: TextAlign.right,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1393,11 +1452,6 @@ class _OrderRow extends StatelessWidget {
     final customer = order['customer']?['name']?.toString() ?? 'Khách mua lẻ';
     final code = order['orderCode']?.toString() ?? 'DH-${order['id']}';
     final orderDate = salesOrderDateLabel(order['orderDate']);
-    final payment = paid >= total && paid > 0
-        ? 'Đã thanh toán'
-        : paid > 0
-        ? 'Thanh toán một phần'
-        : 'Chưa thanh toán';
 
     return InkWell(
       onTap: onTap,
@@ -1411,64 +1465,80 @@ class _OrderRow extends StatelessWidget {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          code,
-                          style: AppTheme.tabularStyle(
-                            context,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        if (shopName != null) ...[
-                          const SizedBox(height: 2),
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            shopName!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(color: colors.textSecondary),
+                            code,
+                            style: AppTheme.tabularStyle(
+                              context,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
+                          if (shopName != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              shopName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: colors.textSecondary),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                   Expanded(
                     flex: 3,
-                    child: Text(
-                      customer,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      orderDate,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.textSecondary,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        customer,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
                   Expanded(
                     flex: 2,
-                    child: Text(
-                      payment,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.textSecondary,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        orderDate,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.textSecondary,
+                        ),
                       ),
                     ),
                   ),
                   Expanded(
                     flex: 2,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: AppStatusBadge(
-                        label: status.label,
-                        color: status.color,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: PaymentStatusBadge(
+                          isPaid: paid >= total && paid > 0,
+                          isPartiallyPaid: paid > 0 && paid < total,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: AppStatusBadge(
+                          label: status.label,
+                          color: status.color,
+                        ),
                       ),
                     ),
                   ),
@@ -1550,11 +1620,9 @@ class _OrderRow extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       AppStatusBadge(label: status.label, color: status.color),
-                      Text(
-                        payment,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colors.textSecondary,
-                        ),
+                      PaymentStatusBadge(
+                        isPaid: paid >= total && paid > 0,
+                        isPartiallyPaid: paid > 0 && paid < total,
                       ),
                     ],
                   ),

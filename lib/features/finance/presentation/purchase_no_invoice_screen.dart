@@ -2,6 +2,8 @@ import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -58,217 +60,207 @@ class _PurchaseNoInvoiceScreenState
       final pnAsync = ref.watch(
         purchasesNoInvoiceProvider((page: _page, status: requestedStatus)),
       );
-      return pnAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Lỗi: $e')),
-        data: (data) {
-          final rawItems = (data['items'] as List?) ?? [];
-          final totalPages = asInt(data['totalPages'], fallback: 1);
-          final items = rawItems
-              .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList();
-          final totalAmount = asNum(data['filteredAmountTotal']);
-
-          if (items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.receipt_outlined,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    requestedStatus == null
-                        ? 'Chưa có bảng kê nào'
-                        : 'Không có dữ liệu phù hợp bộ lọc',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.receipt_long),
-                    label: const Text('Thêm bảng kê'),
-                    onPressed: _openAddDialog,
-                  ),
-                ],
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: pnAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: AppInlineError(
+                  message:
+                      'Không tải được danh sách bảng kê. Vui lòng thử lại sau.',
+                  onRetry: () => ref.invalidate(purchasesNoInvoiceProvider),
+                ),
               ),
-            );
-          }
+            ),
+            data: (data) {
+              final rawItems = (data['items'] as List?) ?? [];
+              final totalPages = asInt(data['totalPages'], fallback: 1);
+              final items = rawItems
+                  .whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList();
+              final totalAmount = asNum(data['filteredAmountTotal']);
 
-          return RefreshIndicator(
-            onRefresh: () async =>
-                ref.invalidate(purchasesNoInvoiceProvider),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length + (showQuickFilter ? 3 : 2),
-              itemBuilder: (_, index) {
-                if (index == 0) {
-                  return Container(
-                    padding: const EdgeInsets.all(14),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: AppThemeColors.of(context).card,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Tổng giá trị',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          _fmt(totalAmount),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final listStartIndex = showQuickFilter ? 2 : 1;
-
-                if (showQuickFilter && index == 1) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _filterChip('ALL', 'Tất cả'),
-                          const SizedBox(width: 8),
-                          _filterChip('PENDING', 'Chờ duyệt'),
-                          const SizedBox(width: 8),
-                          _filterChip('APPROVED', 'Đã duyệt'),
-                          const SizedBox(width: 8),
-                          _filterChip('REJECTED', 'Từ chối'),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                if (index == items.length + listStartIndex) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: _page > 1
-                              ? () => setState(() => _page--)
-                              : null,
-                          icon: const Icon(Icons.chevron_left),
-                          label: const Text('Trước'),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Trang $_page/$totalPages',
-                          style: TextStyle(
-                            color: AppThemeColors.of(context).textSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton.icon(
-                          onPressed: _page < totalPages
-                              ? () => setState(() => _page++)
-                              : null,
-                          icon: const Icon(Icons.chevron_right),
-                          label: const Text('Sau'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final p = items[index - listStartIndex];
-                final detailItems = (p['items'] as List?) ?? const [];
-                final approvalStatus = (p['approvalStatus'] ?? 'PENDING')
-                    .toString()
-                    .toUpperCase();
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppThemeColors.of(context).card,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              if (items.isEmpty) {
+                return RefreshIndicator(
+                  onRefresh: () async =>
+                      ref.invalidate(purchasesNoInvoiceProvider),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      const SizedBox(height: 80),
+                      AppEmpty(
+                        visual: AppEmptyVisual.document,
+                        message: requestedStatus == null
+                            ? 'Chưa có bảng kê nào'
+                            : 'Không có dữ liệu phù hợp bộ lọc',
+                        subtitle:
+                            'Tạo bảng kê thu mua hàng hóa dịch vụ không có hóa đơn (Mẫu 01/TNDN).',
+                        action: ElevatedButton.icon(
+                          icon: const Icon(Icons.receipt_long),
+                          label: const Text('Thêm bảng kê'),
+                          onPressed: _openAddDialog,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async =>
+                    ref.invalidate(purchasesNoInvoiceProvider),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: items.length + (showQuickFilter ? 3 : 2),
+                  itemBuilder: (_, index) {
+                    if (index == 0) {
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: AppThemeColors.of(context).card,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Tổng giá trị',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              _fmt(totalAmount),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final listStartIndex = showQuickFilter ? 2 : 1;
+
+                    if (showQuickFilter && index == 1) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _filterChip('ALL', 'Tất cả'),
+                              const SizedBox(width: 8),
+                              _filterChip('PENDING', 'Chờ duyệt'),
+                              const SizedBox(width: 8),
+                              _filterChip('APPROVED', 'Đã duyệt'),
+                              const SizedBox(width: 8),
+                              _filterChip('REJECTED', 'Từ chối'),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (index == items.length + listStartIndex) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _page > 1
+                                  ? () => setState(() => _page--)
+                                  : null,
+                              icon: const Icon(Icons.chevron_left),
+                              label: const Text('Trước'),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Trang $_page/$totalPages',
+                              style: TextStyle(
+                                color: AppThemeColors.of(context).textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed: _page < totalPages
+                                  ? () => setState(() => _page++)
+                                  : null,
+                              icon: const Icon(Icons.chevron_right),
+                              label: const Text('Sau'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final p = items[index - listStartIndex];
+                    final detailItems = (p['items'] as List?) ?? const [];
+                    final approvalStatus = (p['approvalStatus'] ?? 'PENDING')
+                        .toString()
+                        .toUpperCase();
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppThemeColors.of(context).card,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            p['recordCode'] ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                p['recordCode'] ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                _fmt(asNum(p['totalAmount'])),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 6),
+                          _buildApprovalChip(approvalStatus),
+                          const SizedBox(height: 4),
                           Text(
-                            _fmt(asNum(p['totalAmount'])),
+                            '${p['sellerName'] ?? ''} ${p['sellerIdentityNumber'] != null ? '• CCCD: ${p['sellerIdentityNumber']}' : ''}',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: AppColors.primary,
+                              color: AppThemeColors.of(context).textSecondary,
+                              fontSize: 12,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      _buildApprovalChip(approvalStatus),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${p['sellerName'] ?? ''} ${p['sellerIdentityNumber'] != null ? '• CCCD: ${p['sellerIdentityNumber']}' : ''}',
-                        style: TextStyle(
-                          color: AppThemeColors.of(context).textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        p['purchaseDate']?.toString().split('T').first ?? '',
-                        style: TextStyle(
-                          color: AppThemeColors.of(context).textSecondary,
-                          fontSize: 11,
-                        ),
-                      ),
-                      if ((p['approvalNotes'] ?? '')
-                          .toString()
-                          .trim()
-                          .isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            'Ghi chú duyệt: ${p['approvalNotes']}',
+                          Text(
+                            p['purchaseDate']?.toString().split('T').first ??
+                                '',
                             style: TextStyle(
                               color: AppThemeColors.of(context).textSecondary,
                               fontSize: 11,
                             ),
                           ),
-                        ),
-                      if (detailItems.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Mặt hàng: ${detailItems.length}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        ...detailItems
-                            .take(3)
-                            .map<Widget>(
-                              (it) => Text(
-                                '- ${it['productName'] ?? ''}: ${it['quantity'] ?? 0} x ${_fmt(asNum(it['unitPrice']))}',
+                          if ((p['approvalNotes'] ?? '')
+                              .toString()
+                              .trim()
+                              .isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                'Ghi chú duyệt: ${p['approvalNotes']}',
                                 style: TextStyle(
                                   color: AppThemeColors.of(
                                     context,
@@ -277,49 +269,74 @@ class _PurchaseNoInvoiceScreenState
                                 ),
                               ),
                             ),
-                      ],
-                      if (isOwner && approvalStatus == 'PENDING') ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _handleApprovalDecision(
-                                  p['id'] as int,
-                                  approve: false,
-                                ),
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: AppColors.danger,
-                                  size: 16,
-                                ),
-                                label: const Text(
-                                  'Từ chối',
-                                  style: TextStyle(color: AppColors.danger),
-                                ),
+                          if (detailItems.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Mặt hàng: ${detailItems.length}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _handleApprovalDecision(
-                                  p['id'] as int,
-                                  approve: true,
+                            const SizedBox(height: 4),
+                            ...detailItems
+                                .take(3)
+                                .map<Widget>(
+                                  (it) => Text(
+                                    '- ${it['productName'] ?? ''}: ${it['quantity'] ?? 0} x ${_fmt(asNum(it['unitPrice']))}',
+                                    style: TextStyle(
+                                      color: AppThemeColors.of(
+                                        context,
+                                      ).textSecondary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ),
-                                icon: const Icon(Icons.check, size: 16),
-                                label: const Text('Duyệt'),
-                              ),
+                          ],
+                          if (isOwner && approvalStatus == 'PENDING') ...[
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _handleApprovalDecision(
+                                      p['id'] as int,
+                                      approve: false,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: AppColors.danger,
+                                      size: 16,
+                                    ),
+                                    label: const Text(
+                                      'Từ chối',
+                                      style: TextStyle(color: AppColors.danger),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _handleApprovalDecision(
+                                      p['id'] as int,
+                                      approve: true,
+                                    ),
+                                    icon: const Icon(Icons.check, size: 16),
+                                    label: const Text('Duyệt'),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
       );
     }
 
@@ -471,23 +488,23 @@ class _PurchaseNoInvoiceScreenState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(approve ? 'Duyet bang ke' : 'Tu choi bang ke'),
+        title: Text(approve ? 'Duyệt bảng kê' : 'Từ chối bảng kê'),
         content: TextField(
           controller: notesController,
           maxLines: 3,
           decoration: const InputDecoration(
-            hintText: 'Ghi chu (khong bat buoc)',
+            hintText: 'Ghi chú (không bắt buộc)',
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Huy'),
+            child: const Text('Hủy'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(approve ? 'Duyet' : 'Tu choi'),
+            child: Text(approve ? 'Duyệt' : 'Từ chối'),
           ),
         ],
       ),
@@ -517,11 +534,13 @@ class _PurchaseNoInvoiceScreenState
       if (!mounted) return;
       ref.invalidate(purchasesNoInvoiceProvider);
       ToastService.showSuccess(
-        approve ? 'Da duyet bang ke' : 'Da tu choi bang ke',
+        approve ? 'Đã duyệt bảng kê' : 'Đã từ chối bảng kê',
       );
     } catch (e) {
       if (!mounted) return;
-      ToastService.showError('Không thể cập nhật phê duyệt: $e');
+      ToastService.showError(
+        'Không thể cập nhật phê duyệt. Vui lòng thử lại sau.',
+      );
     } finally {
       notesController.dispose();
     }
@@ -597,9 +616,16 @@ class _AddPurchaseNoInvoiceDialogState
                 controller: idC,
                 maxLength: 20,
                 decoration: const InputDecoration(labelText: 'CCCD người bán'),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Vui lòng nhập CCCD người bán'
-                    : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Vui lòng nhập CCCD người bán';
+                  }
+                  final trimmed = v.trim();
+                  if (!RegExp(r'^\d{9}(\d{3})?$').hasMatch(trimmed)) {
+                    return 'CCCD/CMND phải gồm 9 hoặc 12 chữ số';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 8),
               const Align(
@@ -643,15 +669,25 @@ class _AddPurchaseNoInvoiceDialogState
                     child: TextFormField(
                       controller: qtyC,
                       decoration: const InputDecoration(labelText: 'Số lượng'),
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextFormField(
                       controller: unitPriceC,
-                      decoration: const InputDecoration(labelText: 'Đơn giá'),
+                      decoration: InputDecoration(
+                        labelText: 'Đơn giá',
+                        helperText: unitPriceC.text.trim().isNotEmpty
+                            ? widget.formatCurrency(
+                                parseCurrency(unitPriceC.text),
+                              )
+                            : null,
+                      ),
                       keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}),
                     ),
                   ),
                 ],
@@ -664,9 +700,8 @@ class _AddPurchaseNoInvoiceDialogState
                       ? null
                       : () {
                           final productName = productC.text.trim();
-                          final quantity = double.tryParse(qtyC.text) ?? 0;
-                          final unitPrice =
-                              double.tryParse(unitPriceC.text) ?? 0;
+                          final quantity = parseQuantity(qtyC.text);
+                          final unitPrice = parseCurrency(unitPriceC.text);
                           if (productName.isEmpty ||
                               quantity <= 0 ||
                               unitPrice < 0) {
@@ -779,8 +814,8 @@ class _AddPurchaseNoInvoiceDialogState
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (productC.text.trim().isNotEmpty) {
-      final quantity = double.tryParse(qtyC.text) ?? 0;
-      final unitPrice = double.tryParse(unitPriceC.text) ?? 0;
+      final quantity = parseQuantity(qtyC.text);
+      final unitPrice = parseCurrency(unitPriceC.text);
       if (quantity > 0 && unitPrice >= 0) {
         lineItems.add({
           'productName': productC.text.trim(),
@@ -820,7 +855,9 @@ class _AddPurchaseNoInvoiceDialogState
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Lưu thất bại: $e';
+        _errorMessage = e is ApiException
+            ? e.message
+            : 'Không thể lưu bảng kê. Vui lòng thử lại sau.';
         _isSubmitting = false;
       });
     }
@@ -842,9 +879,13 @@ class _AddPurchaseNoInvoiceDialogState
             height: 220,
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (e, _) => SizedBox(
+          error: (e, _) => const SizedBox(
             height: 220,
-            child: Center(child: Text('Lỗi tải sản phẩm: $e')),
+            child: Center(
+              child: Text(
+                'Không thể tải danh sách sản phẩm. Vui lòng thử lại.',
+              ),
+            ),
           ),
           data: (data) {
             final products = (data['items'] as List?) ?? const [];

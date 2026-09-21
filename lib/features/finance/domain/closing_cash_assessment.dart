@@ -1,3 +1,5 @@
+import '../../../core/utils/parse_utils.dart';
+
 class ClosingCashAssessment {
   const ClosingCashAssessment({
     required this.actualCash,
@@ -18,8 +20,15 @@ ClosingCashAssessment assessClosingCash({
   double explanationThreshold = 50000,
 }) {
   final normalized = rawActualCash.trim();
-  final parsed = normalized.isEmpty ? null : double.tryParse(normalized);
-  final actualCash = parsed != null && parsed >= 0 ? parsed : null;
+  if (normalized.isEmpty || !RegExp(r'\d').hasMatch(normalized)) {
+    return const ClosingCashAssessment(
+      actualCash: null,
+      difference: null,
+      needsExplanation: false,
+    );
+  }
+  final parsed = parseCurrency(normalized, fallback: -1);
+  final actualCash = parsed >= 0 ? parsed : null;
   final difference = actualCash == null ? null : actualCash - expectedCash;
 
   return ClosingCashAssessment(
