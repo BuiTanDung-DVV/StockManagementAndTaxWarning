@@ -177,7 +177,8 @@ class TaxConfig {
 
   bool get isLoaded => !isLoading && errorMessage == null && thresholds != null;
   TaxRates? get activeRates => rates[businessType];
-  TaxRates? ratesFor(BusinessType type) => rates[type] ?? kDefaultVerifiedRates2026[type];
+  TaxRates? ratesFor(BusinessType type) =>
+      rates[type] ?? kDefaultVerifiedRates2026[type];
   double get effectiveVatRate => activeRates?.vat ?? 0.01;
   double get effectivePitRate => activeRates?.pit ?? 0.005;
 
@@ -309,9 +310,7 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
     double? customPitRate,
   }) async {
     final type = businessType ?? state.businessType;
-    final payload = <String, dynamic>{
-      'businessSector': type.sectorCode,
-    };
+    final payload = <String, dynamic>{'businessSector': type.sectorCode};
     if (customVatRate != null) payload['customVatRate'] = customVatRate;
     if (customPitRate != null) payload['customPitRate'] = customPitRate;
 
@@ -331,10 +330,7 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
   void setBusinessType(BusinessType type) {
     final updatedRates = Map<BusinessType, TaxRates>.from(state.rates);
     // If custom rates were applied to previous sector, reset to default when switching sector unless customized
-    state = state.copyWith(
-      businessType: type,
-      rates: updatedRates,
-    );
+    state = state.copyWith(businessType: type, rates: updatedRates);
   }
 
   void resetToDefaultPolicy() {

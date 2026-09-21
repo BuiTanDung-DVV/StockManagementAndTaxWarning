@@ -4,6 +4,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'core/localization/app_localizations.dart';
+import 'core/localization/locale_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
@@ -50,6 +52,7 @@ class MyApp extends ConsumerWidget {
     ref.watch(authProvider);
     final themeMode = ref.watch(themeProvider);
     final brandColor = ref.watch(brandColorProvider);
+    final appLanguage = ref.watch(localeProvider);
     final router = ref.watch(routerProvider);
 
     // Đồng bộ hóa AppColors động toàn cục trước khi dựng widget tree
@@ -64,7 +67,9 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme(brandColor.color),
       darkTheme: AppTheme.darkTheme(brandColor.color),
       themeMode: themeMode,
+      locale: appLanguage.locale,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

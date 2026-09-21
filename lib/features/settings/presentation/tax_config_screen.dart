@@ -66,15 +66,16 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
         customVat = double.tryParse(_customVatController.text.trim());
         customPit = double.tryParse(_customPitController.text.trim());
       }
-      await ref.read(taxConfigProvider.notifier).saveConfig(
-            customVatRate: customVat,
-            customPitRate: customPit,
-          );
+      await ref
+          .read(taxConfigProvider.notifier)
+          .saveConfig(customVatRate: customVat, customPitRate: customPit);
       if (!mounted) return;
       ToastService.showSuccess('Đã lưu cấu hình thuế thành công!');
     } catch (e) {
       if (!mounted) return;
-      ToastService.showError('Không thể lưu cấu hình thuế lên máy chủ. Đã lưu tạm bộ nhớ máy.');
+      ToastService.showError(
+        'Không thể lưu cấu hình thuế lên máy chủ. Đã lưu tạm bộ nhớ máy.',
+      );
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -87,7 +88,9 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
       _customVatController.clear();
       _customPitController.clear();
     });
-    ToastService.showSuccess('Đã áp dụng biểu thuế chuẩn 2026 (Nghị định 141/2026/NĐ-CP)!');
+    ToastService.showSuccess(
+      'Đã áp dụng biểu thuế chuẩn 2026 (Nghị định 141/2026/NĐ-CP)!',
+    );
   }
 
   @override
@@ -103,8 +106,12 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
     if (_customRatesEnabled) {
       final parsedVat = double.tryParse(_customVatController.text.trim());
       final parsedPit = double.tryParse(_customPitController.text.trim());
-      displayedVatRate = (parsedVat != null ? parsedVat / 100 : config.effectiveVatRate);
-      displayedPitRate = (parsedPit != null ? parsedPit / 100 : config.effectivePitRate);
+      displayedVatRate = (parsedVat != null
+          ? parsedVat / 100
+          : config.effectiveVatRate);
+      displayedPitRate = (parsedPit != null
+          ? parsedPit / 100
+          : config.effectivePitRate);
     } else {
       displayedVatRate = config.effectiveVatRate;
       displayedPitRate = config.effectivePitRate;
@@ -211,17 +218,21 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           ),
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
-                            onPressed: () =>
-                                ref.read(taxConfigProvider.notifier).resetToDefaultPolicy(),
+                            onPressed: () => ref
+                                .read(taxConfigProvider.notifier)
+                                .resetToDefaultPolicy(),
                             icon: const Icon(Icons.shield_outlined),
-                            label: const Text('Sử dụng cấu hình chuẩn 2026 ngay'),
+                            label: const Text(
+                              'Sử dụng cấu hình chuẩn 2026 ngay',
+                            ),
                           ),
                         ],
                       ),
                     ),
             )
           : RefreshIndicator(
-              onRefresh: () async => ref.read(taxConfigProvider.notifier).refresh(),
+              onRefresh: () async =>
+                  ref.read(taxConfigProvider.notifier).refresh(),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.only(bottom: 80),
@@ -277,7 +288,9 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                               IconButton(
                                 tooltip: 'Thử đồng bộ lại máy chủ',
                                 icon: const Icon(Icons.sync_rounded, size: 20),
-                                onPressed: () => ref.read(taxConfigProvider.notifier).refresh(),
+                                onPressed: () => ref
+                                    .read(taxConfigProvider.notifier)
+                                    .refresh(),
                               ),
                             ],
                           ),
@@ -297,7 +310,10 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           ),
                           TextButton.icon(
                             onPressed: _resetToOfficialBenchmark,
-                            icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                            icon: const Icon(
+                              Icons.restart_alt_rounded,
+                              size: 16,
+                            ),
                             label: const Text('Mặc định chuẩn 2026'),
                           ),
                         ],
@@ -309,11 +325,15 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           rates: config.ratesFor(type)!,
                           isSelected: config.businessType == type,
                           onTap: () {
-                            ref.read(taxConfigProvider.notifier).setBusinessType(type);
+                            ref
+                                .read(taxConfigProvider.notifier)
+                                .setBusinessType(type);
                             if (!_customRatesEnabled) {
                               final r = config.ratesFor(type)!;
-                              _customVatController.text = (r.vat * 100).toStringAsFixed(2);
-                              _customPitController.text = (r.pit * 100).toStringAsFixed(2);
+                              _customVatController.text = (r.vat * 100)
+                                  .toStringAsFixed(2);
+                              _customPitController.text = (r.pit * 100)
+                                  .toStringAsFixed(2);
                             }
                           },
                         ),
@@ -336,25 +356,32 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           Expanded(
                             child: _RateCard(
                               title: 'Thuế GTGT',
-                              percentage: '${(displayedVatRate * 100).toStringAsFixed(2)}%',
+                              percentage:
+                                  '${(displayedVatRate * 100).toStringAsFixed(2)}%',
                               color: AppColors.primary,
-                              subtitle: _customRatesEnabled ? 'Mức tùy chỉnh' : 'Giá trị gia tăng',
+                              subtitle: _customRatesEnabled
+                                  ? 'Mức tùy chỉnh'
+                                  : 'Giá trị gia tăng',
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _RateCard(
                               title: 'Thuế TNCN',
-                              percentage: '${(displayedPitRate * 100).toStringAsFixed(2)}%',
+                              percentage:
+                                  '${(displayedPitRate * 100).toStringAsFixed(2)}%',
                               color: AppColors.success,
-                              subtitle: _customRatesEnabled ? 'Mức tùy chỉnh' : 'Thu nhập cá nhân',
+                              subtitle: _customRatesEnabled
+                                  ? 'Mức tùy chỉnh'
+                                  : 'Thu nhập cá nhân',
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _RateCard(
                               title: 'Tổng thuế',
-                              percentage: '${((displayedVatRate + displayedPitRate) * 100).toStringAsFixed(2)}%',
+                              percentage:
+                                  '${((displayedVatRate + displayedPitRate) * 100).toStringAsFixed(2)}%',
                               color: AppColors.warning,
                               subtitle: 'Trích trên doanh thu',
                             ),
@@ -380,7 +407,9 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Icon(
@@ -392,7 +421,8 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Tùy chỉnh thuế suất riêng',
@@ -418,8 +448,12 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                                     setState(() {
                                       _customRatesEnabled = val;
                                       if (val) {
-                                        _customVatController.text = (config.effectiveVatRate * 100).toStringAsFixed(2);
-                                        _customPitController.text = (config.effectivePitRate * 100).toStringAsFixed(2);
+                                        _customVatController.text =
+                                            (config.effectiveVatRate * 100)
+                                                .toStringAsFixed(2);
+                                        _customPitController.text =
+                                            (config.effectivePitRate * 100)
+                                                .toStringAsFixed(2);
                                       } else {
                                         _customVatController.clear();
                                         _customPitController.clear();
@@ -439,14 +473,25 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                                   Expanded(
                                     child: TextField(
                                       controller: _customVatController,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
                                       onChanged: (_) => setState(() {}),
                                       decoration: InputDecoration(
                                         labelText: 'Tỷ lệ GTGT tùy chỉnh (%)',
                                         hintText: 'Ví dụ: 1.0',
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                         suffixText: '%',
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 12,
+                                            ),
                                       ),
                                     ),
                                   ),
@@ -454,14 +499,25 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                                   Expanded(
                                     child: TextField(
                                       controller: _customPitController,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
                                       onChanged: (_) => setState(() {}),
                                       decoration: InputDecoration(
                                         labelText: 'Tỷ lệ TNCN tùy chỉnh (%)',
                                         hintText: 'Ví dụ: 0.5',
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
                                         suffixText: '%',
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 12,
+                                            ),
                                       ),
                                     ),
                                   ),
@@ -486,8 +542,10 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                       const SizedBox(height: 12),
                       _ThresholdCard(
                         title: 'Vùng 1: An toàn (Không chịu thuế)',
-                        range: 'Doanh thu năm ≤ ${_moneyThreshold(config.thresholds!.tier3)}',
-                        description: 'Dưới 900 triệu/năm: Hộ kinh doanh hoàn toàn không phải nộp thuế GTGT & TNCN.',
+                        range:
+                            'Doanh thu năm ≤ ${_moneyThreshold(config.thresholds!.tier3)}',
+                        description:
+                            'Dưới 900 triệu/năm: Hộ kinh doanh hoàn toàn không phải nộp thuế GTGT & TNCN.',
                         badgeText: 'An toàn',
                         color: AppColors.success,
                         icon: Icons.check_circle_outline_rounded,
@@ -495,8 +553,10 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                       const SizedBox(height: 10),
                       _ThresholdCard(
                         title: 'Vùng 2: Cảnh báo sớm',
-                        range: '${_moneyThreshold(config.thresholds!.tier3)} - ${_moneyThreshold(config.thresholds!.tier4)}',
-                        description: 'Từ 900 triệu đến 1 tỷ/năm: Hệ thống kích hoạt cảnh báo sớm để chuẩn bị hồ sơ sổ sách.',
+                        range:
+                            '${_moneyThreshold(config.thresholds!.tier3)} - ${_moneyThreshold(config.thresholds!.tier4)}',
+                        description:
+                            'Từ 900 triệu đến 1 tỷ/năm: Hệ thống kích hoạt cảnh báo sớm để chuẩn bị hồ sơ sổ sách.',
                         badgeText: 'Cần chú ý',
                         color: AppColors.warning,
                         icon: Icons.warning_amber_rounded,
@@ -504,8 +564,10 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                       const SizedBox(height: 10),
                       _ThresholdCard(
                         title: 'Vùng 3: Chịu thuế & Bắt buộc HĐĐT',
-                        range: 'Doanh thu năm > ${_moneyThreshold(config.thresholds!.tier4)}',
-                        description: 'Trên 1 tỷ/năm: Bắt buộc nộp thuế GTGT + TNCN theo tỷ lệ và xuất Hóa đơn điện tử máy tính tiền.',
+                        range:
+                            'Doanh thu năm > ${_moneyThreshold(config.thresholds!.tier4)}',
+                        description:
+                            'Trên 1 tỷ/năm: Bắt buộc nộp thuế GTGT + TNCN theo tỷ lệ và xuất Hóa đơn điện tử máy tính tiền.',
                         badgeText: 'Bắt buộc HĐĐT',
                         color: AppColors.danger,
                         icon: Icons.error_outline_rounded,
@@ -540,9 +602,12 @@ class _BusinessTypeCard extends StatelessWidget {
   };
 
   String get _examples => switch (type) {
-    BusinessType.distribution => 'Vật liệu xây dựng, phân bón, nông sản, bán lẻ tiêu dùng',
-    BusinessType.manufacturing => 'Cơ khí, sản xuất mộc, vận tải, xây lắp bao thầu NVL',
-    BusinessType.services => 'Sửa chữa, dịch vụ lưu trú, ăn uống, thi công không thầu NVL',
+    BusinessType.distribution =>
+      'Vật liệu xây dựng, phân bón, nông sản, bán lẻ tiêu dùng',
+    BusinessType.manufacturing =>
+      'Cơ khí, sản xuất mộc, vận tải, xây lắp bao thầu NVL',
+    BusinessType.services =>
+      'Sửa chữa, dịch vụ lưu trú, ăn uống, thi công không thầu NVL',
     BusinessType.other => 'Các ngành nghề hoạt động kinh doanh thương mại khác',
   };
 
@@ -601,12 +666,17 @@ class _BusinessTypeCard extends StatelessWidget {
                           style: GoogleFonts.manrope(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
-                            color: isSelected ? AppColors.primary : c.textPrimary,
+                            color: isSelected
+                                ? AppColors.primary
+                                : c.textPrimary,
                           ),
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -643,7 +713,9 @@ class _BusinessTypeCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Icon(
-              isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+              isSelected
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_off_rounded,
               color: isSelected ? AppColors.primary : c.textMuted,
               size: 22,
             ),
@@ -774,7 +846,10 @@ class _ThresholdCard extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),

@@ -12,6 +12,9 @@ import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_ui_components.dart';
+import '../../../core/localization/app_language.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/localization/locale_provider.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/costing_provider.dart';
@@ -73,6 +76,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final auth = ref.watch(authProvider);
     final notifications = ref.watch(notificationProvider);
     final brandColor = ref.watch(brandColorProvider);
+    final appLanguage = ref.watch(localeProvider);
+    final tr = context.tr;
     final costing = ref.watch(costingProvider);
     final canManageSettings =
         shopState.isOwner || shopState.hasPermission('settings');
@@ -84,29 +89,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final sections = <_SettingsSectionData>[
       _SettingsSectionData(
-        title: 'Tài khoản & bảo mật',
+        title: tr.settings.sectionAccountSecurity,
         icon: Icons.shield_outlined,
         iconColor: const Color(0xFF2563EB),
         entries: [
           _SettingsEntry(
-            label: 'Thông tin cá nhân',
-            description: 'Cập nhật hồ sơ và thông tin liên hệ của tài khoản.',
+            label: tr.settings.profile,
+            description: tr.settings.profileDesc,
             icon: Icons.person_outline_rounded,
             iconColor: const Color(0xFF2563EB),
             onTap: () => context.push('/profile'),
           ),
           _SettingsEntry(
-            label: 'Đổi mật khẩu',
-            description: 'Thiết lập mật khẩu mới cho tài khoản đang đăng nhập.',
+            label: tr.settings.changePassword,
+            description: tr.settings.changePasswordDesc,
             icon: Icons.lock_reset_rounded,
             iconColor: const Color(0xFF3B82F6),
             onTap: () => context.push('/change-password'),
           ),
           if (shopState.userShops.length > 1)
             _SettingsEntry(
-              label: 'Chuyển cửa hàng',
-              description:
-                  'Đang xem: ${shopState.currentShopName ?? 'Tất cả cửa hàng'}.',
+              label: tr.settings.switchShop,
+              description: tr.settings.viewingShop(
+                shopState.currentShopName ?? tr.settings.allShops,
+              ),
               icon: Icons.swap_horiz_rounded,
               iconColor: const Color(0xFF6366F1),
               onTap: () => _showShopSwitcher(context, shopState),
@@ -115,20 +121,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       if (canManageStaff)
         _SettingsSectionData(
-          title: 'Nhân viên & phân quyền',
+          title: tr.settings.sectionStaffRoles,
           icon: Icons.badge_outlined,
           iconColor: const Color(0xFFD97706),
           entries: [
             _SettingsEntry(
-              label: 'Danh sách nhân viên',
-              description: 'Quản lý thành viên đang làm việc tại cửa hàng.',
+              label: tr.settings.staffList,
+              description: tr.settings.staffListDesc,
               icon: Icons.people_alt_outlined,
               iconColor: const Color(0xFFD97706),
               onTap: () => context.push('/staff'),
             ),
             _SettingsEntry(
-              label: 'Vai trò và quyền truy cập',
-              description: 'Thiết lập phạm vi thao tác theo từng vai trò.',
+              label: tr.settings.rolesAndPermissions,
+              description: tr.settings.rolesAndPermissionsDesc,
               icon: Icons.admin_panel_settings_outlined,
               iconColor: const Color(0xFFF59E0B),
               onTap: () => context.push('/roles'),
@@ -136,37 +142,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       _SettingsSectionData(
-        title: 'Hàng hóa & kho vận',
+        title: tr.settings.sectionGoodsLogistics,
         icon: Icons.inventory_2_outlined,
         iconColor: const Color(0xFF0D9488),
         entries: [
           if (canManageProducts)
             _SettingsEntry(
-              label: 'Danh mục sản phẩm',
-              description: 'Chuẩn hóa nhóm hàng phục vụ tra cứu và báo cáo.',
+              label: tr.settings.productCategories,
+              description: tr.settings.productCategoriesDesc,
               icon: Icons.category_outlined,
               iconColor: const Color(0xFF0D9488),
               onTap: () => context.push('/settings/product-categories'),
             ),
           if (canManageSettings)
             _SettingsEntry(
-              label: 'Nhật ký hoạt động',
-              description:
-                  'Tra cứu thao tác quan trọng đã thực hiện trong hệ thống.',
+              label: tr.settings.activityLogs,
+              description: tr.settings.activityLogsDesc,
               icon: Icons.history_rounded,
               iconColor: const Color(0xFF14B8A6),
               onTap: () => context.push('/activity-logs'),
             ),
           if (canManageSettings)
             _SettingsEntry(
-              label: 'Phương pháp tính giá vốn',
+              label: tr.settings.costingMethod,
               description: costing.isLoading
-                  ? 'Đang tải cấu hình…'
+                  ? tr.settings.costingMethodLoading
                   : costing.errorMessage != null || !costing.hasData
-                  ? 'Chưa tải được cấu hình từ cơ sở dữ liệu.'
+                  ? tr.settings.costingMethodError
                   : costing.method == 'FIFO'
-                  ? 'Đang dùng: Nhập trước – xuất trước (FIFO).'
-                  : 'Đang dùng: Bình quân gia quyền (AVG).',
+                  ? tr.settings.costingMethodFifo
+                  : tr.settings.costingMethodAvg,
               icon: Icons.calculate_outlined,
               iconColor: const Color(0xFF0284C7),
               onTap: costing.isLoading || !costing.hasData
@@ -175,9 +180,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           if (canManageProducts)
             _SettingsEntry(
-              label: 'Định mức tồn tối thiểu',
-              description:
-                  'Thiết lập ngưỡng cảnh báo khi mặt hàng chạm mức an toàn.',
+              label: tr.settings.minStockAlert,
+              description: tr.settings.minStockAlertDesc,
               icon: Icons.warning_amber_rounded,
               iconColor: const Color(0xFFE11D48),
               onTap: () => context.push('/inventory'),
@@ -185,40 +189,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
       _SettingsSectionData(
-        title: 'Cửa hàng & thanh toán',
+        title: tr.settings.sectionShopPayment,
         icon: Icons.storefront_rounded,
         iconColor: const Color(0xFF059669),
         entries: [
           if (canManageSettings)
             _SettingsEntry(
-              label: 'Thông tin cửa hàng',
-              description:
-                  'Cập nhật tên, địa chỉ, mã số thuế và thông tin liên hệ.',
+              label: tr.settings.shopProfile,
+              description: tr.settings.shopProfileDesc,
               icon: Icons.store_outlined,
               iconColor: const Color(0xFF059669),
               onTap: () => context.push('/shop-profile'),
             ),
           if (canManageSettings)
             _SettingsEntry(
-              label: 'Ảnh QR thanh toán',
-              description: 'Tải lên hoặc thay ảnh QR nhận tiền của cửa hàng.',
+              label: tr.settings.paymentQr,
+              description: tr.settings.paymentQrDesc,
               icon: Icons.qr_code_2_rounded,
               iconColor: const Color(0xFF10B981),
               onTap: () => showShopPaymentQrDialog(context, canManage: true),
             ),
           if (canManageSettings)
             _SettingsEntry(
-              label: 'Mẫu hóa đơn in',
-              description:
-                  'Tùy chỉnh nội dung và nhận diện trên chứng từ bán hàng.',
+              label: tr.settings.receiptTemplate,
+              description: tr.settings.receiptTemplateDesc,
               icon: Icons.receipt_long_outlined,
               iconColor: const Color(0xFF34D399),
               onTap: () => context.push('/settings/receipt-template'),
             ),
           if (canManageSettings)
             _SettingsEntry(
-              label: 'Đơn vị vận chuyển',
-              description: 'Quản lý đối tác giao hàng và cấu hình vận chuyển.',
+              label: tr.settings.shippingCarriers,
+              description: tr.settings.shippingCarriersDesc,
               icon: Icons.local_shipping_outlined,
               iconColor: const Color(0xFF059669),
               onTap: () => context.push('/settings/shipping-carriers'),
@@ -226,42 +228,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
       _SettingsSectionData(
-        title: 'Thuế & trợ giúp nghiệp vụ',
+        title: tr.settings.sectionTaxSupport,
         icon: Icons.account_balance_outlined,
         iconColor: const Color(0xFF7C3AED),
         entries: [
           if (canManageSettings)
             _SettingsEntry(
-              label: 'Cấu hình thuế',
-              description:
-                  'Thiết lập thông số dùng trong chức năng hỗ trợ tính thuế.',
+              label: tr.settings.taxConfig,
+              description: tr.settings.taxConfigDesc,
               icon: Icons.tune_rounded,
               iconColor: const Color(0xFF7C3AED),
               onTap: () => context.push('/tax-config'),
             ),
           if (canViewFinance)
             _SettingsEntry(
-              label: 'Kênh hỗ trợ thuế',
-              description:
-                  'Xem đầu mối và tài liệu hỗ trợ khi cần làm rõ nghiệp vụ.',
+              label: tr.settings.taxSupport,
+              description: tr.settings.taxSupportDesc,
               icon: Icons.support_agent_rounded,
               iconColor: const Color(0xFF8B5CF6),
               onTap: () => context.push('/tax-support'),
             ),
           if (canManageSettings)
             _SettingsEntry(
-              label: 'Nguồn tài liệu tham khảo',
-              description:
-                  'Quản lý nguồn kiến thức được dùng trong phần trợ giúp.',
+              label: tr.settings.aiKnowledge,
+              description: tr.settings.aiKnowledgeDesc,
               icon: Icons.menu_book_outlined,
               iconColor: const Color(0xFFA855F7),
               onTap: () => context.push('/settings/ai-knowledge'),
             ),
           if (canViewFinance)
             _SettingsEntry(
-              label: 'Cổng tra cứu Thuế điện tử',
-              description:
-                  'Liên kết tra cứu nghĩa vụ thuế trên thuedientu.gdt.gov.vn.',
+              label: tr.settings.taxPortal,
+              description: tr.settings.taxPortalDesc,
               icon: Icons.open_in_new_rounded,
               iconColor: const Color(0xFF7C3AED),
               onTap: () => context.push('/tax-support'),
@@ -269,38 +267,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
       _SettingsSectionData(
-        title: 'Hệ thống & giao diện',
+        title: tr.settings.sectionSystemInterface,
         icon: Icons.settings_suggest_outlined,
         iconColor: const Color(0xFF4F46E5),
         entries: [
           _SettingsEntry(
-            label: 'Trung tâm thông báo',
-            description: 'Xem cảnh báo vận hành và thông báo cần xử lý.',
+            label: tr.settings.notificationCenter,
+            description: tr.settings.notificationCenterDesc,
             icon: Icons.notifications_none_rounded,
             iconColor: const Color(0xFF4F46E5),
             badge: notifications.unreadCount > 0
-                ? '${notifications.unreadCount} chưa đọc'
+                ? tr.settings.unreadCountBadge(notifications.unreadCount)
                 : null,
             onTap: () => context.push('/notifications'),
           ),
           _SettingsEntry(
-            label: 'Màu giao diện',
-            description: 'Đang dùng: ${brandColor.label}.',
+            label: tr.settings.language,
+            description: tr.settings.currentLanguage(
+              '${appLanguage.flag} ${appLanguage.label}',
+            ),
+            icon: Icons.language_rounded,
+            iconColor: const Color(0xFF0284C7),
+            onTap: () => _showLanguagePicker(context, appLanguage),
+          ),
+          _SettingsEntry(
+            label: tr.settings.brandColor,
+            description: tr.settings.currentBrandColor(brandColor.label),
             icon: Icons.palette_outlined,
             iconColor: brandColor.color,
             onTap: () => _showBrandColorPicker(context, brandColor),
           ),
           if (shopState.isOwner)
             _SettingsEntry(
-              label: 'Sao lưu và khôi phục',
-              description: 'Tạo bản sao dữ liệu và khôi phục khi có sự cố.',
+              label: tr.settings.backupRestore,
+              description: tr.settings.backupRestoreDesc,
               icon: Icons.cloud_sync_outlined,
               iconColor: const Color(0xFF6366F1),
               onTap: () => context.push('/settings/backup-restore'),
             ),
           _SettingsEntry(
-            label: 'Thông tin phần mềm',
-            description: 'Xem phiên bản và thông tin sản phẩm.',
+            label: tr.settings.appInfo,
+            description: tr.settings.appInfoDesc,
             icon: Icons.info_outline_rounded,
             iconColor: const Color(0xFF64748B),
             onTap: () => _showAbout(context),
@@ -347,9 +354,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AppPageHeader(
-                  title: 'Cài đặt hệ thống',
-                  subtitle:
-                      'Quản lý tài khoản, cửa hàng, phân quyền và các cấu hình nghiệp vụ.',
+                  title: tr.settings.systemSettings,
+                  subtitle: tr.settings.subtitle,
                   dense: true,
                   action: featureGuideButton(context, 'settings'),
                   compactAction: featureGuideButton(context, 'settings'),
@@ -395,8 +401,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                     decoration: InputDecoration(
-                      hintText:
-                          'Tìm nhanh một thiết lập, nhân viên, thuế, kho hàng...',
+                      hintText: tr.settings.searchHint,
                       hintStyle: GoogleFonts.inter(
                         color: colors.textMuted,
                         fontSize: 13.5,
@@ -446,7 +451,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Tìm thấy ${filteredSections.fold<int>(0, (sum, s) => sum + s.entries.length)} thiết lập phù hợp',
+                          tr.settings.searchResultsFound(
+                            filteredSections.fold<int>(
+                              0,
+                              (sum, s) => sum + s.entries.length,
+                            ),
+                          ),
                           style: GoogleFonts.inter(
                             color: colors.textSecondary,
                             fontSize: 12.5,
@@ -460,7 +470,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             setState(() => _searchQuery = '');
                           },
                           icon: const Icon(Icons.close_rounded, size: 14),
-                          label: const Text('Xóa bộ lọc'),
+                          label: Text(tr.settings.clearFilter),
                           style: TextButton.styleFrom(
                             visualDensity: VisualDensity.compact,
                             foregroundColor: colors.textSecondary,
@@ -480,7 +490,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          'Không tìm thấy thiết lập phù hợp.',
+                          tr.settings.noSettingsFound,
                           style: TextStyle(color: colors.textSecondary),
                         ),
                       ),
@@ -502,7 +512,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _confirmLogout(context),
                     icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: const Text('Đăng xuất tài khoản'),
+                    label: Text(tr.settings.logoutButton),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.danger,
                       side: BorderSide(
@@ -685,6 +695,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                   ],
                 ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLanguagePicker(BuildContext context, AppLanguage current) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final colors = AppThemeColors.of(sheetContext);
+        final tr = sheetContext.tr;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.xl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tr.settings.selectLanguage,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  tr.settings.languageSubtitle,
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                for (final item in AppLanguage.values)
+                  _LanguageOption(
+                    item: item,
+                    selected: item == current,
+                    onTap: () {
+                      ref.read(localeProvider.notifier).setLanguage(item);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
               ],
             ),
           ),
@@ -1177,7 +1237,7 @@ class _SettingsSection extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      '${section.entries.length} mục',
+                      context.tr.settings.itemsCount(section.entries.length),
                       style: GoogleFonts.inter(
                         color: colors.textSecondary,
                         fontSize: 11,
@@ -1496,6 +1556,91 @@ class _CostingOption extends StatelessWidget {
                 AppStatusBadge(label: 'Đang dùng', color: primary),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageOption extends StatelessWidget {
+  final AppLanguage item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _LanguageOption({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        color: selected ? primary.withValues(alpha: 0.08) : colors.card,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: selected ? primary : colors.divider,
+            width: selected ? 1.5 : 1.0,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 4,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: colors.bg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: colors.divider),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(item.flag, style: const TextStyle(fontSize: 22)),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.englishLabel,
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (selected)
+                  Icon(Icons.check_circle_rounded, color: primary, size: 22),
+              ],
+            ),
           ),
         ),
       ),
