@@ -3,6 +3,8 @@ import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_avatar.dart';
+import 'avatar_picker_dialog.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -138,65 +140,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  // Avatar with Premium Glassmorphism Feel
+                  // Interactive AppAvatar
                   Center(
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 96,
-                          height: 96,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.1,
-                            ),
-                            borderRadius: BorderRadius.circular(28),
-                            border: Border.all(
-                              color: theme.colorScheme.primary.withValues(
-                                alpha: 0.2,
-                              ),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: theme.colorScheme.primary.withValues(
-                                  alpha: 0.1,
-                                ),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            (_nameCtrl.text.isNotEmpty
-                                    ? _nameCtrl.text[0]
-                                    : '?')
-                                .toUpperCase(),
-                            style: GoogleFonts.manrope(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: c.card, width: 2.5),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt_rounded,
-                              size: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: AppAvatar(
+                      size: 96,
+                      borderWidth: 3,
+                      showEditBadge: true,
+                      fallbackInitials:
+                          (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?')
+                              .toUpperCase(),
+                      onTap: () => AvatarPickerDialog.show(context),
                     ),
                   ),
                   const SizedBox(height: 16),

@@ -319,7 +319,7 @@ class _ViSettings implements SettingsTranslations {
   @override
   String unreadCountBadge(int count) => '$count chưa đọc';
   @override
-  String get brandColor => 'Màu giao diện';
+  String get brandColor => 'Màu sắc & Chủ đề';
   @override
   String currentBrandColor(String name) => 'Đang dùng: $name.';
   @override
@@ -327,6 +327,21 @@ class _ViSettings implements SettingsTranslations {
   @override
   String get brandColorDesc =>
       'Màu được áp dụng cho nút chính và trạng thái đang chọn.';
+  @override
+  String get appearanceAndTheme => 'Giao diện & Màu sắc';
+  @override
+  String get appearanceDesc =>
+      'Chế độ Sáng/Tối, bảng màu thương hiệu và xem trước trực tiếp.';
+  @override
+  String get appWallpaper => 'Hình nền ứng dụng';
+  @override
+  String get appWallpaperDesc =>
+      'Gradient nghệ thuật, họa tiết pattern và hiệu ứng làm mờ kính.';
+  @override
+  String get userAvatar => 'Ảnh đại diện tài khoản';
+  @override
+  String get userAvatarDesc =>
+      'Bộ sưu tập avatar doanh nghiệp hoặc ảnh liên kết cá nhân.';
   @override
   String get language => 'Ngôn ngữ hiển thị';
   @override

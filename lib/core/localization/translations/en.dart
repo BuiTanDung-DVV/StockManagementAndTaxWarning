@@ -329,6 +329,21 @@ class _EnSettings implements SettingsTranslations {
   String get brandColorDesc =>
       'Applies to primary buttons, highlights, and active badges.';
   @override
+  String get appearanceAndTheme => 'Theme & Appearance';
+  @override
+  String get appearanceDesc =>
+      'Light/Dark mode, brand accent palettes, and live interactive preview.';
+  @override
+  String get appWallpaper => 'App Background & Wallpaper';
+  @override
+  String get appWallpaperDesc =>
+      'Artistic gradients, subtle patterns, wallpapers, and glassmorphism blur.';
+  @override
+  String get userAvatar => 'Profile Avatar';
+  @override
+  String get userAvatarDesc =>
+      'Curated professional avatar collection or custom photo link.';
+  @override
   String get language => 'Display Language';
   @override
   String currentLanguage(String name) => 'Active: $name.';
