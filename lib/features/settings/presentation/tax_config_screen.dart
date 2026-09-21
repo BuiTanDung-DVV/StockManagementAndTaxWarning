@@ -98,6 +98,18 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
 
     _syncControllers(config);
 
+    final double displayedVatRate;
+    final double displayedPitRate;
+    if (_customRatesEnabled) {
+      final parsedVat = double.tryParse(_customVatController.text.trim());
+      final parsedPit = double.tryParse(_customPitController.text.trim());
+      displayedVatRate = (parsedVat != null ? parsedVat / 100 : config.effectiveVatRate);
+      displayedPitRate = (parsedPit != null ? parsedPit / 100 : config.effectivePitRate);
+    } else {
+      displayedVatRate = config.effectiveVatRate;
+      displayedPitRate = config.effectivePitRate;
+    }
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -324,25 +336,25 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           Expanded(
                             child: _RateCard(
                               title: 'Thuế GTGT',
-                              percentage: '${(config.effectiveVatRate * 100).toStringAsFixed(2)}%',
+                              percentage: '${(displayedVatRate * 100).toStringAsFixed(2)}%',
                               color: AppColors.primary,
-                              subtitle: 'Giá trị gia tăng',
+                              subtitle: _customRatesEnabled ? 'Mức tùy chỉnh' : 'Giá trị gia tăng',
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _RateCard(
                               title: 'Thuế TNCN',
-                              percentage: '${(config.effectivePitRate * 100).toStringAsFixed(2)}%',
+                              percentage: '${(displayedPitRate * 100).toStringAsFixed(2)}%',
                               color: AppColors.success,
-                              subtitle: 'Thu nhập cá nhân',
+                              subtitle: _customRatesEnabled ? 'Mức tùy chỉnh' : 'Thu nhập cá nhân',
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _RateCard(
                               title: 'Tổng thuế',
-                              percentage: '${((config.effectiveVatRate + config.effectivePitRate) * 100).toStringAsFixed(2)}%',
+                              percentage: '${((displayedVatRate + displayedPitRate) * 100).toStringAsFixed(2)}%',
                               color: AppColors.warning,
                               subtitle: 'Trích trên doanh thu',
                             ),
@@ -428,6 +440,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                                     child: TextField(
                                       controller: _customVatController,
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      onChanged: (_) => setState(() {}),
                                       decoration: InputDecoration(
                                         labelText: 'Tỷ lệ GTGT tùy chỉnh (%)',
                                         hintText: 'Ví dụ: 1.0',
@@ -442,6 +455,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                                     child: TextField(
                                       controller: _customPitController,
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      onChanged: (_) => setState(() {}),
                                       decoration: InputDecoration(
                                         labelText: 'Tỷ lệ TNCN tùy chỉnh (%)',
                                         hintText: 'Ví dụ: 0.5',
