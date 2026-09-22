@@ -213,61 +213,63 @@ class _MainShellState extends ConsumerState<MainShell> {
 
         final page = ColoredBox(
           color: colors.bg,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Column(
-                children: [
-                  if (showUtilityHeader)
-                    _ShellUtilityHeader(
-                      compact: mode == MainShellNavigationMode.bottomBar,
-                      shop: shop,
-                      showAiRestore: showAiHeaderAction,
-                      showShopQr: shouldShowShopPaymentQr(
-                        isAllShops: shop.isAllShops,
-                      ),
-                      onSearch: () async {
-                        final route = await showGlobalSearchPanel(
+          child: AppBackgroundWrapper(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Column(
+                  children: [
+                    if (showUtilityHeader)
+                      _ShellUtilityHeader(
+                        compact: mode == MainShellNavigationMode.bottomBar,
+                        shop: shop,
+                        showAiRestore: showAiHeaderAction,
+                        showShopQr: shouldShowShopPaymentQr(
+                          isAllShops: shop.isAllShops,
+                        ),
+                        onSearch: () async {
+                          final route = await showGlobalSearchPanel(
+                            context,
+                            api: ref.read(apiClientProvider),
+                          );
+                          if (route != null &&
+                              route.isNotEmpty &&
+                              context.mounted) {
+                            context.go(route);
+                          }
+                        },
+                        onNotifications: () => context.go('/notifications'),
+                        onShopSelected: (shopId) =>
+                            ref.read(shopProvider.notifier).switchShop(shopId),
+                        onShopQr: () => showShopPaymentQrDialog(
                           context,
-                          api: ref.read(apiClientProvider),
-                        );
-                        if (route != null &&
-                            route.isNotEmpty &&
-                            context.mounted) {
-                          context.go(route);
-                        }
-                      },
-                      onNotifications: () => context.go('/notifications'),
-                      onShopSelected: (shopId) =>
-                          ref.read(shopProvider.notifier).switchShop(shopId),
-                      onShopQr: () => showShopPaymentQrDialog(
-                        context,
-                        canManage:
-                            shop.isOwner ||
-                            shop.hasPermission('settings', 'edit'),
+                          canManage:
+                              shop.isOwner ||
+                              shop.hasPermission('settings', 'edit'),
+                        ),
+                        onRestoreAi: () {
+                          ref
+                              .read(aiAssistantLauncherVisibleProvider.notifier)
+                              .show();
+                          ref.read(aiAssistantOpenProvider.notifier).open();
+                        },
                       ),
-                      onRestoreAi: () {
-                        ref
-                            .read(aiAssistantLauncherVisibleProvider.notifier)
-                            .show();
-                        ref.read(aiAssistantOpenProvider.notifier).open();
-                      },
-                    ),
-                  Expanded(child: widget.child),
-                ],
-              ),
-              if (showAi)
-                Positioned.fill(
-                  child: AiAssistantWidget(
-                    showLauncher: false,
-                    topSafeInset: showUtilityHeader
-                        ? mode == MainShellNavigationMode.bottomBar
-                              ? 60
-                              : 68
-                        : 0,
-                  ),
+                    Expanded(child: widget.child),
+                  ],
                 ),
-            ],
+                if (showAi)
+                  Positioned.fill(
+                    child: AiAssistantWidget(
+                      showLauncher: false,
+                      topSafeInset: showUtilityHeader
+                          ? mode == MainShellNavigationMode.bottomBar
+                                ? 60
+                                : 68
+                          : 0,
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
 
