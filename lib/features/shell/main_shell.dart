@@ -7,8 +7,6 @@ import '../../core/assets/app_assets.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/theme/app_background_wrapper.dart';
-import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/ai_assistant_widget.dart';
 import '../../core/widgets/global_search_delegate.dart';
 import '../settings/presentation/shop_payment_qr_dialog.dart';
@@ -212,7 +210,8 @@ class _MainShellState extends ConsumerState<MainShell> {
         );
         final showAiHeaderAction = showAi;
 
-        final page = AppBackgroundWrapper(
+        final page = ColoredBox(
+          color: colors.bg,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -491,12 +490,6 @@ class _ShellUtilityHeader extends StatelessWidget {
                 semanticLabel: 'Mở thông báo',
                 onPressed: onNotifications,
               ),
-              const SizedBox(width: AppSpacing.xs),
-              AppAvatar(
-                size: 32,
-                showEditBadge: false,
-                onTap: () => context.push('/profile'),
-              ),
             ],
             if (!compact) ...[
               OutlinedButton(
@@ -546,12 +539,6 @@ class _ShellUtilityHeader extends StatelessWidget {
                 onPressed: onNotifications,
               ),
               const SizedBox(width: AppSpacing.sm),
-              AppAvatar(
-                size: 34,
-                showEditBadge: false,
-                onTap: () => context.push('/profile'),
-              ),
-              const SizedBox(width: AppSpacing.xs),
             ],
           ],
         ),

@@ -155,12 +155,6 @@ abstract class SettingsTranslations {
   String currentBrandColor(String name);
   String get selectBrandColor;
   String get brandColorDesc;
-  String get appearanceAndTheme;
-  String get appearanceDesc;
-  String get appWallpaper;
-  String get appWallpaperDesc;
-  String get userAvatar;
-  String get userAvatarDesc;
   String get language;
   String currentLanguage(String name);
   String get selectLanguage;

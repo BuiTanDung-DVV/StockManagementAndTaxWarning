@@ -22,9 +22,6 @@ import '../providers/notification_provider.dart';
 import '../providers/shop_provider.dart';
 import '../providers/system_provider.dart';
 import 'shop_payment_qr_dialog.dart';
-import '../../../core/widgets/app_avatar.dart';
-import 'avatar_picker_dialog.dart';
-import 'theme_appearance_modal.dart';
 
 bool settingsShouldLoadShopProfile(ShopState state) =>
     !state.isAllShops &&
@@ -295,25 +292,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           _SettingsEntry(
             label: tr.settings.brandColor,
-            description:
-                '${brandColor.label} · ${ref.watch(themeModeProvider).name == 'dark' ? 'Nền tối' : (ref.watch(themeModeProvider).name == 'light' ? 'Nền sáng' : 'Tự động')}',
+            description: tr.settings.currentBrandColor(brandColor.label),
             icon: Icons.palette_outlined,
             iconColor: brandColor.color,
             onTap: () => _showBrandColorPicker(context, brandColor),
-          ),
-          _SettingsEntry(
-            label: tr.settings.appWallpaper,
-            description: tr.settings.appWallpaperDesc,
-            icon: Icons.wallpaper_rounded,
-            iconColor: const Color(0xFF0284C7),
-            onTap: () => ThemeAppearanceModal.show(context, initialTabIndex: 1),
-          ),
-          _SettingsEntry(
-            label: tr.settings.userAvatar,
-            description: tr.settings.userAvatarDesc,
-            icon: Icons.account_circle_outlined,
-            iconColor: const Color(0xFF10B981),
-            onTap: () => AvatarPickerDialog.show(context),
           ),
           if (shopState.isOwner)
             _SettingsEntry(
@@ -665,7 +647,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showBrandColorPicker(BuildContext context, AppBrandColor current) {
-    ThemeAppearanceModal.show(context, initialTabIndex: 0);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final colors = AppThemeColors.of(sheetContext);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.xl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Chọn màu giao diện',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Màu được áp dụng cho nút chính và trạng thái đang chọn.',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final item in AppBrandColor.values)
+                      _BrandColorOption(
+                        item: item,
+                        selected: item == current,
+                        onTap: () {
+                          ref
+                              .read(brandColorProvider.notifier)
+                              .setBrandColor(item);
+                          Navigator.pop(sheetContext);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showLanguagePicker(BuildContext context, AppLanguage current) {
@@ -923,10 +958,10 @@ class _SettingsProfileCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      AppAvatar(
+                      const AppAssetIcon(
+                        assetPath: AppAssets.appIcon,
                         size: 44,
-                        showEditBadge: true,
-                        onTap: () => AvatarPickerDialog.show(context),
+                        semanticLabel: 'SmartStock',
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(child: details),
@@ -940,10 +975,10 @@ class _SettingsProfileCard extends StatelessWidget {
 
             return Row(
               children: [
-                AppAvatar(
+                const AppAssetIcon(
+                  assetPath: AppAssets.appIcon,
                   size: 48,
-                  showEditBadge: true,
-                  onTap: () => AvatarPickerDialog.show(context),
+                  semanticLabel: 'SmartStock',
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(child: details),
@@ -1014,10 +1049,10 @@ class _SettingsProfileCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      AppAvatar(
+                      const AppAssetIcon(
+                        assetPath: AppAssets.appIcon,
                         size: 44,
-                        showEditBadge: true,
-                        onTap: () => AvatarPickerDialog.show(context),
+                        semanticLabel: 'SmartStock',
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(child: details),
@@ -1031,10 +1066,10 @@ class _SettingsProfileCard extends StatelessWidget {
 
             return Row(
               children: [
-                AppAvatar(
+                const AppAssetIcon(
+                  assetPath: AppAssets.appIcon,
                   size: 48,
-                  showEditBadge: true,
-                  onTap: () => AvatarPickerDialog.show(context),
+                  semanticLabel: 'SmartStock',
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(child: details),
@@ -1050,10 +1085,10 @@ class _SettingsProfileCard extends StatelessWidget {
         ),
         error: (_, _) => Row(
           children: [
-            AppAvatar(
+            const AppAssetIcon(
+              assetPath: AppAssets.appIcon,
               size: 44,
-              showEditBadge: true,
-              onTap: () => AvatarPickerDialog.show(context),
+              semanticLabel: 'SmartStock',
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -1399,6 +1434,67 @@ class _ShopOption extends StatelessWidget {
   }
 }
 
+class _BrandColorOption extends StatelessWidget {
+  final AppBrandColor item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _BrandColorOption({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Material(
+      color: colors.card,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: selected ? item.color : colors.divider,
+          width: selected ? 1.5 : 1,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        child: SizedBox(
+          width: 148,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: item.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    item.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _CostingOption extends StatelessWidget {
   final String title;

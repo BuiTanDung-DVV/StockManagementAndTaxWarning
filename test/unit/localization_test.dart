@@ -98,12 +98,6 @@ void main() {
       verifyNonEmpty((t) => t.settings.language, 'language');
       verifyNonEmpty((t) => t.settings.selectLanguage, 'selectLanguage');
       verifyNonEmpty((t) => t.settings.brandColor, 'brandColor');
-      verifyNonEmpty(
-        (t) => t.settings.appearanceAndTheme,
-        'appearanceAndTheme',
-      );
-      verifyNonEmpty((t) => t.settings.appWallpaper, 'appWallpaper');
-      verifyNonEmpty((t) => t.settings.userAvatar, 'userAvatar');
       verifyNonEmpty((t) => t.settings.costingMethod, 'costingMethod');
       verifyNonEmpty((t) => t.settings.taxConfig, 'taxConfig');
       verifyNonEmpty((t) => t.settings.logoutButton, 'logoutButton');

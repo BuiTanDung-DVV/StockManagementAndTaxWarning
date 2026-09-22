@@ -56,10 +56,7 @@ class MyApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
 
     // Đồng bộ hóa AppColors động toàn cục trước khi dựng widget tree
-    AppColors.updateColors(
-      brandColor.color,
-      brandColor.isDark || themeMode == ThemeMode.dark,
-    );
+    AppColors.updateColors(brandColor.color, brandColor.isDark);
 
     return MaterialApp.router(
       title: 'Quản lý Bán hàng & Kho hàng',
