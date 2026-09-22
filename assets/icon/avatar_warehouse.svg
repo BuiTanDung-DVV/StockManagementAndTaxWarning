@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" fill="none">
+  <rect width="96" height="96" rx="48" fill="#155E75"/>
+  <circle cx="48" cy="45" r="17" fill="#FDE68A"/>
+  <!-- Hardhat -->
+  <path d="M28 38c0-11 8.954-20 20-20s20 9 20 20v2H28v-2z" fill="#EAB308"/>
+  <rect x="25" y="38" width="46" height="5" rx="2" fill="#CA8A04"/>
+  <path d="M46 20h4v16h-4z" fill="#FACC15"/>
+  <path d="M22 84c0-14.359 11.64-26 26-26s26 11.64 26 26v4H22v-4z" fill="#0891B2"/>
+  <path d="M38 68h20v6H38z" fill="#EAB308"/>
+</svg>

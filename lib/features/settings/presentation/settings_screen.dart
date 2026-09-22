@@ -21,7 +21,9 @@ import '../providers/costing_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/shop_provider.dart';
 import '../providers/system_provider.dart';
+import '../../../core/widgets/app_avatar.dart';
 import 'shop_payment_qr_dialog.dart';
+import 'theme_appearance_modal.dart';
 
 bool settingsShouldLoadShopProfile(ShopState state) =>
     !state.isAllShops &&
@@ -291,11 +293,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () => _showLanguagePicker(context, appLanguage),
           ),
           _SettingsEntry(
-            label: tr.settings.brandColor,
+            label: 'Giao diện & Hình nền',
             description: tr.settings.currentBrandColor(brandColor.label),
-            icon: Icons.palette_outlined,
+            assetPath: AppAssets.palette,
             iconColor: brandColor.color,
-            onTap: () => _showBrandColorPicker(context, brandColor),
+            onTap: () => ThemeAppearanceModal.show(context),
           ),
           if (shopState.isOwner)
             _SettingsEntry(
@@ -646,63 +648,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showBrandColorPicker(BuildContext context, AppBrandColor current) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        final colors = AppThemeColors.of(sheetContext);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.xl,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Chọn màu giao diện',
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  'Màu được áp dụng cho nút chính và trạng thái đang chọn.',
-                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    for (final item in AppBrandColor.values)
-                      _BrandColorOption(
-                        item: item,
-                        selected: item == current,
-                        onTap: () {
-                          ref
-                              .read(brandColorProvider.notifier)
-                              .setBrandColor(item);
-                          Navigator.pop(sheetContext);
-                        },
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   void _showLanguagePicker(BuildContext context, AppLanguage current) {
     showModalBottomSheet<void>(
       context: context,
@@ -958,10 +903,11 @@ class _SettingsProfileCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const AppAssetIcon(
-                        assetPath: AppAssets.appIcon,
-                        size: 44,
-                        semanticLabel: 'SmartStock',
+                      AppAvatar(
+                        size: 48,
+                        displayName: displayName,
+                        showEditBadge: true,
+                        onTap: () => ThemeAppearanceModal.show(context),
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(child: details),
@@ -975,10 +921,11 @@ class _SettingsProfileCard extends StatelessWidget {
 
             return Row(
               children: [
-                const AppAssetIcon(
-                  assetPath: AppAssets.appIcon,
+                AppAvatar(
                   size: 48,
-                  semanticLabel: 'SmartStock',
+                  displayName: displayName,
+                  showEditBadge: true,
+                  onTap: () => ThemeAppearanceModal.show(context),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(child: details),
@@ -1049,10 +996,11 @@ class _SettingsProfileCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const AppAssetIcon(
-                        assetPath: AppAssets.appIcon,
-                        size: 44,
-                        semanticLabel: 'SmartStock',
+                      AppAvatar(
+                        size: 48,
+                        displayName: displayName,
+                        showEditBadge: true,
+                        onTap: () => ThemeAppearanceModal.show(context),
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(child: details),
@@ -1066,10 +1014,11 @@ class _SettingsProfileCard extends StatelessWidget {
 
             return Row(
               children: [
-                const AppAssetIcon(
-                  assetPath: AppAssets.appIcon,
+                AppAvatar(
                   size: 48,
-                  semanticLabel: 'SmartStock',
+                  displayName: displayName,
+                  showEditBadge: true,
+                  onTap: () => ThemeAppearanceModal.show(context),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(child: details),
@@ -1144,7 +1093,8 @@ class _SettingsSectionData {
 class _SettingsEntry {
   final String label;
   final String description;
-  final IconData icon;
+  final IconData? icon;
+  final String? assetPath;
   final Color? iconColor;
   final String? badge;
   final VoidCallback? onTap;
@@ -1152,7 +1102,8 @@ class _SettingsEntry {
   const _SettingsEntry({
     required this.label,
     required this.description,
-    required this.icon,
+    this.icon,
+    this.assetPath,
     this.iconColor,
     this.badge,
     required this.onTap,
@@ -1302,7 +1253,17 @@ class _SettingsActionRow extends StatelessWidget {
                   color: iconColor.withValues(alpha: 0.09),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(entry.icon, size: 20, color: iconColor),
+                alignment: Alignment.center,
+                child: entry.assetPath != null
+                    ? AppAssetIcon(
+                        assetPath: entry.assetPath!,
+                        size: 20,
+                        color: iconColor,
+                        semanticLabel: entry.label,
+                      )
+                    : (entry.icon != null
+                          ? Icon(entry.icon, size: 20, color: iconColor)
+                          : const SizedBox.shrink()),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1425,68 +1386,6 @@ class _ShopOption extends StatelessWidget {
                 ),
                 if (selected)
                   AppStatusBadge(label: 'Đang dùng', color: primary),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BrandColorOption extends StatelessWidget {
-  final AppBrandColor item;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _BrandColorOption({
-    required this.item,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    return Material(
-      color: colors.card,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: selected ? item.color : colors.divider,
-          width: selected ? 1.5 : 1,
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: SizedBox(
-          width: 148,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: Row(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: item.color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

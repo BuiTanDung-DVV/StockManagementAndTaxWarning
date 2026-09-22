@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" fill="none">
+  <defs>
+    <linearGradient id="emerald_grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#10B981" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#047857" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="emerald_grad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#065F46" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+  <path d="M-100 200 C 200 100, 400 350, 900 150 L 900 850 L -100 850 Z" fill="url(#emerald_grad1)"/>
+  <path d="M-50 450 C 300 350, 500 650, 850 400 L 850 850 L -50 850 Z" fill="url(#emerald_grad2)"/>
+</svg>

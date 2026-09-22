@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _kColorKey = 'brand_color';
+const _kThemeModeKey = 'app_theme_mode_setting';
 
 enum AppBrandColor {
   tealSmartStock('Xanh ngọc SmartStock', Color(0xFF0F766E), false),
@@ -20,14 +21,61 @@ enum AppBrandColor {
   const AppBrandColor(this.label, this.color, this.isDark);
 }
 
+enum AppThemeModeSetting {
+  light('Sáng', 'Giao diện sáng rõ ràng, tối ưu tương phản'),
+  dark('Tối', 'Giao diện nền tối bảo vệ mắt'),
+  system('Hệ thống', 'Tự động chuyển theo cài đặt thiết bị');
+
+  final String label;
+  final String description;
+  const AppThemeModeSetting(this.label, this.description);
+}
+
+final themeModeSettingProvider =
+    NotifierProvider<ThemeModeSettingNotifier, AppThemeModeSetting>(
+      ThemeModeSettingNotifier.new,
+    );
+
+final themeProvider = Provider<ThemeMode>((ref) {
+  final setting = ref.watch(themeModeSettingProvider);
+  switch (setting) {
+    case AppThemeModeSetting.light:
+      return ThemeMode.light;
+    case AppThemeModeSetting.dark:
+      return ThemeMode.dark;
+    case AppThemeModeSetting.system:
+      return ThemeMode.system;
+  }
+});
+
+class ThemeModeSettingNotifier extends Notifier<AppThemeModeSetting> {
+  @override
+  AppThemeModeSetting build() {
+    _load();
+    return AppThemeModeSetting.light;
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_kThemeModeKey);
+    if (value != null) {
+      state = AppThemeModeSetting.values.firstWhere(
+        (e) => e.name == value,
+        orElse: () => AppThemeModeSetting.light,
+      );
+    }
+  }
+
+  Future<void> setThemeMode(AppThemeModeSetting mode) async {
+    state = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kThemeModeKey, mode.name);
+  }
+}
+
 final brandColorProvider = NotifierProvider<BrandColorNotifier, AppBrandColor>(
   BrandColorNotifier.new,
 );
-
-final themeProvider = Provider<ThemeMode>((ref) {
-  final brandColor = ref.watch(brandColorProvider);
-  return brandColor.isDark ? ThemeMode.dark : ThemeMode.light;
-});
 
 class BrandColorNotifier extends Notifier<AppBrandColor> {
   @override

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" fill="none">
+  <rect width="96" height="96" rx="48" fill="#065F46"/>
+  <circle cx="48" cy="40" r="18" fill="#FDE68A"/>
+  <path d="M30 36c0-9.941 8.059-18 18-18s18 8.059 18 18c-4 0-7-2-12-1-4 1-6 3-10 2s-8-1-14-1z" fill="#1F2937"/>
+  <!-- Glasses -->
+  <rect x="35" y="36" width="11" height="8" rx="2" stroke="#047857" stroke-width="2" fill="none"/>
+  <rect x="50" y="36" width="11" height="8" rx="2" stroke="#047857" stroke-width="2" fill="none"/>
+  <line x1="46" y1="40" x2="50" y2="40" stroke="#047857" stroke-width="2"/>
+  <path d="M22 84c0-14.359 11.64-26 26-26s26 11.64 26 26v4H22v-4z" fill="#047857"/>
+  <path d="M48 58l-6 15h12l-6-15z" fill="#D1FAE5"/>
+</svg>

@@ -7,6 +7,7 @@ import '../../core/assets/app_assets.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/app_background_wrapper.dart';
 import '../../core/widgets/ai_assistant_widget.dart';
 import '../../core/widgets/global_search_delegate.dart';
 import '../settings/presentation/shop_payment_qr_dialog.dart';
@@ -309,7 +310,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           );
         }
 
-        return navigationShell;
+        return AppBackgroundWrapper(child: navigationShell);
       },
     );
   }

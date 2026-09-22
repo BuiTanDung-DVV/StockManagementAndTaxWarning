@@ -1,0 +1,91 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_app/core/theme/app_theme.dart';
+import 'package:flutter_app/core/widgets/app_avatar.dart';
+import 'package:flutter_app/features/settings/presentation/avatar_picker_dialog.dart';
+import 'package:flutter_app/features/settings/presentation/theme_appearance_modal.dart';
+
+void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  Widget buildTestableWidget(Widget child) {
+    return ProviderScope(
+      child: MaterialApp(
+        theme: AppTheme.lightTheme(AppColors.primary),
+        home: Scaffold(body: child),
+      ),
+    );
+  }
+
+  group('Appearance Customizer & Avatar Widget Tests', () {
+    testWidgets('AppAvatar renders initials when no image is set', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildTestableWidget(
+          const AppAvatar(size: 60, displayName: 'Nguyễn Văn A', assetPath: ''),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('NA'), findsOneWidget);
+    });
+
+    testWidgets('ThemeAppearanceModal renders with all 3 tabs', (tester) async {
+      tester.view.physicalSize = const Size(1200, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        buildTestableWidget(const ThemeAppearanceModal()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tùy biến giao diện & hình nền'), findsOneWidget);
+      expect(find.text('Màu sắc & Chế độ'), findsOneWidget);
+      expect(find.text('Hình nền App'), findsOneWidget);
+      expect(find.text('Ảnh đại diện'), findsOneWidget);
+
+      // Verify Theme mode options exist
+      expect(find.text('Sáng'), findsOneWidget);
+      expect(find.text('Tối'), findsOneWidget);
+      expect(find.text('Tự động'), findsOneWidget);
+
+      // Switch to Wallpaper tab
+      await tester.tap(find.text('Hình nền App'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('HOA VĂN & HÌNH NỀN ỨNG DỤNG'), findsOneWidget);
+      expect(find.text('Lưới Kho Vận'), findsOneWidget);
+      expect(find.text('Chấm Công Nghệ'), findsOneWidget);
+
+      // Switch to Avatar tab
+      await tester.tap(find.text('Ảnh đại diện'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CHỌN NHANH AVATAR NHẬN DIỆN'), findsOneWidget);
+      expect(find.text('Chọn mẫu'), findsOneWidget);
+    });
+
+    testWidgets('AvatarPickerDialog renders preset collection and dismisses', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(buildTestableWidget(const AvatarPickerDialog()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chọn ảnh đại diện'), findsOneWidget);
+      expect(find.text('BỘ SƯU TẬP NHẬN DIỆN DOANH NGHIỆP'), findsOneWidget);
+      expect(find.text('Quản trị viên Nam'), findsNWidgets(2));
+      expect(find.text('Kế toán trưởng'), findsOneWidget);
+      expect(find.text('Thu ngân bán hàng'), findsOneWidget);
+    });
+  });
+}

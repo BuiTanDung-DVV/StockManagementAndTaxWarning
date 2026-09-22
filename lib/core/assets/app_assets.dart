@@ -45,6 +45,33 @@ abstract final class AppAssets {
   static const String warehouseMotif = 'assets/icon/warehouse_motif.svg';
   static const String parcelBox = 'assets/icon/parcel_box.svg';
   static const String analyticsMotif = 'assets/icon/analytics_motif.svg';
+
+  // --- Theme & Appearance UI Assets ---
+  static const String palette = 'assets/icon/palette_icon.svg';
+  static const String wallpaper = 'assets/icon/wallpaper_icon.svg';
+  static const String avatar = 'assets/icon/avatar_icon.svg';
+  static const String check = 'assets/icon/check_icon.svg';
+  static const String close = 'assets/icon/close_icon.svg';
+  static const String sun = 'assets/icon/sun_icon.svg';
+  static const String moon = 'assets/icon/moon_icon.svg';
+  static const String systemMode = 'assets/icon/system_mode_icon.svg';
+  static const String upload = 'assets/icon/upload_icon.svg';
+  static const String refresh = 'assets/icon/refresh_icon.svg';
+  static const String image = 'assets/icon/image_icon.svg';
+
+  // --- Avatar Presets (Vector Illustration) ---
+  static const String avatarAdminM = 'assets/icon/avatar_admin_m.svg';
+  static const String avatarAdminF = 'assets/icon/avatar_admin_f.svg';
+  static const String avatarAccountant = 'assets/icon/avatar_accountant.svg';
+  static const String avatarCashier = 'assets/icon/avatar_cashier.svg';
+  static const String avatarWarehouse = 'assets/icon/avatar_warehouse.svg';
+  static const String avatarAiBot = 'assets/icon/avatar_ai_bot.svg';
+
+  // --- Wallpaper / Background Presets ---
+  static const String bgWarehouseGrid = 'assets/icon/bg_warehouse_grid.svg';
+  static const String bgTechDots = 'assets/icon/bg_tech_dots.svg';
+  static const String bgMeshEmerald = 'assets/icon/bg_mesh_emerald.svg';
+  static const String bgGeometricShapes = 'assets/icon/bg_geometric_shapes.svg';
 }
 
 class AppAssetIcon extends StatelessWidget {
