@@ -16,6 +16,9 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
   final Color divider;
   final Color inputFill;
   final Color inputBorder;
+  final Color primary;
+  final Color primarySubtle;
+  final Color primaryBorder;
 
   const AppThemeColors({
     required this.bg,
@@ -28,6 +31,9 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     required this.divider,
     required this.inputFill,
     required this.inputBorder,
+    this.primary = const Color(0xFF0F766E),
+    this.primarySubtle = const Color(0x1A0F766E),
+    this.primaryBorder = const Color(0x400F766E),
   });
 
   static AppThemeColors of(BuildContext context) =>
@@ -45,6 +51,9 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     divider: Color(0xFF2A3C50),
     inputFill: Color(0xFF101C29),
     inputBorder: Color(0xFF3B5067),
+    primary: Color(0xFF14B8A6),
+    primarySubtle: Color(0x2614B8A6),
+    primaryBorder: Color(0x5914B8A6),
   );
 
   // Deep teal and mint neutral palette for retail management.
@@ -59,9 +68,64 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     divider: Color(0xFFDCE7E3),
     inputFill: Color(0xFFFFFFFF),
     inputBorder: Color(0xFFDCE7E3),
+    primary: Color(0xFF0F766E),
+    primarySubtle: Color(0x1A0F766E),
+    primaryBorder: Color(0x400F766E),
   );
 
-  static AppThemeColors createLight(Color primary) => light;
+  static AppThemeColors createLight(Color primary) {
+    return AppThemeColors(
+      bg: const Color(0xFFF5F8F7),
+      surface: const Color(0xFFFFFFFF),
+      card: const Color(0xFFFFFFFF),
+      cardAlt: Color.alphaBlend(
+        primary.withValues(alpha: 0.04),
+        const Color(0xFFEDF4F1),
+      ),
+      textPrimary: const Color(0xFF17332F),
+      textSecondary: const Color(0xFF3D5450),
+      textMuted: const Color(0xFF5D716B),
+      divider: Color.alphaBlend(
+        primary.withValues(alpha: 0.06),
+        const Color(0xFFDCE7E3),
+      ),
+      inputFill: const Color(0xFFFFFFFF),
+      inputBorder: Color.alphaBlend(
+        primary.withValues(alpha: 0.09),
+        const Color(0xFFDCE7E3),
+      ),
+      primary: primary,
+      primarySubtle: primary.withValues(alpha: 0.09),
+      primaryBorder: primary.withValues(alpha: 0.28),
+    );
+  }
+
+  static AppThemeColors createDark(Color primary) {
+    return AppThemeColors(
+      bg: const Color(0xFF0B1420),
+      surface: const Color(0xFF111D2B),
+      card: const Color(0xFF172536),
+      cardAlt: Color.alphaBlend(
+        primary.withValues(alpha: 0.06),
+        const Color(0xFF1E3044),
+      ),
+      textPrimary: const Color(0xFFF8FAFC),
+      textSecondary: const Color(0xFFD0DAE6),
+      textMuted: const Color(0xFF91A3B8),
+      divider: Color.alphaBlend(
+        primary.withValues(alpha: 0.08),
+        const Color(0xFF2A3C50),
+      ),
+      inputFill: const Color(0xFF101C29),
+      inputBorder: Color.alphaBlend(
+        primary.withValues(alpha: 0.12),
+        const Color(0xFF3B5067),
+      ),
+      primary: primary,
+      primarySubtle: primary.withValues(alpha: 0.15),
+      primaryBorder: primary.withValues(alpha: 0.35),
+    );
+  }
 
   @override
   AppThemeColors copyWith({
@@ -75,6 +139,9 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     Color? divider,
     Color? inputFill,
     Color? inputBorder,
+    Color? primary,
+    Color? primarySubtle,
+    Color? primaryBorder,
   }) => AppThemeColors(
     bg: bg ?? this.bg,
     surface: surface ?? this.surface,
@@ -86,6 +153,9 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     divider: divider ?? this.divider,
     inputFill: inputFill ?? this.inputFill,
     inputBorder: inputBorder ?? this.inputBorder,
+    primary: primary ?? this.primary,
+    primarySubtle: primarySubtle ?? this.primarySubtle,
+    primaryBorder: primaryBorder ?? this.primaryBorder,
   );
 
   @override
@@ -102,6 +172,9 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
       divider: Color.lerp(divider, other.divider, t)!,
       inputFill: Color.lerp(inputFill, other.inputFill, t)!,
       inputBorder: Color.lerp(inputBorder, other.inputBorder, t)!,
+      primary: Color.lerp(primary, other.primary, t)!,
+      primarySubtle: Color.lerp(primarySubtle, other.primarySubtle, t)!,
+      primaryBorder: Color.lerp(primaryBorder, other.primaryBorder, t)!,
     );
   }
 }
@@ -198,10 +271,16 @@ class AppTheme {
     );
   }
 
-  static ThemeData darkTheme(Color primaryColor) =>
-      _buildTheme(Brightness.dark, AppThemeColors.dark, primaryColor);
-  static ThemeData lightTheme(Color primaryColor) =>
-      _buildTheme(Brightness.light, AppThemeColors.light, primaryColor);
+  static ThemeData darkTheme(Color primaryColor) => _buildTheme(
+    Brightness.dark,
+    AppThemeColors.createDark(primaryColor),
+    primaryColor,
+  );
+  static ThemeData lightTheme(Color primaryColor) => _buildTheme(
+    Brightness.light,
+    AppThemeColors.createLight(primaryColor),
+    primaryColor,
+  );
 
   static ThemeData _buildTheme(
     Brightness brightness,
@@ -292,7 +371,7 @@ class AppTheme {
         error: AppColors.danger,
         onError: Colors.white,
       ),
-      scaffoldBackgroundColor: colors.bg,
+      scaffoldBackgroundColor: Colors.transparent,
       cardColor: colors.card,
       dividerColor: colors.divider,
       dividerTheme: DividerThemeData(

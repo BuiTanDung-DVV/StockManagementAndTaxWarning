@@ -36,7 +36,6 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
     final listAsync = ref.watch(
       customerListProvider((
         page: _page,
@@ -45,7 +44,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     );
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: Colors.transparent,
       body: AppResponsiveContent(
         maxWidth: 1320,
         verticalPadding: AppSpacing.lg,

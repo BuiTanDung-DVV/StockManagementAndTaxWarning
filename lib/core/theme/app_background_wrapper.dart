@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,26 +74,17 @@ class AppBackgroundWrapper extends ConsumerWidget {
       return child;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveOpacity = bgState.getEffectiveOpacity(isDark);
+
     return Stack(
       fit: StackFit.expand,
       children: [
         Positioned.fill(
           child: IgnorePointer(
-            child: Opacity(opacity: bgState.opacity, child: backgroundContent),
+            child: Opacity(opacity: effectiveOpacity, child: backgroundContent),
           ),
         ),
-        if (bgState.blurRadius > 0.1)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: bgState.blurRadius,
-                  sigmaY: bgState.blurRadius,
-                ),
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ),
         child,
       ],
     );

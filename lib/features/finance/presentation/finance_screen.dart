@@ -163,7 +163,6 @@ class FinanceScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppThemeColors.of(context);
     final period = currentMonthReportingPeriod(DateTime.now());
     final from = period.from;
     final to = period.to;
@@ -194,7 +193,7 @@ class FinanceScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: Colors.transparent,
       body: RefreshIndicator(
         onRefresh: refresh,
         child: SingleChildScrollView(

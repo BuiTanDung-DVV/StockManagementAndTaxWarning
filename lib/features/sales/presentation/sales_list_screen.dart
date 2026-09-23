@@ -200,7 +200,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     );
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(

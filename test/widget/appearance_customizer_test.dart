@@ -46,6 +46,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Tùy biến giao diện & hình nền'), findsOneWidget);
+      expect(find.text('Live Preview'), findsOneWidget);
+      expect(find.text('Doanh thu tháng'), findsOneWidget);
       expect(find.text('Màu sắc & Chế độ'), findsOneWidget);
       expect(find.text('Hình nền App'), findsOneWidget);
       expect(find.text('Ảnh đại diện'), findsOneWidget);
@@ -62,6 +64,7 @@ void main() {
       expect(find.text('HOA VĂN & HÌNH NỀN ỨNG DỤNG'), findsOneWidget);
       expect(find.text('Lưới Kho Vận'), findsOneWidget);
       expect(find.text('Chấm Công Nghệ'), findsOneWidget);
+      expect(find.textContaining('tự động tối ưu hóa'), findsOneWidget);
 
       // Switch to Avatar tab
       await tester.tap(find.text('Ảnh đại diện'));
@@ -70,6 +73,38 @@ void main() {
       expect(find.text('CHỌN NHANH AVATAR NHẬN DIỆN'), findsOneWidget);
       expect(find.text('Chọn mẫu'), findsOneWidget);
     });
+
+    testWidgets(
+      'LiveMiniPreview reacts to brand and preset selection without sliders',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        await tester.pumpWidget(
+          buildTestableWidget(const ThemeAppearanceModal()),
+        );
+        await tester.pumpAndSettle();
+
+        // Tap on Cam bán lẻ (Sunset Copper)
+        final orangeBrand = find.text('Cam bán lẻ');
+        expect(orangeBrand, findsOneWidget);
+        await tester.tap(orangeBrand);
+        await tester.pumpAndSettle();
+
+        // Switch to wallpaper tab and select Lưới Kho Vận
+        await tester.tap(find.text('Hình nền App'));
+        await tester.pumpAndSettle();
+
+        final gridPreset = find.text('Lưới Kho Vận');
+        expect(gridPreset, findsOneWidget);
+        await tester.tap(gridPreset);
+        await tester.pumpAndSettle();
+
+        // Verify that no slider exists (they were removed for clean 1-click experience)
+        expect(find.byType(Slider), findsNothing);
+      },
+    );
 
     testWidgets('AvatarPickerDialog renders preset collection and dismisses', (
       tester,

@@ -211,72 +211,67 @@ class _MainShellState extends ConsumerState<MainShell> {
         );
         final showAiHeaderAction = showAi;
 
-        final page = ColoredBox(
-          color: colors.bg,
-          child: AppBackgroundWrapper(
-            child: Stack(
-              fit: StackFit.expand,
+        final page = Stack(
+          fit: StackFit.expand,
+          children: [
+            Column(
               children: [
-                Column(
-                  children: [
-                    if (showUtilityHeader)
-                      _ShellUtilityHeader(
-                        compact: mode == MainShellNavigationMode.bottomBar,
-                        shop: shop,
-                        showAiRestore: showAiHeaderAction,
-                        showShopQr: shouldShowShopPaymentQr(
-                          isAllShops: shop.isAllShops,
-                        ),
-                        onSearch: () async {
-                          final route = await showGlobalSearchPanel(
-                            context,
-                            api: ref.read(apiClientProvider),
-                          );
-                          if (route != null &&
-                              route.isNotEmpty &&
-                              context.mounted) {
-                            context.go(route);
-                          }
-                        },
-                        onNotifications: () => context.go('/notifications'),
-                        onShopSelected: (shopId) =>
-                            ref.read(shopProvider.notifier).switchShop(shopId),
-                        onShopQr: () => showShopPaymentQrDialog(
-                          context,
-                          canManage:
-                              shop.isOwner ||
-                              shop.hasPermission('settings', 'edit'),
-                        ),
-                        onRestoreAi: () {
-                          ref
-                              .read(aiAssistantLauncherVisibleProvider.notifier)
-                              .show();
-                          ref.read(aiAssistantOpenProvider.notifier).open();
-                        },
-                      ),
-                    Expanded(child: widget.child),
-                  ],
-                ),
-                if (showAi)
-                  Positioned.fill(
-                    child: AiAssistantWidget(
-                      showLauncher: false,
-                      topSafeInset: showUtilityHeader
-                          ? mode == MainShellNavigationMode.bottomBar
-                                ? 60
-                                : 68
-                          : 0,
+                if (showUtilityHeader)
+                  _ShellUtilityHeader(
+                    compact: mode == MainShellNavigationMode.bottomBar,
+                    shop: shop,
+                    showAiRestore: showAiHeaderAction,
+                    showShopQr: shouldShowShopPaymentQr(
+                      isAllShops: shop.isAllShops,
                     ),
+                    onSearch: () async {
+                      final route = await showGlobalSearchPanel(
+                        context,
+                        api: ref.read(apiClientProvider),
+                      );
+                      if (route != null &&
+                          route.isNotEmpty &&
+                          context.mounted) {
+                        context.go(route);
+                      }
+                    },
+                    onNotifications: () => context.go('/notifications'),
+                    onShopSelected: (shopId) =>
+                        ref.read(shopProvider.notifier).switchShop(shopId),
+                    onShopQr: () => showShopPaymentQrDialog(
+                      context,
+                      canManage:
+                          shop.isOwner ||
+                          shop.hasPermission('settings', 'edit'),
+                    ),
+                    onRestoreAi: () {
+                      ref
+                          .read(aiAssistantLauncherVisibleProvider.notifier)
+                          .show();
+                      ref.read(aiAssistantOpenProvider.notifier).open();
+                    },
                   ),
+                Expanded(child: widget.child),
               ],
             ),
-          ),
+            if (showAi)
+              Positioned.fill(
+                child: AiAssistantWidget(
+                  showLauncher: false,
+                  topSafeInset: showUtilityHeader
+                      ? mode == MainShellNavigationMode.bottomBar
+                            ? 60
+                            : 68
+                      : 0,
+                ),
+              ),
+          ],
         );
 
         late final Widget navigationShell;
         if (mode == MainShellNavigationMode.sidebar) {
           navigationShell = Scaffold(
-            backgroundColor: colors.bg,
+            backgroundColor: Colors.transparent,
             body: Row(
               children: [
                 _DesktopSidebar(
@@ -292,7 +287,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           );
         } else if (mode == MainShellNavigationMode.rail) {
           navigationShell = Scaffold(
-            backgroundColor: colors.bg,
+            backgroundColor: Colors.transparent,
             body: Row(
               children: [
                 _TabletNavigationRail(tabs: tabs, currentIndex: currentIndex),
@@ -303,7 +298,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           );
         } else {
           navigationShell = Scaffold(
-            backgroundColor: colors.bg,
+            backgroundColor: Colors.transparent,
             body: page,
             bottomNavigationBar: _MobileNavigationBar(
               tabs: tabs,
@@ -312,7 +307,10 @@ class _MainShellState extends ConsumerState<MainShell> {
           );
         }
 
-        return AppBackgroundWrapper(child: navigationShell);
+        return ColoredBox(
+          color: colors.bg,
+          child: AppBackgroundWrapper(child: navigationShell),
+        );
       },
     );
   }
@@ -380,10 +378,11 @@ class _ShellUtilityHeader extends StatelessWidget {
             ),
             if (canSwitchShop) ...[
               const SizedBox(width: 4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: 18,
+              AppAssetIcon(
+                assetPath: AppAssets.expand,
+                size: 15,
                 color: colors.textSecondary,
+                semanticLabel: 'Mở rộng danh sách cửa hàng',
               ),
             ],
           ],
@@ -574,10 +573,11 @@ class _ShopMenuItem extends StatelessWidget {
         ),
         if (selected) ...[
           const SizedBox(width: AppSpacing.md),
-          Icon(
-            Icons.check_rounded,
-            size: 18,
-            color: Theme.of(context).colorScheme.primary,
+          AppAssetIcon(
+            assetPath: AppAssets.check,
+            size: 16,
+            color: colors.primary,
+            semanticLabel: 'Đã chọn',
           ),
         ],
       ],
@@ -772,14 +772,29 @@ class _SidebarLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final primary = colors.primary;
     return Container(
-      width: 38,
-      height: 38,
-      padding: const EdgeInsets.all(6),
+      width: 40,
+      height: 40,
+      padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
-        color: colors.cardAlt,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.divider),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            primary.withValues(alpha: 0.16),
+            primary.withValues(alpha: 0.06),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: colors.primaryBorder, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: const AppAssetIcon(
         assetPath: AppAssets.appIcon,
@@ -867,7 +882,7 @@ class _SidebarNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final primary = Theme.of(context).colorScheme.primary;
+    final primary = colors.primary;
 
     final item = Semantics(
       button: true,
@@ -885,14 +900,12 @@ class _SidebarNavItem extends StatelessWidget {
               vertical: 10,
             ),
             decoration: BoxDecoration(
-              color: selected
-                  ? primary.withValues(alpha: 0.09)
-                  : Colors.transparent,
+              color: selected ? colors.primarySubtle : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadius.input),
               border: Border(
                 left: BorderSide(
                   color: selected ? primary : Colors.transparent,
-                  width: 3,
+                  width: 3.5,
                 ),
               ),
             ),

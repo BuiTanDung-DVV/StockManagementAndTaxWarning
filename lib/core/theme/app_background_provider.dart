@@ -16,48 +16,64 @@ enum AppWallpaperPreset {
     label: 'Mặc định (Không nền)',
     assetPath: '',
     description: 'Nền phẳng tối giản, tối ưu tốc độ và độ tập trung',
+    defaultOpacityLight: 0.0,
+    defaultOpacityDark: 0.0,
   ),
   warehouseGrid(
     id: 'warehouse_grid',
     label: 'Lưới Kho Vận',
     assetPath: AppAssets.bgWarehouseGrid,
     description: 'Họa tiết lưới kệ kho thông minh, hiện đại',
+    defaultOpacityLight: 0.08,
+    defaultOpacityDark: 0.12,
   ),
   techDots(
     id: 'tech_dots',
     label: 'Chấm Công Nghệ',
     assetPath: AppAssets.bgTechDots,
     description: 'Ma trận điểm vi mạch số hóa công nghệ cao',
+    defaultOpacityLight: 0.07,
+    defaultOpacityDark: 0.11,
   ),
   meshEmerald(
     id: 'mesh_emerald',
     label: 'Sóng Lục Bảo',
     assetPath: AppAssets.bgMeshEmerald,
     description: 'Lớp sóng gradient mềm mại mang năng lượng thịnh vượng',
+    defaultOpacityLight: 0.09,
+    defaultOpacityDark: 0.14,
   ),
   geometric(
     id: 'geometric',
     label: 'Khối Hình Học',
     assetPath: AppAssets.bgGeometricShapes,
     description: 'Khối đa giác lập thể thanh lịch và gọn gàng',
+    defaultOpacityLight: 0.08,
+    defaultOpacityDark: 0.12,
   ),
   warehousePanorama(
     id: 'warehouse_panorama',
     label: 'Kho Hàng Thực Tế',
     assetPath: AppAssets.authWarehousePanoramaV2,
     description: 'Toàn cảnh trung tâm phân phối kho bãi SmartStock',
+    defaultOpacityLight: 0.06,
+    defaultOpacityDark: 0.10,
   );
 
   final String id;
   final String label;
   final String assetPath;
   final String description;
+  final double defaultOpacityLight;
+  final double defaultOpacityDark;
 
   const AppWallpaperPreset({
     required this.id,
     required this.label,
     required this.assetPath,
     required this.description,
+    this.defaultOpacityLight = 0.08,
+    this.defaultOpacityDark = 0.12,
   });
 
   static AppWallpaperPreset fromId(String? id) {
@@ -91,6 +107,11 @@ class AppBackgroundState {
       customBase64 != null;
 
   bool get isCustom => customImagePath != null || customBase64 != null;
+
+  double getEffectiveOpacity(bool isDark) {
+    if (isCustom) return isDark ? 0.10 : 0.08;
+    return isDark ? preset.defaultOpacityDark : preset.defaultOpacityLight;
+  }
 
   AppBackgroundState copyWith({
     AppWallpaperPreset? preset,

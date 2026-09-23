@@ -23,7 +23,6 @@ class InventoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppThemeColors.of(context);
     final stockPageAsync = ref.watch(stockPageProvider(null));
     final stockAsync = stockPageAsync.whenData(
       (page) => (page['items'] as List?) ?? const <dynamic>[],
@@ -89,7 +88,7 @@ class InventoryScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(

@@ -28,7 +28,6 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
     final listAsync = ref.watch(
       supplierListProvider((
         page: _page,
@@ -37,7 +36,7 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
     );
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: Colors.transparent,
       body: AppResponsiveContent(
         maxWidth: 1320,
         verticalPadding: AppSpacing.lg,

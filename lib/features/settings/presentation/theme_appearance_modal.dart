@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -86,7 +87,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
 
     return Container(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.92,
       ),
       decoration: BoxDecoration(
         color: colors.card,
@@ -170,7 +171,15 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                 ],
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
+
+            // Live Mini-Preview of interface
+            _LiveMiniPreview(
+              themeMode: themeMode,
+              brandColor: brandColor,
+              bgState: bgState,
+            ),
+            const SizedBox(height: 12),
 
             // Tabs strictly with AppAssets
             Container(
@@ -594,6 +603,36 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
           ],
         ),
         const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: colors.primarySubtle,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.primaryBorder, width: 1),
+          ),
+          child: Row(
+            children: [
+              AppAssetIcon(
+                assetPath: AppAssets.check,
+                size: 16,
+                color: colors.primary,
+                semanticLabel: 'Tối ưu tự động',
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Độ tương phản và độ mờ được tự động tối ưu hóa (chuẩn WCAG AAA), đảm bảo số liệu và hóa đơn luôn sắc nét, dễ đọc.',
+                  style: GoogleFonts.inter(
+                    color: colors.textPrimary,
+                    fontSize: 11.5,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
 
         // Wallpaper Presets Grid
         GridView.builder(
@@ -717,48 +756,6 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
               ),
             );
           },
-        ),
-
-        const SizedBox(height: 20),
-        Text(
-          'ĐỘ MỜ HÌNH NỀN (${(bgState.opacity * 100).toInt()}%)',
-          style: GoogleFonts.inter(
-            color: colors.textMuted,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-          ),
-        ),
-        Slider(
-          value: bgState.opacity,
-          min: 0.02,
-          max: 0.30,
-          divisions: 14,
-          label: '${(bgState.opacity * 100).toInt()}%',
-          onChanged: bgState.hasBackground
-              ? (v) => ref.read(appBackgroundProvider.notifier).setOpacity(v)
-              : null,
-        ),
-
-        const SizedBox(height: 10),
-        Text(
-          'HIỆU ỨNG KÍNH MỜ (${bgState.blurRadius.toStringAsFixed(1)}px)',
-          style: GoogleFonts.inter(
-            color: colors.textMuted,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-          ),
-        ),
-        Slider(
-          value: bgState.blurRadius,
-          min: 0.0,
-          max: 10.0,
-          divisions: 10,
-          label: '${bgState.blurRadius.toStringAsFixed(1)}px',
-          onChanged: bgState.hasBackground
-              ? (v) => ref.read(appBackgroundProvider.notifier).setBlurRadius(v)
-              : null,
         ),
       ],
     );
@@ -902,6 +899,346 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
           ],
         ),
       ],
+    );
+  }
+}
+
+class _LiveMiniPreview extends StatelessWidget {
+  final AppThemeModeSetting themeMode;
+  final AppBrandColor brandColor;
+  final AppBackgroundState bgState;
+
+  const _LiveMiniPreview({
+    required this.themeMode,
+    required this.brandColor,
+    required this.bgState,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark =
+        themeMode == AppThemeModeSetting.dark ||
+        (themeMode == AppThemeModeSetting.system &&
+            MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+    final primary = brandColor.color;
+    final bgColor = isDark ? const Color(0xFF0B1420) : const Color(0xFFF5F8F7);
+    final surfaceColor = isDark
+        ? const Color(0xFF111D2B)
+        : const Color(0xFFFFFFFF);
+    final cardColor = isDark
+        ? const Color(0xFF172536)
+        : const Color(0xFFFFFFFF);
+    final textPrimary = isDark
+        ? const Color(0xFFF8FAFC)
+        : const Color(0xFF17332F);
+    final textMuted = isDark
+        ? const Color(0xFF91A3B8)
+        : const Color(0xFF5D716B);
+    final dividerColor = isDark
+        ? const Color(0xFF2A3C50)
+        : const Color(0xFFDCE7E3);
+
+    final opacity = bgState.getEffectiveOpacity(isDark);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      height: 120,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primary.withValues(alpha: 0.35), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withValues(alpha: 0.12),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (bgState.hasBackground)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: (opacity * 1.8).clamp(0.06, 0.30),
+                  child:
+                      bgState.preset != AppWallpaperPreset.none &&
+                          bgState.preset.assetPath.isNotEmpty
+                      ? (bgState.preset.assetPath.endsWith('.svg')
+                            ? SvgPicture.asset(
+                                bgState.preset.assetPath,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.asset(
+                                bgState.preset.assetPath,
+                                fit: BoxFit.cover,
+                              ))
+                      : const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          Row(
+            children: [
+              // Mini Sidebar
+              Container(
+                width: 66,
+                color: surfaceColor,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      height: 22,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            primary.withValues(alpha: 0.22),
+                            primary.withValues(alpha: 0.08),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: primary.withValues(alpha: 0.4),
+                          width: 1,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'SmartStock',
+                        style: GoogleFonts.inter(
+                          color: primary,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border(
+                          left: BorderSide(color: primary, width: 2.5),
+                        ),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Container(
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: primary,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    for (int i = 0; i < 2; i++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.5),
+                        child: Container(
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF172536)
+                                : const Color(0xFFEDF4F1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              Container(width: 1, color: dividerColor),
+
+              // Mini Content Area
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: surfaceColor,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: dividerColor),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Cửa hàng chính',
+                                  style: GoogleFonts.inter(
+                                    color: textPrimary,
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Live Preview',
+                              style: GoogleFonts.inter(
+                                color: primary,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: cardColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: primary.withValues(alpha: 0.22),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Doanh thu tháng',
+                                      style: GoogleFonts.inter(
+                                        color: textMuted,
+                                        fontSize: 7.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '128.5M ₫',
+                                          style: GoogleFonts.inter(
+                                            color: textPrimary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              0xFF10B981,
+                                            ).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '+14%',
+                                            style: GoogleFonts.inter(
+                                              color: const Color(0xFF10B981),
+                                              fontSize: 7.5,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              flex: 2,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: primary,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: primary.withValues(alpha: 0.3),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'Tạo đơn',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
