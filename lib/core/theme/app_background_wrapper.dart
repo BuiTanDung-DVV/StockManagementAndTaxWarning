@@ -22,33 +22,35 @@ class AppBackgroundWrapper extends ConsumerWidget {
 
     Widget? backgroundContent;
 
-    if (bgState.customBase64 != null && bgState.customBase64!.isNotEmpty) {
-      try {
-        final bytes = base64Decode(bgState.customBase64!);
-        backgroundContent = Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-        );
-      } catch (_) {
-        backgroundContent = null;
-      }
-    } else if (bgState.customImagePath != null &&
-        bgState.customImagePath!.isNotEmpty &&
-        !kIsWeb) {
-      try {
-        final file = File(bgState.customImagePath!);
-        if (file.existsSync()) {
-          backgroundContent = Image.file(
-            file,
+    if (bgState.isCustom && bgState.hasCustomImage) {
+      if (bgState.customBase64 != null && bgState.customBase64!.isNotEmpty) {
+        try {
+          final bytes = base64Decode(bgState.customBase64!);
+          backgroundContent = Image.memory(
+            bytes,
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
           );
+        } catch (_) {
+          backgroundContent = null;
         }
-      } catch (_) {
-        backgroundContent = null;
+      } else if (bgState.customImagePath != null &&
+          bgState.customImagePath!.isNotEmpty &&
+          !kIsWeb) {
+        try {
+          final file = File(bgState.customImagePath!);
+          if (file.existsSync()) {
+            backgroundContent = Image.file(
+              file,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            );
+          }
+        } catch (_) {
+          backgroundContent = null;
+        }
       }
     } else if (bgState.preset != AppWallpaperPreset.none &&
         bgState.preset.assetPath.isNotEmpty) {

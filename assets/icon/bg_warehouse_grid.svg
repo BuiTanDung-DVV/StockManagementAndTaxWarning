@@ -1,9 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" fill="none">
   <defs>
     <pattern id="warehouse_grid" width="80" height="80" patternUnits="userSpaceOnUse">
-      <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#2563EB" stroke-width="0.75" stroke-opacity="0.18"/>
-      <rect x="20" y="20" width="40" height="40" rx="4" fill="none" stroke="#2563EB" stroke-width="0.5" stroke-opacity="0.12"/>
-      <circle cx="40" cy="40" r="3" fill="#2563EB" fill-opacity="0.2"/>
+      <!-- Trục tọa độ và đường lưới kệ kho -->
+      <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#2563EB" stroke-width="1.2" stroke-opacity="0.45"/>
+      <!-- Khung pallet chứa hàng kho thông minh -->
+      <rect x="18" y="18" width="44" height="44" rx="5" fill="#3B82F6" fill-opacity="0.08" stroke="#2563EB" stroke-width="1.0" stroke-opacity="0.40"/>
+      <!-- Tâm điểm định vị kệ hàng -->
+      <circle cx="40" cy="40" r="3.5" fill="#2563EB" fill-opacity="0.55"/>
+      <circle cx="40" cy="40" r="1.5" fill="#60A5FA"/>
+      <!-- Dấu ngắm tọa độ các góc -->
+      <path d="M 12 18 L 18 18 L 18 12" fill="none" stroke="#38BDF8" stroke-width="1.0" stroke-opacity="0.5"/>
+      <path d="M 68 62 L 62 62 L 62 68" fill="none" stroke="#38BDF8" stroke-width="1.0" stroke-opacity="0.5"/>
     </pattern>
   </defs>
   <rect width="800" height="800" fill="url(#warehouse_grid)"/>

@@ -1,15 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" fill="none">
   <defs>
     <linearGradient id="emerald_grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#059669" stop-opacity="0.15"/>
-      <stop offset="50%" stop-color="#10B981" stop-opacity="0.08"/>
-      <stop offset="100%" stop-color="#047857" stop-opacity="0.03"/>
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.45"/>
+      <stop offset="40%" stop-color="#10B981" stop-opacity="0.32"/>
+      <stop offset="80%" stop-color="#34D399" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#047857" stop-opacity="0.08"/>
     </linearGradient>
     <linearGradient id="emerald_grad2" x1="100%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="#065F46" stop-opacity="0.05"/>
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.40"/>
+      <stop offset="50%" stop-color="#14B8A6" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#065F46" stop-opacity="0.10"/>
+    </linearGradient>
+    <linearGradient id="wave_stroke" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#6EE7B7" stop-opacity="0.3"/>
     </linearGradient>
   </defs>
-  <path d="M-100 200 C 200 100, 400 350, 900 150 L 900 850 L -100 850 Z" fill="url(#emerald_grad1)"/>
-  <path d="M-50 450 C 300 350, 500 650, 850 400 L 850 850 L -50 850 Z" fill="url(#emerald_grad2)"/>
+  <!-- Lớp sóng nền 1 -->
+  <path d="M-100 240 C 200 120, 380 420, 900 180 L 900 850 L -100 850 Z" fill="url(#emerald_grad1)"/>
+  <!-- Lớp sóng nền 2 -->
+  <path d="M-50 480 C 280 340, 520 680, 850 420 L 850 850 L -50 850 Z" fill="url(#emerald_grad2)"/>
+  <!-- Dải viền sóng sắc nét phát sáng -->
+  <path d="M-100 240 C 200 120, 380 420, 900 180" fill="none" stroke="url(#wave_stroke)" stroke-width="2.5"/>
+  <path d="M-50 480 C 280 340, 520 680, 850 420" fill="none" stroke="#34D399" stroke-width="1.8" stroke-opacity="0.5"/>
 </svg>

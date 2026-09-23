@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -565,6 +566,8 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
     AppThemeColors colors,
     AppBackgroundState bgState,
   ) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       children: [
@@ -580,29 +583,34 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                 letterSpacing: 0.8,
               ),
             ),
-            OutlinedButton.icon(
-              onPressed: _isUploadingBg ? null : _pickCustomBackground,
-              icon: AppAssetIcon(
-                assetPath: AppAssets.upload,
-                size: 15,
-                color: Theme.of(context).colorScheme.primary,
-                semanticLabel: 'Tải ảnh nền',
-              ),
-              label: Text(
-                _isUploadingBg ? 'Đang tải...' : 'Tải ảnh từ máy',
-                style: GoogleFonts.inter(fontSize: 11.5),
-              ),
-              style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+            if (bgState.hasCustomImage)
+              TextButton.icon(
+                onPressed: _isUploadingBg ? null : _pickCustomBackground,
+                icon: AppAssetIcon(
+                  assetPath: AppAssets.upload,
+                  size: 13,
+                  color: primary,
+                  semanticLabel: 'Đổi ảnh',
+                ),
+                label: Text(
+                  _isUploadingBg ? 'Đang nạp...' : 'Đổi ảnh từ máy',
+                  style: GoogleFonts.inter(
+                    color: primary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
@@ -621,7 +629,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Độ tương phản và độ mờ được tự động tối ưu hóa (chuẩn WCAG AAA), đảm bảo số liệu và hóa đơn luôn sắc nét, dễ đọc.',
+                  'Độ tương phản và độ mờ được tự động tối ưu hóa (chuẩn WCAG AAA), đảm bảo số liệu và hóa đơn luôn sắc nét. Ảnh tải từ máy được lưu cục bộ trên thiết bị của bạn, không gửi lên máy chủ hay lưu trên DB.',
                   style: GoogleFonts.inter(
                     color: colors.textPrimary,
                     fontSize: 11.5,
@@ -634,131 +642,726 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
         ),
         const SizedBox(height: 14),
 
-        // Wallpaper Presets Grid
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 1.6,
-          ),
-          itemCount: AppWallpaperPreset.values.length,
-          itemBuilder: (context, index) {
-            final preset = AppWallpaperPreset.values[index];
-            final isSelected = !bgState.isCustom && bgState.preset == preset;
+        // GridView hiển thị 1 Card Ảnh Tùy Chỉnh + 6 Card Preset
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 520;
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: isWide ? 2 : 1,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: isWide ? 1.48 : 2.1,
+              children: [
+                // 1. Mặc định (Không nền)
+                _buildPresetCard(
+                  context: context,
+                  colors: colors,
+                  preset: AppWallpaperPreset.none,
+                  isSelected:
+                      !bgState.isCustom &&
+                      bgState.preset == AppWallpaperPreset.none,
+                ),
 
-            return InkWell(
-              onTap: () {
-                ref.read(appBackgroundProvider.notifier).setPreset(preset);
-              },
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colors.cardAlt,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : colors.divider,
-                    width: isSelected ? 2 : 1,
+                // 2. Card chuyên dụng cho Ảnh tùy chỉnh (Lưu trên máy người dùng, chỉ 1 card duy nhất)
+                _buildCustomWallpaperCard(
+                  context: context,
+                  colors: colors,
+                  bgState: bgState,
+                ),
+
+                // 3..7. Các Wallpaper Presets đặc trưng
+                for (final preset in AppWallpaperPreset.values.where(
+                  (p) => p != AppWallpaperPreset.none,
+                ))
+                  _buildPresetCard(
+                    context: context,
+                    colors: colors,
+                    preset: preset,
+                    isSelected: !bgState.isCustom && bgState.preset == preset,
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    if (preset != AppWallpaperPreset.none &&
-                        preset.assetPath.isNotEmpty)
-                      Positioned.fill(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(13),
-                          child: Opacity(
-                            opacity: 0.25,
-                            child: AppAssetIcon(
-                              assetPath: preset.assetPath,
-                              fit: BoxFit.cover,
-                              semanticLabel: preset.label,
-                            ),
-                          ),
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                width: 26,
-                                height: 26,
-                                decoration: BoxDecoration(
-                                  color: colors.card,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: colors.divider),
-                                ),
-                                alignment: Alignment.center,
-                                child: AppAssetIcon(
-                                  assetPath: AppAssets.wallpaper,
-                                  size: 13,
-                                  color: Theme.of(context).colorScheme.primary,
-                                  semanticLabel: 'Hình nền',
-                                ),
-                              ),
-                              if (isSelected)
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const AppAssetIcon(
-                                    assetPath: AppAssets.check,
-                                    size: 11,
-                                    color: Colors.white,
-                                    semanticLabel: 'Đã chọn',
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Text(
-                            preset.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              color: colors.textPrimary,
-                              fontSize: 12.5,
-                              fontWeight: isSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            preset.description,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              color: colors.textSecondary,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             );
           },
         ),
+        const SizedBox(height: 16),
       ],
     );
+  }
+
+  /// Card chuyên dụng cho Ảnh Tùy Chỉnh từ máy tính/thiết bị người dùng.
+  /// Lưu cục bộ qua SharedPreferences, không gửi lên DB.
+  Widget _buildCustomWallpaperCard({
+    required BuildContext context,
+    required AppThemeColors colors,
+    required AppBackgroundState bgState,
+  }) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final isSelected = bgState.isCustom;
+    final hasImage = bgState.hasCustomImage;
+
+    return InkWell(
+      onTap: () {
+        if (!hasImage) {
+          _pickCustomBackground();
+        } else {
+          ref.read(appBackgroundProvider.notifier).selectCustomImage();
+        }
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: colors.cardAlt,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? primary
+                : (hasImage ? colors.divider : primary.withValues(alpha: 0.35)),
+            width: isSelected ? 2.5 : 1.2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: primary.withValues(alpha: 0.20),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Thumbnail Area
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (!hasImage)
+                      // Slot rỗng: Tải ảnh từ máy
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colors.card,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: primary.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: colors.primarySubtle,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: AppAssetIcon(
+                                assetPath: AppAssets.upload,
+                                size: 18,
+                                color: primary,
+                                semanticLabel: 'Tải ảnh',
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _isUploadingBg
+                                  ? 'Đang nạp ảnh...'
+                                  : 'Tải ảnh từ máy',
+                              style: GoogleFonts.inter(
+                                color: primary,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Lưu cục bộ trên thiết bị',
+                              style: GoogleFonts.inter(
+                                color: colors.textSecondary,
+                                fontSize: 9.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      // Đã có ảnh: Hiển thị thumbnail thật của ảnh
+                      _buildCustomImageThumbnail(bgState),
+
+                    // Thanh tác vụ trên ảnh: Nút Đổi ảnh & Gỡ ảnh
+                    if (hasImage)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Nút Đổi ảnh
+                            InkWell(
+                              onTap: _isUploadingBg
+                                  ? null
+                                  : _pickCustomBackground,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.72),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const AppAssetIcon(
+                                      assetPath: AppAssets.upload,
+                                      size: 11,
+                                      color: Colors.white,
+                                      semanticLabel: 'Đổi ảnh',
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Đổi ảnh',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            // Nút Gỡ ảnh
+                            InkWell(
+                              onTap: () {
+                                ref
+                                    .read(appBackgroundProvider.notifier)
+                                    .removeCustomImage();
+                                ToastService.showInfo(
+                                  'Đã gỡ ảnh tùy chỉnh khỏi máy.',
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.72),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: const AppAssetIcon(
+                                  assetPath: AppAssets.close,
+                                  size: 10,
+                                  color: Colors.white,
+                                  semanticLabel: 'Gỡ',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Nhãn và Trạng thái chọn
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        hasImage ? 'Ảnh tùy chỉnh (Từ máy)' : 'Ảnh từ thiết bị',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: colors.textPrimary,
+                          fontSize: 12.5,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        hasImage
+                            ? 'Lưu trên thiết bị (Offline)'
+                            : 'Không lưu trên database',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: colors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: primary,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const AppAssetIcon(
+                      assetPath: AppAssets.check,
+                      size: 12,
+                      color: Colors.white,
+                      semanticLabel: 'Đã chọn',
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Hiển thị thumbnail ảnh thật của người dùng đã tải
+  Widget _buildCustomImageThumbnail(AppBackgroundState bgState) {
+    if (bgState.customBase64 != null && bgState.customBase64!.isNotEmpty) {
+      try {
+        final bytes = base64Decode(bgState.customBase64!);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        );
+      } catch (_) {}
+    }
+    if (bgState.customImagePath != null && !kIsWeb) {
+      try {
+        final file = File(bgState.customImagePath!);
+        if (file.existsSync()) {
+          return Image.file(
+            file,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          );
+        }
+      } catch (_) {}
+    }
+    return Container(
+      color: const Color(0xFF334155),
+      alignment: Alignment.center,
+      child: const AppAssetIcon(
+        assetPath: AppAssets.image,
+        size: 26,
+        color: Colors.white70,
+        semanticLabel: 'Ảnh',
+      ),
+    );
+  }
+
+  /// Card cho từng Preset hình nền có sẵn, với Thumbnail sắc nét, tương phản cao, phân biệt rõ rệt
+  Widget _buildPresetCard({
+    required BuildContext context,
+    required AppThemeColors colors,
+    required AppWallpaperPreset preset,
+    required bool isSelected,
+  }) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return InkWell(
+      onTap: () {
+        ref.read(appBackgroundProvider.notifier).setPreset(preset);
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: colors.cardAlt,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? primary : colors.divider,
+            width: isSelected ? 2.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: primary.withValues(alpha: 0.20),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Thumbnail Preview Visual (Sắc nét 100%, không bị mờ 0.25)
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: _buildPresetThumbnailVisual(preset, colors),
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Tiêu đề & Mô tả
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        preset.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: colors.textPrimary,
+                          fontSize: 12.5,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        preset.description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: colors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: primary,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const AppAssetIcon(
+                      assetPath: AppAssets.check,
+                      size: 12,
+                      color: Colors.white,
+                      semanticLabel: 'Đã chọn',
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Đồ họa Thumbnail trực quan, phong cách riêng biệt, rực rỡ và dễ nhận diện
+  Widget _buildPresetThumbnailVisual(
+    AppWallpaperPreset preset,
+    AppThemeColors colors,
+  ) {
+    switch (preset) {
+      case AppWallpaperPreset.none:
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [colors.card, colors.cardAlt],
+            ),
+            border: Border.all(color: colors.divider),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: colors.textMuted.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: AppAssetIcon(
+                    assetPath: AppAssets.close,
+                    size: 15,
+                    color: colors.textMuted,
+                    semanticLabel: 'Không nền',
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Giao diện phẳng',
+                  style: GoogleFonts.inter(
+                    color: colors.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case AppWallpaperPreset.warehouseGrid:
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0A192F), Color(0xFF1E3A8A)],
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              SvgPicture.asset(
+                AppAssets.bgWarehouseGrid,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+              Positioned(
+                bottom: 6,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.90),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'BLUEPRINT KHO',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case AppWallpaperPreset.techDots:
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              SvgPicture.asset(
+                AppAssets.bgTechDots,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+              Positioned(
+                bottom: 6,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.90),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'CYBER MATRIX',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case AppWallpaperPreset.meshEmerald:
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF064E3B), Color(0xFF047857)],
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              SvgPicture.asset(
+                AppAssets.bgMeshEmerald,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+              Positioned(
+                bottom: 6,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.90),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'SÓNG LỤC BẢO',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case AppWallpaperPreset.geometric:
+        return Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF3B0764), Color(0xFF6B21A8)],
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              SvgPicture.asset(
+                AppAssets.bgGeometricShapes,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+              Positioned(
+                bottom: 6,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC026D3).withValues(alpha: 0.90),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'KHỐI LẬP THỂ',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      case AppWallpaperPreset.warehousePanorama:
+        return Container(
+          decoration: const BoxDecoration(color: Color(0xFF0F172A)),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                AppAssets.authWarehousePanoramaV2,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.65),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 6,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEA580C).withValues(alpha: 0.90),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'ẢNH KHO THẬT',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+    }
   }
 
   Widget _buildAvatarTab(
@@ -963,20 +1566,32 @@ class _LiveMiniPreview extends StatelessWidget {
             Positioned.fill(
               child: IgnorePointer(
                 child: Opacity(
-                  opacity: (opacity * 1.8).clamp(0.06, 0.30),
-                  child:
-                      bgState.preset != AppWallpaperPreset.none &&
-                          bgState.preset.assetPath.isNotEmpty
-                      ? (bgState.preset.assetPath.endsWith('.svg')
-                            ? SvgPicture.asset(
-                                bgState.preset.assetPath,
+                  opacity: (opacity * 1.8).clamp(0.06, 0.35),
+                  child: bgState.isCustom && bgState.hasCustomImage
+                      ? (bgState.customBase64 != null &&
+                                bgState.customBase64!.isNotEmpty
+                            ? Image.memory(
+                                base64Decode(bgState.customBase64!),
                                 fit: BoxFit.cover,
                               )
-                            : Image.asset(
-                                bgState.preset.assetPath,
-                                fit: BoxFit.cover,
-                              ))
-                      : const SizedBox.shrink(),
+                            : (bgState.customImagePath != null && !kIsWeb
+                                  ? Image.file(
+                                      File(bgState.customImagePath!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : const SizedBox.shrink()))
+                      : (bgState.preset != AppWallpaperPreset.none &&
+                                bgState.preset.assetPath.isNotEmpty
+                            ? (bgState.preset.assetPath.endsWith('.svg')
+                                  ? SvgPicture.asset(
+                                      bgState.preset.assetPath,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.asset(
+                                      bgState.preset.assetPath,
+                                      fit: BoxFit.cover,
+                                    ))
+                            : const SizedBox.shrink()),
                 ),
               ),
             ),

@@ -9,6 +9,7 @@ const _kBgOpacityKey = 'app_background_opacity_v2';
 const _kBgBlurKey = 'app_background_blur_v2';
 const _kBgCustomPathKey = 'app_background_custom_path_v2';
 const _kBgCustomBase64Key = 'app_background_custom_base64_v2';
+const _kBgIsCustomActiveKey = 'app_background_is_custom_active_v2';
 
 enum AppWallpaperPreset {
   none(
@@ -24,40 +25,40 @@ enum AppWallpaperPreset {
     label: 'Lưới Kho Vận',
     assetPath: AppAssets.bgWarehouseGrid,
     description: 'Họa tiết lưới kệ kho thông minh, hiện đại',
-    defaultOpacityLight: 0.08,
-    defaultOpacityDark: 0.12,
+    defaultOpacityLight: 0.12,
+    defaultOpacityDark: 0.16,
   ),
   techDots(
     id: 'tech_dots',
     label: 'Chấm Công Nghệ',
     assetPath: AppAssets.bgTechDots,
     description: 'Ma trận điểm vi mạch số hóa công nghệ cao',
-    defaultOpacityLight: 0.07,
-    defaultOpacityDark: 0.11,
+    defaultOpacityLight: 0.12,
+    defaultOpacityDark: 0.16,
   ),
   meshEmerald(
     id: 'mesh_emerald',
     label: 'Sóng Lục Bảo',
     assetPath: AppAssets.bgMeshEmerald,
     description: 'Lớp sóng gradient mềm mại mang năng lượng thịnh vượng',
-    defaultOpacityLight: 0.09,
-    defaultOpacityDark: 0.14,
+    defaultOpacityLight: 0.14,
+    defaultOpacityDark: 0.18,
   ),
   geometric(
     id: 'geometric',
     label: 'Khối Hình Học',
     assetPath: AppAssets.bgGeometricShapes,
     description: 'Khối đa giác lập thể thanh lịch và gọn gàng',
-    defaultOpacityLight: 0.08,
-    defaultOpacityDark: 0.12,
+    defaultOpacityLight: 0.12,
+    defaultOpacityDark: 0.16,
   ),
   warehousePanorama(
     id: 'warehouse_panorama',
     label: 'Kho Hàng Thực Tế',
     assetPath: AppAssets.authWarehousePanoramaV2,
     description: 'Toàn cảnh trung tâm phân phối kho bãi SmartStock',
-    defaultOpacityLight: 0.06,
-    defaultOpacityDark: 0.10,
+    defaultOpacityLight: 0.08,
+    defaultOpacityDark: 0.12,
   );
 
   final String id;
@@ -72,8 +73,8 @@ enum AppWallpaperPreset {
     required this.label,
     required this.assetPath,
     required this.description,
-    this.defaultOpacityLight = 0.08,
-    this.defaultOpacityDark = 0.12,
+    this.defaultOpacityLight = 0.12,
+    this.defaultOpacityDark = 0.16,
   });
 
   static AppWallpaperPreset fromId(String? id) {
@@ -92,6 +93,7 @@ class AppBackgroundState {
   final double blurRadius;
   final String? customImagePath;
   final String? customBase64;
+  final bool isCustomActive;
 
   const AppBackgroundState({
     this.preset = AppWallpaperPreset.none,
@@ -99,17 +101,25 @@ class AppBackgroundState {
     this.blurRadius = 0.0,
     this.customImagePath,
     this.customBase64,
+    this.isCustomActive = false,
   });
 
-  bool get hasBackground =>
-      preset != AppWallpaperPreset.none ||
-      customImagePath != null ||
-      customBase64 != null;
+  /// Kiểm tra xem người dùng đã tải/lưu ảnh tùy chỉnh trên thiết bị chưa.
+  bool get hasCustomImage =>
+      (customImagePath != null && customImagePath!.isNotEmpty) ||
+      (customBase64 != null && customBase64!.isNotEmpty);
 
-  bool get isCustom => customImagePath != null || customBase64 != null;
+  /// Trạng thái đang kích hoạt ảnh tùy chỉnh từ thiết bị.
+  bool get isCustom =>
+      (isCustomActive && hasCustomImage) ||
+      (preset == AppWallpaperPreset.none && hasCustomImage && isCustomActive);
+
+  /// Kiểm tra có đang áp dụng bất kỳ hình nền nào không.
+  bool get hasBackground =>
+      (isCustom && hasCustomImage) || preset != AppWallpaperPreset.none;
 
   double getEffectiveOpacity(bool isDark) {
-    if (isCustom) return isDark ? 0.10 : 0.08;
+    if (isCustom) return isDark ? 0.14 : 0.12;
     return isDark ? preset.defaultOpacityDark : preset.defaultOpacityLight;
   }
 
@@ -119,16 +129,27 @@ class AppBackgroundState {
     double? blurRadius,
     String? customImagePath,
     String? customBase64,
+    bool? isCustomActive,
     bool clearCustom = false,
   }) {
+    final nextCustomPath = clearCustom
+        ? null
+        : (customImagePath ?? this.customImagePath);
+    final nextCustomBase64 = clearCustom
+        ? null
+        : (customBase64 ?? this.customBase64);
+    final hasNewCustomData =
+        (customImagePath != null || customBase64 != null) && !clearCustom;
+
     return AppBackgroundState(
       preset: preset ?? this.preset,
       opacity: opacity ?? this.opacity,
       blurRadius: blurRadius ?? this.blurRadius,
-      customImagePath: clearCustom
-          ? null
-          : (customImagePath ?? this.customImagePath),
-      customBase64: clearCustom ? null : (customBase64 ?? this.customBase64),
+      customImagePath: nextCustomPath,
+      customBase64: nextCustomBase64,
+      isCustomActive: clearCustom
+          ? false
+          : (isCustomActive ?? (hasNewCustomData ? true : this.isCustomActive)),
     );
   }
 
@@ -140,12 +161,19 @@ class AppBackgroundState {
         other.opacity == opacity &&
         other.blurRadius == blurRadius &&
         other.customImagePath == customImagePath &&
-        other.customBase64 == customBase64;
+        other.customBase64 == customBase64 &&
+        other.isCustomActive == isCustomActive;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(preset, opacity, blurRadius, customImagePath, customBase64);
+  int get hashCode => Object.hash(
+    preset,
+    opacity,
+    blurRadius,
+    customImagePath,
+    customBase64,
+    isCustomActive,
+  );
 }
 
 final appBackgroundProvider =
@@ -163,10 +191,13 @@ class AppBackgroundNotifier extends Notifier<AppBackgroundState> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     final presetId = prefs.getString(_kBgPresetKey);
-    final opacity = prefs.getDouble(_kBgOpacityKey) ?? 0.08;
+    final opacity = prefs.getDouble(_kBgOpacityKey) ?? 0.12;
     final blur = prefs.getDouble(_kBgBlurKey) ?? 0.0;
     final customPath = prefs.getString(_kBgCustomPathKey);
     final customBase64 = prefs.getString(_kBgCustomBase64Key);
+    final isCustomActive =
+        prefs.getBool(_kBgIsCustomActiveKey) ??
+        (customBase64 != null || customPath != null);
 
     state = AppBackgroundState(
       preset: AppWallpaperPreset.fromId(presetId),
@@ -174,15 +205,30 @@ class AppBackgroundNotifier extends Notifier<AppBackgroundState> {
       blurRadius: blur.clamp(0.0, 20.0),
       customImagePath: customPath,
       customBase64: customBase64,
+      isCustomActive: isCustomActive,
     );
   }
 
+  /// Chọn preset mẫu có sẵn.
+  /// LƯU Ý: Giữ nguyên ảnh tùy chỉnh đã lưu ở máy để người dùng có thể chọn lại bất kỳ lúc nào.
   Future<void> setPreset(AppWallpaperPreset preset) async {
-    state = state.copyWith(preset: preset, clearCustom: true);
+    state = state.copyWith(preset: preset, isCustomActive: false);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kBgPresetKey, preset.id);
-    await prefs.remove(_kBgCustomPathKey);
-    await prefs.remove(_kBgCustomBase64Key);
+    await prefs.setBool(_kBgIsCustomActiveKey, false);
+  }
+
+  /// Kích hoạt lại ảnh tùy chỉnh đã có trên máy.
+  Future<void> selectCustomImage() async {
+    if (state.hasCustomImage) {
+      state = state.copyWith(
+        preset: AppWallpaperPreset.none,
+        isCustomActive: true,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_kBgIsCustomActiveKey, true);
+      await prefs.setString(_kBgPresetKey, AppWallpaperPreset.none.id);
+    }
   }
 
   Future<void> setOpacity(double opacity) async {
@@ -199,24 +245,33 @@ class AppBackgroundNotifier extends Notifier<AppBackgroundState> {
     await prefs.setDouble(_kBgBlurKey, clamped);
   }
 
+  /// Lưu ảnh tùy chỉnh cục bộ trên máy người dùng (SharedPreferences).
+  /// TUYỆT ĐỐI KHÔNG GỬI LÊN SERVER/DB.
   Future<void> setCustomImage({String? filePath, String? base64Data}) async {
     state = state.copyWith(
       preset: AppWallpaperPreset.none,
       customImagePath: filePath,
       customBase64: base64Data,
+      isCustomActive: true,
     );
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kBgIsCustomActiveKey, true);
     await prefs.setString(_kBgPresetKey, AppWallpaperPreset.none.id);
     if (filePath != null) {
       await prefs.setString(_kBgCustomPathKey, filePath);
-    } else {
-      await prefs.remove(_kBgCustomPathKey);
     }
     if (base64Data != null) {
       await prefs.setString(_kBgCustomBase64Key, base64Data);
-    } else {
-      await prefs.remove(_kBgCustomBase64Key);
     }
+  }
+
+  /// Xóa ảnh tùy chỉnh khỏi bộ nhớ máy người dùng nếu muốn dọn dẹp.
+  Future<void> removeCustomImage() async {
+    state = state.copyWith(clearCustom: true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kBgCustomPathKey);
+    await prefs.remove(_kBgCustomBase64Key);
+    await prefs.setBool(_kBgIsCustomActiveKey, false);
   }
 
   Future<void> resetDefault() async {
@@ -227,5 +282,6 @@ class AppBackgroundNotifier extends Notifier<AppBackgroundState> {
     await prefs.remove(_kBgBlurKey);
     await prefs.remove(_kBgCustomPathKey);
     await prefs.remove(_kBgCustomBase64Key);
+    await prefs.remove(_kBgIsCustomActiveKey);
   }
 }

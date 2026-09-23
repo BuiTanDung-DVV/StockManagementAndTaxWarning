@@ -122,5 +122,40 @@ void main() {
       expect(find.text('Kế toán trưởng'), findsOneWidget);
       expect(find.text('Thu ngân bán hàng'), findsOneWidget);
     });
+
+    testWidgets(
+      'Wallpaper tab displays Dedicated Custom Wallpaper Card alongside distinct Presets',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        await tester.pumpWidget(
+          buildTestableWidget(const ThemeAppearanceModal()),
+        );
+        await tester.pumpAndSettle();
+
+        // Chuyển sang Tab Hình nền App
+        await tester.tap(find.text('Hình nền App'));
+        await tester.pumpAndSettle();
+
+        // 1. Kiểm tra sự xuất hiện của Card "Tải ảnh từ máy" / "Ảnh từ thiết bị"
+        expect(find.text('Ảnh từ thiết bị'), findsOneWidget);
+        expect(find.text('Không lưu trên database'), findsOneWidget);
+
+        // 2. Kiểm tra các badges đặc trưng trực quan của từng Preset để đảm bảo không bị trùng lặp hay mờ nhạt
+        expect(find.text('Giao diện phẳng'), findsOneWidget);
+        expect(find.text('BLUEPRINT KHO'), findsOneWidget);
+        expect(find.text('CYBER MATRIX'), findsOneWidget);
+        expect(find.text('SÓNG LỤC BẢO'), findsOneWidget);
+        expect(find.text('KHỐI LẬP THỂ'), findsOneWidget);
+        expect(find.text('ẢNH KHO THẬT'), findsOneWidget);
+
+        // 3. Chọn thử một Preset
+        await tester.tap(find.text('Sóng Lục Bảo'));
+        await tester.pumpAndSettle();
+      },
+    );
   });
 }
+

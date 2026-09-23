@@ -136,7 +136,7 @@ void main() {
 
     testWidgets('02 - Modal Tab 1: Hinh nen App', (tester) async {
       const key = ValueKey('modal_tab1_capture');
-      await tester.binding.setSurfaceSize(const Size(720, 860));
+      await tester.binding.setSurfaceSize(const Size(720, 1150));
       await tester.pumpWidget(
         RepaintBoundary(
           key: key,
@@ -155,6 +155,12 @@ void main() {
       await tester.pumpAndSettle();
       // Click on "Hình nền App" tab
       await tester.tap(find.text('Hình nền App'));
+      await tester.pumpAndSettle();
+      // Cuộn danh sách xuống để hiển thị đầy đủ các thẻ hình nền
+      await tester.drag(
+        find.text('HOA VĂN & HÌNH NỀN ỨNG DỤNG'),
+        const Offset(0, -380),
+      );
       await tester.pumpAndSettle();
       await capture(tester, key, '02_modal_tab1_wallpaper.png');
     });
