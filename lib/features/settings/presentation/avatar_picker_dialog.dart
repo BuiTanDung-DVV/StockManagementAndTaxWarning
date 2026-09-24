@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/assets/app_assets.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/avatar_provider.dart';
 import '../../../core/utils/toast_service.dart';
@@ -108,7 +109,7 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                       assetPath: AppAssets.avatar,
                       size: 22,
                       color: Theme.of(context).colorScheme.primary,
-                      semanticLabel: 'Ảnh đại diện',
+                      semanticLabel: context.tr.settings.tabAvatar,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -117,7 +118,7 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Chọn ảnh đại diện',
+                          context.tr.settings.chooseAvatarTitle,
                           style: GoogleFonts.inter(
                             color: colors.textPrimary,
                             fontSize: 17,
@@ -125,7 +126,7 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                           ),
                         ),
                         Text(
-                          'Chọn từ bộ sưu tập nhận diện hoặc tải ảnh riêng',
+                          context.tr.settings.chooseAvatarSubtitle,
                           style: GoogleFonts.inter(
                             color: colors.textSecondary,
                             fontSize: 12.5,
@@ -140,7 +141,7 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                       assetPath: AppAssets.close,
                       size: 18,
                       color: colors.textSecondary,
-                      semanticLabel: 'Đóng',
+                      semanticLabel: context.tr.common.close,
                     ),
                   ),
                 ],
@@ -169,9 +170,15 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                         children: [
                           Text(
                             avatarState.hasCustomImage
-                                ? 'Ảnh tùy chỉnh đã tải'
-                                : (avatarState.preset?.label ??
-                                      'Chưa chọn mẫu'),
+                                ? (context.isEnglish
+                                      ? 'Uploaded custom avatar'
+                                      : 'Ảnh tùy chỉnh đã tải')
+                                : (avatarState.preset?.localizedLabel(
+                                        context.isEnglish,
+                                      ) ??
+                                      (context.isEnglish
+                                          ? 'No preset selected'
+                                          : 'Chưa chọn mẫu')),
                             style: GoogleFonts.inter(
                               color: colors.textPrimary,
                               fontSize: 14.5,
@@ -181,8 +188,12 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                           const SizedBox(height: 4),
                           Text(
                             avatarState.hasCustomImage
-                                ? 'Ảnh cá nhân tải lên từ thiết bị'
-                                : 'Nhận diện: ${avatarState.preset?.category ?? "Hệ thống"}',
+                                ? (context.isEnglish
+                                      ? 'Personal image uploaded from device'
+                                      : 'Ảnh cá nhân tải lên từ thiết bị')
+                                : (context.isEnglish
+                                      ? 'Identity: ${avatarState.preset?.localizedCategory(true) ?? "System"}'
+                                      : 'Nhận diện: ${avatarState.preset?.category ?? "Hệ thống"}'),
                             style: GoogleFonts.inter(
                               color: colors.textSecondary,
                               fontSize: 12,
@@ -197,10 +208,14 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                         assetPath: AppAssets.upload,
                         size: 16,
                         color: Theme.of(context).colorScheme.primary,
-                        semanticLabel: 'Tải ảnh lên',
+                        semanticLabel: context.tr.settings.uploadFromDevice,
                       ),
                       label: Text(
-                        _isUploading ? 'Đang tải...' : 'Tải ảnh',
+                        _isUploading
+                            ? (context.isEnglish
+                                  ? 'Uploading...'
+                                  : 'Đang tải...')
+                            : (context.isEnglish ? 'Upload' : 'Tải ảnh'),
                         style: GoogleFonts.inter(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -223,7 +238,7 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
 
               const SizedBox(height: 20),
               Text(
-                'BỘ SƯU TẬP NHẬN DIỆN DOANH NGHIỆP',
+                context.tr.settings.enterpriseAvatarCollection,
                 style: GoogleFonts.inter(
                   color: colors.textMuted,
                   fontSize: 11,
@@ -312,7 +327,7 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              preset.label,
+                              preset.localizedLabel(context.isEnglish),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
@@ -341,16 +356,20 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                   TextButton.icon(
                     onPressed: () {
                       ref.read(userAvatarProvider.notifier).resetDefault();
-                      ToastService.showInfo('Đã đặt lại ảnh đại diện mặc định');
+                      ToastService.showInfo(
+                        context.isEnglish
+                            ? 'Default avatar restored'
+                            : 'Đã đặt lại ảnh đại diện mặc định',
+                      );
                     },
                     icon: AppAssetIcon(
                       assetPath: AppAssets.refresh,
                       size: 15,
                       color: colors.textSecondary,
-                      semanticLabel: 'Đặt lại',
+                      semanticLabel: context.tr.settings.resetDefaults,
                     ),
                     label: Text(
-                      'Khôi phục mặc định',
+                      context.tr.settings.resetDefaults,
                       style: GoogleFonts.inter(
                         color: colors.textSecondary,
                         fontSize: 12.5,
@@ -371,7 +390,7 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                       ),
                     ),
                     child: Text(
-                      'Hoàn tất',
+                      context.tr.settings.finish,
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,

@@ -293,8 +293,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () => _showLanguagePicker(context, appLanguage),
           ),
           _SettingsEntry(
-            label: 'Giao diện & Hình nền',
-            description: tr.settings.currentBrandColor(brandColor.label),
+            label: tr.settings.appearanceAndWallpaper,
+            description: tr.settings.currentBrandColor(
+              brandColor.localizedLabel(context.isEnglish),
+            ),
             assetPath: AppAssets.palette,
             iconColor: brandColor.color,
             onTap: () => ThemeAppearanceModal.show(context),
@@ -762,11 +764,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final confirmed = await AppConfirmModal.show(
       context,
-      title: 'Đổi phương pháp tính giá vốn',
-      message:
-          'Theo chế độ kế toán và Thông tư 88/2021/TT-BTC, phương pháp tính giá vốn cần áp dụng nhất quán trong niên độ kế toán. Thay đổi giữa kỳ có thể ảnh hưởng đến giá trị tồn kho và lợi nhuận.\n\nBạn có chắc chắn muốn chuyển sang ${method == 'FIFO' ? 'Nhập trước – xuất trước (FIFO)' : 'Bình quân gia quyền (AVG)'}?',
-      confirmText: 'Xác nhận thay đổi',
-      cancelText: 'Hủy bỏ',
+      title: context.tr.settings.costingMethodConfirmTitle,
+      message: context.tr.settings.costingMethodConfirmMsg,
+      confirmText: context.tr.common.confirm,
+      cancelText: context.tr.common.cancel,
     );
     if (confirmed != true) return;
 

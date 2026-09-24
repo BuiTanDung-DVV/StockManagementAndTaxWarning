@@ -77,6 +77,42 @@ enum AppWallpaperPreset {
     this.defaultOpacityDark = 0.16,
   });
 
+  String localizedLabel(bool isEnglish) {
+    if (!isEnglish) return label;
+    switch (this) {
+      case AppWallpaperPreset.none:
+        return 'Default (No Wallpaper)';
+      case AppWallpaperPreset.warehouseGrid:
+        return 'Warehouse Grid';
+      case AppWallpaperPreset.techDots:
+        return 'Tech Dots';
+      case AppWallpaperPreset.meshEmerald:
+        return 'Emerald Waves';
+      case AppWallpaperPreset.geometric:
+        return 'Geometric Shapes';
+      case AppWallpaperPreset.warehousePanorama:
+        return 'Realistic Warehouse';
+    }
+  }
+
+  String localizedDescription(bool isEnglish) {
+    if (!isEnglish) return description;
+    switch (this) {
+      case AppWallpaperPreset.none:
+        return 'Minimalist flat background, optimized for focus';
+      case AppWallpaperPreset.warehouseGrid:
+        return 'Smart warehouse shelving pattern, clean & modern';
+      case AppWallpaperPreset.techDots:
+        return 'High-tech digital circuit dot matrix';
+      case AppWallpaperPreset.meshEmerald:
+        return 'Soft emerald wave gradient for prosperity';
+      case AppWallpaperPreset.geometric:
+        return 'Clean, elegant 3D isometric geometric polygons';
+      case AppWallpaperPreset.warehousePanorama:
+        return 'SmartStock logistics distribution center panorama';
+    }
+  }
+
   static AppWallpaperPreset fromId(String? id) {
     if (id == null) return AppWallpaperPreset.none;
     for (final preset in AppWallpaperPreset.values) {

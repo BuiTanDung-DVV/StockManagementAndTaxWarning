@@ -71,6 +71,48 @@ enum AppAvatarPreset {
     required this.category,
   });
 
+  String localizedLabel(bool isEnglish) {
+    if (!isEnglish) return label;
+    switch (this) {
+      case AppAvatarPreset.adminM:
+        return 'Administrator (Male)';
+      case AppAvatarPreset.adminF:
+        return 'Manager (Female)';
+      case AppAvatarPreset.accountant:
+        return 'Chief Accountant';
+      case AppAvatarPreset.cashier:
+        return 'POS Cashier';
+      case AppAvatarPreset.warehouse:
+        return 'Warehouse Keeper';
+      case AppAvatarPreset.aiBot:
+        return 'SmartStock AI Assistant';
+      case AppAvatarPreset.mascot:
+        return 'System Mascot';
+      case AppAvatarPreset.logo:
+        return 'SmartStock Logo';
+    }
+  }
+
+  String localizedCategory(bool isEnglish) {
+    if (!isEnglish) return category;
+    switch (this) {
+      case AppAvatarPreset.adminM:
+      case AppAvatarPreset.adminF:
+        return 'Administration';
+      case AppAvatarPreset.accountant:
+        return 'Finance & Tax';
+      case AppAvatarPreset.cashier:
+        return 'Retail';
+      case AppAvatarPreset.warehouse:
+        return 'Logistics';
+      case AppAvatarPreset.aiBot:
+        return 'Technology';
+      case AppAvatarPreset.mascot:
+      case AppAvatarPreset.logo:
+        return 'Branding';
+    }
+  }
+
   static AppAvatarPreset? fromId(String? id) {
     if (id == null) return null;
     for (final p in AppAvatarPreset.values) {

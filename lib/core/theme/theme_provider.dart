@@ -19,16 +19,62 @@ enum AppBrandColor {
   final Color color;
   final bool isDark;
   const AppBrandColor(this.label, this.color, this.isDark);
+
+  String localizedLabel(bool isEnglish) {
+    if (!isEnglish) return label;
+    switch (this) {
+      case AppBrandColor.tealSmartStock:
+        return 'SmartStock Teal';
+      case AppBrandColor.luminaBlue:
+        return 'SmartStock Blue';
+      case AppBrandColor.emeraldWealth:
+        return 'Emerald Operations';
+      case AppBrandColor.sunsetCopper:
+        return 'Retail Amber';
+      case AppBrandColor.orchidMajesty:
+        return 'Neutral Purple';
+      case AppBrandColor.crimsonRose:
+        return 'Crimson Brand';
+      case AppBrandColor.steelSlate:
+        return 'Steel Slate';
+      case AppBrandColor.darkObsidian:
+        return 'Dark Obsidian';
+    }
+  }
 }
 
 enum AppThemeModeSetting {
   light('Sáng', 'Giao diện sáng rõ ràng, tối ưu tương phản'),
   dark('Tối', 'Giao diện nền tối bảo vệ mắt'),
-  system('Hệ thống', 'Tự động chuyển theo cài đặt thiết bị');
+  system('Tự động', 'Tự động chuyển theo cài đặt thiết bị');
 
   final String label;
   final String description;
   const AppThemeModeSetting(this.label, this.description);
+
+  String localizedLabel(bool isEnglish) {
+    if (!isEnglish) return label;
+    switch (this) {
+      case AppThemeModeSetting.light:
+        return 'Light';
+      case AppThemeModeSetting.dark:
+        return 'Dark';
+      case AppThemeModeSetting.system:
+        return 'Auto';
+    }
+  }
+
+  String localizedDescription(bool isEnglish) {
+    if (!isEnglish) return description;
+    switch (this) {
+      case AppThemeModeSetting.light:
+        return 'Clear light interface, optimized contrast';
+      case AppThemeModeSetting.dark:
+        return 'Dark theme for eye comfort';
+      case AppThemeModeSetting.system:
+        return 'Follows device system settings';
+    }
+  }
 }
 
 final themeModeSettingProvider =

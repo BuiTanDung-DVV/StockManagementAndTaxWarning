@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -69,18 +70,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  late ReportingPeriodSelection _periodSelection;
-
-  @override
-  void initState() {
-    super.initState();
-    _periodSelection = ReportingPeriodSelection(
-      periodType: ReportingPeriodType.month,
-      anchorDate: DateTime.now(),
-      comparisonType: ReportingComparisonType.previousPeriod,
-    );
-  }
-
   Future<void> _openPeriodEditor(ReportingPeriodSelection selection) async {
     final launcherWasVisible = ref.read(aiAssistantLauncherVisibleProvider);
     if (launcherWasVisible) {
@@ -88,14 +77,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
     final updated = await showReportingPeriodEditor(
       context,
-      selection: selection,
+      initialSelection: selection,
       today: DateTime.now(),
     );
     if (launcherWasVisible) {
       ref.read(aiAssistantLauncherVisibleProvider.notifier).show();
     }
     if (updated == null || !mounted) return;
-    setState(() => _periodSelection = updated);
+    ref
+        .read(reportingPeriodNotifierProvider.notifier)
+        .setPeriodForTab('dashboard', updated);
   }
 
   void _showJoinShopDialog(BuildContext context) {
@@ -115,7 +106,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final compactLayout = dashboardUsesCompactLayout(
       MediaQuery.sizeOf(context).width,
     );
-    final periodSelection = _periodSelection;
+    final periodSelection = ref.watch(tabSelectionProvider('dashboard'));
     final today = DateTime.now();
     final periods = _resolvePeriods(periodSelection, today);
 
@@ -267,12 +258,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     selection: periodSelection,
                     currentLabel: periods.currentLabel,
                     comparisonLabel: periods.previousLabel,
-                    onQuickPeriodChanged: (value) => setState(
-                      () => _periodSelection = _periodSelection.copyWith(
-                        periodType: value,
-                        anchorDate: DateTime.now(),
-                      ),
-                    ),
+                    onQuickPeriodChanged: (value) => ref
+                        .read(reportingPeriodNotifierProvider.notifier)
+                        .setPeriodForTab(
+                          'dashboard',
+                          periodSelection.copyWith(
+                            periodType: value,
+                            anchorDate: DateTime.now(),
+                          ),
+                        ),
                     onOpenEditor: () => _openPeriodEditor(periodSelection),
                   ),
                   const SizedBox(height: AppSpacing.md),

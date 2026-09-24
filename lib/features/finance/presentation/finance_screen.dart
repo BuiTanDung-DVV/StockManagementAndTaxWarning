@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/reporting_period.dart';
@@ -163,12 +164,12 @@ class FinanceScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final period = currentMonthReportingPeriod(DateTime.now());
-    final from = period.from;
-    final to = period.to;
+    final resolvedPeriod = ref.watch(tabResolvedPeriodProvider('finance'));
+    final from = resolvedPeriod.currentFrom.toIso8601String().split('T')[0];
+    final to = resolvedPeriod.currentTo.toIso8601String().split('T')[0];
     final periodLabel = reportingCompactRangeLabel(
-      DateTime.parse(from),
-      DateTime.parse(to),
+      resolvedPeriod.currentFrom,
+      resolvedPeriod.currentTo,
     );
     final summaryAsync = ref.watch(cashSummaryProvider((from: from, to: to)));
     final transactionsAsync = ref.watch(

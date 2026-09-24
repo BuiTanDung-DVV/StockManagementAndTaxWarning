@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/assets/app_assets.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_background_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/avatar_provider.dart';
@@ -134,7 +135,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                       assetPath: AppAssets.palette,
                       size: 22,
                       color: Theme.of(context).colorScheme.primary,
-                      semanticLabel: 'Tùy biến giao diện',
+                      semanticLabel: context.tr.settings.appearanceAndWallpaper,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -143,7 +144,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Tùy biến giao diện & hình nền',
+                          context.tr.settings.appearanceModalTitle,
                           style: GoogleFonts.inter(
                             color: colors.textPrimary,
                             fontSize: 17,
@@ -151,7 +152,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                           ),
                         ),
                         Text(
-                          'Cá nhân hóa màu sắc, ảnh nền và ảnh đại diện',
+                          context.tr.settings.appearanceModalSubtitle,
                           style: GoogleFonts.inter(
                             color: colors.textSecondary,
                             fontSize: 12.5,
@@ -166,7 +167,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                       assetPath: AppAssets.close,
                       size: 18,
                       color: colors.textSecondary,
-                      semanticLabel: 'Đóng',
+                      semanticLabel: context.tr.common.close,
                     ),
                   ),
                 ],
@@ -212,30 +213,30 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
                 ),
-                tabs: const [
+                tabs: [
                   Tab(
                     icon: AppAssetIcon(
                       assetPath: AppAssets.palette,
                       size: 16,
-                      semanticLabel: 'Màu sắc',
+                      semanticLabel: context.tr.settings.tabColorAndMode,
                     ),
-                    text: 'Màu sắc & Chế độ',
+                    text: context.tr.settings.tabColorAndMode,
                   ),
                   Tab(
                     icon: AppAssetIcon(
                       assetPath: AppAssets.wallpaper,
                       size: 16,
-                      semanticLabel: 'Hình nền',
+                      semanticLabel: context.tr.settings.tabWallpaper,
                     ),
-                    text: 'Hình nền App',
+                    text: context.tr.settings.tabWallpaper,
                   ),
                   Tab(
                     icon: AppAssetIcon(
                       assetPath: AppAssets.avatar,
                       size: 16,
-                      semanticLabel: 'Avatar',
+                      semanticLabel: context.tr.settings.tabAvatar,
                     ),
-                    text: 'Ảnh đại diện',
+                    text: context.tr.settings.tabAvatar,
                   ),
                 ],
               ),
@@ -282,17 +283,19 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                       ref.read(appBackgroundProvider.notifier).resetDefault();
                       ref.read(userAvatarProvider.notifier).resetDefault();
                       ToastService.showInfo(
-                        'Đã đặt lại toàn bộ cài đặt mặc định',
+                        context.isEnglish
+                            ? 'All appearance settings reset to default'
+                            : 'Đã đặt lại toàn bộ cài đặt mặc định',
                       );
                     },
                     icon: AppAssetIcon(
                       assetPath: AppAssets.refresh,
                       size: 15,
                       color: colors.textSecondary,
-                      semanticLabel: 'Khôi phục mặc định',
+                      semanticLabel: context.tr.settings.resetDefaults,
                     ),
                     label: Text(
-                      'Khôi phục chuẩn',
+                      context.tr.settings.resetDefaults,
                       style: GoogleFonts.inter(
                         color: colors.textSecondary,
                         fontSize: 12.5,
@@ -313,7 +316,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                       ),
                     ),
                     child: Text(
-                      'Hoàn tất',
+                      context.tr.settings.finish,
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
@@ -339,7 +342,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       children: [
         Text(
-          'CHẾ ĐỘ HIỂN THỊ',
+          context.tr.settings.displayModeTitle,
           style: GoogleFonts.inter(
             color: colors.textMuted,
             fontSize: 11,
@@ -353,8 +356,10 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
             _buildThemeModeCard(
               context: context,
               colors: colors,
-              title: 'Sáng',
-              subtitle: 'Tiêu chuẩn',
+              title: AppThemeModeSetting.light.localizedLabel(
+                context.isEnglish,
+              ),
+              subtitle: context.isEnglish ? 'Standard' : 'Tiêu chuẩn',
               assetPath: AppAssets.sun,
               isSelected: currentMode == AppThemeModeSetting.light,
               onTap: () {
@@ -367,8 +372,8 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
             _buildThemeModeCard(
               context: context,
               colors: colors,
-              title: 'Tối',
-              subtitle: 'Bảo vệ mắt',
+              title: AppThemeModeSetting.dark.localizedLabel(context.isEnglish),
+              subtitle: context.isEnglish ? 'Eye care' : 'Bảo vệ mắt',
               assetPath: AppAssets.moon,
               isSelected: currentMode == AppThemeModeSetting.dark,
               onTap: () {
@@ -381,8 +386,10 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
             _buildThemeModeCard(
               context: context,
               colors: colors,
-              title: 'Tự động',
-              subtitle: 'Theo thiết bị',
+              title: AppThemeModeSetting.system.localizedLabel(
+                context.isEnglish,
+              ),
+              subtitle: context.isEnglish ? 'Device auto' : 'Theo thiết bị',
               assetPath: AppAssets.systemMode,
               isSelected: currentMode == AppThemeModeSetting.system,
               onTap: () {
@@ -395,7 +402,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
         ),
         const SizedBox(height: 24),
         Text(
-          'BẢNG MÀU THƯƠNG HIỆU (BRAND ACCENT)',
+          context.tr.settings.brandColorTitle,
           style: GoogleFonts.inter(
             color: colors.textMuted,
             fontSize: 11,
@@ -471,7 +478,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.label,
+                            item.localizedLabel(context.isEnglish),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.inter(
@@ -483,7 +490,13 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                             ),
                           ),
                           Text(
-                            item.isDark ? 'Giao diện tối' : 'Màu điểm nhấn',
+                            item.isDark
+                                ? (context.isEnglish
+                                      ? 'Dark theme'
+                                      : 'Giao diện tối')
+                                : (context.isEnglish
+                                      ? 'Accent color'
+                                      : 'Màu điểm nhấn'),
                             style: GoogleFonts.inter(
                               color: colors.textSecondary,
                               fontSize: 10.5,
@@ -575,7 +588,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'HOA VĂN & HÌNH NỀN ỨNG DỤNG',
+              context.tr.settings.wallpaperTitle,
               style: GoogleFonts.inter(
                 color: colors.textMuted,
                 fontSize: 11,
@@ -590,10 +603,12 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                   assetPath: AppAssets.upload,
                   size: 13,
                   color: primary,
-                  semanticLabel: 'Đổi ảnh',
+                  semanticLabel: context.tr.settings.changeImage,
                 ),
                 label: Text(
-                  _isUploadingBg ? 'Đang nạp...' : 'Đổi ảnh từ máy',
+                  _isUploadingBg
+                      ? (context.isEnglish ? 'Uploading...' : 'Đang nạp...')
+                      : context.tr.settings.changeImage,
                   style: GoogleFonts.inter(
                     color: primary,
                     fontSize: 11.5,
@@ -624,12 +639,12 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                 assetPath: AppAssets.check,
                 size: 16,
                 color: colors.primary,
-                semanticLabel: 'Tối ưu tự động',
+                semanticLabel: context.tr.common.info,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Độ tương phản và độ mờ được tự động tối ưu hóa (chuẩn WCAG AAA), đảm bảo số liệu và hóa đơn luôn sắc nét. Ảnh tải từ máy được lưu cục bộ trên thiết bị của bạn, không gửi lên máy chủ hay lưu trên DB.',
+                  context.tr.settings.wallpaperNotice,
                   style: GoogleFonts.inter(
                     color: colors.textPrimary,
                     fontSize: 11.5,
@@ -766,14 +781,17 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                                 assetPath: AppAssets.upload,
                                 size: 18,
                                 color: primary,
-                                semanticLabel: 'Tải ảnh',
+                                semanticLabel:
+                                    context.tr.settings.uploadFromDevice,
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               _isUploadingBg
-                                  ? 'Đang nạp ảnh...'
-                                  : 'Tải ảnh từ máy',
+                                  ? (context.isEnglish
+                                        ? 'Uploading...'
+                                        : 'Đang nạp ảnh...')
+                                  : context.tr.settings.uploadFromDevice,
                               style: GoogleFonts.inter(
                                 color: primary,
                                 fontSize: 11.5,
@@ -782,7 +800,9 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Lưu cục bộ trên thiết bị',
+                              context.isEnglish
+                                  ? 'Stored locally on device'
+                                  : 'Lưu cục bộ trên thiết bị',
                               style: GoogleFonts.inter(
                                 color: colors.textSecondary,
                                 fontSize: 9.5,
@@ -824,15 +844,16 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const AppAssetIcon(
+                                    AppAssetIcon(
                                       assetPath: AppAssets.upload,
                                       size: 11,
                                       color: Colors.white,
-                                      semanticLabel: 'Đổi ảnh',
+                                      semanticLabel:
+                                          context.tr.settings.changeImage,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Đổi ảnh',
+                                      context.tr.settings.changeImage,
                                       style: GoogleFonts.inter(
                                         color: Colors.white,
                                         fontSize: 9.5,
@@ -851,7 +872,9 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                                     .read(appBackgroundProvider.notifier)
                                     .removeCustomImage();
                                 ToastService.showInfo(
-                                  'Đã gỡ ảnh tùy chỉnh khỏi máy.',
+                                  context.isEnglish
+                                      ? 'Custom image removed from device.'
+                                      : 'Đã gỡ ảnh tùy chỉnh khỏi máy.',
                                 );
                               },
                               borderRadius: BorderRadius.circular(12),
@@ -866,11 +889,12 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                                   ),
                                 ),
                                 alignment: Alignment.center,
-                                child: const AppAssetIcon(
+                                child: AppAssetIcon(
                                   assetPath: AppAssets.close,
                                   size: 10,
                                   color: Colors.white,
-                                  semanticLabel: 'Gỡ',
+                                  semanticLabel:
+                                      context.tr.settings.removeCustomImage,
                                 ),
                               ),
                             ),
@@ -892,7 +916,9 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        hasImage ? 'Ảnh tùy chỉnh (Từ máy)' : 'Ảnh từ thiết bị',
+                        hasImage
+                            ? context.tr.settings.customWallpaperTitle
+                            : context.tr.settings.customWallpaperEmptyTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -906,8 +932,10 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                       const SizedBox(height: 1),
                       Text(
                         hasImage
-                            ? 'Lưu trên thiết bị (Offline)'
-                            : 'Không lưu trên database',
+                            ? context.tr.settings.customWallpaperSubtitle
+                            : (context.isEnglish
+                                  ? 'Not stored on database'
+                                  : 'Không lưu trên database'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -1034,7 +1062,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        preset.label,
+                        preset.localizedLabel(context.isEnglish),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -1047,7 +1075,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                       ),
                       const SizedBox(height: 1),
                       Text(
-                        preset.description,
+                        preset.localizedDescription(context.isEnglish),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -1393,8 +1421,15 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                   children: [
                     Text(
                       avatarState.hasCustomImage
-                          ? 'Ảnh cá nhân đã tải'
-                          : (avatarState.preset?.label ?? 'Mẫu avatar'),
+                          ? (context.isEnglish
+                                ? 'Uploaded custom avatar'
+                                : 'Ảnh cá nhân đã tải')
+                          : (avatarState.preset?.localizedLabel(
+                                  context.isEnglish,
+                                ) ??
+                                (context.isEnglish
+                                    ? 'Avatar preset'
+                                    : 'Mẫu avatar')),
                       style: GoogleFonts.inter(
                         color: colors.textPrimary,
                         fontSize: 14.5,
@@ -1404,8 +1439,12 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     const SizedBox(height: 4),
                     Text(
                       avatarState.hasCustomImage
-                          ? 'Ảnh từ tệp thiết bị'
-                          : 'Bộ nhận diện: ${avatarState.preset?.category ?? "Hệ thống"}',
+                          ? (context.isEnglish
+                                ? 'Personal image from device'
+                                : 'Ảnh từ tệp thiết bị')
+                          : (context.isEnglish
+                                ? 'Branding: ${avatarState.preset?.localizedCategory(true) ?? "System"}'
+                                : 'Bộ nhận diện: ${avatarState.preset?.category ?? "Hệ thống"}'),
                       style: GoogleFonts.inter(
                         color: colors.textSecondary,
                         fontSize: 12,
@@ -1420,9 +1459,12 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                   assetPath: AppAssets.avatar,
                   size: 15,
                   color: Colors.white,
-                  semanticLabel: 'Đổi ảnh',
+                  semanticLabel: context.tr.settings.chooseAvatarPreset,
                 ),
-                label: Text('Chọn mẫu', style: GoogleFonts.inter(fontSize: 12)),
+                label: Text(
+                  context.tr.settings.chooseAvatarPreset,
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
@@ -1438,7 +1480,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
         ),
         const SizedBox(height: 20),
         Text(
-          'CHỌN NHANH AVATAR NHẬN DIỆN',
+          context.tr.settings.quickAvatarTitle,
           style: GoogleFonts.inter(
             color: colors.textMuted,
             fontSize: 11,
@@ -1487,7 +1529,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                       AppAvatar(size: 42, assetPath: preset.assetPath),
                       const SizedBox(height: 4),
                       Text(
-                        preset.label,
+                        preset.localizedLabel(context.isEnglish),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(

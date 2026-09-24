@@ -144,6 +144,16 @@ class _EnNav implements NavTranslations {
   String get expand => 'Expand';
   @override
   String get viewingScope => 'ACTIVE STORE';
+  @override
+  String get store => 'STORE';
+  @override
+  String get mainNavigation => 'MAIN NAVIGATION';
+  @override
+  String get searchPlaceholder => 'Search products, orders...';
+  @override
+  String get collapseTooltip => 'Collapse navigation';
+  @override
+  String get expandTooltip => 'Expand navigation';
 }
 
 class _EnSettings implements SettingsTranslations {
@@ -328,6 +338,55 @@ class _EnSettings implements SettingsTranslations {
   @override
   String get brandColorDesc =>
       'Applies to primary buttons, highlights, and active badges.';
+  @override
+  String get appearanceAndWallpaper => 'Theme & Wallpaper';
+  @override
+  String get appearanceModalTitle => 'Theme & Appearance';
+  @override
+  String get appearanceModalSubtitle =>
+      'Customize brand colors, wallpaper, and avatar';
+  @override
+  String get tabColorAndMode => 'Colors & Modes';
+  @override
+  String get tabWallpaper => 'App Wallpaper';
+  @override
+  String get tabAvatar => 'Avatar';
+  @override
+  String get displayModeTitle => 'DISPLAY MODE';
+  @override
+  String get brandColorTitle => 'BRAND ACCENT PALETTE';
+  @override
+  String get wallpaperTitle => 'PATTERNS & APP WALLPAPERS';
+  @override
+  String get wallpaperNotice =>
+      'Contrast and blur are automatically optimized (WCAG AAA standard), ensuring numbers and receipts remain sharp. Images uploaded from your machine are stored locally on your device, never sent to the server or database.';
+  @override
+  String get customWallpaperTitle => 'Custom Image (From Device)';
+  @override
+  String get customWallpaperSubtitle => 'Stored locally (Offline)';
+  @override
+  String get customWallpaperEmptyTitle => 'Device Image';
+  @override
+  String get uploadFromDevice => 'Upload from device';
+  @override
+  String get changeImage => 'Change';
+  @override
+  String get removeCustomImage => 'Remove';
+  @override
+  String get quickAvatarTitle => 'QUICK AVATAR SELECTION';
+  @override
+  String get chooseAvatarPreset => 'Select preset';
+  @override
+  String get resetDefaults => 'Reset to default';
+  @override
+  String get finish => 'Done';
+  @override
+  String get chooseAvatarTitle => 'Choose Avatar';
+  @override
+  String get chooseAvatarSubtitle =>
+      'Pick from enterprise branding collection or upload your own';
+  @override
+  String get enterpriseAvatarCollection => 'ENTERPRISE IDENTITY COLLECTION';
   @override
   String get language => 'Display Language';
   @override

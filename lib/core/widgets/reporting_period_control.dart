@@ -229,11 +229,23 @@ class _PeriodChoice extends StatelessWidget {
 
 Future<ReportingPeriodSelection?> showReportingPeriodEditor(
   BuildContext context, {
-  required ReportingPeriodSelection selection,
+  ReportingPeriodSelection? selection,
+  ReportingPeriodSelection? initialSelection,
   required DateTime today,
 }) {
+  final targetSelection =
+      selection ??
+      initialSelection ??
+      ReportingPeriodSelection(
+        periodType: ReportingPeriodType.month,
+        anchorDate: today,
+        comparisonType: ReportingComparisonType.previousPeriod,
+      );
   final compact = MediaQuery.sizeOf(context).width < 700;
-  final editor = _ReportingPeriodEditor(selection: selection, today: today);
+  final editor = _ReportingPeriodEditor(
+    selection: targetSelection,
+    today: today,
+  );
   if (compact) {
     return showModalBottomSheet<ReportingPeriodSelection>(
       context: context,

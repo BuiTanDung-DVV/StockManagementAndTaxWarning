@@ -3,13 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/assets/app_assets.dart';
-import '../../core/constants/app_strings.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/localization/translations/app_translations.dart';
 import '../../core/network/api_client.dart';
+import '../../core/providers/reporting_period_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_background_wrapper.dart';
+import '../../core/utils/reporting_period.dart';
 import '../../core/widgets/ai_assistant_widget.dart';
 import '../../core/widgets/global_search_delegate.dart';
+import '../../core/widgets/reporting_period_control.dart';
 import '../settings/presentation/shop_payment_qr_dialog.dart';
 import '../settings/providers/shop_provider.dart';
 
@@ -78,10 +83,16 @@ List<Map<String, dynamic>> shellSelectableShops(ShopState state) => state
 bool shellCanSwitchShops(ShopState state) =>
     shellSelectableShops(state).length > 1;
 
-String shellShopContextLabel(ShopState state) =>
-    shellCanSwitchShops(state) || state.isAllShops
-    ? 'PHẠM VI ĐANG XEM'
-    : 'CỬA HÀNG';
+String shellShopContextLabel(ShopState state, [AppTranslations? tr]) {
+  if (tr != null) {
+    return shellCanSwitchShops(state) || state.isAllShops
+        ? tr.nav.viewingScope
+        : tr.nav.store;
+  }
+  return shellCanSwitchShops(state) || state.isAllShops
+      ? 'PHẠM VI ĐANG XEM'
+      : 'CỬA HÀNG';
+}
 
 class MainShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -128,25 +139,26 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final tr = context.tr;
     final shop = ref.watch(shopProvider);
     final tabs = <_NavDef>[
       _NavDef(
         assetPath: AppAssets.home,
-        label: AppStrings.navHome,
+        label: tr.nav.home,
         route: '/',
         prefixes: const ['/'],
       ),
       if (!shop.isAllShops && shop.hasPermission('sales'))
         _NavDef(
           assetPath: AppAssets.orders,
-          label: AppStrings.navSales,
+          label: tr.nav.sales,
           route: '/sales',
           prefixes: const ['/sales', '/pos'],
         ),
       if (!shop.isAllShops && shop.hasPermission('inventory'))
         _NavDef(
           assetPath: AppAssets.inventory,
-          label: AppStrings.navInventory,
+          label: tr.nav.inventory,
           route: '/inventory',
           prefixes: const [
             '/inventory',
@@ -159,7 +171,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       if (!shop.isAllShops && shop.hasPermission('finance'))
         _NavDef(
           assetPath: AppAssets.cash,
-          label: AppStrings.navFinance,
+          label: tr.nav.finance,
           route: '/finance',
           prefixes: const [
             '/finance',
@@ -182,7 +194,7 @@ class _MainShellState extends ConsumerState<MainShell> {
         ),
       _NavDef(
         assetPath: AppAssets.settings,
-        label: AppStrings.navSettings,
+        label: tr.nav.settings,
         route: '/settings',
         prefixes: const [
           '/settings',
@@ -220,6 +232,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                   _ShellUtilityHeader(
                     compact: mode == MainShellNavigationMode.bottomBar,
                     shop: shop,
+                    currentPath: location,
                     showAiRestore: showAiHeaderAction,
                     showShopQr: shouldShowShopPaymentQr(
                       isAllShops: shop.isAllShops,
@@ -319,6 +332,7 @@ class _MainShellState extends ConsumerState<MainShell> {
 class _ShellUtilityHeader extends StatelessWidget {
   final bool compact;
   final ShopState shop;
+  final String currentPath;
   final bool showAiRestore;
   final bool showShopQr;
   final VoidCallback onSearch;
@@ -330,6 +344,7 @@ class _ShellUtilityHeader extends StatelessWidget {
   const _ShellUtilityHeader({
     required this.compact,
     required this.shop,
+    required this.currentPath,
     required this.showAiRestore,
     required this.showShopQr,
     required this.onSearch,
@@ -347,6 +362,7 @@ class _ShellUtilityHeader extends StatelessWidget {
         : 'Cửa hàng';
     final selectableShops = shellSelectableShops(shop);
     final canSwitchShop = selectableShops.length > 1;
+    final showPeriodFilter = !currentPath.startsWith('/settings');
 
     Widget shopSummary() => Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -354,7 +370,7 @@ class _ShellUtilityHeader extends StatelessWidget {
       children: [
         if (!compact)
           Text(
-            shellShopContextLabel(shop),
+            shellShopContextLabel(shop, context.tr),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: colors.textMuted,
               fontSize: 10,
@@ -382,7 +398,7 @@ class _ShellUtilityHeader extends StatelessWidget {
                 assetPath: AppAssets.expand,
                 size: 15,
                 color: colors.textSecondary,
-                semanticLabel: 'Mở rộng danh sách cửa hàng',
+                semanticLabel: context.tr.nav.expandTooltip,
               ),
             ],
           ],
@@ -393,9 +409,10 @@ class _ShellUtilityHeader extends StatelessWidget {
     final shopIdentity = canSwitchShop
         ? Semantics(
             button: true,
-            label: 'Chuyển cửa hàng. Đang xem $resolvedShop',
+            label:
+                '${context.tr.settings.switchShop}. ${context.tr.settings.viewingShop(resolvedShop)}',
             child: PopupMenuButton<int>(
-              tooltip: 'Chuyển cửa hàng',
+              tooltip: context.tr.settings.switchShop,
               onSelected: onShopSelected,
               position: PopupMenuPosition.under,
               itemBuilder: (context) => [
@@ -403,7 +420,8 @@ class _ShellUtilityHeader extends StatelessWidget {
                   PopupMenuItem<int>(
                     value: parseShopRecordId(item['shopId']),
                     child: _ShopMenuItem(
-                      name: item['shopName']?.toString() ?? 'Cửa hàng',
+                      name:
+                          item['shopName']?.toString() ?? context.tr.nav.store,
                       selected:
                           !shop.isAllShops &&
                           parseShopRecordId(item['shopId']) ==
@@ -414,7 +432,7 @@ class _ShellUtilityHeader extends StatelessWidget {
                 PopupMenuItem<int>(
                   value: -1,
                   child: _ShopMenuItem(
-                    name: 'Tất cả cửa hàng',
+                    name: context.tr.settings.allShops,
                     selected: shop.isAllShops,
                   ),
                 ),
@@ -469,7 +487,10 @@ class _ShellUtilityHeader extends StatelessWidget {
               ),
             ),
             if (compact) ...[
-              const SizedBox(width: AppSpacing.xs),
+              if (showPeriodFilter) ...[
+                _HeaderPeriodButtonCompact(currentPath: currentPath),
+                const SizedBox(width: AppSpacing.xs),
+              ],
               if (showAiRestore) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.aiMascot,
@@ -494,26 +515,30 @@ class _ShellUtilityHeader extends StatelessWidget {
               ),
             ],
             if (!compact) ...[
+              if (showPeriodFilter) ...[
+                _HeaderPeriodSelector(currentPath: currentPath),
+                const SizedBox(width: AppSpacing.sm),
+              ],
               OutlinedButton(
                 onPressed: onSearch,
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(220, 40),
+                  minimumSize: const Size(200, 40),
                   alignment: Alignment.centerLeft,
                   foregroundColor: colors.textMuted,
                   backgroundColor: colors.cardAlt,
                   side: BorderSide(color: colors.divider),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     AppAssetIcon(
                       assetPath: AppAssets.search,
                       size: 17,
-                      semanticLabel: 'Tìm kiếm',
+                      semanticLabel: context.tr.common.search,
                     ),
-                    SizedBox(width: 9),
-                    Text('Tìm sản phẩm, đơn hàng...'),
+                    const SizedBox(width: 9),
+                    Text(context.tr.nav.searchPlaceholder),
                   ],
                 ),
               ),
@@ -543,6 +568,145 @@ class _ShellUtilityHeader extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderPeriodSelector extends ConsumerWidget {
+  final String currentPath;
+
+  const _HeaderPeriodSelector({required this.currentPath});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppThemeColors.of(context);
+    final tabKey = resolveTabKeyFromLocation(currentPath);
+    final tabName = resolveTabName(tabKey);
+    final selection = ref.watch(tabSelectionProvider(tabKey));
+    final resolved = ref.watch(tabResolvedPeriodProvider(tabKey));
+
+    final periodLabel = reportingCompactRangeLabel(
+      resolved.currentFrom,
+      resolved.currentTo,
+    );
+    final periodName = reportingPeriodSelectionLabel(selection, DateTime.now());
+
+    return Material(
+      color: colors.cardAlt,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: () async {
+          final updated = await showReportingPeriodEditor(
+            context,
+            initialSelection: selection,
+            today: DateTime.now(),
+          );
+          if (updated != null) {
+            ref
+                .read(reportingPeriodNotifierProvider.notifier)
+                .setPeriodForTab(tabKey, updated);
+          }
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colors.divider),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 14,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 7),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  tabName,
+                  style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '$periodName · $periodLabel',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.arrow_drop_down_rounded,
+                size: 18,
+                color: colors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderPeriodButtonCompact extends ConsumerWidget {
+  final String currentPath;
+
+  const _HeaderPeriodButtonCompact({required this.currentPath});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppThemeColors.of(context);
+    final tabKey = resolveTabKeyFromLocation(currentPath);
+    final selection = ref.watch(tabSelectionProvider(tabKey));
+
+    return Material(
+      color: colors.cardAlt,
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        onTap: () async {
+          final updated = await showReportingPeriodEditor(
+            context,
+            initialSelection: selection,
+            today: DateTime.now(),
+          );
+          if (updated != null) {
+            ref
+                .read(reportingPeriodNotifierProvider.notifier)
+                .setPeriodForTab(tabKey, updated);
+          }
+        },
+        borderRadius: BorderRadius.circular(9),
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: colors.divider),
+          ),
+          child: Icon(
+            Icons.calendar_today_rounded,
+            size: 16,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
       ),
     );
@@ -701,7 +865,7 @@ class _DesktopSidebar extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
                   child: Text(
-                    'CHỨC NĂNG CHÍNH',
+                    context.tr.nav.mainNavigation,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: colors.textMuted,
                       fontSize: 10,
@@ -738,17 +902,19 @@ class _DesktopSidebar extends StatelessWidget {
                 child: Column(
                   children: [
                     _SidebarUtilityItem(
-                      label: 'Trung tâm trợ giúp',
+                      label: context.tr.nav.helpCenter,
                       assetPath: AppAssets.help,
                       collapsed: collapsed,
                       onPressed: () => context.push('/settings/ai-knowledge'),
                     ),
                     const SizedBox(height: 4),
                     _SidebarUtilityItem(
-                      label: collapsed ? 'Mở rộng' : 'Thu gọn',
+                      label: collapsed
+                          ? context.tr.nav.expand
+                          : context.tr.nav.collapse,
                       tooltip: collapsed
-                          ? 'Mở rộng thanh điều hướng'
-                          : 'Thu gọn thanh điều hướng',
+                          ? context.tr.nav.expandTooltip
+                          : context.tr.nav.collapseTooltip,
                       assetPath: collapsed
                           ? AppAssets.expand
                           : AppAssets.collapse,

@@ -144,6 +144,16 @@ class _ViNav implements NavTranslations {
   String get expand => 'Mở rộng';
   @override
   String get viewingScope => 'PHẠM VI ĐANG XEM';
+  @override
+  String get store => 'CỬA HÀNG';
+  @override
+  String get mainNavigation => 'CHỨC NĂNG CHÍNH';
+  @override
+  String get searchPlaceholder => 'Tìm sản phẩm, đơn hàng...';
+  @override
+  String get collapseTooltip => 'Thu gọn thanh điều hướng';
+  @override
+  String get expandTooltip => 'Mở rộng thanh điều hướng';
 }
 
 class _ViSettings implements SettingsTranslations {
@@ -327,6 +337,55 @@ class _ViSettings implements SettingsTranslations {
   @override
   String get brandColorDesc =>
       'Màu được áp dụng cho nút chính và trạng thái đang chọn.';
+  @override
+  String get appearanceAndWallpaper => 'Giao diện & Hình nền';
+  @override
+  String get appearanceModalTitle => 'Tùy biến giao diện & hình nền';
+  @override
+  String get appearanceModalSubtitle =>
+      'Cá nhân hóa màu sắc, ảnh nền và ảnh đại diện';
+  @override
+  String get tabColorAndMode => 'Màu sắc & Chế độ';
+  @override
+  String get tabWallpaper => 'Hình nền App';
+  @override
+  String get tabAvatar => 'Ảnh đại diện';
+  @override
+  String get displayModeTitle => 'CHẾ ĐỘ HIỂN THỊ';
+  @override
+  String get brandColorTitle => 'BẢNG MÀU THƯƠNG HIỆU';
+  @override
+  String get wallpaperTitle => 'HOA VĂN & HÌNH NỀN ỨNG DỤNG';
+  @override
+  String get wallpaperNotice =>
+      'Độ tương phản và độ mờ được tự động tối ưu hóa (chuẩn WCAG AAA), đảm bảo số liệu và hóa đơn luôn sắc nét. Ảnh tải từ máy được lưu cục bộ trên thiết bị của bạn, không gửi lên máy chủ hay lưu trên DB.';
+  @override
+  String get customWallpaperTitle => 'Ảnh tùy chỉnh (Từ máy)';
+  @override
+  String get customWallpaperSubtitle => 'Lưu trên thiết bị (Offline)';
+  @override
+  String get customWallpaperEmptyTitle => 'Ảnh từ thiết bị';
+  @override
+  String get uploadFromDevice => 'Tải ảnh từ máy';
+  @override
+  String get changeImage => 'Đổi ảnh';
+  @override
+  String get removeCustomImage => 'Gỡ ảnh';
+  @override
+  String get quickAvatarTitle => 'CHỌN NHANH AVATAR NHẬN DIỆN';
+  @override
+  String get chooseAvatarPreset => 'Chọn mẫu';
+  @override
+  String get resetDefaults => 'Khôi phục chuẩn';
+  @override
+  String get finish => 'Hoàn tất';
+  @override
+  String get chooseAvatarTitle => 'Chọn ảnh đại diện';
+  @override
+  String get chooseAvatarSubtitle =>
+      'Chọn từ bộ sưu tập nhận diện hoặc tải ảnh riêng';
+  @override
+  String get enterpriseAvatarCollection => 'BỘ SƯU TẬP NHẬN DIỆN DOANH NGHIỆP';
   @override
   String get language => 'Ngôn ngữ hiển thị';
   @override

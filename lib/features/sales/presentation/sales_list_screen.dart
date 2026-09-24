@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -150,15 +151,18 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final now = DateTime.now();
-    final reportingPeriod = currentMonthReportingPeriod(now);
-    final listPeriod = salesListPeriodParams(
-      currentPeriodOnly: _currentPeriodOnly,
-      now: now,
-    );
+    final resolvedPeriod = ref.watch(tabResolvedPeriodProvider('sales'));
+    final fromDateStr = resolvedPeriod.currentFrom.toIso8601String().split(
+      'T',
+    )[0];
+    final toDateStr = resolvedPeriod.currentTo.toIso8601String().split('T')[0];
+    final reportingPeriod = (from: fromDateStr, to: toDateStr);
+    final listPeriod = _currentPeriodOnly
+        ? reportingPeriod
+        : (from: null, to: null);
     final reportingPeriodLabel = reportingCompactRangeLabel(
-      DateTime.parse(reportingPeriod.from),
-      DateTime.parse(reportingPeriod.to),
+      resolvedPeriod.currentFrom,
+      resolvedPeriod.currentTo,
     );
     final shopState = ref.watch(shopProvider);
     final canCreateTransaction = salesListCanCreateTransaction(
@@ -527,7 +531,7 @@ class _SalesPeriodFilter extends StatelessWidget {
           segments: [
             ButtonSegment(
               value: true,
-              label: Text('Tháng hiện tại · $periodLabel'),
+              label: Text('Kỳ đã chọn · $periodLabel'),
             ),
             const ButtonSegment(value: false, label: Text('Toàn bộ')),
           ],
@@ -865,10 +869,7 @@ class _TopReturnedProductsPanel extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               color: colors.cardAlt,
-              border: Border(
-                bottom: BorderSide(color: colors.divider),
-                left: const BorderSide(color: AppColors.warning, width: 3),
-              ),
+              border: Border(bottom: BorderSide(color: colors.divider)),
             ),
             child: Row(
               children: [
@@ -876,10 +877,25 @@ class _TopReturnedProductsPanel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Sản phẩm bị trả nhiều',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                      Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 18,
+                            margin: const EdgeInsets.only(right: AppSpacing.sm),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Sản phẩm bị trả nhiều',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
@@ -1357,7 +1373,7 @@ class _SalesTableHeader extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     return Container(
       color: colors.cardAlt,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Expanded(

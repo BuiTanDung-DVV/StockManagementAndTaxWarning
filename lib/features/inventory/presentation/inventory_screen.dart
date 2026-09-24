@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -31,12 +32,13 @@ class InventoryScreen extends ConsumerWidget {
     final expiringAsync = ref.watch(expiringProductsProvider);
     final slowMovingAsync = ref.watch(slowMovingProvider);
     final categoriesAsync = ref.watch(inventoryCategoriesSummaryProvider);
-    final abcPeriod = comparisonReportingDates('year', DateTime.now());
+    final resolvedPeriod = ref.watch(tabResolvedPeriodProvider('inventory'));
+    final fromDateStr = resolvedPeriod.currentFrom.toIso8601String().split(
+      'T',
+    )[0];
+    final toDateStr = resolvedPeriod.currentTo.toIso8601String().split('T')[0];
     final abcAsync = ref.watch(
-      inventoryAbcProvider((
-        from: abcPeriod.currentFrom,
-        to: abcPeriod.currentTo,
-      )),
+      inventoryAbcProvider((from: fromDateStr, to: toDateStr)),
     );
     final shopState = ref.watch(shopProvider);
     final warehousesAsync = shopState.isAllShops
@@ -165,8 +167,8 @@ class InventoryScreen extends ConsumerWidget {
                   _InventoryAbcPanel(
                     asyncValue: abcAsync,
                     periodLabel: reportingCompactRangeLabel(
-                      DateTime.parse(abcPeriod.currentFrom),
-                      DateTime.parse(abcPeriod.currentTo),
+                      resolvedPeriod.currentFrom,
+                      resolvedPeriod.currentTo,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -210,6 +212,7 @@ class _InventoryAbcPanel extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: colors.surface,
         border: Border.all(color: colors.divider),
@@ -1326,6 +1329,7 @@ class _InventoryIssuePanel extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: colors.surface,
         border: Border.all(color: colors.divider),
@@ -1334,10 +1338,7 @@ class _InventoryIssuePanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            decoration: BoxDecoration(
-              border: Border(left: BorderSide(color: accentColor, width: 3)),
-            ),
+          Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.sm,
@@ -1346,6 +1347,15 @@ class _InventoryIssuePanel extends StatelessWidget {
             ),
             child: Row(
               children: [
+                Container(
+                  width: 4,
+                  height: 18,
+                  margin: const EdgeInsets.only(right: AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: accentColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
                 Expanded(
                   child: Text(
                     title,

@@ -68,6 +68,11 @@ abstract class NavTranslations {
   String get collapse;
   String get expand;
   String get viewingScope;
+  String get store;
+  String get mainNavigation;
+  String get searchPlaceholder;
+  String get collapseTooltip;
+  String get expandTooltip;
 }
 
 abstract class SettingsTranslations {
@@ -155,6 +160,29 @@ abstract class SettingsTranslations {
   String currentBrandColor(String name);
   String get selectBrandColor;
   String get brandColorDesc;
+  String get appearanceAndWallpaper;
+  String get appearanceModalTitle;
+  String get appearanceModalSubtitle;
+  String get tabColorAndMode;
+  String get tabWallpaper;
+  String get tabAvatar;
+  String get displayModeTitle;
+  String get brandColorTitle;
+  String get wallpaperTitle;
+  String get wallpaperNotice;
+  String get customWallpaperTitle;
+  String get customWallpaperSubtitle;
+  String get customWallpaperEmptyTitle;
+  String get uploadFromDevice;
+  String get changeImage;
+  String get removeCustomImage;
+  String get quickAvatarTitle;
+  String get chooseAvatarPreset;
+  String get resetDefaults;
+  String get finish;
+  String get chooseAvatarTitle;
+  String get chooseAvatarSubtitle;
+  String get enterpriseAvatarCollection;
   String get language;
   String currentLanguage(String name);
   String get selectLanguage;
