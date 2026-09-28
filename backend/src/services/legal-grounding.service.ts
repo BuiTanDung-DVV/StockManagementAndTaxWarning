@@ -41,13 +41,14 @@ export class LegalGroundingService {
     apiKey: string,
     modelName: string,
     prompt: string,
+    timeoutMs = 30000,
   ): Promise<{
     answer: string;
     chunks: GroundingChunk[];
     supports: GroundingSupport[];
   }> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent`,

@@ -535,7 +535,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     if (_needsPhone) {
       if (!RegExp(r'^(0|\+84)\d{8,9}$').hasMatch(phone)) {
-        ToastService.showError('Số điện thoại không hợp lệ.');
+        ToastService.showError('Số điện thoại liên hệ không hợp lệ.');
         return;
       }
     }
@@ -655,8 +655,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 controller: _phoneCtrl,
                 focusNode: _phoneFocus,
                 hasFocus: _phoneHasFocus,
-                labelText: 'Số điện thoại *',
-                hintText: 'VD: 0987654321',
+                labelText: 'Số điện thoại liên hệ *',
+                hintText: 'VD: 0987654321 (Dùng liên hệ & in hóa đơn)',
                 icon: Icons.phone_android_rounded,
                 keyboardType: TextInputType.phone,
                 c: c,

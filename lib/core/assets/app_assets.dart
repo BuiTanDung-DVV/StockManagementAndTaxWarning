@@ -22,6 +22,7 @@ abstract final class AppAssets {
   static const String add = 'assets/icon/add_icon.svg';
   static const String edit = 'assets/icon/edit_icon.svg';
   static const String search = 'assets/icon/search_icon.svg';
+  static const String calendar = 'assets/icon/calendar_icon.svg';
   static const String emptyGeneric = 'assets/icon/empty_generic.svg';
   static const String emptyInventory = 'assets/icon/empty_inventory.svg';
   static const String emptySales = 'assets/icon/empty_sales.svg';

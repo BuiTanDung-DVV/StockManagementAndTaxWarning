@@ -26,6 +26,9 @@ class EnTranslations implements AppTranslations {
 
   @override
   SalesTranslations get sales => const _EnSales();
+
+  @override
+  ReportingPeriodTranslations get period => const _EnReportingPeriod();
 }
 
 class _EnCommon implements CommonTranslations {
@@ -154,6 +157,8 @@ class _EnNav implements NavTranslations {
   String get collapseTooltip => 'Collapse navigation';
   @override
   String get expandTooltip => 'Expand navigation';
+  @override
+  String get aiAssistantTitle => 'SmartStock AI Assistant';
 }
 
 class _EnSettings implements SettingsTranslations {
@@ -263,6 +268,8 @@ class _EnSettings implements SettingsTranslations {
   @override
   String get costingMethodConfirmMsg =>
       'According to Circular 88/2021/TT-BTC, inventory valuation methods must remain consistent throughout an accounting period. Are you sure you want to proceed?';
+  @override
+  String get costingMethodConfirmBtn => 'Confirm Change';
   @override
   String get costingMethodActiveBadge => 'Active';
   @override
@@ -509,4 +516,67 @@ class _EnSales implements SalesTranslations {
   String get printReceipt => 'Print Receipt';
   @override
   String get completed => 'Completed';
+}
+
+class _EnReportingPeriod implements ReportingPeriodTranslations {
+  const _EnReportingPeriod();
+
+  @override
+  String get tabOverview => 'Overview';
+  @override
+  String get tabSales => 'Sales';
+  @override
+  String get tabInventory => 'Inventory';
+  @override
+  String get tabFinance => 'Finance';
+
+  @override
+  String get today => 'Today';
+  @override
+  String get thisWeek => 'This Week';
+  @override
+  String get thisMonth => 'This Month';
+  @override
+  String get thisQuarter => 'This Quarter';
+  @override
+  String get thisYear => 'This Year';
+
+  @override
+  String get day => 'Day';
+  @override
+  String get week => 'Week';
+  @override
+  String get month => 'Month';
+  @override
+  String get quarter => 'Quarter';
+  @override
+  String get year => 'Year';
+
+  @override
+  String get scopeTitle => 'Data Scope';
+  @override
+  String get scopeSubtitle =>
+      'Select reporting period and comparison benchmark.';
+  @override
+  String get viewBy => 'View by';
+  @override
+  String get currentPeriod => 'Current Period';
+  @override
+  String get benchmark => 'Comparison Benchmark';
+  @override
+  String get previousPeriod => 'Previous Period';
+  @override
+  String get samePeriodLastYear => 'Same Period Last Year';
+  @override
+  String get customComparison => 'Custom Range';
+  @override
+  String get selectDateInPeriod => 'Select date within period';
+  @override
+  String get selectStartDate => 'Select start date';
+  @override
+  String get selectEndDate => 'Select end date';
+  @override
+  String get apply => 'Apply';
+  @override
+  String get close => 'Close';
 }

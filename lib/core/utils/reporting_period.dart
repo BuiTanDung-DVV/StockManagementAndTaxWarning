@@ -1,3 +1,5 @@
+import '../localization/translations/app_translations.dart';
+
 /// Shared reporting-period rules used by Dashboard, Sales and Finance.
 ///
 /// Keeping date boundaries in one place prevents screens from silently using
@@ -199,25 +201,52 @@ ResolvedReportingPeriods resolveReportingPeriods(
   }
 }
 
-String reportingPeriodTypeLabel(ReportingPeriodType type) => switch (type) {
-  ReportingPeriodType.day => 'Ngày',
-  ReportingPeriodType.week => 'Tuần',
-  ReportingPeriodType.month => 'Tháng',
-  ReportingPeriodType.quarter => 'Quý',
-  ReportingPeriodType.year => 'Năm',
-};
-
-String reportingComparisonTypeLabel(ReportingComparisonType type) =>
-    switch (type) {
-      ReportingComparisonType.previousPeriod => 'Kỳ trước',
-      ReportingComparisonType.samePeriodLastYear => 'Cùng kỳ năm trước',
-      ReportingComparisonType.custom => 'Tự chọn',
+String reportingPeriodTypeLabel(
+  ReportingPeriodType type, [
+  AppTranslations? tr,
+]) {
+  if (tr != null) {
+    return switch (type) {
+      ReportingPeriodType.day => tr.period.day,
+      ReportingPeriodType.week => tr.period.week,
+      ReportingPeriodType.month => tr.period.month,
+      ReportingPeriodType.quarter => tr.period.quarter,
+      ReportingPeriodType.year => tr.period.year,
     };
+  }
+  return switch (type) {
+    ReportingPeriodType.day => 'Ngày',
+    ReportingPeriodType.week => 'Tuần',
+    ReportingPeriodType.month => 'Tháng',
+    ReportingPeriodType.quarter => 'Quý',
+    ReportingPeriodType.year => 'Năm',
+  };
+}
+
+String reportingComparisonTypeLabel(
+  ReportingComparisonType type, [
+  AppTranslations? tr,
+]) {
+  if (tr != null) {
+    return switch (type) {
+      ReportingComparisonType.previousPeriod => tr.period.previousPeriod,
+      ReportingComparisonType.samePeriodLastYear =>
+        tr.period.samePeriodLastYear,
+      ReportingComparisonType.custom => tr.period.customComparison,
+    };
+  }
+  return switch (type) {
+    ReportingComparisonType.previousPeriod => 'Kỳ trước',
+    ReportingComparisonType.samePeriodLastYear => 'Cùng kỳ năm trước',
+    ReportingComparisonType.custom => 'Tự chọn',
+  };
+}
 
 String reportingPeriodSelectionLabel(
   ReportingPeriodSelection selection,
-  DateTime today,
-) {
+  DateTime today, [
+  AppTranslations? tr,
+]) {
   final anchor = DateTime(
     selection.anchorDate.year,
     selection.anchorDate.month,
@@ -238,6 +267,15 @@ String reportingPeriodSelectionLabel(
     ReportingPeriodType.year => anchor.year == normalizedToday.year,
   };
   if (isCurrent) {
+    if (tr != null) {
+      return switch (selection.periodType) {
+        ReportingPeriodType.day => tr.period.today,
+        ReportingPeriodType.week => tr.period.thisWeek,
+        ReportingPeriodType.month => tr.period.thisMonth,
+        ReportingPeriodType.quarter => tr.period.thisQuarter,
+        ReportingPeriodType.year => tr.period.thisYear,
+      };
+    }
     return switch (selection.periodType) {
       ReportingPeriodType.day => 'Hôm nay',
       ReportingPeriodType.week => 'Tuần này',
@@ -246,7 +284,7 @@ String reportingPeriodSelectionLabel(
       ReportingPeriodType.year => 'Năm nay',
     };
   }
-  return reportingPeriodTypeLabel(selection.periodType);
+  return reportingPeriodTypeLabel(selection.periodType, tr);
 }
 
 /// Produces like-for-like comparison windows.

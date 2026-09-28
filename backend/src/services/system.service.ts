@@ -137,13 +137,13 @@ export class SystemService {
 
         try {
             formsRaw = await this.getSystemConfig(shopId, 'TAX_DECLARATION_FORMS');
-        } catch (e) {
+        } catch (_e) {
             console.warn('[SystemService] TAX_DECLARATION_FORMS chưa có trong DB, dùng biểu mẫu chuẩn 2026.');
         }
 
         try {
             supportLinksRaw = await this.getSystemConfig(shopId, 'TAX_SUPPORT_LINKS');
-        } catch (e) {
+        } catch (_e) {
             console.warn('[SystemService] TAX_SUPPORT_LINKS chưa có trong DB, dùng liên kết chuẩn 2026.');
         }
 

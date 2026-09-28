@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_app/core/network/api_client.dart';
 import 'package:flutter_app/core/theme/app_theme.dart';
@@ -55,6 +57,27 @@ class _GroundedAiApiClient extends ApiClient {
   }
 }
 
+class _PendingAiApiClient extends ApiClient {
+  final pending = Completer<dynamic>();
+  int calls = 0;
+
+  @override
+  Future<dynamic> post(String path, {dynamic data}) {
+    calls++;
+    return pending.future;
+  }
+}
+
+class _LongReplyAiApiClient extends ApiClient {
+  final requests = <Map<String, dynamic>>[];
+
+  @override
+  Future<dynamic> post(String path, {dynamic data}) async {
+    requests.add(Map<String, dynamic>.from(data as Map));
+    return {'answer': List.filled(2100, 'a').join()};
+  }
+}
+
 Widget _buildHeaderOnlyHost({Size size = const Size(390, 700)}) {
   return ProviderScope(
     child: MaterialApp(
@@ -80,6 +103,64 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
+
+  testWidgets(
+    'follow-up history respects API length and keeps recent messages',
+    (tester) async {
+      final api = _LongReplyAiApiClient();
+      await tester.pumpWidget(_buildHost(apiClient: api));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.bySemanticsLabel('Hỏi AI. Có thể kéo để đổi vị trí.'),
+      );
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 7; i++) {
+        await tester.enterText(find.byType(TextField), 'Question $i');
+        await tester.tap(find.text('Gửi'));
+        await tester.pumpAndSettle();
+      }
+      final history = api.requests.last['history'] as List;
+      expect(history.length, 10);
+      expect(history.first['content'], 'Question 1');
+      expect(
+        history
+            .where((m) => m['role'] == 'model')
+            .every((m) => (m['content'] as String).length == 2000),
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets(
+    'hung AI request times out, allows retry and ignores late reply',
+    (tester) async {
+      final api = _PendingAiApiClient();
+      await tester.pumpWidget(_buildHost(apiClient: api));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.bySemanticsLabel('Hỏi AI. Có thể kéo để đổi vị trí.'),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Cách tìm SKU?');
+      await tester.tap(find.text('Gửi'));
+      await tester.pump();
+      expect(find.text('Đang kết nối với Trợ lý AI...'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 51));
+      await tester.pumpAndSettle();
+      expect(find.text('Đang kết nối với Trợ lý AI...'), findsNothing);
+      expect(find.textContaining('phản hồi quá lâu'), findsOneWidget);
+      api.pending.complete({'answer': 'Late response'});
+      await tester.pumpAndSettle();
+      expect(find.text('Late response', findRichText: true), findsNothing);
+      await tester.enterText(find.byType(TextField), 'Thử lại');
+      await tester.tap(find.text('Gửi'));
+      await tester.pumpAndSettle();
+      expect(api.calls, 2);
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pumpAndSettle();
+      expect(find.text('Late response', findRichText: true), findsOneWidget);
+    },
+  );
 
   testWidgets('floating AI launcher opens the assistant panel', (tester) async {
     await tester.pumpWidget(_buildHost());

@@ -171,3 +171,87 @@ export const deleteKnowledgeDocument = async (req: Request, res: Response): Prom
     });
   }
 };
+
+export const extractContentFromUrl = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { url } = req.body;
+    if (!url || typeof url !== 'string' || !url.trim().startsWith('http')) {
+      res.status(400).json({
+        success: false,
+        message: 'Đường link URL không hợp lệ. Vui lòng nhập link bắt đầu bằng http:// hoặc https://',
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const fetchRes = await fetch(url.trim(), {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+    });
+    clearTimeout(timeout);
+
+    if (!fetchRes.ok) {
+      res.status(400).json({
+        success: false,
+        message: `Không thể tải nội dung từ đường link (Mã lỗi HTTP ${fetchRes.status})`,
+      });
+      return;
+    }
+
+    const html = await fetchRes.text();
+
+    // 1. Trích xuất tiêu đề từ thẻ <title> hoặc <h1>
+    let title = '';
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleMatch && titleMatch[1]) {
+      title = titleMatch[1].trim().replace(/\s+/g, ' ');
+    } else {
+      const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+      if (h1Match && h1Match[1]) {
+        title = h1Match[1].trim().replace(/\s+/g, ' ');
+      }
+    }
+
+    // 2. Làm sạch HTML để lấy văn bản thuần
+    let text = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+      .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, ' ')
+      .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, ' ')
+      .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, ' ')
+      .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (text.length > 6000) {
+      text = text.slice(0, 6000) + '...';
+    }
+
+    res.json({
+      success: true,
+      data: {
+        title: title || 'Tài liệu từ liên kết web',
+        content: text,
+      },
+    });
+  } catch (error: any) {
+    console.error('Lỗi khi trích xuất URL:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'Lỗi khi trích xuất nội dung từ đường link',
+    });
+  }
+};
+

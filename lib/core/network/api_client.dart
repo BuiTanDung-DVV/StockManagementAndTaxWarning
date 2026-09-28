@@ -98,8 +98,13 @@ class ApiClient {
               final opts = e.requestOptions;
               opts.extra['authRetried'] = true;
               opts.headers['Authorization'] = 'Bearer $_token';
-              final retryRes = await _dio.fetch(opts);
-              return handler.resolve(retryRes);
+              try {
+                final retryRes = await _dio.fetch(opts);
+                return handler.resolve(retryRes);
+              } on DioException catch (retryError) {
+                // Resolve the original interceptor even when the retry fails.
+                return handler.reject(retryError);
+              }
             }
             await clearToken();
             onSessionExpired?.call();
@@ -114,10 +119,10 @@ class ApiClient {
               // Common translations
               final lowerMsg = errorMessage.toLowerCase();
               if (lowerMsg.contains('invalid credentials')) {
-                errorMessage = 'Sai tên đăng nhập hoặc mật khẩu';
+                errorMessage = 'Sai Gmail hoặc mật khẩu';
               } else if (lowerMsg.contains('username already exists') ||
                   lowerMsg.contains('phone already exists')) {
-                errorMessage = 'Tên đăng nhập / Số điện thoại này đã tồn tại';
+                errorMessage = 'Gmail hoặc tên đăng nhập này đã tồn tại';
               } else if (lowerMsg.contains('email already exists')) {
                 errorMessage = 'Email này đã tồn tại trong hệ thống';
               } else if (lowerMsg.contains('jwt expired')) {
@@ -197,6 +202,8 @@ class ApiClient {
     final dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
         headers: {
           'Content-Type': 'application/json',
           'X-Client-Platform': kIsWeb ? 'web' : 'native',

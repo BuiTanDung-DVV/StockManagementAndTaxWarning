@@ -21,6 +21,11 @@ router.post(
     requirePermission('settings', 'edit'),
     aiCtrl.createKnowledgeDocument,
 );
+router.post(
+    '/knowledge/extract-url',
+    requirePermission('settings', 'edit'),
+    aiCtrl.extractContentFromUrl,
+);
 router.put(
     '/knowledge/:id',
     requirePermission('settings', 'edit'),

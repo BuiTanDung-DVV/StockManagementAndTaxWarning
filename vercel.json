@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "bash build_vercel.sh",
   "outputDirectory": "build/web",
-  "installCommand": "npm install --prefix backend",
+  "installCommand": "echo Flutter dependencies are installed during build",
   "headers": [
     {
       "source": "/(.*\\.js)",
@@ -26,37 +26,7 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "has": [
-        {
-          "type": "host",
-          "value": "smartstock-tax.vercel.app"
-        }
-      ],
       "destination": "https://stock-management-and-tax-warning.vercel.app/api/:match*"
-    },
-    {
-      "source": "/api/:match*",
-      "has": [
-        {
-          "type": "host",
-          "value": "smartstock-app.vercel.app"
-        }
-      ],
-      "destination": "https://stock-management-and-tax-warning.vercel.app/api/:match*"
-    },
-    {
-      "source": "/api/:match*",
-      "has": [
-        {
-          "type": "host",
-          "value": "sales-stock-tax.vercel.app"
-        }
-      ],
-      "destination": "https://stock-management-and-tax-warning.vercel.app/api/:match*"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.ts"
     },
     {
       "source": "/((?!api/).*)",

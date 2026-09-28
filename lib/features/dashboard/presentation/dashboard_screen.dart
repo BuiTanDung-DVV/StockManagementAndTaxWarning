@@ -15,9 +15,7 @@ import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
-import '../../../core/widgets/ai_assistant_widget.dart';
 import '../../../core/widgets/chart_widgets.dart';
-import '../../../core/widgets/reporting_period_control.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/presentation/widgets/join_shop_dialog.dart';
 import '../../finance/providers/finance_provider.dart';
@@ -70,25 +68,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  Future<void> _openPeriodEditor(ReportingPeriodSelection selection) async {
-    final launcherWasVisible = ref.read(aiAssistantLauncherVisibleProvider);
-    if (launcherWasVisible) {
-      ref.read(aiAssistantLauncherVisibleProvider.notifier).hide();
-    }
-    final updated = await showReportingPeriodEditor(
-      context,
-      initialSelection: selection,
-      today: DateTime.now(),
-    );
-    if (launcherWasVisible) {
-      ref.read(aiAssistantLauncherVisibleProvider.notifier).show();
-    }
-    if (updated == null || !mounted) return;
-    ref
-        .read(reportingPeriodNotifierProvider.notifier)
-        .setPeriodForTab('dashboard', updated);
-  }
-
   void _showJoinShopDialog(BuildContext context) {
     showDialog(context: context, builder: (_) => const JoinShopDialog());
   }
@@ -253,21 +232,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     action: headerActions(compact: compactLayout),
                     compactAction: headerActions(compact: true),
                     compact: compactLayout,
-                  ),
-                  ReportingPeriodControl(
-                    selection: periodSelection,
-                    currentLabel: periods.currentLabel,
-                    comparisonLabel: periods.previousLabel,
-                    onQuickPeriodChanged: (value) => ref
-                        .read(reportingPeriodNotifierProvider.notifier)
-                        .setPeriodForTab(
-                          'dashboard',
-                          periodSelection.copyWith(
-                            periodType: value,
-                            anchorDate: DateTime.now(),
-                          ),
-                        ),
-                    onOpenEditor: () => _openPeriodEditor(periodSelection),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   if (shopState.isAllShops) ...[

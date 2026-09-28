@@ -23,12 +23,18 @@ class AppNavigationBackButton extends StatelessWidget {
             hoverColor: Theme.of(
               context,
             ).colorScheme.primary.withValues(alpha: .06),
-            child: SizedBox(
-              width: 44,
-              height: 44,
+            child: Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: colors.cardAlt,
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: colors.divider),
+              ),
               child: Icon(
                 Icons.arrow_back_rounded,
-                size: 22,
+                size: 19,
                 color: colors.textPrimary,
               ),
             ),

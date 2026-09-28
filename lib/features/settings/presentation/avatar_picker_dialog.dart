@@ -50,11 +50,23 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
               filePath: kIsWeb ? null : picked.path,
               base64Data: base64String,
             );
-        ToastService.showSuccess('Đã cập nhật ảnh đại diện mới!');
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) {
+          ToastService.showSuccess(
+            context.isEnglish
+                ? 'New avatar updated!'
+                : 'Đã cập nhật ảnh đại diện mới!',
+          );
+          Navigator.of(context).pop();
+        }
       }
     } catch (e) {
-      ToastService.showError('Không thể tải ảnh lên: $e');
+      if (mounted) {
+        ToastService.showError(
+          context.isEnglish
+              ? 'Failed to upload image: $e'
+              : 'Không thể tải ảnh lên: $e',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
@@ -314,12 +326,13 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                                           width: 1.5,
                                         ),
                                       ),
-                                      alignment: Alignment.center,
-                                      child: const AppAssetIcon(
+                                      child: AppAssetIcon(
                                         assetPath: AppAssets.check,
                                         size: 10,
                                         color: Colors.white,
-                                        semanticLabel: 'Đã chọn',
+                                        semanticLabel: context.isEnglish
+                                            ? 'Selected'
+                                            : 'Đã chọn',
                                       ),
                                     ),
                                   ),

@@ -1048,7 +1048,11 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: _buildPresetThumbnailVisual(preset, colors),
+                child: _buildPresetThumbnailVisual(
+                  preset,
+                  colors,
+                  context.isEnglish,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -1114,6 +1118,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
   Widget _buildPresetThumbnailVisual(
     AppWallpaperPreset preset,
     AppThemeColors colors,
+    bool isEnglish,
   ) {
     switch (preset) {
       case AppWallpaperPreset.none:
@@ -1147,7 +1152,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Giao diện phẳng',
+                  isEnglish ? 'Flat design' : 'Giao diện phẳng',
                   style: GoogleFonts.inter(
                     color: colors.textMuted,
                     fontSize: 10,
@@ -1190,7 +1195,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'BLUEPRINT KHO',
+                    isEnglish ? 'WAREHOUSE BLUEPRINT' : 'BLUEPRINT KHO',
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 8.5,
@@ -1280,7 +1285,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'SÓNG LỤC BẢO',
+                    isEnglish ? 'EMERALD WAVES' : 'SÓNG LỤC BẢO',
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 8.5,
@@ -1325,7 +1330,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'KHỐI LẬP THỂ',
+                    isEnglish ? 'GEOMETRIC CUBES' : 'KHỐI LẬP THỂ',
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 8.5,
@@ -1376,7 +1381,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'ẢNH KHO THẬT',
+                    isEnglish ? 'REAL WAREHOUSE' : 'ẢNH KHO THẬT',
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 8.5,
@@ -1761,7 +1766,9 @@ class _LiveMiniPreview extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Cửa hàng chính',
+                                  context.isEnglish
+                                      ? 'Main Store'
+                                      : 'Cửa hàng chính',
                                   style: GoogleFonts.inter(
                                     color: textPrimary,
                                     fontSize: 8.5,
@@ -1813,7 +1820,9 @@ class _LiveMiniPreview extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      'Doanh thu tháng',
+                                      context.isEnglish
+                                          ? 'Monthly Revenue'
+                                          : 'Doanh thu tháng',
                                       style: GoogleFonts.inter(
                                         color: textMuted,
                                         fontSize: 7.5,
@@ -1876,7 +1885,7 @@ class _LiveMiniPreview extends StatelessWidget {
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
-                                  'Tạo đơn',
+                                  context.isEnglish ? 'New Order' : 'Tạo đơn',
                                   style: GoogleFonts.inter(
                                     color: Colors.white,
                                     fontSize: 9,

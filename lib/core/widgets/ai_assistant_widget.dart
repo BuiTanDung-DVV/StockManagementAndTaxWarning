@@ -61,6 +61,7 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
   Offset? _normalizedLauncherPosition;
   bool _isDraggingLauncher = false;
   bool _isPanelExpanded = false;
+  bool _isLoading = false;
   final List<_AssistantMessage> _messages = const [
     _AssistantMessage(
       fromUser: false,
@@ -91,6 +92,19 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
 
   void _togglePanelExpanded() {
     setState(() => _isPanelExpanded = !_isPanelExpanded);
+  }
+
+  void _resetChat() {
+    setState(() {
+      _messages.clear();
+      _messages.add(
+        const _AssistantMessage(
+          fromUser: false,
+          text:
+              'Chào bạn! Tôi có thể tra cứu dữ liệu cửa hàng. Với câu hỏi pháp luật hoặc thuế, tôi sẽ tìm tài liệu mới nhất và hiển thị nguồn để bạn kiểm tra.',
+        ),
+      );
+    });
   }
 
   Future<void> _restoreLauncherPosition() async {
@@ -146,9 +160,32 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
 
   Future<void> _handleSend(String question) async {
     final query = question.trim();
-    if (query.isEmpty) return;
+    if (query.isEmpty || _isLoading) return;
+
+    // Chuẩn bị lịch sử hội thoại đa lượt
+    final history = _messages
+        .where(
+          (m) =>
+              m.text != 'Đang kết nối với Trợ lý AI...' &&
+              !m.text.startsWith('Lỗi kết nối') &&
+              m.text !=
+                  'Chào bạn! Tôi có thể tra cứu dữ liệu cửa hàng. Với câu hỏi pháp luật hoặc thuế, tôi sẽ tìm tài liệu mới nhất và hiển thị nguồn để bạn kiểm tra.',
+        )
+        .toList()
+        .reversed
+        .take(10)
+        .toList()
+        .reversed
+        .map(
+          (m) => {
+            'role': m.fromUser ? 'user' : 'model',
+            'content': m.text.substring(0, math.min(m.text.length, 2000)),
+          },
+        )
+        .toList();
 
     setState(() {
+      _isLoading = true;
       _messages.add(_AssistantMessage(fromUser: true, text: query));
       _queryController.clear();
       _messages.add(
@@ -161,7 +198,20 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
 
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.post('/ai/chat', data: {'question': query});
+      final response = await api
+          .post(
+            '/ai/chat',
+            data: {
+              'question': query,
+              if (history.isNotEmpty) 'history': history,
+            },
+          )
+          .timeout(
+            const Duration(seconds: 50),
+            onTimeout: () => throw ApiException(
+              'Trợ lý AI phản hồi quá lâu. Vui lòng gửi lại câu hỏi.',
+            ),
+          );
 
       if (!mounted) return;
 
@@ -173,8 +223,12 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
       final payload = data['data'] is Map<String, dynamic>
           ? data['data'] as Map<String, dynamic>
           : data;
-      final answer =
-          payload['answer']?.toString() ?? 'Trợ lý AI đã ghi nhận thông tin.';
+      final answer = payload['answer']?.toString().trim() ?? '';
+      if (answer.isEmpty) {
+        throw ApiException(
+          'Trợ lý AI chưa trả về câu trả lời. Vui lòng thử lại.',
+        );
+      }
       final provider = payload['provider']?.toString() ?? 'AI Assistant';
       final sources = payload['sources'] is List
           ? (payload['sources'] as List)
@@ -235,6 +289,10 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
           ),
         );
       });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -315,6 +373,8 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                               context.push('/settings/ai-knowledge');
                             },
                             onSend: _handleSend,
+                            onReset: _resetChat,
+                            isLoading: _isLoading,
                             expanded: true,
                             showExpandAction: false,
                             onToggleExpanded: _togglePanelExpanded,
@@ -343,6 +403,8 @@ class _AiAssistantWidgetState extends ConsumerState<AiAssistantWidget> {
                         context.push('/settings/ai-knowledge');
                       },
                       onSend: _handleSend,
+                      onReset: _resetChat,
+                      isLoading: _isLoading,
                       expanded: _isPanelExpanded,
                       showExpandAction: true,
                       onToggleExpanded: _togglePanelExpanded,
@@ -390,7 +452,9 @@ class _AssistantPanel extends StatelessWidget {
   final TextEditingController queryController;
   final VoidCallback onClose;
   final VoidCallback onManageSources;
+  final VoidCallback onReset;
   final ValueChanged<String> onSend;
+  final bool isLoading;
   final bool expanded;
   final bool showExpandAction;
   final VoidCallback onToggleExpanded;
@@ -401,7 +465,9 @@ class _AssistantPanel extends StatelessWidget {
     required this.queryController,
     required this.onClose,
     required this.onManageSources,
+    required this.onReset,
     required this.onSend,
+    required this.isLoading,
     required this.expanded,
     required this.showExpandAction,
     required this.onToggleExpanded,
@@ -428,6 +494,7 @@ class _AssistantPanel extends StatelessWidget {
               showExpandAction: showExpandAction,
               onToggleExpanded: onToggleExpanded,
               onManageSources: onManageSources,
+              onReset: onReset,
               onClose: onClose,
             ),
             Divider(height: 1, color: colors.divider),
@@ -459,7 +526,9 @@ class _AssistantPanel extends StatelessWidget {
                       children: [
                         for (final question in quickQuestions)
                           OutlinedButton(
-                            onPressed: () => onSend(question),
+                            onPressed: isLoading
+                                ? null
+                                : () => onSend(question),
                             style: OutlinedButton.styleFrom(
                               alignment: Alignment.centerLeft,
                               backgroundColor: colors.cardAlt,
@@ -492,8 +561,9 @@ class _AssistantPanel extends StatelessWidget {
                       controller: queryController,
                       minLines: 1,
                       maxLines: 3,
+                      enabled: !isLoading,
                       textInputAction: TextInputAction.send,
-                      onSubmitted: onSend,
+                      onSubmitted: isLoading ? null : onSend,
                       decoration: const InputDecoration(
                         hintText: 'Nhập nội dung cần tra cứu',
                       ),
@@ -501,8 +571,19 @@ class _AssistantPanel extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
-                    onPressed: () => onSend(queryController.text),
-                    child: const Text('Gửi'),
+                    onPressed: isLoading
+                        ? null
+                        : () => onSend(queryController.text),
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Gửi'),
                   ),
                 ],
               ),
@@ -519,6 +600,7 @@ class _AssistantPanelHeader extends StatelessWidget {
   final bool showExpandAction;
   final VoidCallback onToggleExpanded;
   final VoidCallback onManageSources;
+  final VoidCallback onReset;
   final VoidCallback onClose;
 
   const _AssistantPanelHeader({
@@ -526,6 +608,7 @@ class _AssistantPanelHeader extends StatelessWidget {
     required this.showExpandAction,
     required this.onToggleExpanded,
     required this.onManageSources,
+    required this.onReset,
     required this.onClose,
   });
 
@@ -595,6 +678,15 @@ class _AssistantPanelHeader extends StatelessWidget {
                               ),
                         ),
                       ],
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'Làm mới cuộc trò chuyện',
+                    child: IconButton(
+                      tooltip: 'Làm mới',
+                      onPressed: onReset,
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.refresh_rounded, size: 20),
                     ),
                   ),
                   if (showExpandAction)

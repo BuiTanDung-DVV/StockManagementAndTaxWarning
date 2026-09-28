@@ -381,6 +381,7 @@ class AppTheme {
       ),
       textTheme: textTheme,
       appBarTheme: AppBarTheme(
+        toolbarHeight: 68,
         backgroundColor: colors.surface,
         elevation: 0,
         centerTitle: false,
@@ -388,10 +389,10 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: Border(bottom: BorderSide(color: colors.divider, width: 1)),
         titleTextStyle: GoogleFonts.manrope(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
           color: colors.textPrimary,
-          letterSpacing: -0.5,
+          letterSpacing: -0.4,
         ),
         iconTheme: IconThemeData(color: colors.textPrimary),
       ),

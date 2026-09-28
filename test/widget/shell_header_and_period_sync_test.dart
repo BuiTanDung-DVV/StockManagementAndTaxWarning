@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../lib/core/providers/reporting_period_provider.dart';
-import '../../lib/core/utils/reporting_period.dart';
+import 'package:flutter_app/core/providers/reporting_period_provider.dart';
+import 'package:flutter_app/core/utils/reporting_period.dart';
 
 void main() {
   group('Shell Header & Period Sync Tests', () {

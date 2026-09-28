@@ -494,7 +494,7 @@ class _ShellUtilityHeader extends StatelessWidget {
               if (showAiRestore) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.aiMascot,
-                  semanticLabel: 'Trợ lý AI SmartStock',
+                  semanticLabel: context.tr.nav.aiAssistantTitle,
                   onPressed: onRestoreAi,
                   preserveAssetColor: true,
                 ),
@@ -503,14 +503,18 @@ class _ShellUtilityHeader extends StatelessWidget {
               if (showShopQr) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.qrPayment,
-                  semanticLabel: 'Mở QR của cửa hàng',
+                  semanticLabel: context.isEnglish
+                      ? 'Open store QR'
+                      : 'Mở QR của cửa hàng',
                   onPressed: onShopQr,
                 ),
                 const SizedBox(width: AppSpacing.xs),
               ],
               _HeaderAssetButton(
                 assetPath: AppAssets.notification,
-                semanticLabel: 'Mở thông báo',
+                semanticLabel: context.isEnglish
+                    ? 'Open notifications'
+                    : 'Mở thông báo',
                 onPressed: onNotifications,
               ),
             ],
@@ -546,7 +550,7 @@ class _ShellUtilityHeader extends StatelessWidget {
               if (showAiRestore) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.aiMascot,
-                  semanticLabel: 'Trợ lý AI SmartStock',
+                  semanticLabel: context.tr.nav.aiAssistantTitle,
                   onPressed: onRestoreAi,
                   preserveAssetColor: true,
                 ),
@@ -555,14 +559,18 @@ class _ShellUtilityHeader extends StatelessWidget {
               if (showShopQr) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.qrPayment,
-                  semanticLabel: 'Mở QR của cửa hàng',
+                  semanticLabel: context.isEnglish
+                      ? 'Open store QR'
+                      : 'Mở QR của cửa hàng',
                   onPressed: onShopQr,
                 ),
                 const SizedBox(width: AppSpacing.sm),
               ],
               _HeaderAssetButton(
                 assetPath: AppAssets.notification,
-                semanticLabel: 'Mở thông báo',
+                semanticLabel: context.isEnglish
+                    ? 'Open notifications'
+                    : 'Mở thông báo',
                 onPressed: onNotifications,
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -582,8 +590,9 @@ class _HeaderPeriodSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppThemeColors.of(context);
+    final tr = context.tr;
     final tabKey = resolveTabKeyFromLocation(currentPath);
-    final tabName = resolveTabName(tabKey);
+    final tabName = resolveTabName(tabKey, tr);
     final selection = ref.watch(tabSelectionProvider(tabKey));
     final resolved = ref.watch(tabResolvedPeriodProvider(tabKey));
 
@@ -591,7 +600,11 @@ class _HeaderPeriodSelector extends ConsumerWidget {
       resolved.currentFrom,
       resolved.currentTo,
     );
-    final periodName = reportingPeriodSelectionLabel(selection, DateTime.now());
+    final periodName = reportingPeriodSelectionLabel(
+      selection,
+      DateTime.now(),
+      tr,
+    );
 
     return Material(
       color: colors.cardAlt,
@@ -620,8 +633,8 @@ class _HeaderPeriodSelector extends ConsumerWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.calendar_today_rounded,
+              AppAssetIcon(
+                assetPath: AppAssets.calendar,
                 size: 14,
                 color: Theme.of(context).colorScheme.primary,
               ),
@@ -653,9 +666,9 @@ class _HeaderPeriodSelector extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(
-                Icons.arrow_drop_down_rounded,
-                size: 18,
+              AppAssetIcon(
+                assetPath: AppAssets.expand,
+                size: 14,
                 color: colors.textSecondary,
               ),
             ],
@@ -702,8 +715,8 @@ class _HeaderPeriodButtonCompact extends ConsumerWidget {
             borderRadius: BorderRadius.circular(9),
             border: Border.all(color: colors.divider),
           ),
-          child: Icon(
-            Icons.calendar_today_rounded,
+          child: AppAssetIcon(
+            assetPath: AppAssets.calendar,
             size: 16,
             color: Theme.of(context).colorScheme.primary,
           ),
@@ -828,39 +841,39 @@ class _DesktopSidebar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                height: 72,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: collapsed ? 15 : 16,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: collapsed
-                        ? MainAxisAlignment.center
-                        : MainAxisAlignment.start,
-                    children: [
-                      const _SidebarLogo(),
-                      if (!collapsed) ...[
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'SmartStock',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: colors.textPrimary,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.35,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ],
+              Container(
+                height: 68,
+                padding: EdgeInsets.symmetric(horizontal: collapsed ? 15 : 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: colors.divider, width: 1),
                   ),
                 ),
+                child: Row(
+                  mainAxisAlignment: collapsed
+                      ? MainAxisAlignment.center
+                      : MainAxisAlignment.start,
+                  children: [
+                    const _SidebarLogo(),
+                    if (!collapsed) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'SmartStock',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: colors.textPrimary,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.35,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-              Divider(height: 1, color: colors.divider),
               if (!collapsed)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),

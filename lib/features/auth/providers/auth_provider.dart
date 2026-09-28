@@ -180,8 +180,7 @@ class AuthNotifier extends Notifier<AuthState> {
           lowerMsg.contains('not found') ||
           lowerMsg.contains('không tồn tại') ||
           lowerMsg.contains('unauthorized')) {
-        msg =
-            'Sai số điện thoại/tên đăng nhập hoặc mật khẩu. Vui lòng kiểm tra lại.';
+        msg = 'Sai Gmail hoặc mật khẩu. Vui lòng kiểm tra lại.';
       } else if (lowerMsg.contains('network') ||
           lowerMsg.contains('connection') ||
           lowerMsg.contains('socket')) {

@@ -26,6 +26,9 @@ class ViTranslations implements AppTranslations {
 
   @override
   SalesTranslations get sales => const _ViSales();
+
+  @override
+  ReportingPeriodTranslations get period => const _ViReportingPeriod();
 }
 
 class _ViCommon implements CommonTranslations {
@@ -154,6 +157,8 @@ class _ViNav implements NavTranslations {
   String get collapseTooltip => 'Thu gọn thanh điều hướng';
   @override
   String get expandTooltip => 'Mở rộng thanh điều hướng';
+  @override
+  String get aiAssistantTitle => 'Trợ lý AI SmartStock';
 }
 
 class _ViSettings implements SettingsTranslations {
@@ -261,7 +266,9 @@ class _ViSettings implements SettingsTranslations {
   String get costingMethodConfirmTitle => 'Đổi phương pháp tính giá vốn';
   @override
   String get costingMethodConfirmMsg =>
-      'Theo Thông tư 88/2021/TT-BTC, việc thay đổi phương pháp tính giá vốn phải được áp dụng nhất quán trong kỳ kế toán. Bạn có chắc muốn thay đổi?';
+      'Theo chế độ kế toán và Thông tư 88/2021/TT-BTC, phương pháp tính giá vốn cần áp dụng nhất quán trong niên độ kế toán. Thay đổi giữa kỳ có thể ảnh hưởng đến giá trị tồn kho và lợi nhuận.\n\nBạn có chắc chắn muốn thay đổi?';
+  @override
+  String get costingMethodConfirmBtn => 'Xác nhận thay đổi';
   @override
   String get costingMethodActiveBadge => 'Đang dùng';
   @override
@@ -507,4 +514,66 @@ class _ViSales implements SalesTranslations {
   String get printReceipt => 'In hóa đơn';
   @override
   String get completed => 'Hoàn thành';
+}
+
+class _ViReportingPeriod implements ReportingPeriodTranslations {
+  const _ViReportingPeriod();
+
+  @override
+  String get tabOverview => 'Tổng quan';
+  @override
+  String get tabSales => 'Bán hàng';
+  @override
+  String get tabInventory => 'Kho hàng';
+  @override
+  String get tabFinance => 'Tài chính';
+
+  @override
+  String get today => 'Hôm nay';
+  @override
+  String get thisWeek => 'Tuần này';
+  @override
+  String get thisMonth => 'Tháng này';
+  @override
+  String get thisQuarter => 'Quý này';
+  @override
+  String get thisYear => 'Năm nay';
+
+  @override
+  String get day => 'Ngày';
+  @override
+  String get week => 'Tuần';
+  @override
+  String get month => 'Tháng';
+  @override
+  String get quarter => 'Quý';
+  @override
+  String get year => 'Năm';
+
+  @override
+  String get scopeTitle => 'Phạm vi số liệu';
+  @override
+  String get scopeSubtitle => 'Chọn kỳ cần xem và mốc dùng để đối chiếu.';
+  @override
+  String get viewBy => 'Xem theo';
+  @override
+  String get currentPeriod => 'Kỳ đang xem';
+  @override
+  String get benchmark => 'Mốc đối chiếu';
+  @override
+  String get previousPeriod => 'Kỳ trước liền kề';
+  @override
+  String get samePeriodLastYear => 'Cùng kỳ năm trước';
+  @override
+  String get customComparison => 'Tùy chọn mốc';
+  @override
+  String get selectDateInPeriod => 'Chọn ngày thuộc kỳ cần xem';
+  @override
+  String get selectStartDate => 'Chọn ngày bắt đầu';
+  @override
+  String get selectEndDate => 'Chọn ngày kết thúc';
+  @override
+  String get apply => 'Áp dụng';
+  @override
+  String get close => 'Đóng';
 }

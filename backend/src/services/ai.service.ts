@@ -11,6 +11,7 @@ import {
 
 import { SalesService } from './sales.service';
 import { legalGroundingService } from './legal-grounding.service';
+import { withAiDeadline } from '../ai/ai-deadline.utils';
 
 export interface ChatMessage {
   role: 'user' | 'model' | 'assistant';
@@ -46,13 +47,89 @@ export class AiService {
    * Tổng hợp dữ liệu thực tế từ cơ sở dữ liệu của cửa hàng (Store Snapshot)
    */
   private async getStoreContext(shopId: number): Promise<string> {
-    let lowStockText: string | null = null;
+    let inventoryOverviewText: string = 'Đang cập nhật';
+    let outOfStockText: string = 'Không có mặt hàng nào hết sạch tồn kho.';
+    let lowStockText: string = 'Không có sản phẩm nào chạm mức tồn kho tối thiểu.';
+    let categoriesText: string = 'Đa dạng';
+    let topSellingText: string = 'Chưa có dữ liệu bán chạy trong 30 ngày gần nhất.';
     let revenue: string | null = null;
     let orders: number | null = null;
-    let debt: string | null = null;
+    let customerDebt: string | null = null;
+    let supplierDebt: string | null = null;
     let taxText: string | null = null;
 
-    // 1. Tồn kho sản phẩm
+    // 1. Tổng quan kho hàng & Mặt hàng
+    try {
+      const invOverview = await AppDataSource.query(`
+        SELECT
+          COUNT(p.id)::int AS total_products,
+          COALESCE(SUM(s.quantity), 0)::numeric AS total_qty,
+          COALESCE(SUM(s.quantity * COALESCE(p.cost_price, 0)), 0)::numeric AS total_inventory_value
+        FROM products p
+        LEFT JOIN inventory_stocks s
+          ON s.product_id = p.id
+          AND s.shop_id = p.shop_id
+        WHERE p.shop_id = $1
+          AND p.is_active = true
+      `, [shopId]);
+
+      if (invOverview && invOverview.length > 0) {
+        const row = invOverview[0];
+        const totalProducts = Number(row.total_products || 0);
+        const totalQty = Number(row.total_qty || 0);
+        const totalVal = Number(row.total_inventory_value || 0);
+        inventoryOverviewText = `Đang quản lý ${totalProducts.toLocaleString('vi-VN')} mặt hàng, tổng tồn kho ${totalQty.toLocaleString('vi-VN')} đơn vị, ước tính tổng giá trị vốn tồn kho là ${totalVal.toLocaleString('vi-VN')} VNĐ.`;
+      }
+    } catch (e) {
+      console.warn('AI StoreContext - Lỗi truy vấn tổng quan kho:', e);
+    }
+
+    // 1.1 Danh mục ngành hàng đang kinh doanh
+    try {
+      const catRows = await AppDataSource.query(`
+        SELECT DISTINCT c.name AS category
+        FROM products p
+        JOIN categories c ON c.id = p.category_id AND c.shop_id = p.shop_id
+        WHERE p.shop_id = $1 AND p.is_active = true AND TRIM(c.name) != ''
+        LIMIT 10
+      `, [shopId]);
+      if (catRows && catRows.length > 0) {
+        categoriesText = catRows.map((r: any) => r.category).join(', ');
+      }
+    } catch (e) {
+      console.warn('AI StoreContext - Lỗi truy vấn danh mục ngành hàng:', e);
+    }
+
+    // 1.2 Mặt hàng đã hết sạch tồn kho (tồn = 0)
+    try {
+      const outOfStockRows = await AppDataSource.query(`
+        SELECT
+          p.name,
+          p.sku,
+          p.unit,
+          p.min_stock
+        FROM products p
+        LEFT JOIN inventory_stocks s
+          ON s.product_id = p.id
+          AND s.shop_id = p.shop_id
+        WHERE p.shop_id = $1
+          AND p.is_active = true
+        GROUP BY p.id, p.name, p.sku, p.unit, p.min_stock
+        HAVING COALESCE(SUM(s.quantity), 0) <= 0
+        ORDER BY p.name ASC
+        LIMIT 6
+      `, [shopId]);
+
+      if (outOfStockRows && outOfStockRows.length > 0) {
+        outOfStockText = outOfStockRows.map((p: any) =>
+          `- ${p.name} (SKU: ${p.sku || 'N/A'}): Tồn kho = 0 ${p.unit || 'sản phẩm'} (Định mức tối thiểu: ${Number(p.min_stock || 0).toLocaleString('vi-VN')})`,
+        ).join('\n');
+      }
+    } catch (e) {
+      console.warn('AI StoreContext - Lỗi truy vấn hàng hết tồn:', e);
+    }
+
+    // 1.3 Mặt hàng chạm ngưỡng tồn kho tối thiểu (còn hàng nhưng <= min_stock)
     try {
       const lowStockResult = await AppDataSource.query(`
         SELECT
@@ -69,23 +146,21 @@ export class AiService {
           AND p.is_active = true
           AND p.min_stock > 0
         GROUP BY p.id, p.name, p.sku, p.unit, p.min_stock
-        HAVING COALESCE(SUM(s.quantity), 0) <= p.min_stock
+        HAVING COALESCE(SUM(s.quantity), 0) > 0 AND COALESCE(SUM(s.quantity), 0) <= p.min_stock
         ORDER BY (p.min_stock - COALESCE(SUM(s.quantity), 0)) DESC, p.name ASC
-        LIMIT 5
+        LIMIT 6
       `, [shopId]);
 
       if (lowStockResult && lowStockResult.length > 0) {
         lowStockText = lowStockResult.map((p: any) =>
-          `- ${p.name} (SKU: ${p.sku || 'N/A'}): còn ${Number(p.current_stock || 0).toLocaleString('vi-VN')} ${p.unit || 'sản phẩm'}, định mức ${Number(p.min_stock || 0).toLocaleString('vi-VN')}`,
+          `- ${p.name} (SKU: ${p.sku || 'N/A'}): còn ${Number(p.current_stock || 0).toLocaleString('vi-VN')} ${p.unit || 'sản phẩm'} (Định mức: ${Number(p.min_stock || 0).toLocaleString('vi-VN')})`,
         ).join('\n');
-      } else {
-        lowStockText = 'Không có sản phẩm nào chạm mức tồn kho tối thiểu.';
       }
     } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn sản phẩm:', e);
+      console.warn('AI StoreContext - Lỗi truy vấn sản phẩm chạm định mức:', e);
     }
 
-    // 2. Doanh thu 30 ngày qua
+    // 2. Doanh thu & Top bán chạy 30 ngày qua
     try {
       const toDate = new Date();
       const fromDate = new Date(toDate.getTime() - 29 * 24 * 60 * 60 * 1000);
@@ -94,13 +169,26 @@ export class AiService {
         vietnamDateKey(fromDate),
         vietnamDateKey(toDate),
       );
-      revenue = Number(sales.totalRevenue).toLocaleString('vi-VN');
+      revenue = Number(sales.netSalesRevenue).toLocaleString('vi-VN');
       orders = Number(sales.orderCount);
+
+      // Top 5 sản phẩm bán chạy
+      const topSellingRows = (await this.salesService.getTopProducts(
+        shopId,
+        vietnamDateKey(fromDate),
+        vietnamDateKey(toDate),
+      )).slice(0, 5);
+
+      if (topSellingRows && topSellingRows.length > 0) {
+        topSellingText = topSellingRows.map((p: any, idx: number) =>
+          `${idx + 1}. ${p.name}: Đã bán ${Number(p.quantity).toLocaleString('vi-VN')} sản phẩm, doanh thu thuần ${Number(p.value).toLocaleString('vi-VN')} VNĐ`,
+        ).join('\n');
+      }
     } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn doanh thu:', e);
+      console.warn('AI StoreContext - Lỗi truy vấn doanh thu và top bán chạy:', e);
     }
 
-    // 3. Công nợ khách hàng
+    // 3. Công nợ khách hàng phải thu
     try {
       const debtResult = await AppDataSource.query(`
         SELECT COALESCE(SUM(GREATEST(amount - paid_amount, 0)), 0) AS total_debt
@@ -110,12 +198,30 @@ export class AiService {
       `, [shopId]);
 
       if (debtResult && debtResult.length > 0) {
-        debt = Number(debtResult[0]?.total_debt || 0).toLocaleString('vi-VN');
+        customerDebt = Number(debtResult[0]?.total_debt || 0).toLocaleString('vi-VN');
       } else {
-        debt = '0';
+        customerDebt = '0';
       }
     } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn công nợ:', e);
+      console.warn('AI StoreContext - Lỗi truy vấn công nợ khách hàng:', e);
+    }
+
+    // 3.1 Nợ nhà cung cấp phải trả
+    try {
+      const payableResult = await AppDataSource.query(`
+        SELECT COALESCE(SUM(GREATEST(amount - paid_amount, 0)), 0) AS total_payable
+        FROM payables
+        WHERE shop_id = $1
+          AND UPPER(COALESCE(status, '')) NOT IN ('PAID', 'CANCELLED')
+      `, [shopId]);
+
+      if (payableResult && payableResult.length > 0) {
+        supplierDebt = Number(payableResult[0]?.total_payable || 0).toLocaleString('vi-VN');
+      } else {
+        supplierDebt = '0';
+      }
+    } catch (e) {
+      console.warn('AI StoreContext - Lỗi truy vấn nợ nhà cung cấp:', e);
     }
 
     // 4. Nghĩa vụ thuế / Cảnh báo thuế
@@ -137,15 +243,28 @@ export class AiService {
     }
 
     return `
-=== DỮ LIỆU THỰC TẾ CỬA HÀNG (CẬP NHẬT TỰ ĐỘNG) ===
-- Tổng doanh thu (30 ngày gần nhất): ${revenue === null ? 'CHƯA THỂ TRUY VẤN DB' : `${revenue} VNĐ (${orders} đơn hàng)`}
-- Tổng công nợ khách hàng cần thu: ${debt === null ? 'CHƯA THỂ TRUY VẤN DB' : `${debt} VNĐ`}
-- Sản phẩm trong danh mục cảnh báo tồn kho:
+=== BẢN TỔNG HỢP DỮ LIỆU THỰC TẾ CỬA HÀNG (CẬP NHẬT TỰ ĐỘNG) ===
+1. Tổng quan Kho hàng:
+- Tình trạng: ${inventoryOverviewText}
+- Các ngành hàng kinh doanh chính: ${categoriesText}
+- Mặt hàng đã HẾT HÀNG (cần nhập khẩn cấp):
+${outOfStockText}
+- Mặt hàng chạm định mức tồn kho tối thiểu:
 ${lowStockText ?? 'CHƯA THỂ TRUY VẤN DB'}
-- Cảnh báo nghĩa vụ Thuế:
+
+2. Hiệu quả Bán hàng (30 ngày gần nhất):
+- Tổng doanh thu bán hàng: ${revenue === null ? 'CHƯA THỂ TRUY VẤN DB' : `${revenue} VNĐ (${orders} đơn hàng thành công)`}
+- Top 5 sản phẩm bán chạy nhất:
+${topSellingText}
+
+3. Quản lý Tài chính & Công nợ:
+- Tổng nợ khách hàng cần thu: ${customerDebt === null ? 'CHƯA THỂ TRUY VẤN DB' : `${customerDebt} VNĐ`}
+- Tổng nợ phải trả cho nhà cung cấp: ${supplierDebt === null ? 'CHƯA THỂ TRUY VẤN DB' : `${supplierDebt} VNĐ`}
+
+4. Nghĩa vụ Thuế hộ kinh doanh:
 ${taxText ?? 'CHƯA THỂ TRUY VẤN DB'}
 - Mọi mục ghi CHƯA THỂ TRUY VẤN DB là dữ liệu không khả dụng, không được suy diễn thành 0 hoặc trạng thái an toàn.
-=================================================
+=============================================================
 `;
   }
 
@@ -193,21 +312,33 @@ ${docsText}
    * Đặt câu hỏi và nhận câu trả lời 100% từ Google Gemini API
    */
   async askAdvisor(shopId: number, dto: ChatRequestDto): Promise<AiAdvisorResult> {
+    return withAiDeadline(remainingMs => this.askAdvisorWithinDeadline(shopId, dto, remainingMs));
+  }
+
+  private async askAdvisorWithinDeadline(
+    shopId: number,
+    dto: ChatRequestDto,
+    remainingMs: () => number,
+  ): Promise<AiAdvisorResult> {
+    const key = config.geminiApiKey;
+    if (!key) {
+      throw new Error('Trợ lý AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
+    }
     const storeContext = await this.getStoreContext(shopId);
+    remainingMs();
     const knowledgeContext = await this.getKnowledgeContext(shopId);
+    remainingMs();
     const requiresLegalSources = isLegalDocumentQuestion(dto.question);
     const searchedAt = requiresLegalSources ? new Date().toISOString() : undefined;
 
-    const systemPrompt = `Bạn là Trợ lý AI thông minh chuyên tư vấn Quản lý Bán hàng, Tồn kho, Tài chính và Nghĩa vụ Thuế cho Hộ kinh doanh tại Việt Nam.
+    const systemPrompt = `Bạn là Trợ lý AI thông minh kiêm Cố vấn Quản trị & Tài chính chuyên nghiệp cho Hộ kinh doanh tại Việt Nam.
 
 Hướng dẫn trả lời:
-1. Trả lời tự nhiên, thông minh, đúng trọng tâm cho MỌI câu hỏi của chủ cửa hàng (từ bán hàng, xuất nhập kho, quản lý nợ, tài chính đến quy định pháp luật).
-2. Với câu hỏi vận hành, chỉ dùng dữ liệu cửa hàng được cung cấp. Với câu hỏi pháp luật/thuế, bắt buộc tra cứu web ở thời điểm trả lời và chỉ kết luận từ nguồn được tìm thấy.
-3. Với pháp luật/thuế, ưu tiên theo thứ tự: vbpl.vn; vanban.chinhphu.vn và website cơ quan nhà nước; sau đó mới đến thuvienphapluat.vn. Không dùng báo chí, blog, diễn đàn hoặc nguồn thương mại khác.
-4. Không tự tạo tên văn bản, số hiệu, URL, ngày hiệu lực hoặc trạng thái hiệu lực. Nếu nguồn không xác nhận trạng thái hiệu lực thì phải ghi rõ "cần kiểm tra hiệu lực tại nguồn".
-5. Mỗi kết luận pháp lý phải chỉ ra nguồn hỗ trợ ngay trong nội dung bằng ký hiệu [Nguồn]. Nếu nguồn mâu thuẫn hoặc không đủ rõ, không được suy đoán.
-6. Lồng ghép tự nhiên thông tin tình hình thực tế của Cửa hàng để đưa ra lời khuyên thực tế nhất.
-7. Trình bày tiếng Việt thân thiện, rõ ràng dạng Markdown.
+1. Bạn có bức tranh tổng thể về tình hình kinh doanh, kho hàng và tài chính của cửa hàng qua bản tổng hợp số liệu thực tế bên dưới. Hãy phân tích sắc bén, tự nhiên, đầy đủ và đưa ra các hành động cụ thể cho chủ cửa hàng.
+2. Tuyệt đối KHÔNG đưa ra những câu máy móc kiểu "chưa thể truy vấn trực tiếp từ cơ sở dữ liệu" hay thắc mắc về kỹ thuật. Hãy sử dụng linh hoạt các số liệu tổng quan sẵn có (tổng số mặt hàng, giá trị tồn kho, các mặt hàng hết hàng cần nhập gấp, mặt hàng chạm định mức, top bán chạy, doanh thu, công nợ) để trả lời trọn vẹn và chuyên nghiệp.
+3. Khi tư vấn nhập hàng/tồn kho: Luôn ưu tiên cảnh báo các mặt hàng đã HẾT HÀNG (tồn = 0) và chạm định mức tối thiểu, đồng thời đối chiếu với Top sản phẩm bán chạy để tối ưu hóa dòng vốn lưu động.
+4. Với câu hỏi pháp luật/thuế: Bắt buộc tra cứu web ở thời điểm trả lời và chỉ kết luận từ nguồn được tìm thấy trên các trang chính thống (vbpl.vn, vanban.chinhphu.vn, gdt.gov.vn, thuvienphapluat.vn).
+5. Trình bày tiếng Việt thân thiện, rõ ràng, cấu trúc đẹp mắt dạng Markdown (tiêu đề in đậm, gạch đầu dòng, bảng số liệu nếu phù hợp).
 
 --- THÔNG TIN CỬA HÀNG & THAM KHẢO ---
 ${storeContext}
@@ -216,18 +347,13 @@ ${knowledgeContext}
 --------------------------------------
 `;
 
-    const key = config.geminiApiKey;
-
-    if (!key) {
-      throw new Error('[AI ERROR] GEMINI_API_KEY is empty on Vercel environment variables. Please set GEMINI_API_KEY in Vercel Settings.');
-    }
-
     const genAI = new GoogleGenerativeAI(key);
     const modelCandidates = requiresLegalSources
       ? [
         'gemini-3.7-flash',
         'gemini-3.6-flash',
         'gemini-3.5-flash',
+        'gemini-3-flash',
       ]
       : [
         'gemini-3.5-flash-lite',
@@ -244,6 +370,7 @@ ${knowledgeContext}
 
     let lastError: any;
     for (const modelName of modelCandidates) {
+      const timeoutMs = Math.min(20000, remainingMs());
       try {
         const historyPrompt = dto.history && dto.history.length > 0
           ? dto.history.map(m => `${m.role === 'user' ? 'Người dùng' : 'Trợ lý AI'}: ${m.content}`).join('\n')
@@ -269,6 +396,7 @@ Người dùng hỏi: ${dto.question}`;
             key,
             modelName,
             fullPrompt,
+            timeoutMs,
           );
           const evidence = await legalGroundingService.extractTrustedGrounding(
             grounded.chunks,
@@ -296,7 +424,7 @@ Người dùng hỏi: ${dto.question}`;
         }
 
         const model = genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(fullPrompt);
+        const result = await model.generateContent(fullPrompt, { timeout: timeoutMs });
         const responseText = result.response.text();
 
         if (responseText && responseText.trim().length > 0) {
@@ -319,7 +447,7 @@ Người dùng hỏi: ${dto.question}`;
       throw new Error('Hệ thống Google AI đang tạm thời vượt quá lượt truy vấn trong phút. Vui lòng đợi 15-30 giây rồi gửi lại câu hỏi.');
     }
 
-    console.error('Gemini Models failed:', lastError);
+    console.error('Gemini Models failed', { status: lastError?.status, name: lastError?.name });
     throw new Error('Không thể kết nối với Trợ lý AI lúc này. Vui lòng thử lại sau.');
   }
 

@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import '../localization/translations/app_translations.dart';
 import '../utils/reporting_period.dart';
 
 /// Trạng thái lưu trữ kỳ báo cáo riêng biệt cho từng Tab / Phân hệ chức năng
@@ -88,8 +88,20 @@ String resolveTabKeyFromLocation(String path) {
   return 'dashboard';
 }
 
-/// Tên tiếng Việt hiển thị của tab
-String resolveTabName(String tabKey) {
+/// Tên tiếng Việt hiển thị của tab (hỗ trợ dịch thuật khi truyền tr)
+String resolveTabName(String tabKey, [AppTranslations? tr]) {
+  if (tr != null) {
+    switch (tabKey) {
+      case 'sales':
+        return tr.period.tabSales;
+      case 'inventory':
+        return tr.period.tabInventory;
+      case 'finance':
+        return tr.period.tabFinance;
+      default:
+        return tr.period.tabOverview;
+    }
+  }
   switch (tabKey) {
     case 'sales':
       return 'Bán hàng';

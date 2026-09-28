@@ -8,6 +8,7 @@ abstract class AppTranslations {
   TaxTranslations get tax;
   InventoryTranslations get inventory;
   SalesTranslations get sales;
+  ReportingPeriodTranslations get period;
 }
 
 abstract class CommonTranslations {
@@ -73,6 +74,7 @@ abstract class NavTranslations {
   String get searchPlaceholder;
   String get collapseTooltip;
   String get expandTooltip;
+  String get aiAssistantTitle;
 }
 
 abstract class SettingsTranslations {
@@ -125,6 +127,7 @@ abstract class SettingsTranslations {
   String get costingMethodDialogSubtitle;
   String get costingMethodConfirmTitle;
   String get costingMethodConfirmMsg;
+  String get costingMethodConfirmBtn;
   String get costingMethodActiveBadge;
   String get minStockAlert;
   String get minStockAlertDesc;
@@ -244,4 +247,34 @@ abstract class SalesTranslations {
   String get paymentMethod;
   String get printReceipt;
   String get completed;
+}
+
+abstract class ReportingPeriodTranslations {
+  String get tabOverview;
+  String get tabSales;
+  String get tabInventory;
+  String get tabFinance;
+  String get today;
+  String get thisWeek;
+  String get thisMonth;
+  String get thisQuarter;
+  String get thisYear;
+  String get day;
+  String get week;
+  String get month;
+  String get quarter;
+  String get year;
+  String get scopeTitle;
+  String get scopeSubtitle;
+  String get viewBy;
+  String get currentPeriod;
+  String get benchmark;
+  String get previousPeriod;
+  String get samePeriodLastYear;
+  String get customComparison;
+  String get selectDateInPeriod;
+  String get selectStartDate;
+  String get selectEndDate;
+  String get apply;
+  String get close;
 }

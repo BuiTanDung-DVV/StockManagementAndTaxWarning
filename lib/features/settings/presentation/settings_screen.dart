@@ -15,6 +15,7 @@ import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/localization/app_language.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_provider.dart';
+import '../../../core/localization/translations/app_translations.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/costing_provider.dart';
@@ -36,9 +37,10 @@ int settingsActiveShopCount(ShopState state) => state.userShops
     .where((shop) => shop['status'] == 'ACTIVE' && shop['isActive'] != false)
     .length;
 
-String settingsAllShopsSummary(ShopState state) {
+String settingsAllShopsSummary(ShopState state, [AppTranslations? tr]) {
   final count = settingsActiveShopCount(state);
-  return 'Đang xem dữ liệu tổng hợp của $count cửa hàng.';
+  return tr?.settings.allShopsSummary(count) ??
+      'Đang xem dữ liệu tổng hợp của $count cửa hàng.';
 }
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -542,13 +544,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
+    final tr = context.tr;
     final confirmed = await AppConfirmModal.show(
       context,
-      title: 'Xác nhận đăng xuất',
-      message:
-          'Bạn có chắc muốn đăng xuất khỏi ứng dụng? Hãy hoàn tất các thay đổi chưa lưu trước khi tiếp tục.',
-      confirmText: 'Đăng xuất',
-      cancelText: 'Ở lại',
+      title: tr.auth.logoutConfirmTitle,
+      message: tr.auth.logoutConfirmMsg,
+      confirmText: tr.auth.logoutConfirmBtn,
+      cancelText: tr.auth.stayBtn,
       isDestructive: true,
     );
     if (confirmed != true) return;
@@ -563,6 +565,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       isScrollControlled: true,
       builder: (sheetContext) {
         final colors = AppThemeColors.of(sheetContext);
+        final tr = sheetContext.tr;
         final availableShops = shopState.userShops
             .where(
               (shop) => shop['status'] == 'ACTIVE' && shop['isActive'] != false,
@@ -588,7 +591,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Chuyển cửa hàng',
+                    tr.settings.switchShopTitle,
                     style: TextStyle(
                       color: colors.textPrimary,
                       fontSize: 18,
@@ -597,7 +600,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    'Dữ liệu trên màn hình sẽ đổi theo cửa hàng được chọn.',
+                    tr.settings.switchShopSubtitle,
                     style: TextStyle(color: colors.textSecondary, fontSize: 12),
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -606,8 +609,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         if (canViewAll)
                           _ShopOption(
-                            title: 'Tất cả cửa hàng',
-                            subtitle: 'Xem dữ liệu tổng hợp của các cửa hàng.',
+                            title: tr.settings.allShops,
+                            subtitle: tr.settings.allShopsSummary(
+                              availableShops.length,
+                            ),
                             selected: shopState.isAllShops,
                             onTap: () {
                               ref.read(shopProvider.notifier).switchShop(-1);
@@ -618,11 +623,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           _ShopOption(
                             title:
                                 shop['shopName']?.toString() ??
-                                'Cửa hàng #${shop['shopId']}',
+                                (sheetContext.isEnglish
+                                    ? 'Store #${shop['shopId']}'
+                                    : 'Cửa hàng #${shop['shopId']}'),
                             subtitle: shop['memberType'] == 'OWNER'
-                                ? 'Chủ sở hữu'
+                                ? tr.settings.owner
                                 : (shop['role']?['name']?.toString() ??
-                                      'Nhân viên'),
+                                      tr.settings.staff),
                             selected:
                                 parseShopRecordId(shop['shopId']) ==
                                     shopState.currentShopId &&
@@ -719,7 +726,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Phương pháp tính giá vốn',
+                  sheetContext.tr.settings.costingMethodDialogTitle,
                   style: TextStyle(
                     color: colors.textPrimary,
                     fontSize: 18,
@@ -728,21 +735,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  'Cấu hình này được dùng để tính giá vốn và lợi nhuận.',
+                  sheetContext.tr.settings.costingMethodDialogSubtitle,
                   style: TextStyle(color: colors.textSecondary, fontSize: 12),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 _CostingOption(
-                  title: 'Bình quân gia quyền (AVG)',
-                  description: 'Tính giá bình quân từ các lô hàng còn tồn kho.',
+                  title: sheetContext.tr.settings.costingMethodAvgShort,
+                  description: sheetContext.tr.settings.costingMethodAvg,
                   selected: costing.method == 'AVG',
                   onTap: () => _updateCostingMethod(sheetContext, 'AVG'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _CostingOption(
-                  title: 'Nhập trước – xuất trước (FIFO)',
-                  description:
-                      'Ưu tiên giá của lô nhập kho sớm hơn khi xuất bán.',
+                  title: sheetContext.tr.settings.costingMethodFifoShort,
+                  description: sheetContext.tr.settings.costingMethodFifo,
                   selected: costing.method == 'FIFO',
                   onTap: () => _updateCostingMethod(sheetContext, 'FIFO'),
                 ),
@@ -766,7 +772,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context,
       title: context.tr.settings.costingMethodConfirmTitle,
       message: context.tr.settings.costingMethodConfirmMsg,
-      confirmText: context.tr.common.confirm,
+      confirmText: context.tr.settings.costingMethodConfirmBtn,
       cancelText: context.tr.common.cancel,
     );
     if (confirmed != true) return;
@@ -774,10 +780,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final success = await ref
         .read(costingProvider.notifier)
         .updateCostingMethod(method);
+    if (!mounted) return;
     if (success) {
-      ToastService.showSuccess('Đã cập nhật phương pháp tính giá vốn.');
+      ToastService.showSuccess(
+        context.isEnglish
+            ? 'Costing method updated successfully.'
+            : 'Đã cập nhật phương pháp tính giá vốn.',
+      );
     } else {
-      ToastService.showError('Không thể cập nhật phương pháp tính giá vốn.');
+      ToastService.showError(
+        context.isEnglish
+            ? 'Failed to update costing method.'
+            : 'Không thể cập nhật phương pháp tính giá vốn.',
+      );
     }
   }
 
@@ -793,13 +808,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       applicationName: 'SmartStock',
       applicationVersion: packageInfo.version,
-      applicationLegalese:
-          'SmartStock - Quản lý bán hàng & Cảnh báo thuế Hộ Kinh Doanh',
+      applicationLegalese: context.isEnglish
+          ? 'SmartStock - Sales Management & Tax Warning for Household Businesses'
+          : 'SmartStock - Quản lý bán hàng & Cảnh báo thuế Hộ Kinh Doanh',
       children: [
         const SizedBox(height: AppSpacing.md),
-        const Text(
-          'Hệ thống ghi nhận giao dịch bán hàng, quản lý tồn kho, dòng tiền và cảnh báo nghĩa vụ thuế cho Hộ Kinh Doanh tại Việt Nam.',
-          style: TextStyle(fontSize: 13, height: 1.45),
+        Text(
+          context.isEnglish
+              ? 'Sales transaction tracking, inventory management, cashflow control, and tax compliance warning system for Household Businesses in Vietnam.'
+              : 'Hệ thống ghi nhận giao dịch bán hàng, quản lý tồn kho, dòng tiền và cảnh báo nghĩa vụ thuế cho Hộ Kinh Doanh tại Việt Nam.',
+          style: const TextStyle(fontSize: 13, height: 1.45),
         ),
       ],
     );
@@ -828,7 +846,7 @@ class _SettingsProfileCard extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final fullName = user?['fullName']?.toString().trim();
     final displayName = fullName == null || fullName.isEmpty
-        ? 'Người dùng SmartStock'
+        ? (context.isEnglish ? 'SmartStock User' : 'Người dùng SmartStock')
         : fullName;
 
     if (shopState.isAllShops || shopAsync == null) {
@@ -841,12 +859,16 @@ class _SettingsProfileCard extends StatelessWidget {
           shopState.currentShopName ??
           currentShop?['shopName']?.toString() ??
           (shopState.currentShopId != null
-              ? 'Cửa hàng #${shopState.currentShopId}'
-              : 'Tất cả cửa hàng');
+              ? (context.isEnglish
+                    ? 'Store #${shopState.currentShopId}'
+                    : 'Cửa hàng #${shopState.currentShopId}')
+              : context.tr.settings.allShops);
       final roleName = shopState.isOwner
-          ? 'Chủ sở hữu'
+          ? context.tr.settings.owner
           : (currentShop?['role']?['name']?.toString() ??
-                (shopState.memberType == 'OWNER' ? 'Chủ sở hữu' : 'Nhân viên'));
+                (shopState.memberType == 'OWNER'
+                    ? context.tr.settings.owner
+                    : context.tr.settings.staff));
 
       return AppCardContainer(
         child: LayoutBuilder(
@@ -867,7 +889,7 @@ class _SettingsProfileCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   shopState.isAllShops
-                      ? settingsAllShopsSummary(shopState)
+                      ? settingsAllShopsSummary(shopState, context.tr)
                       : shopName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -876,8 +898,10 @@ class _SettingsProfileCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   shopState.isAllShops
-                      ? 'Chọn một cửa hàng để xem và chỉnh sửa cấu hình riêng.'
-                      : 'Vai trò: $roleName${shopState.shopCode != null ? '  ·  Mã CH: ${shopState.shopCode}' : ''}',
+                      ? (context.isEnglish
+                            ? 'Select a store to view and edit individual configurations.'
+                            : 'Chọn một cửa hàng để xem và chỉnh sửa cấu hình riêng.')
+                      : '${context.isEnglish ? 'Role' : 'Vai trò'}: $roleName${shopState.shopCode != null ? (context.isEnglish ? '  ·  Store Code: ${shopState.shopCode}' : '  ·  Mã CH: ${shopState.shopCode}') : ''}',
                   style: TextStyle(color: colors.textMuted, fontSize: 11),
                 ),
               ],
@@ -888,12 +912,12 @@ class _SettingsProfileCard extends StatelessWidget {
               children: [
                 TextButton(
                   onPressed: onOpenProfile,
-                  child: const Text('Xem hồ sơ'),
+                  child: Text(context.tr.settings.viewProfile),
                 ),
                 if (onSwitchShop != null)
                   FilledButton.tonal(
                     onPressed: onSwitchShop,
-                    child: const Text('Chọn cửa hàng'),
+                    child: Text(context.tr.settings.switchShopBtn),
                   ),
               ],
             );
@@ -946,7 +970,7 @@ class _SettingsProfileCard extends StatelessWidget {
             final shopName =
                 shop['shopName']?.toString() ??
                 shop['name']?.toString() ??
-                'Cửa hàng của tôi';
+                (context.isEnglish ? 'My Store' : 'Cửa hàng của tôi');
             final details = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -969,8 +993,8 @@ class _SettingsProfileCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  'MST: ${shop['taxCode']?.toString() ?? 'Chưa cập nhật'}'
-                  '${shopState.isOwner && shopState.shopCode != null ? '  ·  Mã CH: ${shopState.shopCode}' : ''}',
+                  '${context.isEnglish ? 'Tax Code' : 'MST'}: ${shop['taxCode']?.toString() ?? (context.isEnglish ? 'Not updated' : 'Chưa cập nhật')}'
+                  '${shopState.isOwner && shopState.shopCode != null ? (context.isEnglish ? '  ·  Store Code: ${shopState.shopCode}' : '  ·  Mã CH: ${shopState.shopCode}') : ''}',
                   style: TextStyle(color: colors.textMuted, fontSize: 11),
                 ),
               ],
@@ -981,12 +1005,12 @@ class _SettingsProfileCard extends StatelessWidget {
               children: [
                 TextButton(
                   onPressed: onOpenProfile,
-                  child: const Text('Xem hồ sơ'),
+                  child: Text(context.tr.settings.viewProfile),
                 ),
                 if (onSwitchShop != null)
                   OutlinedButton(
                     onPressed: onSwitchShop,
-                    child: const Text('Đổi cửa hàng'),
+                    child: Text(context.tr.settings.switchShopBtn),
                   ),
               ],
             );
@@ -1054,7 +1078,9 @@ class _SettingsProfileCard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    'Chưa tải được thông tin chi tiết cửa hàng.',
+                    context.isEnglish
+                        ? 'Failed to load store details.'
+                        : 'Chưa tải được thông tin chi tiết cửa hàng.',
                     style: TextStyle(color: colors.textSecondary, fontSize: 12),
                   ),
                 ],
@@ -1063,12 +1089,12 @@ class _SettingsProfileCard extends StatelessWidget {
             if (onRetry != null)
               FilledButton.tonal(
                 onPressed: onRetry,
-                child: const Text('Thử lại'),
+                child: Text(context.tr.common.retry),
               ),
             const SizedBox(width: AppSpacing.xs),
             TextButton(
               onPressed: onOpenProfile,
-              child: const Text('Xem hồ sơ'),
+              child: Text(context.tr.settings.viewProfile),
             ),
           ],
         ),
@@ -1301,7 +1327,7 @@ class _SettingsActionRow extends StatelessWidget {
                 )
               else if (entry.onTap == null)
                 Text(
-                  'Đang tải',
+                  context.tr.common.loading,
                   style: GoogleFonts.inter(
                     color: colors.textMuted,
                     fontSize: 11.5,
@@ -1386,7 +1412,10 @@ class _ShopOption extends StatelessWidget {
                   ),
                 ),
                 if (selected)
-                  AppStatusBadge(label: 'Đang dùng', color: primary),
+                  AppStatusBadge(
+                    label: context.tr.settings.costingMethodActiveBadge,
+                    color: primary,
+                  ),
               ],
             ),
           ),
@@ -1453,7 +1482,10 @@ class _CostingOption extends StatelessWidget {
               ),
               if (selected) ...[
                 const SizedBox(width: AppSpacing.md),
-                AppStatusBadge(label: 'Đang dùng', color: primary),
+                AppStatusBadge(
+                  label: context.tr.settings.costingMethodActiveBadge,
+                  color: primary,
+                ),
               ],
             ],
           ),
