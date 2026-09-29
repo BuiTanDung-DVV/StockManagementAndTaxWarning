@@ -40,13 +40,39 @@ export const getConfig = async (req: Request, res: Response) => {
 export const updateConfig = async (req: Request, res: Response) => {
     try {
         const shopId = (req as any).shopId;
-        const { businessSector } = req.body;
+        const { businessSector, customVatRate, customPitRate } = req.body;
+
+        if (customVatRate !== undefined && customVatRate !== null && customVatRate !== '') {
+            const vat = Number(customVatRate);
+            if (!Number.isFinite(vat) || vat < 0 || vat > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thuế suất GTGT tùy chỉnh phải từ 0% đến 100%',
+                });
+            }
+        }
+
+        if (customPitRate !== undefined && customPitRate !== null && customPitRate !== '') {
+            const pit = Number(customPitRate);
+            if (!Number.isFinite(pit) || pit < 0 || pit > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thuế suất TNCN tùy chỉnh phải từ 0% đến 100%',
+                });
+            }
+        }
         
         const shopRepo = AppDataSource.getRepository(ShopProfile);
         const shop = await shopRepo.findOne({ where: { shopId } });
         
         if (shop) {
             if (businessSector !== undefined) shop.businessSector = businessSector;
+            if (customVatRate !== undefined) {
+                shop.customVatRate = (customVatRate === null || customVatRate === '') ? (null as any) : Number(customVatRate);
+            }
+            if (customPitRate !== undefined) {
+                shop.customPitRate = (customPitRate === null || customPitRate === '') ? (null as any) : Number(customPitRate);
+            }
             await shopRepo.save(shop);
         }
         

@@ -308,11 +308,20 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
     BusinessType? businessType,
     double? customVatRate,
     double? customPitRate,
+    bool clearCustomRates = false,
   }) async {
     final type = businessType ?? state.businessType;
     final payload = <String, dynamic>{'businessSector': type.sectorCode};
-    if (customVatRate != null) payload['customVatRate'] = customVatRate;
-    if (customPitRate != null) payload['customPitRate'] = customPitRate;
+    if (customVatRate != null) {
+      payload['customVatRate'] = customVatRate;
+    } else if (clearCustomRates) {
+      payload['customVatRate'] = null;
+    }
+    if (customPitRate != null) {
+      payload['customPitRate'] = customPitRate;
+    } else if (clearCustomRates) {
+      payload['customPitRate'] = null;
+    }
 
     try {
       await ref.read(apiClientProvider).put('/tax/config', data: payload);
@@ -321,9 +330,10 @@ class TaxConfigNotifier extends Notifier<TaxConfig> {
       // Keep state locally even if server throws
       state = state.copyWith(
         businessType: type,
-        customVatRate: customVatRate,
-        customPitRate: customPitRate,
+        customVatRate: clearCustomRates ? null : customVatRate,
+        customPitRate: clearCustomRates ? null : customPitRate,
       );
+      rethrow;
     }
   }
 

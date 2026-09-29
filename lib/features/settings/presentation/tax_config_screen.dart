@@ -58,17 +58,33 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
   }
 
   Future<void> _save() async {
+    double? customVat;
+    double? customPit;
+    if (_customRatesEnabled) {
+      final vatText = _customVatController.text.trim();
+      final pitText = _customPitController.text.trim();
+      customVat = double.tryParse(vatText);
+      customPit = double.tryParse(pitText);
+
+      if (customVat == null || customVat < 0 || customVat > 100) {
+        ToastService.showError('Tỷ lệ thuế GTGT phải từ 0% đến 100%');
+        return;
+      }
+      if (customPit == null || customPit < 0 || customPit > 100) {
+        ToastService.showError('Tỷ lệ thuế TNCN phải từ 0% đến 100%');
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
     try {
-      double? customVat;
-      double? customPit;
-      if (_customRatesEnabled) {
-        customVat = double.tryParse(_customVatController.text.trim());
-        customPit = double.tryParse(_customPitController.text.trim());
-      }
       await ref
           .read(taxConfigProvider.notifier)
-          .saveConfig(customVatRate: customVat, customPitRate: customPit);
+          .saveConfig(
+            customVatRate: customVat,
+            customPitRate: customPit,
+            clearCustomRates: !_customRatesEnabled,
+          );
       if (!mounted) return;
       ToastService.showSuccess('Đã lưu cấu hình thuế thành công!');
     } catch (e) {
@@ -81,13 +97,20 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
     }
   }
 
-  void _resetToOfficialBenchmark() {
-    ref.read(taxConfigProvider.notifier).resetToDefaultPolicy();
+  Future<void> _resetToOfficialBenchmark() async {
     setState(() {
       _customRatesEnabled = false;
       _customVatController.clear();
       _customPitController.clear();
     });
+    ref.read(taxConfigProvider.notifier).resetToDefaultPolicy();
+    try {
+      await ref
+          .read(taxConfigProvider.notifier)
+          .saveConfig(clearCustomRates: true);
+    } catch (_) {
+      // Local fallback handled
+    }
     ToastService.showSuccess(
       'Đã áp dụng biểu thuế chuẩn 2026 (Nghị định 141/2026/NĐ-CP)!',
     );
