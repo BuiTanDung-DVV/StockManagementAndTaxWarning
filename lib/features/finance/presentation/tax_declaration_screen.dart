@@ -6,11 +6,15 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../settings/providers/system_provider.dart';
 import '../../settings/providers/tax_config_provider.dart';
+import '../../tax/services/tax_declaration_pdf_service.dart';
 import '../../tax/services/tax_service.dart';
+import '../../tax/widgets/tax_export_format_dialog.dart';
 import '../providers/finance_provider.dart';
 import '../providers/tax_reference_provider.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import 'package:printing/printing.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -35,6 +39,7 @@ class TaxDeclarationScreen extends ConsumerStatefulWidget {
 class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
   double? _manualRevenue;
   bool _useManualRevenue = false;
+  String _selectedPeriod = DateTime.now().month.toString().padLeft(2, '0');
 
   @override
   Widget build(BuildContext context) {
@@ -195,15 +200,32 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
     }
     final forms = referenceAsync.requireValue.forms;
 
-    // Fetch real revenue from profit-loss API instead of hardcoded 450M
+    // Fetch real revenue from profit-loss API for selected period and whole year
     final now = DateTime.now();
-    final from = DateTime(
-      now.year,
-      now.month,
-      1,
-    ).toIso8601String().split('T').first;
-    final to = now.toIso8601String().split('T').first;
+    final year = now.year;
+    String from;
+    String to;
+    if (_selectedPeriod.startsWith('Q')) {
+      final q = int.tryParse(_selectedPeriod.replaceAll('Q', '')) ?? 1;
+      final startMonth = (q - 1) * 3 + 1;
+      final endMonth = q * 3;
+      final lastDay = DateTime(year, endMonth + 1, 0).day;
+      from = '$year-${startMonth.toString().padLeft(2, '0')}-01';
+      to =
+          '$year-${endMonth.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}';
+    } else {
+      final m = int.tryParse(_selectedPeriod) ?? now.month;
+      final lastDay = DateTime(year, m + 1, 0).day;
+      from = '$year-${m.toString().padLeft(2, '0')}-01';
+      to =
+          '$year-${m.toString().padLeft(2, '0')}-${lastDay.toString().padLeft(2, '0')}';
+    }
     final plAsync = ref.watch(profitLossProvider((from: from, to: to)));
+    final annualFrom = '$year-01-01';
+    final annualTo = '$year-12-31';
+    final annualPlAsync = ref.watch(
+      profitLossProvider((from: annualFrom, to: annualTo)),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -224,6 +246,10 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
               forms,
               now,
               _manualRevenue!,
+              annualRevenue:
+                  ((annualPlAsync.value?['revenue'] as num?) ??
+                          (_manualRevenue! * 12))
+                      .toDouble(),
               isDraft: true,
             )
           : plAsync.when(
@@ -281,12 +307,16 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
               ),
               data: (plData) {
                 final revenue = ((plData['revenue'] as num?) ?? 0).toDouble();
+                final annualRevenue =
+                    ((annualPlAsync.value?['revenue'] as num?) ?? revenue)
+                        .toDouble();
                 return _buildDeclarationContent(
                   context,
                   config,
                   forms,
                   now,
                   revenue,
+                  annualRevenue: annualRevenue,
                   isDraft: false,
                 );
               },
@@ -300,11 +330,12 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
     List<TaxDeclarationFormReference> forms,
     DateTime now,
     double revenue, {
+    required double annualRevenue,
     required bool isDraft,
   }) {
     final c = AppThemeColors.of(context);
-    final vat = config.calculateVat(revenue);
-    final pit = config.calculatePit(revenue);
+    final vat = config.calculateVat(revenue, annualRevenue: annualRevenue);
+    final pit = config.calculatePit(revenue, annualRevenue: annualRevenue);
 
     return Center(
       child: ConstrainedBox(
@@ -360,6 +391,78 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                       ],
                     ),
                   ),
+                // Period selection bar
+                Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: c.divider),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_month_outlined,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Kỳ kê khai:',
+                        style: GoogleFonts.manrope(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: c.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedPeriod,
+                            isDense: true,
+                            items: [
+                              for (int i = 1; i <= 12; i++)
+                                DropdownMenuItem(
+                                  value: i.toString().padLeft(2, '0'),
+                                  child: Text('Tháng $i/${now.year}'),
+                                ),
+                              const DropdownMenuItem(
+                                value: 'Q1',
+                                child: Text('Quý 1'),
+                              ),
+                              const DropdownMenuItem(
+                                value: 'Q2',
+                                child: Text('Quý 2'),
+                              ),
+                              const DropdownMenuItem(
+                                value: 'Q3',
+                                child: Text('Quý 3'),
+                              ),
+                              const DropdownMenuItem(
+                                value: 'Q4',
+                                child: Text('Quý 4'),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              if (val != null && val != _selectedPeriod) {
+                                setState(() {
+                                  _selectedPeriod = val;
+                                  _useManualRevenue = false;
+                                  _manualRevenue = null;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 // Summary card
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -371,7 +474,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Tóm tắt kỳ kê khai (Tháng ${now.month}/${now.year})',
+                        'Tóm tắt kỳ kê khai (${_selectedPeriod.startsWith('Q') ? _selectedPeriod : 'Tháng ${int.tryParse(_selectedPeriod) ?? now.month}'}/${now.year})',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -606,10 +709,14 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                                   ref,
                                   f.code,
                                   f.name,
+                                  revenue,
+                                  vat,
+                                  pit,
+                                  config,
                                 ),
                                 icon: const Icon(Icons.download, size: 16),
                                 label: const Text(
-                                  'Kết xuất XML',
+                                  'Kết xuất tờ khai',
                                   style: TextStyle(fontSize: 12),
                                 ),
                                 style: OutlinedButton.styleFrom(
@@ -739,14 +846,67 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
     WidgetRef ref,
     String formCode,
     String formName,
+    double revenue,
+    double vatAmount,
+    double pitAmount,
+    TaxConfig config,
   ) async {
     if (formCode != '01/CNKD') {
       ToastService.showWarning(
-        'Mẫu $formCode chưa được hỗ trợ xuất XML. Hiện hệ thống chỉ hỗ trợ mẫu 01/CNKD.',
+        'Mẫu $formCode chưa được hỗ trợ xuất. Hiện hệ thống chỉ hỗ trợ mẫu 01/CNKD.',
       );
       return;
     }
 
+    final format = await showTaxExportFormatDialog(
+      context: context,
+      period: _selectedPeriod,
+      year: '${DateTime.now().year}',
+      formCode: formCode,
+    );
+
+    if (format == null || !context.mounted) return;
+
+    if (format == TaxExportFormat.pdf) {
+      try {
+        final profile = ref.read(shopProfileProvider).value ?? {};
+        final shopName =
+            profile['shopName']?.toString() ?? 'Hộ kinh doanh SmartStock';
+        final taxCode = profile['taxCode']?.toString() ?? 'Chưa cập nhật';
+        final address = profile['address']?.toString() ?? '';
+        final phone = profile['phone']?.toString() ?? '';
+        final isExempt = (vatAmount == 0 && pitAmount == 0 && revenue > 0);
+
+        final pdfBytes = await TaxDeclarationPdfService.build(
+          shopName: shopName,
+          taxCode: taxCode,
+          businessSector: config.businessType.label,
+          period: _selectedPeriod,
+          year: '${DateTime.now().year}',
+          revenue: revenue,
+          vatRate: config.effectiveVatRate,
+          pitRate: config.effectivePitRate,
+          vatAmount: vatAmount,
+          pitAmount: pitAmount,
+          policySourceCode: config.policySourceCode ?? 'TT 40/2021/TT-BTC',
+          isExempt: isExempt,
+          address: address,
+          phone: phone,
+        );
+
+        await Printing.layoutPdf(
+          onLayout: (_) async => pdfBytes,
+          name: 'To_khai_01_CNKD_${_selectedPeriod}_${DateTime.now().year}.pdf',
+        );
+      } catch (e) {
+        if (context.mounted) {
+          ToastService.showError('Không thể tạo bản in PDF: $e');
+        }
+      }
+      return;
+    }
+
+    // Format is XML
     final c = AppThemeColors.of(context);
     showDialog<void>(
       context: context,
@@ -767,7 +927,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
       final now = DateTime.now();
       await ref
           .read(taxServiceProvider)
-          .exportHTKK(now.month.toString().padLeft(2, '0'), '${now.year}');
+          .exportHTKK(_selectedPeriod, '${now.year}');
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         ToastService.showSuccess('Đã kết xuất XML mẫu $formName thành công!');
@@ -775,7 +935,12 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
     } catch (error) {
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-        ToastService.showError('Không thể kết xuất XML. Vui lòng thử lại sau.');
+        final message = error.toString().replaceFirst('Exception: ', '').trim();
+        ToastService.showError(
+          message.isNotEmpty
+              ? message
+              : 'Không thể kết xuất XML. Vui lòng thử lại sau.',
+        );
       }
     }
   }

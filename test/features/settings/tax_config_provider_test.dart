@@ -38,6 +38,22 @@ void main() {
       expect(config.calculatePit(1200000000), 6000000);
     });
 
+    test(
+      'estimates tax for monthly period when annual revenue exceeds threshold',
+      () {
+        expect(
+          config.calculateVat(50000000, annualRevenue: 1200000000),
+          500000,
+        );
+        expect(
+          config.calculatePit(50000000, annualRevenue: 1200000000),
+          250000,
+        );
+        expect(config.calculateVat(50000000, annualRevenue: 800000000), 0);
+        expect(config.calculatePit(50000000, annualRevenue: 800000000), 0);
+      },
+    );
+
     test('never produces negative tax', () {
       expect(config.calculateVat(-1), 0);
       expect(config.calculatePit(-1), 0);

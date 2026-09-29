@@ -182,15 +182,17 @@ class TaxConfig {
   double get effectiveVatRate => activeRates?.vat ?? 0.01;
   double get effectivePitRate => activeRates?.pit ?? 0.005;
 
-  double calculateVat(double revenue) {
+  double calculateVat(double revenue, {double? annualRevenue}) {
     final threshold = thresholds;
-    if (threshold == null || revenue <= threshold.tier4) return 0;
+    final testRev = annualRevenue ?? revenue;
+    if (threshold == null || testRev <= threshold.tier4) return 0;
     return revenue.clamp(0, double.infinity) * effectiveVatRate;
   }
 
-  double calculatePit(double revenue) {
+  double calculatePit(double revenue, {double? annualRevenue}) {
     final threshold = thresholds;
-    if (threshold == null || revenue <= threshold.tier4) return 0;
+    final testRev = annualRevenue ?? revenue;
+    if (threshold == null || testRev <= threshold.tier4) return 0;
     return revenue.clamp(0, double.infinity) * effectivePitRate;
   }
 

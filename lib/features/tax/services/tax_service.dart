@@ -45,6 +45,20 @@ class TaxService {
       if (!launched) {
         throw Exception('Trình duyệt đã chặn tải xuống');
       }
+    } on DioException catch (e) {
+      String? backendMsg;
+      if (e.response?.data != null) {
+        try {
+          final raw = e.response!.data;
+          final map = raw is Map ? raw : jsonDecode(raw.toString());
+          if (map is Map && map['message'] != null) {
+            backendMsg = map['message'].toString();
+          }
+        } catch (_) {}
+      }
+      throw Exception(
+        backendMsg ?? e.message ?? 'Không thể tải file XML từ máy chủ',
+      );
     } on ApiException {
       rethrow;
     } catch (e) {

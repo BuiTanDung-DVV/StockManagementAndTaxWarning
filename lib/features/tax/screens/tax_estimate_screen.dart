@@ -4,8 +4,12 @@ import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import 'package:printing/printing.dart';
+import '../../settings/providers/system_provider.dart';
 import '../../settings/providers/tax_config_provider.dart';
+import '../services/tax_declaration_pdf_service.dart';
 import '../services/tax_service.dart';
+import '../widgets/tax_export_format_dialog.dart';
 import '../widgets/tax_warning_widget.dart';
 
 class TaxEstimateScreen extends ConsumerStatefulWidget {
@@ -57,19 +61,74 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
     }
   }
 
-  Future<void> _exportHTKK() async {
+  Future<void> _exportDeclaration() async {
+    final format = await showTaxExportFormatDialog(
+      context: context,
+      period: _selectedPeriod,
+      year: _selectedYear,
+      formCode: '01/CNKD',
+    );
+    if (format == null || !mounted) return;
+
+    if (format == TaxExportFormat.pdf) {
+      try {
+        final profile = ref.read(shopProfileProvider).value ?? {};
+        final config = ref.read(taxConfigProvider);
+        final shopName =
+            _reportData?['shopName']?.toString() ??
+            profile['shopName']?.toString() ??
+            'Hộ kinh doanh SmartStock';
+        final taxCode =
+            _reportData?['taxCode']?.toString() ??
+            profile['taxCode']?.toString() ??
+            'Chưa cập nhật';
+        final totalRevenue = asDouble(_reportData?['totalRevenue']);
+        final vatOwed = asDouble(_reportData?['vatOwed']);
+        final pitOwed = asDouble(_reportData?['pitOwed']);
+        final isExempt = _reportData?['taxExempt'] == true;
+
+        final pdfBytes = await TaxDeclarationPdfService.build(
+          shopName: shopName,
+          taxCode: taxCode,
+          businessSector: config.businessType.label,
+          period: _selectedPeriod,
+          year: _selectedYear,
+          revenue: totalRevenue,
+          vatRate: config.effectiveVatRate,
+          pitRate: config.effectivePitRate,
+          vatAmount: vatOwed,
+          pitAmount: pitOwed,
+          policySourceCode: config.policySourceCode ?? 'TT 40/2021/TT-BTC',
+          isExempt: isExempt,
+        );
+
+        await Printing.layoutPdf(
+          onLayout: (_) async => pdfBytes,
+          name: 'To_khai_01_CNKD_${_selectedPeriod}_$_selectedYear.pdf',
+        );
+      } catch (e) {
+        if (mounted) {
+          ToastService.showError('Không thể tạo bản in PDF: $e');
+        }
+      }
+      return;
+    }
+
     if (_isExporting) return;
     setState(() => _isExporting = true);
     final taxService = ref.read(taxServiceProvider);
     try {
       await taxService.exportHTKK(_selectedPeriod, _selectedYear);
       if (mounted) {
-        ToastService.showSuccess('Đang mở liên kết tải xuống...');
+        ToastService.showSuccess('Đang mở liên kết tải xuống XML...');
       }
     } catch (e) {
       if (mounted) {
+        final message = e.toString().replaceFirst('Exception: ', '').trim();
         ToastService.showError(
-          'Không thể xuất file XML HTKK. Vui lòng thử lại sau.',
+          message.isNotEmpty
+              ? message
+              : 'Không thể xuất file XML HTKK. Vui lòng thử lại sau.',
         );
       }
     } finally {
@@ -229,7 +288,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
-                          onPressed: _isExporting ? null : _exportHTKK,
+                          onPressed: _isExporting ? null : _exportDeclaration,
                           icon: _isExporting
                               ? const SizedBox(
                                   width: 16,
@@ -243,7 +302,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                           label: Text(
                             _isExporting
                                 ? 'Đang xuất XML...'
-                                : 'Xuất XML HTKK (Mẫu 01/CNKD)',
+                                : 'Kết xuất tờ khai (XML / PDF)',
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
