@@ -79,6 +79,10 @@ class AuthNotifier extends Notifier<AuthState> {
     return AuthState(isLoading: !api.sessionRestoreCompleted);
   }
 
+  bool _wasManualLogout = false;
+  bool get wasManualLogout => _wasManualLogout;
+  void clearManualLogout() => _wasManualLogout = false;
+
   ApiClient get _api => ref.read(apiClientProvider);
 
   Future<void> init() async {
@@ -158,6 +162,7 @@ class AuthNotifier extends Notifier<AuthState> {
         accountType: accountType,
         isOnboarded: isOnboarded,
       );
+      _wasManualLogout = false;
 
       return true;
     } catch (e) {
@@ -211,6 +216,7 @@ class AuthNotifier extends Notifier<AuthState> {
       accountType: user?['accountType'] as String?,
       isOnboarded: user?['isOnboarded'] as bool? ?? true,
     );
+    _wasManualLogout = false;
     return true;
   }
 
@@ -344,6 +350,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    _wasManualLogout = true;
     state = const AuthState();
     try {
       await _api.revokeSession();
