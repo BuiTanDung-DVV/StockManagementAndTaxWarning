@@ -15,6 +15,7 @@ import '../providers/supplier_provider.dart';
 import 'supplier_form_screen.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -198,8 +199,30 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                         if (bankAccount.isNotEmpty)
                           _R('Số tài khoản ngân hàng', bankAccount, c),
                         if (paymentTerms.toString().isNotEmpty)
-                          _R('Kỳ hạn thanh toán nợ', '$paymentTerms ngày', c),
+                          _R(
+                            'Kỳ hạn thanh toán nợ',
+                            _formatPaymentTerm(paymentTerms),
+                            c,
+                          ),
                       ]),
+                      if (phone.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.phone_rounded, size: 16),
+                            label: const Text('Gọi cho nhà cung cấp'),
+                            onPressed: () async {
+                              final uri = Uri.parse('tel:$phone');
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri);
+                              } else {
+                                ToastService.showError('Không thể thực hiện cuộc gọi');
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
 
                       // Info Section 2: Ledger Summary parameters
@@ -334,4 +357,14 @@ class _R extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatPaymentTerm(dynamic term, {String fallback = '—'}) {
+  if (term == null) return fallback;
+  final s = term.toString().trim();
+  if (s.isEmpty) return fallback;
+  if (s.toLowerCase().contains('ngày')) return s;
+  final numVal = num.tryParse(s);
+  if (numVal != null) return '$s ngày';
+  return s;
 }

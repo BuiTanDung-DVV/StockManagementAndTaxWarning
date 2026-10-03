@@ -573,7 +573,9 @@ class _ProductTagsRow extends StatelessWidget {
     final minStock = TypeParser.asDouble(
       p['minStock'] ?? p['minimumStock'] ?? p['min_stock'],
     );
-    if (productIsLowStock(stock, minStock)) {
+    if (stock <= 0) {
+      if (!tags.contains('Hết hàng')) tags.insert(0, 'Hết hàng');
+    } else if (productIsLowStock(stock, minStock)) {
       if (!tags.contains('Sắp hết')) tags.insert(0, 'Sắp hết');
     }
 

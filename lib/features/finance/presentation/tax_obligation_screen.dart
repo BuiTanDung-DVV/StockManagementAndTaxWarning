@@ -512,16 +512,18 @@ class TaxObligationScreen extends ConsumerWidget {
   }
 }
 
-class _AddTaxObligationDialog extends StatefulWidget {
+class AddTaxObligationDialog extends StatefulWidget {
   final WidgetRef ref;
-  const _AddTaxObligationDialog({required this.ref});
+  const AddTaxObligationDialog({super.key, required this.ref});
 
   @override
-  State<_AddTaxObligationDialog> createState() =>
+  State<AddTaxObligationDialog> createState() =>
       _AddTaxObligationDialogState();
 }
 
-class _AddTaxObligationDialogState extends State<_AddTaxObligationDialog> {
+typedef _AddTaxObligationDialog = AddTaxObligationDialog;
+
+class _AddTaxObligationDialogState extends State<AddTaxObligationDialog> {
   late final TextEditingController _periodC;
   late final TextEditingController _vatC;
   late final TextEditingController _pitC;
@@ -676,17 +678,19 @@ class _AddTaxObligationDialogState extends State<_AddTaxObligationDialog> {
   }
 }
 
-class _EditTaxObligationDialog extends StatefulWidget {
+class EditTaxObligationDialog extends StatefulWidget {
   final WidgetRef ref;
   final Map<String, dynamic> item;
-  const _EditTaxObligationDialog({required this.ref, required this.item});
+  const EditTaxObligationDialog({super.key, required this.ref, required this.item});
 
   @override
-  State<_EditTaxObligationDialog> createState() =>
+  State<EditTaxObligationDialog> createState() =>
       _EditTaxObligationDialogState();
 }
 
-class _EditTaxObligationDialogState extends State<_EditTaxObligationDialog> {
+typedef _EditTaxObligationDialog = EditTaxObligationDialog;
+
+class _EditTaxObligationDialogState extends State<EditTaxObligationDialog> {
   late final TextEditingController _periodC;
   late final TextEditingController _vatC;
   late final TextEditingController _pitC;

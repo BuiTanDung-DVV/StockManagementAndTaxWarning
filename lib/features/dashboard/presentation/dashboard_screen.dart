@@ -191,7 +191,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: colors.bg,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(

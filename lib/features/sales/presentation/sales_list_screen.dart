@@ -204,7 +204,7 @@ class _SalesListScreenState extends ConsumerState<SalesListScreen> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: colors.bg,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
@@ -1197,7 +1197,11 @@ class _PaymentMethodRow extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                _paymentMethodLabel(item['method']?.toString()),
+                _paymentMethodLabel(
+                  item['method']?.toString() ??
+                      item['paymentMethod']?.toString() ??
+                      item['payment_method']?.toString(),
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1241,14 +1245,21 @@ String _paymentMethodLabel(String? method) {
       return 'Tiền mặt';
     case 'BANK_TRANSFER':
     case 'TRANSFER':
+    case 'QR':
+    case 'VIETQR':
       return 'Chuyển khoản';
     case 'CREDIT_CARD':
     case 'CARD':
+    case 'POS':
       return 'Thẻ';
     case 'DEBT':
+    case 'RECEIVABLE':
       return 'Ghi nợ';
+    case 'MOMO':
+    case 'ZALOPAY':
+      return 'Ví điện tử';
     default:
-      return 'Khác';
+      return (method != null && method.trim().isNotEmpty) ? method : 'Khác';
   }
 }
 
@@ -1338,11 +1349,28 @@ class _SalesMetricRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              '${metric.label} • ${metric.periodLabel}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  metric.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  metric.periodLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
+                ),
+              ],
             ),
           ),
           Flexible(

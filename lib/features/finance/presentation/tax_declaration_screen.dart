@@ -41,12 +41,30 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
   bool _useManualRevenue = false;
   String _selectedPeriod = DateTime.now().month.toString().padLeft(2, '0');
 
+  String _computeTaxDeadlineText(String period, int year) {
+    if (period.startsWith('Q')) {
+      final q = int.tryParse(period.replaceAll('Q', '')) ?? 1;
+      return switch (q) {
+        1 => '30/04/$year (Ngày cuối tháng đầu Quý 2)',
+        2 => '31/07/$year (Ngày cuối tháng đầu Quý 3)',
+        3 => '31/10/$year (Ngày cuối tháng đầu Quý 4)',
+        _ => '31/01/${year + 1} (Ngày cuối tháng đầu Quý 1 năm sau)',
+      };
+    } else {
+      final m = int.tryParse(period) ?? DateTime.now().month;
+      final nextMonth = m == 12 ? 1 : m + 1;
+      final nextYear = m == 12 ? year + 1 : year;
+      return '20/${nextMonth.toString().padLeft(2, '0')}/$nextYear (Ngày 20 của tháng tiếp theo)';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final config = ref.watch(taxConfigProvider);
     if (!config.isLoaded) {
       return Scaffold(
+        backgroundColor: c.bg,
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -132,10 +150,14 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
 
     final referenceAsync = ref.watch(taxReferenceDataProvider);
     if (referenceAsync.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: c.bg,
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
     if (referenceAsync.hasError) {
       return Scaffold(
+        backgroundColor: c.bg,
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -228,6 +250,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
     );
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -458,6 +481,63 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                               }
                             },
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Banner thời hạn nộp tờ khai chuẩn Điều 44 Luật QLT số 38/2019/QH14 & NĐ 125/2020/NĐ-CP
+                Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.info.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.info.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.gavel_rounded,
+                          size: 16,
+                          color: AppColors.info,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hạn nộp tờ khai: ${_computeTaxDeadlineText(_selectedPeriod, now.year)}',
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: c.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Căn cứ Điều 44 Luật Quản lý Thuế số 38/2019/QH14. Nộp chậm hồ sơ khai thuế quá thời hạn có thể bị phạt vi phạm hành chính từ 2.000.000đ đến 25.000.000đ theo Nghị định 125/2020/NĐ-CP.',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: c.textSecondary,
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

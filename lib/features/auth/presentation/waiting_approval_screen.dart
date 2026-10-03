@@ -7,6 +7,7 @@ import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/auth_scaffold.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
+import 'widgets/join_shop_dialog.dart';
 
 class WaitingApprovalScreen extends ConsumerWidget {
   const WaitingApprovalScreen({super.key});
@@ -65,6 +66,18 @@ class WaitingApprovalScreen extends ConsumerWidget {
                   );
                 }
               }
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          OutlinedButton.icon(
+            icon: const Icon(Icons.storefront_outlined, size: 18),
+            label: const Text('Chọn / Gia nhập cửa hàng khác'),
+            onPressed: () async {
+              showDialog(
+                context: context,
+                builder: (_) => const JoinShopDialog(),
+              );
             },
           ),
           const SizedBox(height: AppSpacing.sm),

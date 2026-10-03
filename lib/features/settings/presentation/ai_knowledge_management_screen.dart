@@ -45,7 +45,11 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
     final docs = docsAsync.asData?.value ?? const <AiDocument>[];
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
+        backgroundColor: c.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         toolbarHeight: 68,
         automaticallyImplyLeading: false,
         leadingWidth: 56,
@@ -131,6 +135,13 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 20),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: c.divider,
+            height: 1,
+          ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(aiKnowledgeProvider),
@@ -142,7 +153,10 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
             children: [
               // Informational banner
               AppCardContainer(
-                backgroundColor: AppColors.primary.withValues(alpha: 0.06),
+                backgroundColor: Color.alphaBlend(
+                  AppColors.primary.withValues(alpha: 0.08),
+                  c.surface,
+                ),
                 borderColor: AppColors.primary.withValues(alpha: 0.22),
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -414,6 +428,67 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
     super.dispose();
   }
 
+  // Danh sách mẫu quy chuẩn 1-chạm cho hộ kinh doanh
+  static const List<Map<String, String>> _legalPresets = [
+    {
+      'title': 'Thông tư 40/2021/TT-BTC - Hướng dẫn thuế Hộ kinh doanh',
+      'category': 'Thuế HKD',
+      'desc': 'Tỷ lệ % thuế GTGT & TNCN theo ngành nghề, ngưỡng 100 tr/năm',
+      'content':
+          'Căn cứ Thông tư 40/2021/TT-BTC của Bộ Tài chính:\n'
+          '1. Doanh thu tính thuế: Hộ kinh doanh có doanh thu từ 100 triệu đồng/năm trở xuống thuộc diện không phải nộp thuế GTGT và TNCN.\n'
+          '2. Phương pháp tính thuế: Tỷ lệ % trên doanh thu thực tế phát sinh.\n'
+          '- Phân phối, cung cấp hàng hóa: GTGT 1% + TNCN 0.5% (Tổng 1.5%).\n'
+          '- Dịch vụ, xây dựng không bao thầu NVL: GTGT 5% + TNCN 2% (Tổng 7%).\n'
+          '- Sản xuất, vận tải, dịch vụ có gắn với hàng hóa: GTGT 3% + TNCN 1.5% (Tổng 4.5%).\n'
+          '3. Hộ kê khai phải mở sổ sách kế toán theo Thông tư 88/2021/TT-BTC và sử dụng hóa đơn điện tử hợp pháp.',
+    },
+    {
+      'title': 'Nghị định 123/2020/NĐ-CP & TT 78 - Hóa đơn điện tử máy tính tiền',
+      'category': 'Thuế HKD',
+      'desc': 'Quy định xuất HĐĐT khởi tạo từ máy tính tiền kết nối cơ quan thuế',
+      'content':
+          'Căn cứ Nghị định 123/2020/NĐ-CP và Thông tư 78/2021/TT-BTC:\n'
+          '1. Đối tượng áp dụng: Hộ kinh doanh nộp thuế theo phương pháp kê khai có hoạt động bán lẻ trực tiếp đến người tiêu dùng (trung tâm thương mại, siêu thị, bán lẻ hàng tiêu dùng, ăn uống, nhà hàng, khách sạn, hiệu thuốc...).\n'
+          '2. Nguyên tắc: Xuất hóa đơn điện tử có mã của cơ quan thuế khởi tạo từ máy tính tiền có kết nối chuyển dữ liệu điện tử với cơ quan thuế ngay khi giao dịch hoàn tất.\n'
+          '3. Chế tài: Xử phạt hành vi không lập hóa đơn khi bán hàng hóa, cung cấp dịch vụ theo Nghị định 125/2020/NĐ-CP từ 10 - 20 triệu đồng.',
+    },
+    {
+      'title': 'Thời hạn nộp hồ sơ khai thuế & Phạt chậm nộp (Luật QLT 38 & NĐ 125)',
+      'category': 'Thuế HKD',
+      'desc': 'Hạn chót ngày cuối tháng đầu quý sau, mức phạt chậm nộp tờ khai',
+      'content':
+          'Căn cứ Luật Quản lý thuế số 38/2019/QH14 và Nghị định 125/2020/NĐ-CP:\n'
+          '1. Thời hạn nộp hồ sơ khai thuế theo quý: Chậm nhất là ngày cuối cùng của tháng đầu tiên của quý tiếp theo quý phát sinh nghĩa vụ thuế (Quý 1: 30/04; Quý 2: 31/07; Quý 3: 31/10; Quý 4: 31/01 năm sau).\n'
+          '2. Tiền chậm nộp thuế: Tính 0.03%/ngày trên số tiền thuế chậm nộp.\n'
+          '3. Phạt hành vi chậm nộp hồ sơ khai thuế (Điều 13 NĐ 125/2020/NĐ-CP):\n'
+          '- Quá hạn 1 - 5 ngày có tình tiết giảm nhẹ: Phạt cảnh cáo.\n'
+          '- Quá hạn 1 - 30 ngày: Phạt tiền từ 2 - 5 triệu đồng.\n'
+          '- Quá hạn 31 - 60 ngày: Phạt tiền từ 5 - 8 triệu đồng.\n'
+          '- Quá hạn từ 61 - 90 ngày: Phạt tiền từ 8 - 15 triệu đồng.',
+    },
+    {
+      'title': 'Quy chế Quản lý & Thu hồi Công nợ bán lẻ cửa hàng',
+      'category': 'Bán Hàng & Sổ Nợ',
+      'desc': 'Giới hạn nợ tối đa 30 ngày, đối soát định kỳ, chặn bán nợ vượt trần',
+      'content':
+          'Quy chế quản lý công nợ khách hàng và nhà cung cấp nội bộ:\n'
+          '1. Hạn mức tín dụng khách quen: Tối đa không quá 10.000.000 VNĐ hoặc thời gian nợ tối đa 30 ngày tính từ ngày ghi sổ.\n'
+          '2. Quy trình nhắc nợ: Gửi bảng kê đối soát công nợ vào ngày 25 hàng tháng. Nếu quá hạn 15 ngày chưa thanh toán thì tạm dừng cho mua nợ mới.\n'
+          '3. Công nợ nhà cung cấp: Ưu tiên đối soát công nợ đối ứng với các lô hàng nhập kho có biên bản bàn giao và hóa đơn hợp lệ.',
+    },
+    {
+      'title': 'Quy chế Kiểm kê & Quản lý Hao hụt Kho hàng (FIFO)',
+      'category': 'Kho & Tài Chính',
+      'desc': 'Kiểm kê định kỳ cuối tháng, xuất trước nhập trước, lập biên bản hủy',
+      'content':
+          'Quy chuẩn quản lý tồn kho và xử lý hao hụt hàng hóa:\n'
+          '1. Nguyên tắc xuất kho: Áp dụng phương pháp Nhập trước - Xuất trước (FIFO) đối với toàn bộ mặt hàng có hạn sử dụng hoặc bao bì biến đổi theo lô.\n'
+          '2. Chu kỳ kiểm kê: Tiến hành kiểm kê thực tế toàn bộ kho vào ngày làm việc cuối cùng mỗi tháng. Lập biên bản chênh lệch giữa số lượng sổ sách và thực tế.\n'
+          '3. Xử lý hàng hỏng hóc/hết hạn: Phải có biên bản xác nhận nguyên nhân và đại diện hộ kinh doanh ký duyệt trước khi xuất hủy ra khỏi giá vốn kinh doanh.',
+    },
+  ];
+
   Future<void> _pickDocumentFile() async {
     try {
       setState(() => _isLoading = true);
@@ -438,31 +513,27 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
       String extractedContent = '';
 
       if (ext == 'txt' || ext == 'md' || ext == 'json') {
-        try {
-          extractedContent = utf8.decode(bytes);
-        } catch (_) {
-          extractedContent = String.fromCharCodes(bytes);
-        }
+        extractedContent = utf8.decode(bytes, allowMalformed: true);
       } else {
-        // Đối với PDF hoặc DOCX: Trích xuất các đoạn văn bản có nghĩa từ binary stream
-        final rawStr = String.fromCharCodes(bytes);
-        final matches =
-            RegExp(
-                  r'[\p{L}\p{N}\s,.\-:;/()""'
-                  '–—]{6,}',
-                  unicode: true,
-                )
-                .allMatches(rawStr)
-                .map((m) => m.group(0)!.trim())
-                .where(
-                  (s) =>
-                      s.length > 8 &&
-                      !s.contains('Font') &&
-                      !s.contains('obj') &&
-                      !s.contains('endobj'),
-                )
-                .take(150)
-                .toList();
+        // Đối với PDF hoặc DOCX: Giải mã chuỗi UTF-8 tiếng Việt an toàn
+        final utf8Decoded = utf8.decode(bytes, allowMalformed: true);
+        final matches = RegExp(
+          r'[\p{L}\p{N}\s,.\-:;/()""''–—]{6,}',
+          unicode: true,
+        )
+            .allMatches(utf8Decoded)
+            .map((m) => m.group(0)!.trim())
+            .where(
+              (s) =>
+                  s.length > 8 &&
+                  !s.contains('Font') &&
+                  !s.contains('obj') &&
+                  !s.contains('endobj') &&
+                  !s.contains('XML') &&
+                  !s.contains('xmlns'),
+            )
+            .take(150)
+            .toList();
 
         if (matches.isNotEmpty) {
           extractedContent = matches.join('\n');
@@ -488,6 +559,15 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
         ToastService.showError('Lỗi đọc tệp: $e');
       }
     }
+  }
+
+  void _applyPreset(Map<String, String> preset) {
+    setState(() {
+      _titleCtrl.text = preset['title'] ?? '';
+      _category = preset['category'] ?? 'Thuế HKD';
+      _contentCtrl.text = preset['content'] ?? '';
+    });
+    ToastService.showSuccess('Đã áp dụng mẫu quy định: ${preset['title']}');
   }
 
   Future<void> _extractFromUrl() async {
@@ -537,6 +617,8 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -614,7 +696,7 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                       OutlinedButton.icon(
                         onPressed: _isLoading ? null : _pickDocumentFile,
                         icon: const Icon(Icons.upload_file_rounded, size: 16),
-                        label: const Text('Tải tệp (PDF, Word, TXT)'),
+                        label: const Text('Tải tệp (PDF, Word, TXT, JSON)'),
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(
@@ -684,10 +766,125 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    // Gợi ý link chính thống
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          Text(
+                            'Gợi ý link:',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: c.textMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          ActionChip(
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            label: const Text('thuedientu.gdt.gov.vn', style: TextStyle(fontSize: 11)),
+                            onPressed: () {
+                              _urlCtrl.text = 'https://thuedientu.gdt.gov.vn';
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          ActionChip(
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            label: const Text('vbpl.vn', style: TextStyle(fontSize: 11)),
+                            onPressed: () {
+                              _urlCtrl.text = 'https://vbpl.vn';
+                            },
+                          ),
+                          const SizedBox(width: 6),
+                          ActionChip(
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            label: const Text('thuvienphapluat.vn', style: TextStyle(fontSize: 11)),
+                            onPressed: () {
+                              _urlCtrl.text = 'https://thuvienphapluat.vn';
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+
+            // Khối Mẫu quy định pháp lý chuẩn 1-chạm (Presets)
+            ExpansionTile(
+              tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              childrenPadding: const EdgeInsets.only(bottom: 8),
+              collapsedShape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: c.divider),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+              ),
+              leading: Icon(
+                Icons.bookmark_added_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
+              title: Text(
+                'Mẫu quy định & chính sách chuẩn (1-Chạm)',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: c.textPrimary,
+                ),
+              ),
+              subtitle: Text(
+                'Nạp ngay Thông tư 40, HĐĐT 123, Luật QLT 38, Quy chế kho FIFO...',
+                style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary),
+              ),
+              children: _legalPresets.map((preset) {
+                return ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                  leading: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.auto_stories_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  title: Text(
+                    preset['title'] ?? '',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: c.textPrimary,
+                    ),
+                  ),
+                  subtitle: Text(
+                    preset['desc'] ?? '',
+                    style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary),
+                  ),
+                  trailing: TextButton.icon(
+                    onPressed: () => _applyPreset(preset),
+                    icon: const Icon(Icons.flash_on_rounded, size: 14),
+                    label: const Text('Áp dụng', style: TextStyle(fontSize: 11.5)),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: AppColors.primary,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 14),
             const SizedBox(height: 16),
 
             TextField(

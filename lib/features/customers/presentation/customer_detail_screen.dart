@@ -19,6 +19,7 @@ import '../../sales/providers/sales_provider.dart';
 import 'customer_form_screen.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -70,6 +71,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     );
 
     return Scaffold(
+      backgroundColor: AppThemeColors.of(context).bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -198,6 +200,53 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                         _Row('Mã KH', c['code'] ?? ''),
                         if (c['taxCode'] != null) _Row('MST', c['taxCode']),
                       ]),
+                      if (phone.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                icon: const Icon(Icons.phone_rounded, size: 16),
+                                label: const Text('Gọi điện'),
+                                onPressed: () async {
+                                  final uri = Uri.parse('tel:$phone');
+                                  if (await canLaunchUrl(uri)) {
+                                    await launchUrl(uri);
+                                  } else {
+                                    ToastService.showError('Không thể thực hiện cuộc gọi');
+                                  }
+                                },
+                              ),
+                            ),
+                            if (balance > 0) ...[
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.message_rounded, size: 16),
+                                  label: const Text('Nhắc nợ SMS'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.danger,
+                                    side: BorderSide(
+                                      color: AppColors.danger.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                  onPressed: () async {
+                                    final text = Uri.encodeComponent(
+                                      'SmartStock kính gửi quý khách $name: Khoản công nợ hiện tại là ${_currFmt.format(balance)}. Quý khách vui lòng đối soát và thanh toán sớm. Trân trọng!',
+                                    );
+                                    final uri = Uri.parse('sms:$phone?body=$text');
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri);
+                                    } else {
+                                      ToastService.showError('Không thể mở ứng dụng tin nhắn');
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       _Card([
                         _Row('Công nợ', _currFmt.format(balance)),
@@ -690,7 +739,8 @@ class _EvidenceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final imageUrl = item['fileUrl']?.toString() ?? '';
-    final uploadedAt = item['uploadedAt']?.toString() ?? '';
+    final uploadedAt =
+        (item['uploadedAt'] ?? item['createdAt'])?.toString() ?? '';
     final dateLabel = uploadedAt.length >= 10
         ? uploadedAt.substring(0, 10)
         : 'Không rõ ngày';

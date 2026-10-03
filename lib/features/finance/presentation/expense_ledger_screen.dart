@@ -27,7 +27,9 @@ class ExpenseLedgerScreen extends ConsumerWidget {
     final expAsync = ref.watch(expensesByCategoryProvider);
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
+    final c = AppThemeColors.of(context);
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -198,7 +200,9 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 Text(
-                                  '${c['count']} giao dịch',
+                                  asNum(c['count']).toInt() > 0
+                                      ? '${asNum(c['count']).toInt()} giao dịch'
+                                      : 'Chi phí định kỳ',
                                   style: TextStyle(
                                     color: AppThemeColors.of(
                                       context,

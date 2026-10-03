@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
@@ -13,7 +14,10 @@ import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
 import '../../../core/widgets/responsive_layout.dart';
+import '../../settings/providers/shop_provider.dart';
+import '../../settings/providers/system_provider.dart';
 import '../providers/finance_provider.dart';
+import '../services/profit_loss_pdf_service.dart';
 
 class ProfitLossScreen extends ConsumerStatefulWidget {
   const ProfitLossScreen({super.key});
@@ -64,6 +68,46 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
     if (value != null) setState(() => _range = value);
   }
 
+  Future<void> _printReport(_Pnl current) async {
+    try {
+      final shop = ref.read(shopProvider);
+      final shopProfile = ref.read(shopProfileProvider).value ?? {};
+      final shopName = shop.currentShopName ??
+          shopProfile['shopName']?.toString() ??
+          'Hộ kinh doanh SmartStock';
+      final shopTaxCode = shopProfile['taxCode']?.toString() ?? '';
+      final shopAddress = shopProfile['address']?.toString() ?? '';
+
+      final pdfBytes = await ProfitLossPdfService.build(
+        shopName: shopName,
+        shopTaxCode: shopTaxCode,
+        shopAddress: shopAddress,
+        periodLabel: _period(_range),
+        revenue: current.revenue,
+        cogs: current.cogs,
+        grossProfit: current.grossProfit,
+        grossMargin: current.grossMargin,
+        operatingExpenses: current.expenses,
+        netProfit: current.netProfit,
+        netMargin: current.netMargin,
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (_) async => pdfBytes,
+        name: 'BaoCao_Pnl_${_key(_range.start)}_${_key(_range.end)}.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể xuất báo cáo PDF: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
@@ -77,13 +121,23 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
       backgroundColor: colors.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: context.canPop() ? 60 : null,
-        leading: context.canPop()
-            ? AppNavigationBackLeading(onPressed: context.pop)
+        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
+        leading: Navigator.of(context).canPop()
+            ? AppNavigationBackLeading(
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
             : null,
         title: const Text('Kết quả kinh doanh'),
         centerTitle: true,
-        actions: [featureGuideButton(context, 'profit_loss')],
+        actions: [
+          if (currentAsync.value != null)
+            IconButton(
+              tooltip: 'In / Xuất PDF báo cáo',
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              onPressed: () => _printReport(_Pnl.fromMap(currentAsync.value!)),
+            ),
+          featureGuideButton(context, 'profit_loss'),
+        ],
       ),
       body: currentAsync.when(
         loading: () => const _ReportLoading(),
@@ -149,6 +203,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                 currentPeriod: _period(_range),
                 previousPeriod: _period(_previousRange),
                 onChange: _pickDateRange,
+                onPrint: () => _printReport(current),
               ),
               if (comparisonError) ...[
                 const SizedBox(height: 8),
@@ -227,15 +282,13 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
                       ],
                     );
                   }
-                  return IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(flex: 7, child: statement),
-                        const SizedBox(width: AppSpacing.lg),
-                        Expanded(flex: 4, child: calculation),
-                      ],
-                    ),
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 7, child: statement),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(flex: 4, child: calculation),
+                    ],
                   );
                 },
               ),
@@ -285,11 +338,13 @@ class _ReportHeading extends StatelessWidget {
   final String currentPeriod;
   final String previousPeriod;
   final VoidCallback onChange;
+  final VoidCallback? onPrint;
 
   const _ReportHeading({
     required this.currentPeriod,
     required this.previousPeriod,
     required this.onChange,
+    this.onPrint,
   });
 
   @override
@@ -317,17 +372,34 @@ class _ReportHeading extends StatelessWidget {
       icon: const Icon(Icons.calendar_month_rounded, size: 18),
       label: const Text('Đổi kỳ báo cáo'),
     );
+    final printButton = FilledButton.tonalIcon(
+      onPressed: onPrint,
+      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+      label: const Text('Xuất PDF'),
+    );
     return LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth < 650
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [copy, const SizedBox(height: 12), action],
+              children: [
+                copy,
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [action, if (onPrint != null) printButton],
+                ),
+              ],
             )
           : Row(
               children: [
                 Expanded(child: copy),
                 const SizedBox(width: 16),
                 action,
+                if (onPrint != null) ...[
+                  const SizedBox(width: 8),
+                  printButton,
+                ],
               ],
             ),
     );

@@ -24,6 +24,7 @@ class InventoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppThemeColors.of(context);
     final stockPageAsync = ref.watch(stockPageProvider(null));
     final stockAsync = stockPageAsync.whenData(
       (page) => (page['items'] as List?) ?? const <dynamic>[],
@@ -90,7 +91,7 @@ class InventoryScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: colors.bg,
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
@@ -1478,88 +1479,93 @@ class _InventoryIssueRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final name = inventoryIssueProductName(item);
-    final compact = MediaQuery.sizeOf(context).width < 680;
     final productId = inventoryIssueProductId(item);
 
-    return Semantics(
-      button: productId != null,
-      label: productId == null ? null : 'Xem chi tiết $name',
-      child: InkWell(
-        onTap: productId == null
-            ? null
-            : () => context.go('/products/$productId?from=inventory'),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 28,
-                child: Text(
-                  '$index',
-                  style: AppTheme.tabularStyle(
-                    context,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: colors.textMuted,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 420;
+
+        return Semantics(
+          button: productId != null,
+          label: productId == null ? null : 'Xem chi tiết $name',
+          child: InkWell(
+            onTap: productId == null
+                ? null
+                : () => context.go('/products/$productId?from=inventory'),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 28,
+                    child: Text(
+                      '$index',
+                      style: AppTheme.tabularStyle(
+                        context,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
+                        color: colors.textMuted,
                       ),
                     ),
-                    if (compact) ...[
-                      const SizedBox(height: 4),
-                      Text(
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        if (compact) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            status,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
+                                  color: accentColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (!compact) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: Text(
                         status,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
                         style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(
                               color: accentColor,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
-                    ],
-                  ],
-                ),
-              ),
-              if (!compact) ...[
-                const SizedBox(width: AppSpacing.sm),
-                Flexible(
-                  child: Text(
-                    status,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: accentColor,
-                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-                ),
-              ],
-              if (productId != null) ...[
-                const SizedBox(width: AppSpacing.xs),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: colors.textMuted,
-                ),
-              ],
-            ],
+                  ],
+                  if (productId != null) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: colors.textMuted,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

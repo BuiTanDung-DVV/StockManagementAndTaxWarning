@@ -341,7 +341,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: colors.bg,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(shopProfileProvider);

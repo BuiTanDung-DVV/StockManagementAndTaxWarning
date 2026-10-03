@@ -2,7 +2,6 @@
   "version": 2,
   "buildCommand": "bash build_vercel.sh",
   "outputDirectory": "build/web",
-  "installCommand": "echo Flutter dependencies are installed during build",
   "headers": [
     {
       "source": "/(.*\\.js)",
@@ -24,10 +23,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/api/:match*",
-      "destination": "https://stock-management-and-tax-warning.vercel.app/api/:match*"
-    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"

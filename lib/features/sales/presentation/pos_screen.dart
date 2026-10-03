@@ -396,6 +396,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       child: Focus(
         autofocus: true,
         child: Scaffold(
+          backgroundColor: c.bg,
           appBar: AppBar(
             automaticallyImplyLeading: false,
             leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -835,140 +836,174 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         availableStock: availableStock,
                       );
 
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: const BoxDecoration(color: Colors.transparent),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: c.cardAlt,
-                            borderRadius: BorderRadius.circular(
-                              AppRadius.control,
+                  final onRowTap = isOutOfStock
+                      ? null
+                      : () {
+                          if (cartItem != null) {
+                            if (!reachedAvailableStock) {
+                              ref
+                                  .read(_cartProvider.notifier)
+                                  .increment(
+                                    id,
+                                    availableStock: availableStock,
+                                  );
+                              HapticFeedback.selectionClick();
+                            }
+                          } else {
+                            final added = ref
+                                .read(_cartProvider.notifier)
+                                .add(
+                                  id,
+                                  name,
+                                  price,
+                                  taxRate: taxRate,
+                                  availableStock: availableStock,
+                                );
+                            if (added) {
+                              HapticFeedback.lightImpact();
+                            }
+                          }
+                        };
+
+                  return InkWell(
+                    onTap: onRowTap,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: c.cardAlt,
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.control,
+                              ),
+                              border: Border.all(color: c.divider),
                             ),
-                            border: Border.all(color: c.divider),
-                          ),
-                          child: Center(
-                            child: AppAssetIcon(
-                              assetPath: AppAssets.inventory,
-                              color: AppColors.primary,
-                              size: 24,
-                              semanticLabel: 'Sản phẩm',
+                            child: Center(
+                              child: AppAssetIcon(
+                                assetPath: AppAssets.inventory,
+                                color: AppColors.primary,
+                                size: 24,
+                                semanticLabel: 'Sản phẩm',
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text(
-                                    _currFmt.format(price),
-                                    style: TextStyle(
-                                      color: c.textPrimary,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  AppBadge(
-                                    label: stockLabel,
-                                    color: isOutOfStock
-                                        ? AppColors.danger
-                                        : availableStock == null
-                                        ? AppColors.warning
-                                        : AppColors.success,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (cartItem != null)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _qtyButton(
-                                Icons.remove,
-                                () => ref
-                                    .read(_cartProvider.notifier)
-                                    .decrement(id),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                ),
-                                child: Text(
-                                  '${cartItem.quantity}',
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                    fontSize: 15,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              _qtyButton(
-                                Icons.add,
-                                reachedAvailableStock
-                                    ? null
-                                    : () => ref
-                                          .read(_cartProvider.notifier)
-                                          .increment(
-                                            id,
-                                            availableStock: availableStock,
-                                          ),
-                                tooltip: reachedAvailableStock
-                                    ? 'Đã đạt tồn khả dụng'
-                                    : 'Tăng số lượng',
-                              ),
-                            ],
-                          )
-                        else
-                          SizedBox(
-                            width: 76,
-                            height: 40,
-                            child: OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      _currFmt.format(price),
+                                      style: TextStyle(
+                                        color: c.textPrimary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    AppBadge(
+                                      label: stockLabel,
+                                      color: isOutOfStock
+                                          ? AppColors.danger
+                                          : availableStock == null
+                                          ? AppColors.warning
+                                          : AppColors.success,
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              onPressed: isOutOfStock
-                                  ? null
-                                  : () {
-                                      final added = ref
-                                          .read(_cartProvider.notifier)
-                                          .add(
-                                            id,
-                                            name,
-                                            price,
-                                            taxRate: taxRate,
-                                            availableStock: availableStock,
-                                          );
-                                      if (added) {
-                                        HapticFeedback.lightImpact();
-                                      }
-                                    },
-                              child: const Text('Thêm', maxLines: 1),
+                              ],
                             ),
                           ),
-                      ],
+                          if (cartItem != null)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _qtyButton(
+                                  Icons.remove,
+                                  () => ref
+                                      .read(_cartProvider.notifier)
+                                      .decrement(id),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                  child: Text(
+                                    '${cartItem.quantity}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                _qtyButton(
+                                  Icons.add,
+                                  reachedAvailableStock
+                                      ? null
+                                      : () => ref
+                                            .read(_cartProvider.notifier)
+                                            .increment(
+                                              id,
+                                              availableStock: availableStock,
+                                            ),
+                                  tooltip: reachedAvailableStock
+                                      ? 'Đã đạt tồn khả dụng'
+                                      : 'Tăng số lượng',
+                                ),
+                              ],
+                            )
+                          else
+                            SizedBox(
+                              width: 76,
+                              height: 40,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                ),
+                                onPressed: isOutOfStock
+                                    ? null
+                                    : () {
+                                        final added = ref
+                                            .read(_cartProvider.notifier)
+                                            .add(
+                                              id,
+                                              name,
+                                              price,
+                                              taxRate: taxRate,
+                                              availableStock: availableStock,
+                                            );
+                                        if (added) {
+                                          HapticFeedback.lightImpact();
+                                        }
+                                      },
+                                child: const Text('Thêm', maxLines: 1),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -2272,15 +2307,17 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 }
 
 // ── Cash Confirm Dialog with Free Input & Smart Chips ──
-class _CashConfirmDialog extends StatefulWidget {
+class CashConfirmDialog extends StatefulWidget {
   final double total;
   final VoidCallback onConfirm;
-  const _CashConfirmDialog({required this.total, required this.onConfirm});
+  const CashConfirmDialog({super.key, required this.total, required this.onConfirm});
   @override
-  State<_CashConfirmDialog> createState() => _CashConfirmDialogState();
+  State<CashConfirmDialog> createState() => _CashConfirmDialogState();
 }
 
-class _CashConfirmDialogState extends State<_CashConfirmDialog> {
+typedef _CashConfirmDialog = CashConfirmDialog;
+
+class _CashConfirmDialogState extends State<CashConfirmDialog> {
   late final TextEditingController _givenCtrl;
   double _givenAmount = 0;
 

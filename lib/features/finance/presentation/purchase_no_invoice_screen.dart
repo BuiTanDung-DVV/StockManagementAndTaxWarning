@@ -10,6 +10,9 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
+import 'package:printing/printing.dart';
+import '../services/purchase_no_invoice_pdf_service.dart';
+import '../../settings/providers/system_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/finance_provider.dart';
@@ -33,8 +36,55 @@ class _PurchaseNoInvoiceScreenState
     decimalDigits: 0,
   ).format(v);
 
+  Future<void> _printPdf(Map<String, dynamic> p) async {
+    try {
+      final shop = ref.read(shopProvider);
+      final shopProfile = ref.read(shopProfileProvider).value ?? {};
+      final shopName = shop.currentShopName ??
+          shopProfile['shopName']?.toString() ??
+          'Hộ kinh doanh SmartStock';
+      final shopTaxCode = shopProfile['taxCode']?.toString() ?? '';
+      final shopAddress = shopProfile['address']?.toString() ?? '';
+      final recordCode = p['recordCode']?.toString() ?? '01-TNDN';
+      final purchaseDate =
+          p['purchaseDate']?.toString().split('T').first ?? '';
+      final sellerName = p['sellerName']?.toString() ?? '';
+      final sellerId = p['sellerIdentityNumber']?.toString() ?? '';
+      final sellerAddress = p['sellerAddress']?.toString() ?? '';
+      final rawItems = (p['items'] as List?) ?? const [];
+      final items = rawItems
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+      final totalAmount = asDouble(p['totalAmount']);
+
+      final pdfBytes = await PurchaseNoInvoicePdfService.build(
+        shopName: shopName,
+        shopTaxCode: shopTaxCode,
+        shopAddress: shopAddress,
+        recordCode: recordCode,
+        purchaseDate: purchaseDate,
+        sellerName: sellerName,
+        sellerIdentityNumber: sellerId,
+        sellerAddress: sellerAddress,
+        items: items,
+        totalAmount: totalAmount,
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (_) async => pdfBytes,
+        name: 'Bang_ke_01_TNDN_${recordCode.replaceAll('/', '_')}.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ToastService.showError('Không thể tạo bản in PDF: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
     final shop = ref.watch(shopProvider);
     final isOwner = shop.isOwner;
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
@@ -218,12 +268,59 @@ class _PurchaseNoInvoiceScreenState
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                p['recordCode'] ?? '',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    p['recordCode'] ?? '',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () => _printPdf(p),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: AppColors.primary.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.picture_as_pdf_rounded,
+                                            size: 13,
+                                            color: AppColors.primary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Mẫu 01/TNDN',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               Text(
                                 _fmt(asNum(p['totalAmount'])),
@@ -344,6 +441,7 @@ class _PurchaseNoInvoiceScreenState
       return DefaultTabController(
         length: 2,
         child: Scaffold(
+          backgroundColor: c.bg,
           appBar: AppBar(
             automaticallyImplyLeading: false,
             leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -381,6 +479,7 @@ class _PurchaseNoInvoiceScreenState
     }
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -547,17 +646,19 @@ class _PurchaseNoInvoiceScreenState
   }
 }
 
-class _AddPurchaseNoInvoiceDialog extends ConsumerStatefulWidget {
+class AddPurchaseNoInvoiceDialog extends ConsumerStatefulWidget {
   final String Function(num) formatCurrency;
-  const _AddPurchaseNoInvoiceDialog({required this.formatCurrency});
+  const AddPurchaseNoInvoiceDialog({super.key, required this.formatCurrency});
 
   @override
-  ConsumerState<_AddPurchaseNoInvoiceDialog> createState() =>
+  ConsumerState<AddPurchaseNoInvoiceDialog> createState() =>
       _AddPurchaseNoInvoiceDialogState();
 }
 
+typedef _AddPurchaseNoInvoiceDialog = AddPurchaseNoInvoiceDialog;
+
 class _AddPurchaseNoInvoiceDialogState
-    extends ConsumerState<_AddPurchaseNoInvoiceDialog> {
+    extends ConsumerState<AddPurchaseNoInvoiceDialog> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController sellerC;

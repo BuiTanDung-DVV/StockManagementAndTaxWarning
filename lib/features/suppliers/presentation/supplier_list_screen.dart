@@ -36,7 +36,7 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppThemeColors.of(context).bg,
       body: AppResponsiveContent(
         maxWidth: 1320,
         verticalPadding: AppSpacing.lg,
@@ -348,9 +348,7 @@ class _DesktopSupplierRow extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: Text(
-                  paymentTerm == null || paymentTerm.toString().isEmpty
-                      ? '—'
-                      : '${paymentTerm.toString()} ngày',
+                  _formatPaymentTerm(paymentTerm, fallback: '—'),
                   textAlign: TextAlign.right,
                   style: TextStyle(
                     color: colors.textPrimary,
@@ -435,10 +433,10 @@ class _MobileSupplierCard extends StatelessWidget {
                   Expanded(
                     child: _SupplierValue(
                       label: 'Hạn thanh toán',
-                      value:
-                          paymentTerm == null || paymentTerm.toString().isEmpty
-                          ? 'Chưa thiết lập'
-                          : '${paymentTerm.toString()} ngày',
+                      value: _formatPaymentTerm(
+                        paymentTerm,
+                        fallback: 'Chưa thiết lập',
+                      ),
                     ),
                   ),
                 ],
@@ -579,4 +577,14 @@ bool _isRecentSupplier(dynamic value) {
   final createdAt = DateTime.tryParse(value.toString());
   if (createdAt == null) return false;
   return DateTime.now().difference(createdAt).inDays <= 30;
+}
+
+String _formatPaymentTerm(dynamic term, {String fallback = '—'}) {
+  if (term == null) return fallback;
+  final s = term.toString().trim();
+  if (s.isEmpty) return fallback;
+  if (s.toLowerCase().contains('ngày')) return s;
+  final numVal = num.tryParse(s);
+  if (numVal != null) return '$s ngày';
+  return s;
 }

@@ -164,6 +164,7 @@ class FinanceScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppThemeColors.of(context);
     final resolvedPeriod = ref.watch(tabResolvedPeriodProvider('finance'));
     final from = resolvedPeriod.currentFrom.toIso8601String().split('T')[0];
     final to = resolvedPeriod.currentTo.toIso8601String().split('T')[0];
@@ -194,7 +195,7 @@ class FinanceScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: c.bg,
       body: RefreshIndicator(
         onRefresh: refresh,
         child: SingleChildScrollView(

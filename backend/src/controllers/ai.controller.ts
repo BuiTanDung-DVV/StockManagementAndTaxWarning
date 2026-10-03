@@ -205,25 +205,48 @@ export const extractContentFromUrl = async (req: Request, res: Response): Promis
 
     const html = await fetchRes.text();
 
-    // 1. Trích xuất tiêu đề từ thẻ <title> hoặc <h1>
+    // 1. Trích xuất tiêu đề thông minh: og:title -> title -> h1
     let title = '';
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (titleMatch && titleMatch[1]) {
-      title = titleMatch[1].trim().replace(/\s+/g, ' ');
+    const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
+    if (ogTitleMatch && ogTitleMatch[1]) {
+      title = ogTitleMatch[1].trim();
     } else {
-      const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-      if (h1Match && h1Match[1]) {
-        title = h1Match[1].trim().replace(/\s+/g, ' ');
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      if (titleMatch && titleMatch[1]) {
+        title = titleMatch[1].trim().replace(/\s+/g, ' ');
+      } else {
+        const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+        if (h1Match && h1Match[1]) {
+          title = h1Match[1].trim().replace(/\s+/g, ' ');
+        }
       }
     }
 
-    // 2. Làm sạch HTML để lấy văn bản thuần
-    let text = html
+    // 2. Ưu tiên bóc tách phần nội dung chính (article/main/content) để loại bỏ rác sidebar/quảng cáo
+    let sourceHtml = html;
+    const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
+    const mainMatch = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);
+    const contentDivMatch = html.match(/<div\b[^>]*(?:class|id)=["'][^"']*(?:content|article-body|post-body|entry-content)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i);
+
+    if (articleMatch && articleMatch[1].length > 300) {
+      sourceHtml = articleMatch[1];
+    } else if (mainMatch && mainMatch[1].length > 300) {
+      sourceHtml = mainMatch[1];
+    } else if (contentDivMatch && contentDivMatch[1].length > 300) {
+      sourceHtml = contentDivMatch[1];
+    }
+
+    // 3. Làm sạch HTML để lấy văn bản thuần tiếng Việt chuẩn xác
+    let text = sourceHtml
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
       .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, ' ')
       .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, ' ')
       .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, ' ')
+      .replace(/<aside\b[^<]*(?:(?!<\/aside>)<[^<]*)*<\/aside>/gi, ' ')
+      .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, ' ')
+      .replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, ' ')
       .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, ' ')
       .replace(/<[^>]+>/g, ' ')
       .replace(/&nbsp;/gi, ' ')
@@ -235,8 +258,8 @@ export const extractContentFromUrl = async (req: Request, res: Response): Promis
       .replace(/\s+/g, ' ')
       .trim();
 
-    if (text.length > 6000) {
-      text = text.slice(0, 6000) + '...';
+    if (text.length > 12000) {
+      text = text.slice(0, 12000) + '... (nội dung đã được rút gọn cho ngữ cảnh AI)';
     }
 
     res.json({

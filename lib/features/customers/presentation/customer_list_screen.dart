@@ -44,7 +44,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppThemeColors.of(context).bg,
       body: AppResponsiveContent(
         maxWidth: 1320,
         verticalPadding: AppSpacing.lg,

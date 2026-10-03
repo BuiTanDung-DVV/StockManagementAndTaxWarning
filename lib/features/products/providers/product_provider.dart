@@ -121,18 +121,42 @@ final availableTagsProvider = FutureProvider<List<TagModel>>((ref) async {
         if (p.trim().isNotEmpty) usedTags.add(p.trim());
       }
     }
+    final stock =
+        num.tryParse(
+          (item['currentStock'] ?? item['stock'] ?? '').toString(),
+        ) ??
+        0;
+    final minStock =
+        num.tryParse(
+          (item['minStock'] ?? item['minimumStock'] ?? item['min_stock'] ?? '')
+              .toString(),
+        ) ??
+        0;
+    if (stock <= 0) {
+      usedTags.add('Hết hàng');
+    } else if (minStock > 0 && stock <= minStock) {
+      usedTags.add('Sắp hết');
+    }
   }
 
   for (final t in usedTags) {
     if (!tagMap.containsKey(t)) {
-      tagMap[t] = TagModel(
-        id: -1,
-        name: t,
-        color: '#9CA3AF',
-      ); // Gray color for unmanaged tags
+      final defaultColor = switch (t) {
+        'Hết hàng' => '#EF4444',
+        'Sắp hết' => '#F59E0B',
+        _ => '#9CA3AF',
+      };
+      tagMap[t] = TagModel(id: -1, name: t, color: defaultColor);
     }
   }
 
-  final list = tagMap.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+  final list = tagMap.values.toList()
+    ..sort((a, b) {
+      if (a.name == 'Hết hàng') return -1;
+      if (b.name == 'Hết hàng') return 1;
+      if (a.name == 'Sắp hết') return -1;
+      if (b.name == 'Sắp hết') return 1;
+      return a.name.compareTo(b.name);
+    });
   return list;
 });

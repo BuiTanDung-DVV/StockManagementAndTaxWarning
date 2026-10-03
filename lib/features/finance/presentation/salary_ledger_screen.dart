@@ -34,6 +34,7 @@ class _SalaryLedgerScreenState extends ConsumerState<SalaryLedgerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
     final period = currentMonthReportingPeriod(DateTime.now());
     final txAsync = ref.watch(
       transactionsProvider((
@@ -48,6 +49,7 @@ class _SalaryLedgerScreenState extends ConsumerState<SalaryLedgerScreen> {
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,

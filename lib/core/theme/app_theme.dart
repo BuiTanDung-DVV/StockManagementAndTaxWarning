@@ -371,7 +371,7 @@ class AppTheme {
         error: AppColors.danger,
         onError: Colors.white,
       ),
-      scaffoldBackgroundColor: Colors.transparent,
+      scaffoldBackgroundColor: colors.bg,
       cardColor: colors.card,
       dividerColor: colors.divider,
       dividerTheme: DividerThemeData(

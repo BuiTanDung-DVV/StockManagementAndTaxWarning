@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
@@ -59,6 +60,29 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
         });
       }
     }
+  }
+
+  String _computeTaxDeadline(String period, String year) {
+    final y = int.tryParse(year) ?? DateTime.now().year;
+    if (period.startsWith('Q')) {
+      final q = int.tryParse(period.replaceAll('Q', '')) ?? 1;
+      switch (q) {
+        case 1:
+          return '30/04/$y (Hạn chót nộp tờ khai & thuế Quý 1)';
+        case 2:
+          return '31/07/$y (Hạn chót nộp tờ khai & thuế Quý 2)';
+        case 3:
+          return '31/10/$y (Hạn chót nộp tờ khai & thuế Quý 3)';
+        case 4:
+          return '31/01/${y + 1} (Hạn chót nộp tờ khai & thuế Quý 4)';
+      }
+    } else {
+      final m = int.tryParse(period) ?? 1;
+      final nextMonth = m == 12 ? 1 : m + 1;
+      final nextYear = m == 12 ? y + 1 : y;
+      return '20/${nextMonth.toString().padLeft(2, '0')}/$nextYear (Hạn chót ngày 20 tháng sau)';
+    }
+    return 'Ngày cuối tháng kế tiếp';
   }
 
   Future<void> _exportDeclaration() async {
@@ -140,9 +164,11 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
     final config = ref.watch(taxConfigProvider);
     if (!config.isLoaded) {
       return Scaffold(
+        backgroundColor: c.bg,
         appBar: AppBar(
           automaticallyImplyLeading: false,
           leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -180,6 +206,7 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
       });
     }
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
@@ -286,7 +313,75 @@ class _TaxEstimateScreenState extends ConsumerState<TaxEstimateScreen> {
                               config.policySourceCode ??
                               'văn bản đang hiệu lực',
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.event_note_rounded,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Thời hạn nộp theo luật:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppThemeColors.of(context).textPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'Điều 44 Luật QLT',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _computeTaxDeadline(_selectedPeriod, _selectedYear),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppThemeColors.of(context).textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: _isExporting ? null : _exportDeclaration,
                           icon: _isExporting

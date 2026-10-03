@@ -141,6 +141,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
     }
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,

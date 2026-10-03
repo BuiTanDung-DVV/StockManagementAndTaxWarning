@@ -34,6 +34,7 @@ class _NotificationListScreenState
     final actionable = widget.initialFilter == 'actionable';
 
     return Scaffold(
+      backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
