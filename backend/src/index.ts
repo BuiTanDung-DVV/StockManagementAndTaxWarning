@@ -88,6 +88,7 @@ apiRouter.use('/tags', tagRoutes);
 apiRouter.use('/ai', aiRoutes);
 
 app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
