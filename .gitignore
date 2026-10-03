@@ -161,3 +161,6 @@ BA_DOCUMENTS/
 DEMO Screen/
 *.dill
 *.old
+run/
+test/ui_audit_*/
+

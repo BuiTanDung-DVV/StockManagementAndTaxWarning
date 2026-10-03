@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../support/load_ui_fonts.dart';
 import 'package:flutter_app/core/network/api_client.dart';
 import 'package:flutter_app/core/theme/app_theme.dart';
 import 'package:flutter_app/features/settings/providers/tax_config_provider.dart';
@@ -117,9 +117,7 @@ final _mockReferenceData = TaxReferenceData(
 );
 
 void main() {
-  setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-  });
+  setUpAll(loadUiFonts);
 
   testWidgets('Tax Estimate Screen - Capture Normal, Warning & Exempt States', (
     tester,
@@ -151,7 +149,7 @@ void main() {
           theme: AppTheme.lightTheme(AppColors.primary),
           home: const RepaintBoundary(
             key: estimateKey,
-            child: TaxEstimateScreen(),
+            child: TaxEstimateScreen(key: ValueKey('tax_screen_normal')),
           ),
         ),
       ),
@@ -185,7 +183,7 @@ void main() {
           theme: AppTheme.lightTheme(AppColors.primary),
           home: const RepaintBoundary(
             key: estimateKey,
-            child: TaxEstimateScreen(),
+            child: TaxEstimateScreen(key: ValueKey('tax_screen_warning')),
           ),
         ),
       ),
@@ -214,7 +212,7 @@ void main() {
           theme: AppTheme.lightTheme(AppColors.primary),
           home: const RepaintBoundary(
             key: estimateKey,
-            child: TaxEstimateScreen(),
+            child: TaxEstimateScreen(key: ValueKey('tax_screen_exempt')),
           ),
         ),
       ),
@@ -300,10 +298,11 @@ void main() {
         ],
         child: MaterialApp(
           theme: AppTheme.lightTheme(AppColors.primary),
-          home: const RepaintBoundary(
+          builder: (context, child) => RepaintBoundary(
             key: declarationKey,
-            child: TaxDeclarationScreen(),
+            child: child!,
           ),
+          home: const TaxDeclarationScreen(),
         ),
       ),
     );
