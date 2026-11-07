@@ -2,6 +2,30 @@ import 'package:flutter_app/features/sales/presentation/customer_debt_screen.dar
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'opening adjustment changes remaining without becoming money collected',
+    () {
+      final debt = <String, dynamic>{
+        'totalAmount': 300,
+        'paidAmount': 50,
+        'openingAdjustmentAmount': -50,
+      };
+      expect(customerDebtRemaining(debt), 200);
+      expect(
+        customerDebtAdjustmentLabel(debt),
+        contains('Điều chỉnh đầu kỳ: −50'),
+      );
+      expect(
+        customerDebtAdjustmentLabel({'openingAdjustmentAmount': 0}),
+        isNull,
+      );
+      expect(
+        customerDebtAdjustmentLabel({'openingAdjustmentAmount': 'NaN'}),
+        isNull,
+      );
+      expect(customerDebtRemaining({...debt, 'remaining': 175}), 175);
+    },
+  );
   test('debt overview counts unique customers instead of receivable rows', () {
     final overview = customerDebtOverview([
       {

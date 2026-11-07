@@ -35,6 +35,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
+            supplierPayablesProvider(1).overrideWith((ref) async => []),
             supplierDetailProvider(1).overrideWith((ref) async {
               return {
                 'id': 1,

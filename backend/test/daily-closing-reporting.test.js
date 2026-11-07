@@ -26,13 +26,13 @@ test('daily closing counts real non-cancelled sales orders', () => {
   assert.match(service, /FROM sales_orders/);
   assert.match(service, /COUNT\(\*\)::int AS "orderCount"/);
   assert.match(service, /status, ''\)\) != 'CANCELLED'/);
-  assert.match(service, /FROM sales_returns/);
+  assert.match(service, /readDailyReturnValue\(manager, shopId, fromDate, toDate\)/);
 });
 
 test('daily closing financial totals are derived by the server', () => {
   assert.match(
     service,
-    /const current = await this\.getDailyClosingByDate\(shopId, businessDate\)/,
+    /const current = await this\.readDailyClosing\(manager, shopId, businessDate\)/,
   );
   assert.match(service, /totalSales: Number\(current\.totalSales \|\| 0\)/);
   assert.match(service, /totalReturns: Number\(current\.totalReturns \|\| 0\)/);

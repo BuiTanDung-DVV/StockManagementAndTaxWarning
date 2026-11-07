@@ -13,6 +13,7 @@ import 'package:flutter_app/features/inventory/presentation/xnt_report_screen.da
 import 'package:flutter_app/features/inventory/providers/inventory_provider.dart';
 import 'package:flutter_app/features/settings/providers/shop_provider.dart';
 import '../support/load_ui_fonts.dart';
+import '../support/purchase_detail_fixture.dart';
 
 class _FakeShopNotifier extends ShopNotifier {
   final ShopState _state;
@@ -83,7 +84,9 @@ void main() {
           ],
         };
 
-        final container = ProviderContainer();
+        final container = ProviderContainer(
+          overrides: purchaseDetailOverrides(poData),
+        );
         addTearDown(container.dispose);
 
         await tester.pumpWidget(
@@ -127,7 +130,9 @@ void main() {
           'items': [],
         };
 
-        final container = ProviderContainer();
+        final container = ProviderContainer(
+          overrides: purchaseDetailOverrides(poData),
+        );
         addTearDown(container.dispose);
 
         await tester.pumpWidget(

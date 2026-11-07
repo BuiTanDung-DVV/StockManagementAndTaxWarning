@@ -8,13 +8,15 @@ const readService = (name) => fs.readFileSync(
   'utf8',
 );
 
-test('debt reports exclude paid and cancelled receivables', () => {
+test('debt report source uses effective residual and shared snapshot (static contract)', () => {
   const customerService = readService('customer.service.ts');
 
   assert.match(
     customerService,
-    /Not\(In\(\['PAID', 'CANCELLED'\]\)\)/,
+    /receivable\.status <> :cancelled/,
   );
+  assert.match(customerService,/OPEN_RECEIVABLE_REMAINING\} > 0/);
+  assert.match(customerService,/withReceivableSnapshot/);
   assert.match(customerService, /resolveVietnamBusinessDayEnd\(asOf\)/);
   assert.match(customerService, /receivableCount \+= 1/);
 });

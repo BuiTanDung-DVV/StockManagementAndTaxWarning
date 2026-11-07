@@ -11,6 +11,15 @@ const {
   normalizeProductInput,
 } = require('../dist/product/product-input.utils');
 
+test('product category uses a positive ID or explicit unassignment', () => {
+  assert.equal(normalizeProductInput(12, {categoryId: 42}).categoryId, 42);
+  assert.equal(normalizeProductInput(12, {categoryId: null}).categoryId, null);
+  assert.equal(Object.hasOwn(normalizeProductInput(12, {name: 'A'}), 'categoryId'), false);
+  for (const value of [-1, 0, 1.2, '42', {}, true]) {
+    assert.throws(() => normalizeProductInput(12, {categoryId: value}), ProductInputError);
+  }
+});
+
 test('product input only returns explicitly editable fields', () => {
   const result = normalizeProductInput(12, {
     name: '  Xi măng PCB40  ',

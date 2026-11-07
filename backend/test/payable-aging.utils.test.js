@@ -22,13 +22,15 @@ test('payable aging uses stable current, 30, 60 and over-60 buckets', () => {
   assert.equal(classifyPayableAging('2026-06-11', asOf), 'past90');
 });
 
-test('supplier payable report excludes settled rows and is shop scoped', () => {
+test('supplier payable report uses scoped effective residual (static source contract)', () => {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'src', 'services', 'supplier.service.ts'),
     'utf8',
   );
-  assert.match(source, /shopId, status: Not\(In\(\['PAID', 'CANCELLED'\]\)\)/);
-  assert.match(source, /calculateRemainingPayable/);
+  assert.match(source, /payable\.shopId = :shopId/);
+  assert.match(source, /payable\.status <> :cancelled/);
+  assert.match(source, /PAYABLE_REMAINING\} > 0/);
+  assert.match(source, /openingAdjustedDebt/);
   assert.match(source, /resolveVietnamBusinessDayEnd\(asOf\)/);
   assert.match(source, /items\.slice\(0, 20\)/);
 

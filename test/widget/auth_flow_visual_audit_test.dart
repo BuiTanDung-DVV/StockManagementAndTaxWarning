@@ -17,13 +17,23 @@ import 'package:flutter_app/features/auth/providers/auth_provider.dart';
 import 'package:flutter_app/features/settings/providers/shop_provider.dart';
 import '../support/load_ui_fonts.dart';
 
-const String _runDir =
+final String _runDir =
+    Platform.environment['SMARTSTOCK_AUTH_AUDIT_DIR'] ??
     'BA_DOCUMENTS/TEST_RUNS/run_20260930_auth/screenshots';
 
 Future<void> _capture(WidgetTester tester, Key key, String fileName) async {
   final boundaryFinder = find.byKey(key);
-  final boundary =
-      tester.renderObject(boundaryFinder) as RenderRepaintBoundary;
+  // A settled widget frame can precede asynchronous asset decoding. Wait for
+  // the actual assets so screenshots do not falsely show a missing brand mark.
+  final imageWidgets = tester.widgetList<Image>(find.byType(Image)).toList();
+  final imageContext = tester.element(boundaryFinder);
+  await tester.runAsync(() async {
+    await Future.wait(
+      imageWidgets.map((widget) => precacheImage(widget.image, imageContext)),
+    );
+  });
+  await tester.pump();
+  final boundary = tester.renderObject(boundaryFinder) as RenderRepaintBoundary;
   final image = await tester.runAsync(() => boundary.toImage(pixelRatio: 1.0));
   final byteData = await tester.runAsync(
     () => image!.toByteData(format: ui.ImageByteFormat.png),
@@ -96,10 +106,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme(AppColors.primary),
-            home: const RepaintBoundary(
-              key: key,
-              child: LoginScreen(),
-            ),
+            home: const RepaintBoundary(key: key, child: LoginScreen()),
           ),
         ),
       );
@@ -123,10 +130,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme(AppColors.primary),
-            home: const RepaintBoundary(
-              key: key,
-              child: LoginScreen(),
-            ),
+            home: const RepaintBoundary(key: key, child: LoginScreen()),
           ),
         ),
       );
@@ -150,10 +154,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme(AppColors.primary),
-            home: const RepaintBoundary(
-              key: key,
-              child: RegisterScreen(),
-            ),
+            home: const RepaintBoundary(key: key, child: RegisterScreen()),
           ),
         ),
       );
@@ -177,10 +178,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme(AppColors.primary),
-            home: const RepaintBoundary(
-              key: key,
-              child: RegisterScreen(),
-            ),
+            home: const RepaintBoundary(key: key, child: RegisterScreen()),
           ),
         ),
       );
@@ -280,10 +278,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.lightTheme(AppColors.primary),
-            home: const RepaintBoundary(
-              key: key,
-              child: OnboardingScreen(),
-            ),
+            home: const RepaintBoundary(key: key, child: OnboardingScreen()),
           ),
         ),
       );

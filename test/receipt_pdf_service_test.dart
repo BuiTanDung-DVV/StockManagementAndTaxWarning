@@ -3,6 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'receipt date is readable and uses Vietnamese time for UTC timestamps',
+    () {
+      expect(formatReceiptDate('2026-10-30T09:35:00.000Z'), '30/10/2026 16:35');
+      expect(formatReceiptDate('2026-10-31T17:30:00.000Z'), '01/11/2026 00:30');
+      expect(formatReceiptDate('2026-10-30'), '30/10/2026');
+      expect(formatReceiptDate(null), 'Chưa có ngày');
+    },
+  );
 
   test('receipt service generates real 80mm and A4 PDF documents', () async {
     final profile = {

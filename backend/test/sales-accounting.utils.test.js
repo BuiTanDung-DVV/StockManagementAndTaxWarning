@@ -84,21 +84,15 @@ test('allocated revenue SQL guards zero subtotal and legacy excessive discounts'
   );
 });
 
-test('full return uses server prices and reverses every accounting component', () => {
-  const source = fs.readFileSync(
-    path.join(__dirname, '..', 'src', 'services', 'sales.service.ts'),
-    'utf8',
-  );
-
-  assert.match(source, /unitPrice: Number\(soldItem\.unitPrice \|\| 0\)/);
-  assert.match(source, /subtotal: Number\(soldItem\.subtotal \|\| 0\)/);
-  assert.match(source, /refundShippingFee === true/);
-  assert.match(source, /Refund amount does not match the selected shipping-fee option/);
-  assert.match(source, /accountCode: '3388'/);
-  assert.match(source, /accountCode: '3331'/);
-  assert.match(source, /accountCode: '131'/);
-  assert.match(source, /paymentLedgerAccountCode\(refund\.method\)/);
-  assert.match(source, /accountCode: '632'/);
+test('full return keeps recorded prices and reverses merchandise, tax and delivery', () => {
+  const { planPartialReturn } = require('../dist/sales/partial-return.utils');
+  const result=planPartialReturn({subtotal:200,discountAmount:20,taxAmount:18,totalAmount:218,paidAmount:218,
+    shippingFee:20,shippingFeePayer:'CUSTOMER',items:[{productId:1,quantity:2,subtotal:200,unitPrice:100,taxAmount:18}]},
+    [],[{productId:1,quantity:2}],true);
+  assert.equal(result.items[0].unitPrice,100);
+  assert.equal(result.items[0].subtotal,200);
+  assert.equal(result.returnNet,18000n); assert.equal(result.returnTax,1800n);
+  assert.equal(result.reversal,21800n); assert.equal(result.refund,21800n);
 });
 
 test('sales summary reports net merchandise revenue without output VAT', () => {

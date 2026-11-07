@@ -229,7 +229,7 @@ test('account type migration is explicit, idempotent, and does not rewrite users
 test('refresh token reuse commits family revocation before returning 401', async () => {
   const service = new AuthService();
   const refreshToken = jwt.sign(
-    { sub: 7, sid: '00000000-0000-4000-8000-000000000001', type: 'refresh' },
+    { sub: 7, ver: 0, sid: '00000000-0000-4000-8000-000000000001', type: 'refresh' },
     config.refreshTokenSecret,
     { expiresIn: '7d' },
   );
@@ -258,7 +258,9 @@ test('refresh token reuse commits family revocation before returning 401', async
   };
   const originalTransaction = AppDataSource.transaction;
   AppDataSource.transaction = async callback => {
-    const result = await callback({ getRepository: () => repository });
+    const result = await callback({ getRepository: entity => entity === User
+      ? {async findOne() {return {id:7,isActive:true,authVersion:0};}}
+      : repository });
     transactionCommitted = true;
     return result;
   };

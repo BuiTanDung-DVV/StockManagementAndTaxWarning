@@ -172,7 +172,7 @@ void main() {
     await tester.tap(launcher);
     await tester.pumpAndSettle();
 
-    expect(find.text('Trợ giúp nghiệp vụ'), findsOneWidget);
+    expect(find.text('Trợ lý cửa hàng'), findsOneWidget);
     expect(launcher, findsNothing);
   });
 
@@ -195,7 +195,7 @@ void main() {
     await tester.tap(launcher);
     await tester.pumpAndSettle();
 
-    final panel = find.text('Trợ giúp nghiệp vụ');
+    final panel = find.text('Trợ lý cửa hàng');
     expect(panel, findsOneWidget);
     final panelMaterial = find
         .ancestor(of: panel, matching: find.byType(Material))
@@ -214,7 +214,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final panel = find.text('Trợ giúp nghiệp vụ');
+    final panel = find.text('Trợ lý cửa hàng');
     final panelMaterial = find
         .ancestor(of: panel, matching: find.byType(Material))
         .first;

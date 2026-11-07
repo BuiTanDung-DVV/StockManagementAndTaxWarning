@@ -1,3 +1,5 @@
+import 'dart:ui' show FontStyle;
+
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -8,6 +10,7 @@ Future<void> loadUiFonts() async {
     GoogleFonts.inter(fontWeight: weight);
     GoogleFonts.manrope(fontWeight: weight);
   }
+  GoogleFonts.inter(fontStyle: FontStyle.italic);
   await GoogleFonts.pendingFonts();
   final icons = FontLoader('MaterialIcons')
     ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));

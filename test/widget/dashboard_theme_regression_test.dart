@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_app/core/theme/app_theme.dart';
+import 'package:flutter_app/core/guides/feature_guide_sheet.dart';
 import 'package:flutter_app/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:flutter_app/features/dashboard/providers/dashboard_action_provider.dart';
 import 'package:flutter_app/features/finance/providers/finance_provider.dart';
@@ -43,6 +44,7 @@ void main() {
   for (final scenario in [
     (width: 390.0, scale: 1.0),
     (width: 900.0, scale: 1.0),
+    (width: 1142.0, scale: 1.0),
     (width: 1280.0, scale: 1.0),
     (width: 1440.0, scale: 1.0),
     (width: 390.0, scale: 1.5),
@@ -52,7 +54,7 @@ void main() {
     testWidgets(
       'dashboard and shell preserve long amounts at $width scale ${scenario.scale}',
       (tester) async {
-        tester.view.physicalSize = Size(width, 1000);
+        tester.view.physicalSize = Size(width, width == 1142 ? 668 : 1000);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
@@ -160,6 +162,24 @@ void main() {
                   ],
                 ),
                 recentTransactionsProvider.overrideWith((_) async => []),
+                taxObligationsProvider.overrideWith(
+                  (_) async => {
+                    'items': [
+                      {
+                        'period': 'Q2/2026',
+                        'status': 'overdue',
+                        'dueDate': '2026-09-21',
+                        'vatDeclared': 3000000,
+                      },
+                      {
+                        'period': 'Q3/2026',
+                        'status': 'pending',
+                        'dueDate': '2026-10-30',
+                        'vatDeclared': 7500000,
+                      },
+                    ],
+                  },
+                ),
                 topProductsProvider.overrideWith(
                   (ref, period) async => [
                     {
@@ -200,6 +220,53 @@ void main() {
         expect(find.textContaining('12.345.678.900'), findsWidgets);
         expect(find.textContaining('2.456.789.000'), findsWidgets);
         expect(find.textContaining('18.416.843.500'), findsWidgets);
+        // Checking for exceptions alone misses children painted below a card.
+        for (final card
+            in find
+                .byWidgetPredicate(
+                  (w) => w.runtimeType.toString() == '_PastelMetricCard',
+                )
+                .evaluate()) {
+          final cardFinder = find.byElementPredicate(
+            (element) => identical(element, card),
+          );
+          final cardRect = tester.getRect(cardFinder);
+          final badges = find.descendant(
+            of: cardFinder,
+            matching: find.byWidgetPredicate(
+              (w) => w.runtimeType.toString() == '_ComparisonBadge',
+            ),
+          );
+          for (final badge in badges.evaluate()) {
+            final badgeRect = tester.getRect(
+              find.byElementPredicate((element) => identical(element, badge)),
+            );
+            expect(
+              badgeRect.bottom,
+              lessThanOrEqualTo(cardRect.bottom - 8),
+              reason:
+                  'Comparison badge must stay inside its card with bottom padding',
+            );
+            expect(badgeRect.left, greaterThanOrEqualTo(cardRect.left));
+            expect(badgeRect.right, lessThanOrEqualTo(cardRect.right));
+          }
+        }
+        if (width == 1142 && scenario.scale == 1.0) {
+          final revenue = tester.getRect(
+            find.textContaining('12.345.678.900').first,
+          );
+          final profit = tester.getRect(
+            find.textContaining('2.456.789.000').first,
+          );
+          final cash = tester.getRect(
+            find.textContaining('18.416.843.500').first,
+          );
+          expect(revenue.top, closeTo(profit.top, 2));
+          expect(revenue.top, closeTo(cash.top, 2));
+          expect(cash.left, greaterThan(profit.left));
+          expect(find.text('Trợ lý'), findsOneWidget);
+          expect(find.text('Thông báo'), findsOneWidget);
+        }
         if (width >= 1280) {
           Rect surface(String type) {
             final owner = find
@@ -227,7 +294,24 @@ void main() {
           ]) {
             final left = surface(pair.$1);
             final right = surface(pair.$2);
+            if (scenario.scale > 1.25) {
+              expect(
+                pair.$1 == '_DashboardChart' ? left.top : right.top,
+                greaterThanOrEqualTo(
+                  pair.$1 == '_DashboardChart' ? right.bottom : left.bottom,
+                ),
+                reason: 'Large text stacks full-width reading surfaces',
+              );
+              continue;
+            }
             expect(left.top, closeTo(right.top, 1), reason: '${pair.$1} top');
+            if (pair.$1 == '_DashboardChart') {
+              // Both panels stay aligned; long action lists scroll inside.
+              expect(left.height, lessThanOrEqualTo(440));
+              expect(left.bottom, closeTo(right.bottom, 1));
+              expect(right.left, greaterThan(left.right));
+              continue;
+            }
             expect(
               left.bottom,
               closeTo(right.bottom, 1),
@@ -264,6 +348,25 @@ void main() {
           debugPrint(layoutError.toString(minLevel: DiagnosticLevel.info));
         }
         expect(layoutError, isNull);
+        if (const bool.fromEnvironment('CAPTURE_UI_V121') && width == 1142) {
+          await expectLater(
+            find.byKey(const ValueKey('dashboard-capture')),
+            matchesGoldenFile(
+              '../../BA_DOCUMENTS/TEST_RUNS/run_20261021_ui_redesign_v121/widget-previews/dashboard-1142.png',
+            ),
+          );
+          showFeatureGuide(
+            tester.element(find.byType(DashboardScreen)),
+            'dashboard',
+          );
+          await tester.pumpAndSettle();
+          await expectLater(
+            find.byKey(const ValueKey('dashboard-capture')),
+            matchesGoldenFile(
+              '../../BA_DOCUMENTS/TEST_RUNS/run_20261021_ui_redesign_v121/widget-previews/dashboard-guide-1142.png',
+            ),
+          );
+        }
         if (const bool.fromEnvironment('CAPTURE_UI') && scenario.scale == 1.0) {
           await expectLater(
             find.byKey(const ValueKey('dashboard-capture')),
@@ -397,6 +500,15 @@ void main() {
         return tester.getRect(decorated);
       }
 
+      final priority = find.byWidgetPredicate(
+        (w) => w.runtimeType.toString() == 'DashboardPriorityList',
+      );
+      await tester.ensureVisible(priority);
+      await tester.drag(
+        find.descendant(of: priority, matching: find.byType(ListView)),
+        const Offset(0, -1200),
+      );
+      await tester.pumpAndSettle();
       final rightCard = surface('DashboardPriorityList');
       final lastActionText = tester.getRect(
         find

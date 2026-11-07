@@ -393,7 +393,7 @@ void main() {
 
         // 2026-09-15 relative to fixedClock (2026-09-15) is due today
         expect(find.text('Đến hạn hôm nay'), findsOneWidget);
-        expect(find.text('Hạn: 2026-09-15'), findsOneWidget);
+        expect(find.text('Hạn: 15/09/2026'), findsOneWidget);
         expect(find.textContaining('Còn phải nộp: 5.000.000'), findsOneWidget);
       },
     );
@@ -447,7 +447,7 @@ void main() {
           find.textContaining('Còn phải nộp: 123.456.789'),
           findsOneWidget,
         );
-        expect(find.text('Hạn: 2026-10-31'), findsOneWidget);
+        expect(find.text('Hạn: 31/10/2026'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

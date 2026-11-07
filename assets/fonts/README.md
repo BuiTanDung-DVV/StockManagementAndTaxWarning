@@ -11,5 +11,10 @@ việc tải font khi mở ứng dụng. `pubspec.yaml` đã khai báo thư mụ
   `google/fonts` (thư mục `ofl/inter` và `ofl/manrope`).
 - Hai tệp NotoSans có sẵn được giữ nguyên.
 
+Đã bổ sung `Inter-Italic.ttf` (400, italic) từ cùng metadata `google_fonts 8.0.2`
+ngày 13/10/2026 để dòng chữ nghiêng trong biểu mẫu sản phẩm dùng font cục bộ.
+Nguồn và mã SHA-256 nằm trong `Inter-Italic-source.json`; giấy phép Inter OFL
+hiện có cũng áp dụng cho tệp này.
+
 Kiểm thử ảnh nạp font và Material Icons bằng `test/support/load_ui_fonts.dart`
 trước khi dựng widget, tránh font ô vuông mặc định của Flutter Test.

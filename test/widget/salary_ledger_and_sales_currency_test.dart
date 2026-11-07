@@ -79,9 +79,13 @@ void main() {
       expect(find.text('Nguyễn Văn A'), findsOneWidget);
       expect(find.text('Trần Thị B'), findsOneWidget);
       // Check total transactions
-      expect(find.text('2 giao dịch'), findsOneWidget);
-      // Check FAB or Action button
-      expect(find.byIcon(Icons.payments), findsWidgets);
+      expect(find.text('2 khoản chi'), findsOneWidget);
+      expect(find.text('15/09/2026'), findsOneWidget);
+      expect(find.text('18/09/2026'), findsOneWidget);
+      expect(find.text('Ngày chi'), findsOneWidget);
+      expect(find.text('Thêm chi lương'), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNothing);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('Salary Ledger opens add dialog and shows realtime preview', (
@@ -138,4 +142,57 @@ void main() {
       expect(find.text('15.000.000\u00A0₫'), findsOneWidget);
     });
   });
+
+  for (final width in [390.0, 768.0, 1280.0]) {
+    testWidgets('Salary layout fits width $width with long content', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            transactionsProvider.overrideWith(
+              (ref, arg) async => {
+                'items': [
+                  {
+                    'id': 1,
+                    'counterparty':
+                        'Nhân viên có họ tên dài để đối soát khoản chi',
+                    'amount': 12500000,
+                    'notes': 'Lương và phụ cấp theo chứng từ đã nhập vào sổ',
+                    'transactionDate': '2026-10-19T00:00:00Z',
+                  },
+                ],
+                'filteredAmountTotal': 12500000,
+                'total': 1,
+                'page': 1,
+                'totalPages': 1,
+              },
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme(AppColors.primary),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(width == 390 ? 1.5 : 1)),
+              child: child!,
+            ),
+            home: const SalaryLedgerScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('1 khoản chi'), findsOneWidget);
+      expect(find.textContaining('19/10/2026'), findsOneWidget);
+      expect(
+        find.text('Ngày chi'),
+        width >= 720 ? findsOneWidget : findsNothing,
+      );
+    });
+  }
 }

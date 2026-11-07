@@ -233,6 +233,7 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        supplierPayablesProvider(1).overrideWith((ref) async => []),
         shopProvider.overrideWith(() => _FakeShopNotifier(fakeShopState)),
         customerListProvider((
           page: 1,

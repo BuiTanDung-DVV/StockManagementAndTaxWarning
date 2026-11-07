@@ -8,12 +8,14 @@ const source = (file) => fs.readFileSync(
   'utf8',
 );
 
-test('manual receivable collection is atomic and server controlled', () => {
+// Source contracts only; real rollback/concurrency coverage lives in the
+// authorized PostgreSQL verifier, not in these text assertions.
+test('manual collection keeps transactional posting and the shared shop mutation guard', () => {
   const service = source('services/customer.service.ts');
 
   assert.match(service, /collectManualReceivablePayment/);
   assert.match(service, /AppDataSource\.transaction\(async \(manager\)/);
-  assert.match(service, /lock: \{ mode: 'pessimistic_write' \}/);
+  assert.match(service, /await lockShopMutation\(manager, shopId\)/);
   assert.match(service, /manager\.save\(Receivable/);
   assert.match(service, /DebtPaymentHistory/);
   assert.match(service, /createCashTransaction[\s\S]*?'DEBT_COLLECTION'/);

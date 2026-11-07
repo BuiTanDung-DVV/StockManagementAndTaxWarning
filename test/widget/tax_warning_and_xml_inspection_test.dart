@@ -15,7 +15,7 @@ import 'package:flutter_app/features/finance/providers/finance_provider.dart';
 import 'package:flutter_app/features/finance/providers/tax_reference_provider.dart';
 
 const String _runDir =
-    'BA_DOCUMENTS/TEST_RUNS/run_20260929_112200_taxwarn/screenshots';
+    'BA_DOCUMENTS/TEST_RUNS/run_20261004_001442_cxWZf2/screenshots/batch2/tax';
 
 Future<void> _capture(WidgetTester tester, Key key, String fileName) async {
   final boundaryFinder = find.byKey(key);
@@ -298,10 +298,8 @@ void main() {
         ],
         child: MaterialApp(
           theme: AppTheme.lightTheme(AppColors.primary),
-          builder: (context, child) => RepaintBoundary(
-            key: declarationKey,
-            child: child!,
-          ),
+          builder: (context, child) =>
+              RepaintBoundary(key: declarationKey, child: child!),
           home: const TaxDeclarationScreen(),
         ),
       ),
@@ -310,7 +308,7 @@ void main() {
     await _capture(tester, declarationKey, '05_tax_declaration_mobile.png');
 
     // 6. Test and Capture "Nộp tờ khai" Submission Guidance Modal
-    final submitButtons = find.text('Nộp tờ khai');
+    final submitButtons = find.text('Hướng dẫn nộp');
     expect(submitButtons, findsWidgets);
     await tester.tap(submitButtons.first);
     await tester.pumpAndSettle();

@@ -188,7 +188,7 @@ void main() {
         // Xác minh chi tiết đơn hàng
         expect(find.text('DH-2026-10'), findsOneWidget);
         expect(find.text('Bút ký cao cấp Parker'), findsOneWidget);
-        expect(find.text('Đã trả đủ'), findsOneWidget);
+        expect(find.text('Đã thanh toán'), findsOneWidget);
 
         // Xác minh RefreshIndicator hiện diện
         expect(find.byType(RefreshIndicator), findsOneWidget);

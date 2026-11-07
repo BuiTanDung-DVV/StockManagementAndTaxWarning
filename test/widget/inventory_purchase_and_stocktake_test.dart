@@ -8,6 +8,7 @@ import 'package:flutter_app/features/inventory/presentation/stock_take_history_s
 import 'package:flutter_app/features/inventory/presentation/stock_take_screen.dart';
 import 'package:flutter_app/features/inventory/providers/inventory_provider.dart';
 import '../support/load_ui_fonts.dart';
+import '../support/purchase_detail_fixture.dart';
 
 void main() {
   setUpAll(() async {
@@ -41,6 +42,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
+            overrides: purchaseDetailOverrides(pendingPo),
             child: MaterialApp(
               theme: AppTheme.lightTheme(AppColors.primary),
               home: PurchaseOrderDetailScreen(purchaseOrder: pendingPo),
@@ -95,6 +97,7 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
+            overrides: purchaseDetailOverrides(completedPo),
             child: MaterialApp(
               theme: AppTheme.lightTheme(AppColors.primary),
               home: PurchaseOrderDetailScreen(purchaseOrder: completedPo),

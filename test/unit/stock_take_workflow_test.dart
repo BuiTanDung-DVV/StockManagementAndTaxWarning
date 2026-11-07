@@ -22,8 +22,14 @@ void main() {
   });
 
   test('stock take history exposes complete and cancel actions for drafts', () {
-    expect(historySource, contains("updateStockTakeStatus(id, 'COMPLETED')"));
-    expect(historySource, contains("updateStockTakeStatus(id, 'CANCELLED')"));
+    expect(
+      historySource,
+      matches(RegExp(r"updateStockTakeStatus\(\s*id,\s*'COMPLETED',?\s*\)")),
+    );
+    expect(
+      historySource,
+      matches(RegExp(r"updateStockTakeStatus\(\s*id,\s*'CANCELLED',?\s*\)")),
+    );
     expect(historySource, contains('if (isDraft)'));
     expect(historySource, contains("st['stockTakeCode']"));
     expect(historySource, contains("st['stockTakeDate']"));

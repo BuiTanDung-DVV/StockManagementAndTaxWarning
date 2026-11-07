@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_app/core/theme/app_theme.dart';
@@ -36,7 +37,10 @@ class _FakeNotificationNotifier extends NotificationNotifier {
   NotificationState build() => const NotificationState(unreadCount: 0);
 
   @override
-  Future<void> loadNotifications({int page = 1}) async {}
+  Future<void> loadNotifications({
+    int page = 1,
+    bool refreshLoadedPages = false,
+  }) async {}
 }
 
 class MockSystemRepository implements SystemRepository {
@@ -64,6 +68,7 @@ class MockSystemRepository implements SystemRepository {
 }
 
 class MockSettingsOperationsRepository implements SettingsOperationsRepository {
+  int saveCount = 0;
   @override
   Future<Map<String, dynamic>> shopProfile() async => {
     'shopName': 'Cửa hàng Mẫu',
@@ -84,7 +89,10 @@ class MockSettingsOperationsRepository implements SettingsOperationsRepository {
   @override
   Future<Map<String, dynamic>> saveReceiptConfig(
     Map<String, dynamic> config,
-  ) async => {'receiptTemplateConfig': config};
+  ) async {
+    saveCount++;
+    return {'receiptTemplateConfig': config};
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -222,13 +230,33 @@ void main() {
 
   group('Wave 14 - ReceiptTemplateScreen Refresh & Validation Tests', () {
     testWidgets(
-      'ReceiptTemplateScreen validates empty title and renders legal notice',
+      'ReceiptTemplateScreen rejects empty title without saving its draft',
       (tester) async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('net.nfet.printing'),
+              (call) async =>
+                  call.method == 'printingInfo' ? {'canRaster': false} : null,
+            );
+        final repository = MockSettingsOperationsRepository();
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               settingsOperationsRepositoryProvider.overrideWithValue(
-                MockSettingsOperationsRepository(),
+                repository,
+              ),
+              shopProvider.overrideWith(
+                () => _FakeShopNotifier(
+                  const ShopState(
+                    currentShopId: 12,
+                    memberType: 'OWNER',
+                    status: 'ACTIVE',
+                    isLoading: false,
+                    userShops: [
+                      {'shopId': 12, 'memberType': 'OWNER', 'status': 'ACTIVE'},
+                    ],
+                  ),
+                ),
               ),
             ],
             child: MaterialApp(
@@ -237,22 +265,31 @@ void main() {
             ),
           ),
         );
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 150)),
+        );
+        await tester.pump(const Duration(milliseconds: 400));
 
-        expect(find.text('Mẫu phiếu in'), findsOneWidget);
-        expect(find.byType(RefreshIndicator), findsOneWidget);
-        expect(find.textContaining('Nghị định 123/2020/NĐ-CP'), findsOneWidget);
+        expect(find.text('Thiết kế mẫu phiếu'), findsOneWidget);
+        expect(find.text('Khổ giấy & bố cục'), findsOneWidget);
 
         // Clear title and tap Save
-        final titleField = find.widgetWithText(TextField, 'Tiêu đề *');
+        final titleField = find.widgetWithText(TextField, 'Tiêu đề phiếu *');
+        await tester.scrollUntilVisible(
+          titleField,
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
         await tester.enterText(titleField, '');
-        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 400));
 
-        await tester.tap(find.text('Lưu cấu hình'));
-        await tester.pumpAndSettle();
+        await tester.tap(find.text('Lưu mẫu phiếu'));
+        await tester.pump();
+        expect(repository.saveCount, 0);
 
         FocusManager.instance.primaryFocus?.unfocus();
-        await tester.pumpAndSettle();
+        await tester.pumpWidget(const SizedBox());
       },
     );
   });

@@ -72,10 +72,22 @@ void main() {
     });
 
     test('Should intercept and clear token gracefully', () async {
-      await apiClient.saveToken('test_active_token');
+      await apiClient.saveToken('test_active_token', 'test_refresh_token');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', 'legacy_access');
+      await prefs.setString('refresh_token', 'legacy_refresh');
+      expect(tokenStorage.values.length, 2);
+
       await apiClient.clearToken();
 
       expect(apiClient.token, isNull, reason: 'Token clear process failed!');
+      expect(tokenStorage.values, isEmpty);
+      expect(prefs.containsKey('auth_token'), false);
+      expect(prefs.containsKey('refresh_token'), false);
+
+      final restored = ApiClient(tokenStorage: tokenStorage);
+      await restored.loadToken();
+      expect(restored.token, isNull, reason: 'Cleared credentials reappeared');
     });
   });
 }

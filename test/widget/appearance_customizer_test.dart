@@ -71,7 +71,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('CHỌN NHANH AVATAR NHẬN DIỆN'), findsOneWidget);
-      expect(find.text('Chọn mẫu'), findsOneWidget);
+      expect(find.text('Tải ảnh lên'), findsOneWidget);
+      expect(find.text('Chọn mẫu'), findsNothing);
     });
 
     testWidgets(
@@ -149,9 +150,11 @@ void main() {
         expect(find.text('CYBER MATRIX'), findsOneWidget);
         expect(find.text('SÓNG LỤC BẢO'), findsOneWidget);
         expect(find.text('KHỐI LẬP THỂ'), findsOneWidget);
-        expect(find.text('ẢNH KHO THẬT'), findsOneWidget);
+        expect(find.text('ẢNH MINH HỌA'), findsOneWidget);
 
         // 3. Chọn thử một Preset
+        await tester.ensureVisible(find.text('Sóng Lục Bảo'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Sóng Lục Bảo'));
         await tester.pumpAndSettle();
       },

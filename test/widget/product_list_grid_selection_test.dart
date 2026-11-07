@@ -92,9 +92,12 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
-      // Starts in List mode: ListView is present
-      expect(find.byType(ListView), findsOneWidget);
-      expect(find.byType(GridView), findsNothing);
+      // Exercise the two layouts independently of the persisted/default mode.
+      await tester.tap(find.byKey(const Key('product-view-mode-list')));
+      await tester.pumpAndSettle();
+      final listWidth = tester
+          .getSize(find.byKey(const ValueKey('product-list-101')))
+          .width;
 
       // Tap Grid Mode toggle
       final gridToggle = find.byKey(const Key('product-view-mode-grid'));
@@ -104,8 +107,27 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.pumpAndSettle();
 
-      // Now in Grid mode: GridView is present
-      expect(find.byType(GridView), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const ValueKey('product-grid-101'))).width,
+        lessThan(listWidth),
+      );
+      final workspace = tester.getRect(
+        find.byKey(const Key('product-workspace')),
+      );
+      final firstCard = tester.getRect(
+        find.byKey(const ValueKey('product-grid-101')),
+      );
+      expect(firstCard.left - workspace.left, greaterThanOrEqualTo(16));
+      final gridSurface = tester.widget<DecoratedBox>(
+        find.byKey(const Key('product-grid-surface')),
+      );
+      final appColors = AppThemeColors.of(
+        tester.element(find.byKey(const Key('product-grid-surface'))),
+      );
+      expect(
+        (gridSurface.decoration as BoxDecoration).color,
+        isNot(appColors.card),
+      );
 
       // Tap List Mode toggle
       final listToggle = find.byKey(const Key('product-view-mode-list'));
@@ -116,8 +138,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Returns to List mode
-      expect(find.byType(ListView), findsOneWidget);
-      expect(find.byType(GridView), findsNothing);
+      expect(
+        tester.getSize(find.byKey(const ValueKey('product-list-101'))).width,
+        closeTo(listWidth, 1),
+      );
     });
 
     testWidgets('Bulk selection select individual, select all and clear', (
@@ -129,6 +153,28 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            authProvider.overrideWith(
+              () => _FakeAuthNotifier(
+                const AuthState(
+                  isLoggedIn: true,
+                  user: {'id': 7, 'role': 'STAFF'},
+                ),
+              ),
+            ),
+            shopProvider.overrideWith(
+              () => _FakeShopNotifier(
+                const ShopState(
+                  currentShopId: 40,
+                  currentShopName: 'Kiểm thử',
+                  memberType: 'OWNER',
+                  status: 'ACTIVE',
+                  isLoading: false,
+                  userShops: [
+                    {'shopId': 40},
+                  ],
+                ),
+              ),
+            ),
             productListProvider.overrideWith(
               (ref, args) => Future.value({
                 'items': dummyProducts,
@@ -165,7 +211,7 @@ void main() {
       // Toolbar shows "Đã chọn 1 sản phẩm"
       expect(find.text('Đã chọn 1 sản phẩm'), findsOneWidget);
       expect(
-        find.byKey(const Key('product-bulk-export-csv-button')),
+        find.byKey(const Key('product-bulk-export-xlsx-button')),
         findsOneWidget,
       );
 
@@ -406,7 +452,7 @@ void main() {
                   selectedCount: 12,
                   isExporting: false,
                   onClearSelection: () {},
-                  onExportCsv: () async {},
+                  onExport: () async {},
                 ),
               ),
             ),
@@ -417,7 +463,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Đã chọn 12 sản phẩm'), findsOneWidget);
-        expect(find.text('Xuất CSV'), findsOneWidget);
+        expect(find.text('Xuất Excel'), findsOneWidget);
         expect(find.text('Bỏ chọn'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
@@ -661,9 +707,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Đã chọn 1 sản phẩm'), findsOneWidget);
 
-        // "Xuất CSV" is NOT visible because user lacks product permission in this shop
+        // "Xuất Excel" is NOT visible because user lacks product permission in this shop
         expect(
-          find.byKey(const Key('product-bulk-export-csv-button')),
+          find.byKey(const Key('product-bulk-export-xlsx-button')),
           findsNothing,
         );
       },
