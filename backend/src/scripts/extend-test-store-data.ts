@@ -44,6 +44,18 @@ const addDays = (date: Date, days: number): Date =>
 const roundMoney = (value: number): number => Math.round(value / 1000) * 1000;
 const runId = argument('run-id') || `extend-test-data-${new Date().toISOString().replace(/[-:.TZ]/g, '')}`;
 
+const EXTEND_RETURN_REASONS = [
+    'Khách thừa vật tư hoàn lại nguyên hộp',
+    'Nhầm quy cách / kích thước thiết kế',
+    'Giảm số lượng thi công thực tế tại công trình',
+    'Bao bì bị sờn rách nhẹ khi vận chuyển, đổi mã khác',
+    'Khách đổi sang chủng loại cao cấp hơn',
+    'Chủ nhà thay đổi phương án hoàn thiện nội thất',
+    'Bao bì phân bón bị rách góc khi bốc xếp, đổi bao mới',
+    'Nhầm loại phân bón chuyên dụng',
+    'Khách lấy dư hạt giống gieo dặm hoàn lại',
+];
+
 async function createInvoiceForOrder(
     shopId: number,
     ownerId: number,
@@ -241,6 +253,7 @@ async function seedShop(
         createdOrders: 0,
         skippedOrders: 0,
         createdInvoices: 0,
+        createdReturns: 0,
         createdExpenses: 0,
         createdClosings: 0,
     };
@@ -307,6 +320,108 @@ async function seedShop(
                 String(customer.name),
             )) {
                 result.createdInvoices += 1;
+            }
+        }
+
+        if (dayIndex > 0 && dayIndex % 3 === 1) {
+            const [recentOrder] = await AppDataSource.query(`
+                SELECT o.id, o.order_code, o.total_amount, o.paid_amount, o.payment_method
+                FROM sales_orders o
+                WHERE o.shop_id = $1 AND o.status != 'CANCELLED' AND o.return_status = 'NONE'
+                  AND o.order_date <= $2
+                ORDER BY o.id DESC
+                LIMIT 1
+            `, [shopId, atVietnamTime(day, 16, 0)]);
+
+            if (recentOrder) {
+                const orderItems = await AppDataSource.query(`
+                    SELECT id, product_id, quantity, unit_price, subtotal
+                    FROM sales_order_items
+                    WHERE order_id = $1
+                    LIMIT 1
+                `, [recentOrder.id]);
+
+                if (orderItems.length > 0) {
+                    const itemToReturn = orderItems[0];
+                    const returnQty = Math.max(1, Math.min(Number(itemToReturn.quantity), 1));
+                    const refundAmount = returnQty * Number(itemToReturn.unit_price);
+                    const reason = EXTEND_RETURN_REASONS[(dayIndex + shopId) % EXTEND_RETURN_REASONS.length];
+                    const returnCode = `RTE${shopId}${compactDate}`;
+
+                    const [existingReturn] = await AppDataSource.query(
+                        'SELECT id FROM sales_returns WHERE return_code = $1',
+                        [returnCode],
+                    );
+
+                    if (!existingReturn) {
+                        await AppDataSource.transaction(async (manager) => {
+                            const [savedReturn] = await manager.query(`
+                                INSERT INTO sales_returns (
+                                    return_code, shop_id, order_id, return_date, reason,
+                                    refund_amount, refund_method, status, created_by, created_at, updated_at
+                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'COMPLETED', $8, $4, $4)
+                                RETURNING id
+                            `, [
+                                returnCode,
+                                shopId,
+                                recentOrder.id,
+                                atVietnamTime(day, 16, 30),
+                                reason,
+                                refundAmount,
+                                recentOrder.payment_method || 'CASH',
+                                ownerId,
+                            ]);
+
+                            await manager.query(`
+                                INSERT INTO sales_return_items (
+                                    return_id, product_id, quantity, unit_price, subtotal, reason
+                                ) VALUES ($1, $2, $3, $4, $5, $6)
+                            `, [
+                                savedReturn.id,
+                                itemToReturn.product_id,
+                                returnQty,
+                                itemToReturn.unit_price,
+                                refundAmount,
+                                reason,
+                            ]);
+
+                            const [warehouseRow] = await manager.query(
+                                'SELECT id FROM warehouses WHERE shop_id = $1 LIMIT 1',
+                                [shopId],
+                            );
+                            const warehouseId = warehouseRow?.id ? Number(warehouseRow.id) : 1;
+
+                            await manager.query(`
+                                INSERT INTO inventory_movements (
+                                    product_id, shop_id, warehouse_id, movement_type, quantity,
+                                    reference_type, reference_id, notes, created_by, created_at
+                                ) VALUES ($1, $2, $3, 'RETURN', $4, 'SALES_RETURN', $5, $6, $7, $8)
+                            `, [
+                                itemToReturn.product_id,
+                                shopId,
+                                warehouseId,
+                                returnQty,
+                                savedReturn.id,
+                                `Hoàn trả đơn ${recentOrder.order_code}`,
+                                ownerId,
+                                atVietnamTime(day, 16, 30),
+                            ]);
+
+                            await manager.query(`
+                                UPDATE inventory_stocks
+                                SET quantity = quantity + $1, updated_at = $2
+                                WHERE shop_id = $3 AND product_id = $4 AND warehouse_id = $5
+                            `, [returnQty, atVietnamTime(day, 16, 30), shopId, itemToReturn.product_id, warehouseId]);
+
+                            await manager.query(`
+                                UPDATE sales_orders
+                                SET return_status = 'PARTIAL_RETURN'
+                                WHERE id = $1
+                            `, [recentOrder.id]);
+                        });
+                        result.createdReturns += 1;
+                    }
+                }
             }
         }
 
@@ -383,13 +498,15 @@ async function seedShop(
 }
 
 async function main(): Promise<void> {
-    const shopIds = parseTestShopIds(argument('shop-ids'));
-    const from = parseDate(argument('from'), '--from');
-    const to = parseDate(argument('to'), '--to');
+    const rawShopIds = argument('shop-ids');
+    const shopIds = rawShopIds ? parseTestShopIds(rawShopIds) : [34, 35];
+    const rawTo = argument('to') || argument('end-date');
+    const to = rawTo ? parseDate(rawTo, '--to') : new Date();
+    const rawFrom = argument('from') || argument('start-date');
     const ordersPerDay = Number(argument('orders-per-day') || 3);
-    if (!shopIds.length || from > to || !Number.isInteger(ordersPerDay)
-        || ordersPerDay < 1 || ordersPerDay > 6) {
-        throw new Error('Tham số shop, kỳ hoặc số đơn mỗi ngày không hợp lệ');
+
+    if (!shopIds.length || !Number.isInteger(ordersPerDay) || ordersPerDay < 1 || ordersPerDay > 6) {
+        throw new Error('Tham số shop hoặc số đơn mỗi ngày không hợp lệ');
     }
     if (!process.argv.includes('--apply')) {
         throw new Error('Thêm --apply để xác nhận ghi dữ liệu kiểm thử');
@@ -414,9 +531,46 @@ async function main(): Promise<void> {
         `);
         const rows = [];
         for (const shopId of shopIds) {
+            let shopFrom: Date;
+            if (rawFrom) {
+                shopFrom = parseDate(rawFrom, '--from');
+            } else {
+                const [maxRow] = await AppDataSource.query(`
+                    SELECT MAX(order_date)::date AS max_date
+                    FROM sales_orders
+                    WHERE shop_id = $1
+                `, [shopId]);
+                if (maxRow?.max_date) {
+                    shopFrom = addDays(new Date(`${dateKey(new Date(maxRow.max_date))}T00:00:00+07:00`), 1);
+                } else {
+                    shopFrom = new Date('2026-11-08T00:00:00+07:00');
+                }
+            }
+
+            if (shopFrom > to) {
+                console.log(`[Shop ${shopId}] Đã có dữ liệu đến ngày ${dateKey(addDays(shopFrom, -1))}. Bỏ qua vì --to=${dateKey(to)}.`);
+                rows.push({
+                    shopId,
+                    from: dateKey(shopFrom),
+                    to: dateKey(to),
+                    status: 'ALREADY_UP_TO_DATE',
+                    createdOrders: 0,
+                    createdReturns: 0,
+                    createdInvoices: 0,
+                    createdExpenses: 0,
+                    createdClosings: 0,
+                });
+                continue;
+            }
+
+            console.log(`[Shop ${shopId}] Bắt đầu sinh nối tiếp từ ${dateKey(shopFrom)} đến ${dateKey(to)} (${ordersPerDay} đơn/ngày)...`);
+            const seedResult = await seedShop(shopId, shopFrom, to, ordersPerDay);
             rows.push({
                 shopId,
-                ...(await seedShop(shopId, from, to, ordersPerDay)),
+                from: dateKey(shopFrom),
+                to: dateKey(to),
+                status: 'SUCCESS',
+                ...seedResult,
             });
         }
         console.table(rows);

@@ -6,14 +6,51 @@ import { buildPurchasePaymentSchedule } from '../finance/purchase-payment-schedu
 type DbValue = string | number | boolean | Date | null;
 type Row = Record<string, DbValue>;
 
+type ProfileKey = 'construction' | 'agriculture';
+
+function parseDateArg(name: string): Date | undefined {
+  const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`));
+  if (!raw) return undefined;
+  const value = raw.slice(name.length + 3);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error(`--${name} phải có định dạng YYYY-MM-DD`);
+  }
+  const date = new Date(`${value}T17:30:00+07:00`);
+  if (Number.isNaN(date.getTime())) throw new Error(`--${name} không hợp lệ`);
+  return date;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const START_DATE = new Date('2022-01-01T08:00:00+07:00');
-const END_DATE = new Date('2026-12-31T17:30:00+07:00');
+const DEFAULT_END_DATE_STRING = '2026-11-07';
+const parsedEndDate = parseDateArg('end-date') || parseDateArg('to');
+const END_DATE = parsedEndDate ?? new Date(`${DEFAULT_END_DATE_STRING}T17:30:00+07:00`);
 const DATA_SCALE = 5;
 const PURCHASE_CYCLES_PER_MONTH = 5;
-const TOTAL_MONTHS = 60;
+const TOTAL_MONTHS =
+  (END_DATE.getFullYear() - START_DATE.getFullYear()) * 12 +
+  (END_DATE.getMonth() - START_DATE.getMonth()) +
+  1;
 const STOCK_TAKE_COUNT = 100;
-type ProfileKey = 'construction' | 'agriculture';
+
+const RETURN_REASONS: Record<ProfileKey, string[]> = {
+  construction: [
+    'Khách thừa vật tư hoàn lại nguyên hộp',
+    'Nhầm quy cách / kích thước thiết kế',
+    'Giảm số lượng thi công thực tế tại công trình',
+    'Bao bì bị sờn rách nhẹ khi vận chuyển, đổi mã khác',
+    'Khách đổi sang chủng loại cao cấp hơn',
+    'Chủ nhà thay đổi phương án hoàn thiện nội thất',
+  ],
+  agriculture: [
+    'Bao bì phân bón bị rách góc khi bốc xếp, đổi bao mới',
+    'Nhầm loại phân bón chuyên dụng cho cây ăn trái',
+    'Khách lấy dư hạt giống gieo dặm hoàn lại',
+    'Bình phun bị rò ron cao su, đổi sang model khác',
+    'Đổi sang thuốc bảo vệ thực vật sinh học',
+    'Thừa vật tư lưới che và dây tưới sau khi lắp xong vườn',
+  ],
+};
 
 type ProductDefinition = {
   name: string;
@@ -437,6 +474,8 @@ async function clearExistingShopData(
     'DELETE FROM product_batches WHERE shop_id = $1',
     'DELETE FROM unit_conversions WHERE shop_id = $1',
     'DELETE FROM product_price_history WHERE shop_id = $1',
+    'DELETE FROM opening_balance_adjustments WHERE shop_id = $1',
+    'DELETE FROM opening_balance_batches WHERE shop_id = $1',
     'DELETE FROM products WHERE shop_id = $1',
     'DELETE FROM categories WHERE shop_id = $1',
     'DELETE FROM tags WHERE shop_id = $1',
@@ -460,6 +499,7 @@ async function validateGeneratedData(
   runner: QueryRunner,
   shopId: number,
   expectedProductCount: number,
+  expectedPurchaseCount?: number,
 ): Promise<void> {
   const rows = await runner.query(`
     SELECT
@@ -639,7 +679,7 @@ async function validateGeneratedData(
     ['invalidCashBalances', Number(result.invalidCashBalances)],
     ['missingSalesDays', Number(result.missingSalesDays)],
     ['closingCount', Math.abs(Number(result.closingCount) - expectedDays)],
-    ['purchaseCount', Math.abs(Number(result.purchaseCount) - TOTAL_MONTHS * PURCHASE_CYCLES_PER_MONTH)],
+    ['purchaseCount', Math.abs(Number(result.purchaseCount) - (expectedPurchaseCount ?? TOTAL_MONTHS * PURCHASE_CYCLES_PER_MONTH))],
     ['returnCount', Number(result.returnCount) > 0 ? 0 : 1],
     ['invoiceCount', Number(result.invoiceCount) > 0 ? 0 : 1],
     ['receivableCount', Number(result.receivableCount) > 0 ? 0 : 1],
@@ -800,6 +840,16 @@ async function validateGeneratedData(
     year5Revenue: Math.round(year5),
   };
   console.table([qualitySummary]);
+  const daysInYear5 = Math.max(
+    1,
+    Math.floor(
+      (Math.min(END_DATE.getTime(), new Date('2026-12-31T23:59:59+07:00').getTime()) -
+        new Date('2026-01-01T00:00:00+07:00').getTime()) /
+        DAY_MS,
+    ) + 1,
+  );
+  const annualizedYear5 = (year5 / daysInYear5) * 365;
+
   const qualityFailures = [
     netRevenue <= 0 ? 'doanh thu không dương' : '',
     grossMargin < 15 || grossMargin > 35
@@ -822,7 +872,9 @@ async function validateGeneratedData(
     year2 <= year1 * 1.02 ? 'doanh thu năm 2 không tăng tối thiểu 2%' : '',
     year3 <= year2 * 1.02 ? 'doanh thu năm 3 không tăng tối thiểu 2%' : '',
     year4 <= year3 * 1.02 ? 'doanh thu năm 4 không tăng tối thiểu 2%' : '',
-    year5 <= year4 * 1.02 ? 'doanh thu năm 5 không tăng tối thiểu 2%' : '',
+    annualizedYear5 <= year4 * 1.02
+      ? 'doanh thu quy năm của năm 5 không tăng tối thiểu 2%'
+      : '',
   ].filter(Boolean);
   if (qualityFailures.length > 0) {
     throw new Error(`Chất lượng số liệu 5 năm chưa đạt: ${qualityFailures.join('; ')}`);
@@ -1360,6 +1412,7 @@ async function seed(
       orderId: number;
       code: string;
       date: Date;
+      reason: string;
       refund: number;
       cogs: number;
       method: string;
@@ -1553,24 +1606,46 @@ async function seed(
         });
       }
 
-      if (
+      const isRecentOrder = addDays(order.date, 7) >= END_DATE;
+      const recentReturnsCount = selectedReturns.filter(
+        (r) => addDays(r.date, 7) >= END_DATE,
+      ).length;
+      const shouldReturn =
         !order.cancelled &&
         order.initialPaid >= order.total &&
-        addDays(order.date, 10) <= END_DATE &&
-        random() < 0.012
-      ) {
-        selectedReturns.push({
-          orderId,
-          code: `RT${key}${String(selectedReturns.length + 1).padStart(5, '0')}`,
-          date: addDays(order.date, 2 + Math.floor(random() * 8)),
-          refund: order.total,
-          cogs: order.items.reduce(
-            (sum, item) => sum + item.costPrice * item.quantity,
-            0,
-          ),
-          method: order.method,
-          items: order.items,
-        });
+        order.date <= END_DATE &&
+        ((addDays(order.date, 3) <= END_DATE && random() < 0.012) ||
+          (isRecentOrder && recentReturnsCount < 4 && random() < 0.35));
+
+      if (shouldReturn) {
+        const daysAfter = isRecentOrder
+          ? Math.min(
+              1,
+              Math.max(
+                0,
+                Math.floor((END_DATE.getTime() - order.date.getTime()) / DAY_MS),
+              ),
+            )
+          : 2 + Math.floor(random() * 8);
+        const returnDate = addDays(order.date, daysAfter);
+        if (returnDate <= END_DATE) {
+          const reasonList = RETURN_REASONS[profile.key];
+          const returnReason =
+            reasonList[selectedReturns.length % reasonList.length];
+          selectedReturns.push({
+            orderId,
+            code: `RT${key}${String(selectedReturns.length + 1).padStart(5, '0')}`,
+            date: returnDate,
+            reason: returnReason,
+            refund: order.total,
+            cogs: order.items.reduce(
+              (sum, item) => sum + item.costPrice * item.quantity,
+              0,
+            ),
+            method: order.method,
+            items: order.items,
+          });
+        }
       }
     }
 
@@ -1585,7 +1660,7 @@ async function seed(
         shop_id: shopId,
         order_id: salesReturn.orderId,
         return_date: salesReturn.date,
-        reason: 'Khách thừa vật tư công trình hoàn lại',
+        reason: salesReturn.reason,
         refund_amount: salesReturn.refund,
         refund_method: salesReturn.method,
         status: 'COMPLETED',
@@ -1611,7 +1686,7 @@ async function seed(
           quantity: item.quantity,
           unit_price: item.unitPrice,
           subtotal: item.subtotal,
-          reason: 'Hoàn lại hàng nguyên vẹn',
+          reason: salesReturn.reason,
         });
         movementRows.push({
           product_id: Number(products[item.productIndex].id),
@@ -1815,11 +1890,20 @@ async function seed(
     let purchaseSequence = 1;
 
     for (const [keyMonth, soldQuantities] of [...monthlySold.entries()].sort()) {
-      for (
-        let cycleIndex = 0;
-        cycleIndex < PURCHASE_CYCLES_PER_MONTH;
-        cycleIndex += 1
-      ) {
+      const validCycles: number[] = [];
+      for (let c = 0; c < PURCHASE_CYCLES_PER_MONTH; c += 1) {
+        const pDate = keyMonth === monthKey(START_DATE)
+          ? atLocalTime(addDays(START_DATE, c), 7, 30)
+          : new Date(
+              `${keyMonth}-${String(2 + c * 6).padStart(2, '0')}T07:30:00+07:00`,
+            );
+        if (pDate <= END_DATE) {
+          validCycles.push(c);
+        }
+      }
+      if (validCycles.length === 0) continue;
+
+      for (const cycleIndex of validCycles) {
         const purchaseDate = keyMonth === monthKey(START_DATE)
           ? atLocalTime(addDays(START_DATE, cycleIndex), 7, 30)
           : new Date(
@@ -1842,7 +1926,7 @@ async function seed(
           return [{
             product_id: Number(products[index].id),
             quantity:
-              Math.ceil(sold / PURCHASE_CYCLES_PER_MONTH) +
+              Math.ceil(sold / validCycles.length) +
               (purchaseNumber === 1
                 ? profile.products[index].minStock * 4
                 : 0),
@@ -2202,16 +2286,29 @@ async function seed(
         });
       }
 
+      if (cursor.getDate() === 4) {
+        expenseRows.push({
+          date: atLocalTime(cursor, 15, 0),
+          category: 'UTILITIES',
+          amount: 4500000 + Math.floor(random() * 2000000),
+          note: 'Điện nước và viễn thông',
+        });
+      }
       if (cursor.getDate() === 5) {
         const rentAmount = 16000000 + (currentYear - 2022) * 1500000;
-        expenseRows.push({ date: atLocalTime(cursor, 9, 0), category: 'RENT', amount: rentAmount, note: 'Thuê mặt bằng kinh doanh' });
-      }
-      if (cursor.getDate() === 10) {
+        expenseRows.push({
+          date: atLocalTime(cursor, 9, 0),
+          category: 'RENT',
+          amount: rentAmount,
+          note: 'Thuê mặt bằng kinh doanh',
+        });
         const salaryAmount = 36000000 + (currentYear - 2022) * 3000000;
-        expenseRows.push({ date: atLocalTime(cursor, 10, 0), category: 'SALARY', amount: salaryAmount, note: 'Lương nhân viên cửa hàng' });
-      }
-      if (cursor.getDate() === 18) {
-        expenseRows.push({ date: atLocalTime(cursor, 15, 0), category: 'UTILITIES', amount: 4500000 + Math.floor(random() * 2000000), note: 'Điện nước và viễn thông' });
+        expenseRows.push({
+          date: atLocalTime(cursor, 10, 0),
+          category: 'SALARY',
+          amount: salaryAmount,
+          note: 'Lương nhân viên cửa hàng',
+        });
       }
       if (dayIndex % 3 === 0) {
         expenseRows.push({ date: atLocalTime(cursor, 16, 30), category: 'DELIVERY', amount: 180000 + Math.floor(random() * 520000), note: 'Giao nhận và bốc xếp hàng hóa' });
@@ -2463,8 +2560,8 @@ async function seed(
       // Tạo một số mặt hàng chạm ngưỡng tồn thấp để test cảnh báo
       const targetQuantity = index % 31 === 0
         ? 0
-        : index % 9 === 0
-          ? Math.max(Math.floor(minStock * 0.55), 1)
+        : (index === 3 || index === 7 || index === 15)
+          ? Math.max(Math.floor(minStock * 0.45), 1)
           : currentQuantity;
       const adjustment = Math.max(currentQuantity - targetQuantity, 0);
       if (adjustment <= 0) continue;
@@ -2527,16 +2624,15 @@ async function seed(
       const definition = profile.products[index];
       const tracksExpiry = profile.key === 'agriculture' ||
         /Xi măng|Sơn|Bột trét|Keo dán|Chống thấm/i.test(definition.name);
-      const nearExpiry = tracksExpiry &&
-        (profile.key === 'agriculture' ? index < 18 : index < 8);
-      const expired = tracksExpiry && index % 23 === 0;
+      const expired = tracksExpiry && (index === 0 || index === 22 || (profile.key === 'agriculture' && index === 11));
+      const nearExpiry = tracksExpiry && !expired && (profile.key === 'agriculture' ? index < 15 : index < 6);
       const expiryDate = tracksExpiry
         ? addDays(
             END_DATE,
             expired
-              ? -(3 + (index % 17))
+              ? -(3 + (index % 10))
               : nearExpiry
-                ? 10 + index
+                ? 10 + (index % 15)
                 : 180 + (index % 240),
           )
         : null;
@@ -2980,7 +3076,12 @@ async function seed(
     );
 
     console.log('Đang kiểm tra và đối soát các chỉ số chất lượng...');
-    await validateGeneratedData(runner, shopId, profile.products.length);
+    await validateGeneratedData(
+      runner,
+      shopId,
+      profile.products.length,
+      purchaseRows.length,
+    );
 
     if (commitChanges) {
       await runner.commitTransaction();
@@ -3019,7 +3120,11 @@ async function seed(
 
 async function main(): Promise<void> {
   const shopId = parseNumberArg('shop-id');
-  const profileKey = parseProfileArg();
+  let profileKey = parseProfileArg();
+  if (!profileKey && shopId) {
+    if (shopId === 34) profileKey = 'construction';
+    else if (shopId === 35) profileKey = 'agriculture';
+  }
   const profile = profileKey
     ? expandStoreProfile(STORE_PROFILES[profileKey])
     : undefined;

@@ -1,5 +1,15 @@
 import { DataSource } from 'typeorm';
 import { config } from './env.config';
+import { types } from 'pg';
+
+// Force parsing timestamp without time zone (OID 1114) as Vietnam time (+07:00)
+types.setTypeParser(1114, (str) => {
+  if (!str) return null;
+  if (str.endsWith('Z') || /[+-]\d{2}(:\d{2})?$/.test(str)) {
+    return new Date(str);
+  }
+  return new Date(str.replace(' ', 'T') + '+07:00');
+});
 
 import { AuditLogSubscriber } from '../system/audit-log.subscriber';
 

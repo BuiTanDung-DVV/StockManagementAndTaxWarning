@@ -899,7 +899,7 @@ class _TopReturnedProductsPanel extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
-                        'Ưu tiên kiểm tra chất lượng hàng, tư vấn bán và nguyên nhân đổi trả.',
+                        'Ưu tiên kiểm tra chất lượng hàng, tư vấn bán và nguyên nhân đổi trả. Nhấn vào dòng để xem chi tiết.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colors.textSecondary,
                         ),
@@ -983,6 +983,238 @@ class _TopReturnTableHeader extends StatelessWidget {
   }
 }
 
+void _showTopReturnDetailDialog(
+  BuildContext context,
+  Map<String, dynamic> item,
+) {
+  final colors = AppThemeColors.of(context);
+  final productId = int.tryParse(item['id']?.toString() ?? '');
+  final name = item['name']?.toString() ?? 'Sản phẩm chưa có tên';
+  final unit = item['unit']?.toString() ?? 'Sản phẩm';
+  final reason = item['latestReason']?.toString() ?? 'Không ghi nhận';
+  final returnCount = int.tryParse(item['returnCount']?.toString() ?? '') ?? 0;
+  final quantity = double.tryParse(item['quantity']?.toString() ?? '') ?? 0;
+  final value = double.tryParse(item['value']?.toString() ?? '') ?? 0;
+
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(
+              Icons.assignment_return_outlined,
+              size: 20,
+              color: AppColors.warning,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          const Expanded(
+            child: Text(
+              'Chi tiết sản phẩm bị trả',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 480,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: colors.cardAlt,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(color: colors.divider),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: Theme.of(dialogContext).textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${productId != null ? 'Mã sản phẩm: #$productId · ' : ''}Đơn vị: $unit',
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.bg,
+                        borderRadius: BorderRadius.circular(AppRadius.control),
+                        border: Border.all(color: colors.divider),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'LƯỢT TRẢ',
+                            style: TextStyle(
+                              color: colors.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$returnCount lượt',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.bg,
+                        borderRadius: BorderRadius.circular(AppRadius.control),
+                        border: Border.all(color: colors.divider),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'SỐ LƯỢNG',
+                            style: TextStyle(
+                              color: colors.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_quantityFormat.format(quantity)} $unit',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.bg,
+                        borderRadius: BorderRadius.circular(AppRadius.control),
+                        border: Border.all(color: colors.divider),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'GIÁ TRỊ',
+                            style: TextStyle(
+                              color: colors.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _currencyFormat.format(value),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: AppColors.danger,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Lý do trả hàng gần nhất:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: colors.bg,
+                  borderRadius: BorderRadius.circular(AppRadius.control),
+                  border: Border.all(color: colors.divider),
+                ),
+                child: SelectableText(
+                  reason,
+                  style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                    color: colors.textPrimary,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Đóng'),
+        ),
+        if (productId != null)
+          FilledButton.icon(
+            icon: const Icon(Icons.inventory_2_outlined, size: 16),
+            label: const Text('Xem sản phẩm'),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.push('/products/$productId');
+            },
+          ),
+      ],
+    ),
+  );
+}
+
 class _TopReturnRow extends StatelessWidget {
   final Map<String, dynamic> item;
   final bool desktop;
@@ -1000,117 +1232,121 @@ class _TopReturnRow extends StatelessWidget {
     final quantity = double.tryParse(item['quantity']?.toString() ?? '') ?? 0;
     final value = double.tryParse(item['value']?.toString() ?? '') ?? 0;
 
-    if (!desktop) {
-      return Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final content = desktop
+        ? Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 12,
+            ),
+            child: Row(
               children: [
                 Expanded(
+                  flex: 4,
                   child: Text(
                     name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  _currencyFormat.format(value),
-                  style: AppTheme.tabularStyle(
-                    context,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.danger,
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    reason,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    '$returnCount',
+                    textAlign: TextAlign.right,
+                    style: AppTheme.tabularStyle(context, fontSize: 13),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    _quantityFormat.format(quantity),
+                    textAlign: TextAlign.right,
+                    style: AppTheme.tabularStyle(context, fontSize: 13),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    _currencyFormat.format(value),
+                    textAlign: TextAlign.right,
+                    style: AppTheme.tabularStyle(
+                      context,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.danger,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              reason,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+          )
+        : Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      _currencyFormat.format(value),
+                      style: AppTheme.tabularStyle(
+                        context,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.danger,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  reason,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '$returnCount lượt · ${_quantityFormat.format(quantity)} $unit',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              '$returnCount lượt · ${_quantityFormat.format(quantity)} $unit',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+          );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: 12,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              reason,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              '$returnCount',
-              textAlign: TextAlign.right,
-              style: AppTheme.tabularStyle(context, fontSize: 13),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              _quantityFormat.format(quantity),
-              textAlign: TextAlign.right,
-              style: AppTheme.tabularStyle(context, fontSize: 13),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _currencyFormat.format(value),
-              textAlign: TextAlign.right,
-              style: AppTheme.tabularStyle(
-                context,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.danger,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return InkWell(
+      onTap: () => _showTopReturnDetailDialog(context, item),
+      hoverColor: colors.cardAlt.withValues(alpha: 0.7),
+      child: content,
     );
   }
 }
