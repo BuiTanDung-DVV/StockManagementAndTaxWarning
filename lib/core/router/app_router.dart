@@ -1,3 +1,6 @@
+import '../../features/settings/presentation/help_center_screen.dart';
+import '../../features/inventory/models/invoice_purchase_source.dart';
+import '../../features/settings/presentation/min_stock_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,10 +26,12 @@ import '../../features/inventory/presentation/inventory_screen.dart';
 import '../../features/inventory/presentation/stock_take_screen.dart';
 import '../../features/inventory/presentation/purchase_order_screen.dart';
 import '../../features/inventory/presentation/purchase_order_form_screen.dart';
+import '../../features/inventory/models/purchase_order_suggestion.dart';
 import '../../features/inventory/presentation/purchase_order_detail_screen.dart';
 import '../../features/finance/presentation/transaction_detail_screen.dart';
 import '../../features/sales/presentation/return_detail_screen.dart';
 import '../../features/finance/presentation/finance_screen.dart';
+import '../../features/finance/presentation/opening_balance_screen.dart';
 import '../../features/finance/presentation/daily_closing_screen.dart';
 import '../../features/finance/presentation/profit_loss_screen.dart';
 import '../../features/finance/presentation/cashflow_forecast_screen.dart';
@@ -152,10 +157,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               path == '/settings' ||
               path == '/profile' ||
               path == '/change-password' ||
-              path == '/notifications';
+              path == '/notifications' ||
+              path == '/help-center';
         }
 
         if (shopState.isOwner) return true;
+        if (path.startsWith('/opening-balances')) return false;
 
         // Define route mappings
         if (path.startsWith('/finance') ||
@@ -294,7 +301,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Products
           GoRoute(
             path: '/products',
-            builder: (_, _) => const ProductListScreen(),
+            builder: (_, state) => ProductListScreen(
+              initialCategoryId: int.tryParse(
+                state.uri.queryParameters['categoryId'] ?? '',
+              ),
+              initialCategoryName: state.uri.queryParameters['categoryName'],
+              initialInStockOnly:
+                  state.uri.queryParameters['inStockOnly'] == 'true',
+            ),
           ),
           GoRoute(
             path: '/products/tags',
@@ -305,6 +319,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => ProductFormScreen(
               product: state.extra as Map<String, dynamic>?,
             ),
+          ),
+          GoRoute(
+            path: '/products/min-stock',
+            builder: (_, _) => const MinStockSettingsScreen(),
           ),
           GoRoute(
             path: '/products/:id',
@@ -366,7 +384,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/purchase-orders/form',
-            builder: (_, _) => const PurchaseOrderFormScreen(),
+            builder: (_, state) => PurchaseOrderFormScreen(
+              sourceInvoice: state.extra is InvoicePurchaseSource
+                  ? state.extra as InvoicePurchaseSource
+                  : null,
+              suggestion: state.extra is PurchaseOrderSuggestion
+                  ? state.extra as PurchaseOrderSuggestion
+                  : null,
+            ),
           ),
           GoRoute(
             path: '/xnt-report',
@@ -375,11 +400,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/purchase-orders/detail',
             builder: (_, state) => PurchaseOrderDetailScreen(
-              purchaseOrder: state.extra as Map<dynamic, dynamic>? ?? {},
+              purchaseOrder:
+                  state.extra as Map<dynamic, dynamic>? ??
+                  {
+                    'id': state.uri.queryParameters['id'],
+                    'shopId': state.uri.queryParameters['shopId'],
+                  },
             ),
           ),
           // Finance
           GoRoute(path: '/finance', builder: (_, _) => const FinanceScreen()),
+          GoRoute(
+            path: '/opening-balances',
+            builder: (_, _) => const OpeningBalanceScreen(),
+          ),
           GoRoute(
             path: '/daily-closing',
             builder: (_, _) => const DailyClosingScreen(),
@@ -406,7 +440,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/purchases-no-invoice',
-            builder: (_, _) => const PurchaseNoInvoiceScreen(),
+            builder: (_, state) => PurchaseNoInvoiceScreen(
+              initialStatus: state.uri.queryParameters['status'],
+            ),
           ),
           GoRoute(
             path: '/invoice-scans',
@@ -462,6 +498,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           // Settings
           GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+          GoRoute(
+            path: '/help-center',
+            builder: (_, _) => const HelpCenterScreen(),
+          ),
+          GoRoute(path: '/offline', redirect: (_, _) => '/settings'),
           GoRoute(
             path: '/settings/ai-knowledge',
             builder: (_, _) => const AiKnowledgeManagementScreen(),

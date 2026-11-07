@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -245,7 +246,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             decoration: InputDecoration(
               labelText: 'Họ và tên *',
               hintText: 'Nhập họ và tên của bạn',
-              prefixIcon: const Icon(Icons.person_outline_rounded),
+              prefixIcon: const AppIcon(Icons.person_outline_rounded),
               errorText:
                   _fullNameCtrl.text.isNotEmpty &&
                       _fullNameCtrl.text.trim().length < 2
@@ -266,7 +267,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             decoration: InputDecoration(
               labelText: 'Địa chỉ Gmail *',
               hintText: 'Nhập địa chỉ @gmail.com',
-              prefixIcon: const Icon(Icons.email_outlined),
+              prefixIcon: const AppIcon(Icons.email_outlined),
               errorText:
                   _emailCtrl.text.isNotEmpty &&
                       !RegExp(
@@ -289,7 +290,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             decoration: InputDecoration(
               labelText: 'Mật khẩu *',
               hintText: 'Nhập mật khẩu',
-              prefixIcon: const Icon(Icons.lock_outline_rounded),
+              prefixIcon: const AppIcon(Icons.lock_outline_rounded),
               suffixIcon: PasswordVisibilityButton(
                 obscureText: _obscure,
                 onPressed: () => setState(() => _obscure = !_obscure),
@@ -312,7 +313,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             decoration: InputDecoration(
               labelText: 'Xác nhận mật khẩu *',
               hintText: 'Nhập lại mật khẩu',
-              prefixIcon: const Icon(Icons.lock_clock_outlined),
+              prefixIcon: const AppIcon(Icons.lock_clock_outlined),
               suffixIcon: PasswordVisibilityButton(
                 obscureText: _obscureConfirm,
                 onPressed: () =>
@@ -335,7 +336,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  const AppIcon(
                     Icons.error_outline_rounded,
                     color: AppColors.danger,
                     size: 18,
@@ -485,7 +486,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(
+                const AppIcon(
                   Icons.check_circle,
                   color: AppColors.success,
                   size: 16,
@@ -511,7 +512,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
+        AppIcon(
           met ? Icons.check_circle : Icons.remove_rounded,
           size: 14,
           color: met ? AppColors.success : c.textMuted,
@@ -542,7 +543,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       padding: EdgeInsets.only(top: 6, bottom: 4),
       child: Row(
         children: [
-          Icon(Icons.cancel_rounded, size: 14, color: AppColors.danger),
+          AppIcon(Icons.cancel_rounded, size: 14, color: AppColors.danger),
           SizedBox(width: 6),
           Text(
             'Mật khẩu xác nhận chưa khớp',

@@ -1,3 +1,4 @@
+import '../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:bot_toast/bot_toast.dart';
 import '../theme/app_theme.dart';
@@ -46,7 +47,7 @@ class ToastService {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, color: Colors.white, size: 24),
+                  AppIcon(icon, color: Colors.white, size: 24),
                   const SizedBox(width: 12),
                   Flexible(
                     child: Text(

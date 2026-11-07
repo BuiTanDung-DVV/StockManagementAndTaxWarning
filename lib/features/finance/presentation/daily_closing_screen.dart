@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +10,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/responsive_layout.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../domain/closing_cash_assessment.dart';
 import '../providers/finance_provider.dart';
@@ -179,7 +179,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
               final bankExpense = asNum(data['bankExpense']);
               final totalSales = asNum(data['totalSales']);
               final totalReturns = asNum(data['totalReturns']);
-              final netProfit = totalIncome - totalExpense;
+              final netCashFlow = totalIncome - totalExpense;
               final orderCount = (data['orderCount'] as num?)?.toInt() ?? 0;
               final closed = data['closed'] == true;
               final transactions = data['transactions'] as List? ?? [];
@@ -254,7 +254,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                _fmt(netProfit),
+                                _fmt(netCashFlow),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 32,
@@ -262,10 +262,19 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                                 ),
                               ),
                               const Text(
-                                'Lợi nhuận ròng trong ngày',
+                                'Chênh lệch thu – chi trong ngày',
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Bao gồm mọi khoản thu, chi đã ghi nhận. Xem lợi nhuận tại Kết quả kinh doanh.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -281,7 +290,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
+                                    AppIcon(
                                       Icons.check_circle_outline,
                                       color: Colors.white,
                                       size: 16,
@@ -547,7 +556,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                         child: Column(
                           children: [
                             Text(
-                              'SỔ SÁCH TIỀN MẶT HÔM NAY',
+                              'TIỀN MẶT DỰ KIẾN HÔM NAY',
                               style: GoogleFonts.manrope(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -565,10 +574,11 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Tiền mặt két dự kiến (Đầu ca + Thu - Chi tiền mặt)',
+                              'Tiền đầu ngày + Thu tiền mặt − Chi tiền mặt',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: c.textSecondary,
-                                fontSize: 11,
+                                fontSize: 13,
                               ),
                             ),
                           ],
@@ -577,26 +587,22 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                       const SizedBox(height: 20),
 
                       // Cash breakdown metrics
-                      AppFillGrid(
-                        minItemWidth: 140,
-                        maxColumns: 3,
-                        spacing: 12,
-                        runSpacing: 12,
+                      _ClosingMetricGroup(
                         children: [
                           _SummaryTile(
-                            'Đầu ca',
+                            'Tiền đầu ngày',
                             _fmt(openingCash),
                             c.textPrimary,
                             Icons.account_balance_wallet,
                           ),
                           _SummaryTile(
-                            'Thu mặt',
+                            'Thu tiền mặt',
                             _fmt(cashIncome),
                             AppColors.success,
                             Icons.add_circle_outline,
                           ),
                           _SummaryTile(
-                            'Chi mặt',
+                            'Chi tiền mặt',
                             _fmt(cashExpense),
                             AppColors.danger,
                             Icons.remove_circle_outline,
@@ -613,20 +619,16 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      AppFillGrid(
-                        minItemWidth: 140,
-                        maxColumns: 3,
-                        spacing: 12,
-                        runSpacing: 12,
+                      _ClosingMetricGroup(
                         children: [
                           _SummaryTile(
-                            'Doanh số',
+                            'Giá trị đơn lập',
                             _fmt(totalSales),
                             theme.colorScheme.primary,
                             Icons.receipt_long_outlined,
                           ),
                           _SummaryTile(
-                            'Trả hàng',
+                            'Giá trị hàng trả',
                             _fmt(totalReturns),
                             AppColors.warning,
                             Icons.assignment_return_outlined,
@@ -642,6 +644,12 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
+
+                      Text(
+                        'Đơn lập trong ngày chưa trừ hàng trả. Hàng trả tính sau giảm giá, gồm thuế hàng hóa; không gồm phí giao. Tiền hoàn đã tính trong chi.',
+                        style: TextStyle(fontSize: 13, color: c.textSecondary),
+                      ),
+                      const SizedBox(height: 20),
 
                       // Count input
                       Text(
@@ -680,7 +688,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
-                          prefixIcon: Icon(
+                          prefixIcon: AppIcon(
                             Icons.calculate,
                             color: theme.colorScheme.primary,
                           ),
@@ -737,31 +745,52 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                                         )),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Chênh lệch két (Thực tế - Dự kiến):',
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            const label = Text(
+                              'Chênh lệch két (Thực tế − Dự kiến)',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
-                            ),
-                            Text(
-                              hasAssessment
-                                  ? _fmt(differenceValue)
-                                  : 'Chưa đối soát',
+                            );
+                            final value = Text(
+                              !hasAssessment
+                                  ? 'Chưa đối soát'
+                                  : differenceValue == 0
+                                  ? 'Khớp quỹ (${_fmt(0)})'
+                                  : _fmt(differenceValue),
+                              textAlign: TextAlign.right,
                               style: GoogleFonts.manrope(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: !hasAssessment || differenceValue == 0
                                     ? c.textSecondary
-                                    : (differenceValue > 0
-                                          ? AppColors.success
-                                          : AppColors.danger),
+                                    : differenceValue > 0
+                                    ? AppColors.success
+                                    : AppColors.danger,
                               ),
-                            ),
-                          ],
+                            );
+                            if (constraints.maxWidth < 500 ||
+                                MediaQuery.textScalerOf(context).scale(14) >
+                                    18) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  label,
+                                  const SizedBox(height: 8),
+                                  value,
+                                ],
+                              );
+                            }
+                            return Row(
+                              children: [
+                                const Expanded(child: label),
+                                const SizedBox(width: 12),
+                                value,
+                              ],
+                            );
+                          },
                         ),
                       ),
 
@@ -779,7 +808,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              const AppIcon(
                                 Icons.error_outline,
                                 color: AppColors.danger,
                                 size: 18,
@@ -916,7 +945,7 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.lock_outline, size: 18),
+                                    const AppIcon(Icons.lock_outline, size: 18),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Chốt ca & Khóa sổ',
@@ -942,56 +971,115 @@ class _DailyClosingScreenState extends ConsumerState<DailyClosingScreen> {
   }
 }
 
-class _SummaryTile extends StatelessWidget {
-  final String label, value;
-  final Color color;
-  final IconData icon;
-  const _SummaryTile(this.label, this.value, this.color, this.icon);
+class _ClosingMetricGroup extends StatelessWidget {
+  final List<_SummaryTile> children;
+  const _ClosingMetricGroup({required this.children});
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.divider.withValues(alpha: 0.4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 16),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: c.textSecondary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked =
+            constraints.maxWidth < 640 ||
+            MediaQuery.textScalerOf(context).scale(14) > 18;
+        if (stacked) {
+          return Container(
+            decoration: BoxDecoration(
+              color: c.card,
+              border: Border.all(color: c.divider),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0) Divider(height: 1, color: c.divider),
+                  _SummaryTile(
+                    children[i].label,
+                    children[i].value,
+                    children[i].color,
+                    children[i].icon,
+                    compact: true,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+                ],
+              ],
+            ),
+          );
+        }
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0) const SizedBox(width: 12),
+                Expanded(child: children[i]),
+              ],
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.manrope(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: color,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        );
+      },
+    );
+  }
+}
+
+class _SummaryTile extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  final IconData icon;
+  final bool compact;
+  const _SummaryTile(
+    this.label,
+    this.value,
+    this.color,
+    this.icon, {
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final labelWidget = Row(
+      children: [
+        AppIcon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: c.textSecondary, fontSize: 13),
           ),
-        ],
+        ),
+      ],
+    );
+    final valueWidget = Text(
+      value,
+      textAlign: compact ? TextAlign.right : TextAlign.left,
+      style: GoogleFonts.manrope(
+        fontWeight: FontWeight.w700,
+        fontSize: 16,
+        color: color,
       ),
+    );
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: compact
+          ? null
+          : BoxDecoration(
+              color: c.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: c.divider),
+            ),
+      child: compact
+          ? Row(
+              children: [
+                Expanded(flex: 6, child: labelWidget),
+                const SizedBox(width: 12),
+                Expanded(flex: 5, child: valueWidget),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [labelWidget, const SizedBox(height: 10), valueWidget],
+            ),
     );
   }
 }

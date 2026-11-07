@@ -1,10 +1,20 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../models/xnt_export.dart';
+import '../models/purchase_order_suggestion.dart';
+import '../models/replenishment_safety.dart';
 import '../../settings/providers/shop_provider.dart';
 
 class InventoryRepository {
   final ApiClient _api;
   InventoryRepository(this._api);
+  Future<Map<String, dynamic>> createPurchaseFromScan(
+    int scanId,
+    Map<String, dynamic> data,
+  ) async => Map<String, dynamic>.from(
+    await _api.post('/invoice-scans/$scanId/purchase-order', data: data),
+  );
 
   Future<dynamic> getCurrentStock({int? warehouseId, int limit = 500}) async {
     final params = <String, dynamic>{'page': '1', 'limit': '$limit'};
@@ -72,6 +82,35 @@ class InventoryRepository {
     return data;
   }
 
+  Future<XntExport> exportXntInShop(
+    int shopId, {
+    required String from,
+    required String to,
+    int? warehouseId,
+    required bool Function() isCurrentScope,
+  }) async {
+    final response = await _api.getOnlineInShop(
+      '/inventory/xnt-export',
+      '$shopId',
+      params: {
+        'from': from,
+        'to': to,
+        if (warehouseId != null) 'warehouseId': '$warehouseId',
+      },
+      isCurrentScope: isCurrentScope,
+    );
+    if (!isCurrentScope() || _api.shopId != '$shopId') {
+      throw ApiException('Phạm vi báo cáo đã thay đổi.', 409);
+    }
+    return XntExport.fromResponse(
+      response,
+      shopId: shopId,
+      from: from,
+      to: to,
+      warehouseId: warehouseId,
+    );
+  }
+
   Future<Map<String, dynamic>> getXNTReport(
     String from,
     String to, {
@@ -99,14 +138,92 @@ class InventoryRepository {
   Future<Map<String, dynamic>> findPurchaseOrders({
     int page = 1,
     int limit = 20,
+    String? search,
+    String? status,
   }) async => await _api.get(
     '/purchase-orders',
-    params: {'page': '$page', 'limit': '$limit'},
+    params: {
+      'page': '$page',
+      'limit': '$limit',
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      if (status != null && status.isNotEmpty) 'status': status,
+    },
   );
 
   Future<Map<String, dynamic>> createPurchaseOrder(
     Map<String, dynamic> dto,
   ) async => await _api.post('/purchase-orders', data: dto);
+
+  Future<List<PendingPurchaseMatch>> reviewReplenishmentInShop(
+    int shopId,
+    List<ReplenishmentLine> selected, {
+    required bool Function() isCurrentScope,
+  }) => checkReplenishmentSafety(
+    shopId: shopId,
+    selected: selected,
+    isCurrentScope: isCurrentScope,
+    loadStock: () async {
+      final rows = await _api.getOnlineInShop(
+        '/inventory/low-stock',
+        '$shopId',
+        isCurrentScope: isCurrentScope,
+      );
+      if (rows is! List) {
+        throw ApiException('Dữ liệu tồn kho mới không đầy đủ.');
+      }
+      return rows;
+    },
+    loadPendingPage: (page) async {
+      final result = await _api.getOnlineInShop(
+        '/purchase-orders',
+        '$shopId',
+        params: {'page': '$page', 'limit': '100', 'status': 'PENDING'},
+        isCurrentScope: isCurrentScope,
+      );
+      if (result is! Map) throw ApiException('Chưa tải được phiếu nhập chờ.');
+      return Map<String, dynamic>.from(result);
+    },
+  );
+
+  Future<Map<String, dynamic>> getPurchaseOrderInShop(
+    int id,
+    int shopId, {
+    required bool Function() isCurrentScope,
+  }) async {
+    final result = await _api.getOnlineInShop(
+      '/purchase-orders/$id',
+      '$shopId',
+      isCurrentScope: isCurrentScope,
+    );
+    if (result is! Map ||
+        '${result['id']}' != '$id' ||
+        '${result['shopId']}' != '$shopId') {
+      throw ApiException('Dữ liệu chi tiết đơn nhập không hợp lệ.');
+    }
+    return Map<String, dynamic>.from(result);
+  }
+
+  Future<dynamic> updatePurchaseOrderInShop(
+    int id,
+    int shopId,
+    Map<String, dynamic> dto, {
+    required bool Function() isCurrentScope,
+  }) => _api.putInShop(
+    '/purchase-orders/$id',
+    '$shopId',
+    data: dto,
+    isCurrentScope: isCurrentScope,
+  );
+
+  Future<dynamic> deletePurchaseOrderInShop(
+    int id,
+    int shopId, {
+    required bool Function() isCurrentScope,
+  }) => _api.deleteInShop(
+    '/purchase-orders/$id',
+    '$shopId',
+    isCurrentScope: isCurrentScope,
+  );
 
   Future<Map<String, dynamic>> updatePurchaseOrder(
     int id,
@@ -146,6 +263,7 @@ final stockPageProvider = FutureProvider.family<Map<String, dynamic>, int?>((
   ref,
   warehouseId,
 ) async {
+  watchDataFreshness(ref, DataArea.inventory);
   final result = await ref
       .watch(inventoryRepoProvider)
       .getCurrentStock(warehouseId: warehouseId);
@@ -180,6 +298,7 @@ final stockProvider = FutureProvider.family<List<dynamic>, int?>((
   ref,
   warehouseId,
 ) async {
+  watchDataFreshness(ref, DataArea.inventory);
   final result = await ref
       .watch(inventoryRepoProvider)
       .getCurrentStock(warehouseId: warehouseId);
@@ -192,6 +311,7 @@ final stockProvider = FutureProvider.family<List<dynamic>, int?>((
 });
 
 final lowStockProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.inventory);
   return ref.watch(inventoryRepoProvider).getLowStock();
 });
 
@@ -200,12 +320,14 @@ final inventoryMovementsProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.inventory);
       return ref
           .watch(inventoryRepoProvider)
           .getMovements(productId: args.productId, page: args.page);
     });
 
 final warehousesProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.inventory);
   return ref.watch(inventoryRepoProvider).findWarehouses();
 });
 
@@ -214,26 +336,49 @@ final xntReportProvider =
       Map<String, dynamic>,
       ({String from, String to, int? warehouseId})
     >((ref, args) {
+      watchDataFreshness(ref, DataArea.inventory);
       return ref
           .watch(inventoryRepoProvider)
           .getXNTReport(args.from, args.to, warehouseId: args.warehouseId);
     });
 
 final expiringProductsProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.inventory);
   return ref.watch(inventoryRepoProvider).getExpiringProducts();
 });
 
 final slowMovingProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.inventory);
   return ref.watch(inventoryRepoProvider).getSlowMovingProducts();
 });
 
 final purchaseOrdersProvider = FutureProvider.family<Map<String, dynamic>, int>(
   (ref, page) {
+    watchDataFreshness(ref, DataArea.inventory);
     return ref.watch(inventoryRepoProvider).findPurchaseOrders(page: page);
   },
 );
 
+final purchaseOrderQueryProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>, ({int page, String search, String status})>((
+      ref,
+      query,
+    ) {
+      watchDataFreshness(ref, DataArea.inventory);
+      if (query.search.isEmpty && query.status.isEmpty) {
+        return ref.watch(purchaseOrdersProvider(query.page).future);
+      }
+      return ref
+          .watch(inventoryRepoProvider)
+          .findPurchaseOrders(
+            page: query.page,
+            search: query.search,
+            status: query.status,
+          );
+    });
+
 final inventoryCategoriesSummaryProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.inventory);
   return ref.watch(inventoryRepoProvider).getCategoriesSummary();
 });
 
@@ -242,6 +387,7 @@ final inventoryAbcProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.inventory);
       return ref
           .watch(inventoryRepoProvider)
           .getAbcAnalysis(args.from, args.to);
@@ -251,5 +397,6 @@ final stockTakesProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   page,
 ) {
+  watchDataFreshness(ref, DataArea.inventory);
   return ref.watch(inventoryRepoProvider).findStockTakes(page: page);
 });

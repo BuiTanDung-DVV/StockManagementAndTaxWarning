@@ -1,3 +1,4 @@
+import '../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_theme.dart';
@@ -36,9 +37,10 @@ class _AddressInputFieldState extends State<AddressInputField> {
   void _parseInitialValue() {
     if (widget.initialValue.isEmpty) return;
     final parts = widget.initialValue.split(',');
-    if (parts.length > 1) {
+    if (parts.isNotEmpty) {
       final lastPart = parts.last.trim();
-      if (vietnamProvinces.contains(lastPart)) {
+      if (vietnamProvinces.contains(lastPart) ||
+          legacyVietnamProvinces.contains(lastPart)) {
         _selectedProvince = lastPart;
       }
     }
@@ -47,12 +49,12 @@ class _AddressInputFieldState extends State<AddressInputField> {
   String _getDetailPart() {
     if (widget.initialValue.isEmpty) return '';
     if (_selectedProvince == null) return widget.initialValue;
-    final suffix = ', $_selectedProvince';
-    if (widget.initialValue.endsWith(suffix)) {
-      return widget.initialValue.substring(
-        0,
-        widget.initialValue.length - suffix.length,
-      );
+    if (widget.initialValue.trim() == _selectedProvince) return '';
+    final separator = widget.initialValue.lastIndexOf(',');
+    if (separator >= 0 &&
+        widget.initialValue.substring(separator + 1).trim() ==
+            _selectedProvince) {
+      return widget.initialValue.substring(0, separator).trim();
     }
     return widget.initialValue;
   }
@@ -89,7 +91,7 @@ class _AddressInputFieldState extends State<AddressInputField> {
             labelText: 'Tỉnh/Thành phố',
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
-              child: HugeIcon(
+              child: AppHugeIcon(
                 icon: HugeIcons.strokeRoundedLocation01,
                 size: 20,
                 color: AppColors.primary,
@@ -110,9 +112,17 @@ class _AddressInputFieldState extends State<AddressInputField> {
               vertical: 14,
             ),
           ),
-          items: vietnamProvinces
-              .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-              .toList(),
+          items: [
+            if (_selectedProvince != null &&
+                !vietnamProvinces.contains(_selectedProvince))
+              DropdownMenuItem(
+                value: _selectedProvince,
+                child: Text('$_selectedProvince (địa chỉ cũ)'),
+              ),
+            ...vietnamProvinces.map(
+              (p) => DropdownMenuItem(value: p, child: Text(p)),
+            ),
+          ],
           onChanged: (v) {
             setState(() => _selectedProvince = v);
             _emitChange();
@@ -126,7 +136,7 @@ class _AddressInputFieldState extends State<AddressInputField> {
             labelText: 'Chi tiết địa chỉ (Số nhà, đường, phường/xã)',
             prefixIcon: Padding(
               padding: const EdgeInsets.all(12),
-              child: HugeIcon(
+              child: AppHugeIcon(
                 icon: HugeIcons.strokeRoundedLocation01,
                 size: 20,
                 color: AppColors.primary,

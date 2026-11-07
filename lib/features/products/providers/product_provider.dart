@@ -1,24 +1,107 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
 import 'tag_provider.dart';
+import '../../../core/utils/paged_records.dart';
+import '../models/inventory_export.dart';
 
 class ProductRepository {
   final ApiClient _api;
   ProductRepository(this._api);
+
+  Future<InventoryExport> exportInventoryInShop(
+    int shopId, {
+    String? search,
+    String? tag,
+    int? categoryId,
+    bool inStockOnly = false,
+    required bool Function() isCurrentScope,
+  }) async {
+    final params = <String, dynamic>{
+      if (search?.trim().isNotEmpty == true) 'search': search!.trim(),
+      if (tag?.trim().isNotEmpty == true) 'tag': tag!.trim(),
+      if (categoryId != null) 'categoryId': '$categoryId',
+      if (inStockOnly) 'inStockOnly': 'true',
+    };
+    final raw = await _api.getOnlineInShop(
+      '/products/export',
+      '$shopId',
+      params: params,
+      isCurrentScope: isCurrentScope,
+    );
+    return InventoryExport.fromResponse(
+      raw,
+      shopId: shopId,
+      search: search,
+      tag: tag,
+      categoryId: categoryId,
+      inStockOnly: inStockOnly,
+    );
+  }
 
   Future<Map<String, dynamic>> findAll({
     int page = 1,
     int limit = 20,
     String? search,
     String? tag,
+    int? categoryId,
+    bool inStockOnly = false,
   }) async {
     final params = <String, dynamic>{'page': '$page', 'limit': '$limit'};
     if (search != null) params['search'] = search;
     if (tag != null && tag.trim().isNotEmpty) params['tag'] = tag.trim();
+    if (categoryId != null) params['categoryId'] = '$categoryId';
+    if (inStockOnly) params['inStockOnly'] = 'true';
     return await _api.get('/products', params: params);
+  }
+
+  /// Read every matching page; never export a silently truncated first page.
+  Future<List<dynamic>> findAllMatching({
+    String? search,
+    String? tag,
+    int? categoryId,
+    bool inStockOnly = false,
+    required bool Function() isCurrent,
+  }) async {
+    final products = <int, dynamic>{};
+    int? expectedTotal;
+    for (var page = 1; ; page++) {
+      if (!isCurrent()) throw StateError('Phạm vi lựa chọn đã thay đổi');
+      final data = await findAll(
+        page: page,
+        limit: 100,
+        search: search,
+        tag: tag,
+        categoryId: categoryId,
+        inStockOnly: inStockOnly,
+      );
+      if (!isCurrent()) throw StateError('Phạm vi lựa chọn đã thay đổi');
+      final total = (data['total'] as num?)?.toInt();
+      final items = data['items'];
+      if (total == null ||
+          total < 0 ||
+          items is! List ||
+          (expectedTotal != null && expectedTotal != total)) {
+        throw StateError(
+          'Danh sách đã thay đổi. Vui lòng tải lại trước khi xuất.',
+        );
+      }
+      expectedTotal = total;
+      var added = 0;
+      for (final item in items) {
+        final id = int.tryParse('${item['id']}');
+        if (id == null || id <= 0) throw StateError('Sản phẩm không hợp lệ');
+        if (!products.containsKey(id)) added++;
+        products[id] = item;
+      }
+      if (products.length == total) return products.values.toList();
+      if (added == 0 || products.length > total) {
+        throw StateError('Không tải đủ danh sách sản phẩm');
+      }
+    }
   }
 
   Future<Map<String, dynamic>> findById(int id) async =>
@@ -69,43 +152,70 @@ final productRepoProvider = Provider<ProductRepository>((ref) {
 final productListProvider =
     FutureProvider.family<
       Map<String, dynamic>,
-      ({int page, String? search, String? tag})
+      ({
+        int page,
+        String? search,
+        String? tag,
+        int? categoryId,
+        bool inStockOnly,
+      })
     >((ref, args) {
+      watchDataFreshness(ref, DataArea.products);
       return ref
           .watch(productRepoProvider)
-          .findAll(page: args.page, search: args.search, tag: args.tag);
+          .findAll(
+            page: args.page,
+            search: args.search,
+            tag: args.tag,
+            categoryId: args.categoryId,
+            inStockOnly: args.inStockOnly,
+          );
     });
 
 /// Complete option set for transactional forms.
 /// List screens remain paginated; forms must not silently hide products after
 /// the first API page.
 final productOptionsProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.watch(productRepoProvider).findAll(page: 1, limit: 500);
+  watchDataFreshness(ref, DataArea.products);
+  final repo = ref.watch(productRepoProvider);
+  var active = true;
+  ref.onDispose(() => active = false);
+  return collectPagedRecords(
+    (page, limit) => repo.findAll(page: page, limit: limit),
+    isCurrent: () => active,
+  );
 });
 
 final productDetailProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   id,
 ) {
+  watchDataFreshness(ref, DataArea.products);
   return ref.watch(productRepoProvider).findById(id);
 });
 
 final categoriesProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.products);
   return ref.watch(productRepoProvider).findCategories();
 });
 
 final availableTagsProvider = FutureProvider<List<TagModel>>((ref) async {
-  // Fetch managed tags
-  final managedTags = await ref.read(tagRepoProvider).getAll(type: 'product');
+  watchDataFreshness(ref, DataArea.products);
+  // Follow the same sources invalidated by inline tag creation and product saves.
+  final sources = await Future.wait<dynamic>([
+    ref.watch(tagListProvider('product').future),
+    ref.watch(productOptionsProvider.future),
+  ]);
+  final managedTags = sources[0] as List<TagModel>;
   final tagMap = {for (var t in managedTags) t.name: t};
 
   // Fetch recent products to find used tags not in managed list
-  final res = await ref.watch(productRepoProvider).findAll(limit: 500);
+  final res = sources[1] as Map<String, dynamic>;
   final items = res['items'];
   if (items is! List) {
     throw ApiException('Dữ liệu sản phẩm không hợp lệ');
   }
-  final Set<String> usedTags = {};
+  final Set<String> usedTags = {'Hết hàng', 'Sắp hết'};
 
   for (final item in items) {
     final tagsRaw = item['tags'];

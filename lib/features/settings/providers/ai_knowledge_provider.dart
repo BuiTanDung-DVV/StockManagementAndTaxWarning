@@ -1,3 +1,4 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
@@ -62,6 +63,7 @@ class AiDocument {
 class AiKnowledgeNotifier extends AsyncNotifier<List<AiDocument>> {
   @override
   Future<List<AiDocument>> build() async {
+    watchDataFreshness(ref, DataArea.documents);
     final shopState = ref.watch(shopProvider);
     if (shopState.isAllShops || shopState.currentShopId == null) {
       throw StateError('Vui lòng chọn một cửa hàng để tải kho tài liệu AI.');

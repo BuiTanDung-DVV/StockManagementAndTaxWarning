@@ -21,7 +21,7 @@ export const create = async (req: Request, res: Response) => {
 
 export const update = async (req: Request, res: Response) => {
     try { res.json({ success: true, data: await supplierService.update((req as any).shopId, +req.params.id, req.body) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) { res.status(e instanceof PartyInputError ? 400 : 500).json({ success: false, message: e.message }); }
 };
 
 export const remove = async (req: Request, res: Response) => {

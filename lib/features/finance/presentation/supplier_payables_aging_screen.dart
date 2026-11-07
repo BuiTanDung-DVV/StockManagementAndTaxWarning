@@ -1,3 +1,4 @@
+import 'aging_debt_details.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +24,14 @@ final _payableCurrency = NumberFormat.currency(
   decimalDigits: 0,
 );
 
+String? supplierPayableAdjustmentLabel(Map<String, dynamic> item) {
+  final value = num.tryParse(
+    item['openingAdjustmentAmount']?.toString() ?? '0',
+  );
+  if (value == null || !value.isFinite || value == 0) return null;
+  return 'Điều chỉnh đầu kỳ: ${value > 0 ? '+' : ''}${_payableCurrency.format(value)}';
+}
+
 class SupplierPayablesAgingScreen extends ConsumerWidget {
   const SupplierPayablesAgingScreen({super.key});
 
@@ -47,6 +56,7 @@ class SupplierPayablesAgingScreen extends ConsumerWidget {
               children: [
                 AppPageHeader(
                   title: 'Tuổi nợ phải trả',
+                  showBackButton: true,
                   subtitle:
                       'Theo dõi khoản còn phải thanh toán và ưu tiên nhà cung cấp đã quá hạn.',
                   dense: true,
@@ -97,6 +107,14 @@ class _PayablesReport extends StatelessWidget {
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
         .toList();
+    void explore([String bucket = 'ALL', int? partyId]) =>
+        showAgingDebtExplorer(
+          context,
+          payable: true,
+          rows: items,
+          bucket: bucket,
+          partyId: partyId,
+        );
     final total = asDouble(summary['totalOutstanding']);
     final overdue = asDouble(summary['overdueOutstanding']);
     final overdueRatio = asDouble(summary['overdueRatio']);
@@ -125,13 +143,15 @@ class _PayablesReport extends StatelessWidget {
           children: [
             AppKpiCard(
               title: 'Tổng phải trả',
+              onTap: () => explore('ALL'),
               value: _payableCurrency.format(total),
               color: AppColors.primary,
               assetPath: AppAssets.cash,
-              badgeText: 'Tại $asOf',
+              badgeText: 'Tại ${_displayDate(asOf)}',
             ),
             AppKpiCard(
               title: 'Đã quá hạn',
+              onTap: () => explore('OVERDUE'),
               value: _payableCurrency.format(overdue),
               color: AppColors.danger,
               assetPath: AppAssets.orders,
@@ -140,6 +160,7 @@ class _PayablesReport extends StatelessWidget {
             ),
             AppKpiCard(
               title: 'Khoản đang mở',
+              onTap: () => explore('ALL'),
               value: NumberFormat.decimalPattern('vi_VN').format(payableCount),
               color: AppColors.warning,
               assetPath: AppAssets.book,
@@ -147,6 +168,7 @@ class _PayablesReport extends StatelessWidget {
             ),
             AppKpiCard(
               title: 'Nhà cung cấp có dư nợ',
+              onTap: () => explore('ALL'),
               value: NumberFormat.decimalPattern('vi_VN').format(supplierCount),
               color: AppColors.info,
               assetPath: AppAssets.inventory,
@@ -163,6 +185,8 @@ class _PayablesReport extends StatelessWidget {
               trailing: const Text('Đơn vị: đồng'),
               child: MiniBarChart(
                 values: [current, past30, past60, past90],
+                onBarTap: (index) =>
+                    explore(['current', 'past30', 'past60', 'past90'][index]),
                 labels: const ['Chưa hạn', '1–30', '31–60', '>60'],
                 tooltipLabels: const [
                   'Chưa đến hạn',
@@ -182,6 +206,7 @@ class _PayablesReport extends StatelessWidget {
             );
             final priorities = _SupplierPriorityPanel(
               suppliers: suppliers,
+              onSupplierTap: (id) => explore('ALL', id),
               maximum: suppliers.fold<double>(
                 0,
                 (value, item) => asDouble(item['totalOutstanding']) > value
@@ -210,7 +235,7 @@ class _PayablesReport extends StatelessWidget {
           },
         ),
         const SizedBox(height: AppSpacing.xl),
-        _OpenPayablesSection(items: items, totalCount: payableCount),
+        AgingDebtTable(rows: items, payable: true),
       ],
     );
   }
@@ -219,10 +244,12 @@ class _PayablesReport extends StatelessWidget {
 class _SupplierPriorityPanel extends StatelessWidget {
   final List<Map<String, dynamic>> suppliers;
   final double maximum;
+  final ValueChanged<int>? onSupplierTap;
 
   const _SupplierPriorityPanel({
     required this.suppliers,
     required this.maximum,
+    this.onSupplierTap,
   });
 
   @override
@@ -231,7 +258,7 @@ class _SupplierPriorityPanel extends StatelessWidget {
     return AppCardContainer(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: SizedBox(
-        height: 294,
+        height: 282,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -267,229 +294,57 @@ class _SupplierPriorityPanel extends StatelessWidget {
                         final overdue = asDouble(
                           supplier['overdueOutstanding'],
                         );
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    '${index + 1}. ${supplier['supplierName'] ?? supplier['name'] ?? supplier['supplier']?['name'] ?? 'Chưa xác định'}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                        return InkWell(
+                          onTap: () => onSupplierTap?.call(
+                            asInt(supplier['supplierId']),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${index + 1}. ${supplier['supplierName'] ?? supplier['name'] ?? supplier['supplier']?['name'] ?? 'Chưa xác định'}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Text(
-                                  _payableCurrency.format(outstanding),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
+                                  Text(
+                                    _payableCurrency.format(outstanding),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.xxs),
-                            LinearProgressIndicator(
-                              value: maximum <= 0
-                                  ? 0
-                                  : (outstanding / maximum).clamp(0, 1),
-                              minHeight: 6,
-                              borderRadius: BorderRadius.circular(4),
-                              backgroundColor: colors.divider,
-                              valueColor: AlwaysStoppedAnimation(
-                                overdue > 0
-                                    ? AppColors.danger
-                                    : AppColors.primary,
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: AppSpacing.xxs),
+                              LinearProgressIndicator(
+                                value: maximum <= 0
+                                    ? 0
+                                    : (outstanding / maximum).clamp(0, 1),
+                                minHeight: 6,
+                                borderRadius: BorderRadius.circular(4),
+                                backgroundColor: colors.divider,
+                                valueColor: AlwaysStoppedAnimation(
+                                  overdue > 0
+                                      ? AppColors.danger
+                                      : AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
                         );
                       },
                     ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _OpenPayablesSection extends StatelessWidget {
-  final List<Map<String, dynamic>> items;
-  final int totalCount;
-
-  const _OpenPayablesSection({required this.items, required this.totalCount});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (supplierPayablesUsesMobileCards(constraints.maxWidth)) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Khoản cần xử lý sớm',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              for (final item in items) _PayableMobileCard(item: item),
-            ],
-          );
-        }
-
-        return AppDataTable<Map<String, dynamic>>(
-          title: 'Khoản cần xử lý sớm',
-          assetPath: AppAssets.cash,
-          iconColor: AppColors.danger,
-          headerAction: Text(
-            'Hiển thị ${items.length}/$totalCount khoản',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-          columns: const [
-            AppDataTableColumn(title: 'NHÀ CUNG CẤP', flex: 4),
-            AppDataTableColumn(title: 'HẠN THANH TOÁN', flex: 2),
-            AppDataTableColumn(title: 'TRẠNG THÁI', flex: 2),
-            AppDataTableColumn(title: 'ĐÃ TRẢ', flex: 2, alignRight: true),
-            AppDataTableColumn(title: 'CÒN LẠI', flex: 2, alignRight: true),
-          ],
-          items: items,
-          rowBuilder: (context, item, _) => _PayableDesktopRow(item: item),
-          emptyMessage: 'Không có khoản phải trả đang mở.',
-        );
-      },
-    );
-  }
-}
-
-class _PayableDesktopRow extends StatelessWidget {
-  final Map<String, dynamic> item;
-
-  const _PayableDesktopRow({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    final days = asInt(item['daysOverdue']);
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              item['supplierName']?.toString() ??
-                  item['name']?.toString() ??
-                  item['supplier']?['name']?.toString() ??
-                  'Chưa xác định',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _displayDate(item['dueDate']),
-              style: TextStyle(color: colors.textSecondary),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: AppStatusBadge(
-                label: days > 0 ? 'Quá hạn $days ngày' : 'Chưa đến hạn',
-                color: days > 0 ? AppColors.danger : AppColors.success,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _payableCurrency.format(asDouble(item['paidAmount'])),
-              textAlign: TextAlign.right,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              _payableCurrency.format(asDouble(item['remaining'])),
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: days > 0 ? AppColors.danger : colors.textPrimary,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PayableMobileCard extends StatelessWidget {
-  final Map<String, dynamic> item;
-
-  const _PayableMobileCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    final days = asInt(item['daysOverdue']);
-    return AppCardContainer(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  item['supplierName']?.toString() ??
-                      item['name']?.toString() ??
-                      item['supplier']?['name']?.toString() ??
-                      'Chưa xác định',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              AppStatusBadge(
-                label: days > 0 ? 'Quá hạn $days ngày' : 'Chưa hạn',
-                color: days > 0 ? AppColors.danger : AppColors.success,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Hạn ${_displayDate(item['dueDate'])}',
-                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
-                ),
-              ),
-              Text(
-                _payableCurrency.format(asDouble(item['remaining'])),
-                style: TextStyle(
-                  color: days > 0 ? AppColors.danger : colors.textPrimary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

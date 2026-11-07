@@ -1,3 +1,14 @@
+import { readOrderPaymentEvidence } from '../sales/order-payment-evidence.repository';
+import { normalizeSalesReturn } from '../sales/sales-return-input.utils';
+import { SalesWriteActor, requireSalesWriteAuthority, requireOpenSalesDay } from '../sales/sales-write-authorization';
+import { planPartialReturn, partialReturnDebtPlan, allocateReturnRefund } from '../sales/partial-return.utils';
+import { randomBytes } from 'node:crypto';
+import { SalesOrderPaymentService, SalesPaymentActor } from './sales-order-payment.service';
+import { CustomerService } from './customer.service';
+import { readOpeningBalanceEffects, openingEffectValue, openingEffectCents, openingEffectText } from '../finance/opening-balance-effects.repository';
+import { withOrderDebtBalances } from '../finance/order-debt-balance.repository';
+import { assertPastOrToday } from '../utils/business-date';
+import { lockShopMutation } from '../utils/shop-mutation-lock';
 import { AppDataSource } from '../config/db.config';
 import {
     buildVietnamPeriodKeys,
@@ -9,10 +20,8 @@ import { SalesOrder, SalesOrderItem, SalesReturn, SalesReturnItem, SalesOrderPay
 import { ShippingCarrier } from '../system/entities';
 import {
     Customer,
-    DebtPaymentHistory,
     Receivable,
 } from '../customer/entities';
-import { applyDebtPayment } from '../customer/debt.utils';
 import { Product } from '../product/entities';
 import { COGSService } from './cogs.service';
 import { FinanceService } from './finance.service';
@@ -20,7 +29,7 @@ import { PostingService } from './posting.service';
 import { JournalEntry } from '../finance/ledger.entity';
 import { InventoryMovement, InventoryStock } from '../inventory/entities';
 import { InventoryLot } from '../inventory/lot.entity';
-import { EntityManager } from 'typeorm';
+import { EntityManager, QueryRunner } from 'typeorm';
 import {
     calculateGrossMarginPercentage,
     calculateRevenueGrowth,
@@ -39,7 +48,6 @@ import {
     calculateSalesTaxLines,
 } from '../sales/sales-accounting.utils';
 import {
-    groupSettledPaymentsByMethod,
     normalizeSettledPaymentMethod,
     paymentLedgerAccountCode,
 } from '../sales/payment-ledger.utils';
@@ -68,52 +76,56 @@ export class SalesService {
         from?: string,
         to?: string,
     ) {
-        const safePage = Math.max(Number(page) || 1, 1);
-        const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
-        const statuses = normalizeSalesStatusFilter(status);
-        const qb = this.orderRepo.createQueryBuilder('o')
-            .leftJoinAndSelect('o.customer', 'customer');
+        const balanceAsOf = vietnamDateKey(new Date());
+        return AppDataSource.transaction('REPEATABLE READ', async manager => {
+            await manager.query('SET TRANSACTION READ ONLY');
+            const safePage = Math.max(Number(page) || 1, 1);
+            const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+            const statuses = normalizeSalesStatusFilter(status);
+            const qb = manager.getRepository(SalesOrder).createQueryBuilder('o')
+                .leftJoinAndSelect('o.customer', 'customer', 'customer.shopId = o.shopId');
 
-        if (Array.isArray(shopId)) {
-            if (shopId.length === 0) {
-                throw new Error('Validation: Phạm vi cửa hàng không hợp lệ');
+            if (Array.isArray(shopId)) {
+                if (shopId.length === 0) {
+                    throw new Error('Validation: Phạm vi cửa hàng không hợp lệ');
+                }
+                qb.where('o.shopId IN (:...shopIds)', { shopIds: shopId });
+            } else {
+                qb.where('o.shopId = :shopId', { shopId });
             }
-            qb.where('o.shopId IN (:...shopIds)', { shopIds: shopId });
-        } else {
-            qb.where('o.shopId = :shopId', { shopId });
-        }
 
-        if (customerId) qb.andWhere('customer.id = :customerId', { customerId });
-        if (statuses) qb.andWhere('o.status IN (:...statuses)', { statuses });
-        if ((from && !to) || (!from && to)) {
-            throw new Error('Validation: Kỳ danh sách cần đủ ngày bắt đầu và kết thúc');
-        }
-        if (from && to) {
-            const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
-            qb.andWhere(
-                "o.orderDate >= CAST(:fromKey AS date) AND o.orderDate < CAST(:toKey AS date) + INTERVAL '1 day'",
-                {
-                    fromKey: vietnamDateKey(fromDate),
-                    toKey: vietnamDateKey(toDate),
-                },
-            );
-        }
-        if (search?.trim()) {
-            qb.andWhere(
-                `(${vietnameseSearchExpression('o.orderCode')} OR ${vietnameseSearchExpression('customer.name')} OR ${vietnameseSearchExpression('customer.phone')})`,
-                vietnameseSearchParams(search),
-            );
-        }
+            if (customerId) qb.andWhere('customer.id = :customerId', { customerId });
+            if (statuses) qb.andWhere('o.status IN (:...statuses)', { statuses });
+            if ((from && !to) || (!from && to)) {
+                throw new Error('Validation: Kỳ danh sách cần đủ ngày bắt đầu và kết thúc');
+            }
+            if (from && to) {
+                const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
+                qb.andWhere(
+                    "o.orderDate >= CAST(:fromKey AS date) AND o.orderDate < CAST(:toKey AS date) + INTERVAL '1 day'",
+                    {
+                        fromKey: vietnamDateKey(fromDate),
+                        toKey: vietnamDateKey(toDate),
+                    },
+                );
+            }
+            if (search?.trim()) {
+                qb.andWhere(
+                    `(${vietnameseSearchExpression('o.orderCode')} OR ${vietnameseSearchExpression('customer.name')} OR ${vietnameseSearchExpression('customer.phone')})`,
+                    vietnameseSearchParams(search),
+                );
+            }
 
-        const [items, total] = await qb
-            .orderBy('o.orderDate', 'DESC')
-            .addOrderBy('o.id', 'DESC')
-            .skip((safePage - 1) * safeLimit)
-            .take(safeLimit)
-            .getManyAndCount();
-        return { items, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
+            const [items, total] = await qb
+                .orderBy('o.orderDate', 'DESC')
+                .addOrderBy('o.id', 'DESC')
+                .skip((safePage - 1) * safeLimit)
+                .take(safeLimit)
+                .getManyAndCount();
+            return { items: await withOrderDebtBalances(manager, 'SALES', items, balanceAsOf), total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
+        });
     }
-    
+
     async summary(shopId: number | number[], from?: string, to?: string) {
         const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
         const fromKey = vietnamDateKey(fromDate);
@@ -488,6 +500,8 @@ export class SalesService {
                 sold.id,
                 sold.name,
                 sold.unit,
+                product.image_url,
+                product.shop_id,
                 GREATEST(sold.gross_value - COALESCE(returned.return_value, 0), 0) AS value,
                 GREATEST(sold.gross_quantity - COALESCE(returned.return_quantity, 0), 0) AS quantity,
                 GREATEST(sold.gross_cogs - COALESCE(returned.return_cogs, 0), 0) AS cogs,
@@ -495,6 +509,7 @@ export class SalesService {
                 (sold.gross_cogs - COALESCE(returned.return_cogs, 0)) AS gross_profit,
                 previous_net.value AS previous_value
             FROM sold
+            JOIN products product ON product.id = sold.id
             LEFT JOIN returned ON returned.product_id = sold.id
             LEFT JOIN previous_net ON previous_net.id = sold.id
             WHERE sold.gross_value - COALESCE(returned.return_value, 0) > 0
@@ -516,6 +531,8 @@ export class SalesService {
                 id: Number(p.id),
                 name: p.name,
                 unit: p.unit || 'Sản phẩm',
+                imageUrl: p.image_url || null,
+                shopId: Number(p.shop_id),
                 value,
                 quantity: Number(p.quantity),
                 cogs: Number(p.cogs),
@@ -610,29 +627,50 @@ export class SalesService {
     }
 
     async findById(shopId: number, id: number) {
-        const order = await this.orderRepo.findOne({
-            where: { id, shopId },
-            relations: ['customer', 'items', 'items.product', 'payments', 'shippingCarrier'],
+        const balanceAsOf = vietnamDateKey(new Date());
+        return AppDataSource.transaction('REPEATABLE READ', async manager => {
+            await manager.query('SET TRANSACTION READ ONLY');
+            const order = await manager.getRepository(SalesOrder).createQueryBuilder('o')
+                .leftJoinAndSelect('o.customer', 'customer', 'customer.shopId = o.shopId')
+                .leftJoinAndSelect('o.items', 'item')
+                .leftJoinAndSelect('item.product', 'product', 'product.shopId = o.shopId')
+                .leftJoinAndSelect('o.payments', 'payment', '(payment.shopId = o.shopId OR payment.shopId IS NULL)')
+                .leftJoinAndSelect('o.shippingCarrier', 'carrier', 'carrier.shopId = o.shopId')
+                .where('o.id = :id AND o.shopId = :shopId', { id, shopId }).getOne();
+            if (!order) throw new Error('Order not found');
+            const returns = await manager.getRepository(SalesReturn).find({
+                where: { order: { id, shopId } as any, shopId } as any,
+                relations: ['items', 'items.product'], order: { createdAt: 'DESC' } as any,
+            });
+            const balanced = (await withOrderDebtBalances(manager, 'SALES', [order], balanceAsOf))[0];
+            return { ...(this.withItemProductIds(balanced) as any), returns };
         });
-        if (!order) throw new Error('Order not found');
-
-        const returns = await this.returnRepo.find({
-            where: { order: { id, shopId } as any, shopId } as any,
-            relations: ['items'],
-            order: { createdAt: 'DESC' } as any,
-        });
-
-        return { ...(this.withItemProductIds(order) as any), returns };
     }
 
-    async create(shopId: number, dto: any) {
-        const queryRunner = AppDataSource.createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
+    // HTTP writes use these entry points; seed/import callers retain their trusted service contract.
+    async createForActor(shopId: number, dto: any, actor: SalesWriteActor) {
+        return this.create(shopId, { ...dto, createdBy: actor.id }, undefined, actor);
+    }
+    async cancelForActor(shopId: number, id: number, actor: SalesWriteActor) {
+        return this.cancel(shopId, id, actor.id, actor);
+    }
+    async createReturnForActor(shopId: number, id: number, dto: any, actor: SalesWriteActor) {
+        return this.createReturn(shopId, id, { ...dto, createdBy: actor.id }, actor);
+    }
+    async create(shopId: number, dto: any, externalRunner?: QueryRunner, actor?: SalesWriteActor) {
+        const queryRunner = externalRunner ?? AppDataSource.createQueryRunner();
+        if (!externalRunner) {
+            await queryRunner.connect();
+            await queryRunner.startTransaction();
+        }
         try {
             const manager = queryRunner.manager;
+            if (actor) await manager.query("SET LOCAL lock_timeout = '5s'");
+            await lockShopMutation(manager, shopId);
+            const member = actor ? await requireSalesWriteAuthority(manager, shopId, actor) : undefined;
 
-            const orderDate = dto.orderDate ? new Date(dto.orderDate) : new Date();
+            const orderDate = assertPastOrToday(dto.orderDate || new Date(), 'Ngày chứng từ');
+            if (member) await requireOpenSalesDay(manager, shopId, orderDate, member.memberType);
             if (Number.isNaN(orderDate.getTime())) {
                 throw new Error('Validation: Order date is invalid');
             }
@@ -700,6 +738,7 @@ export class SalesService {
                         quantity,
                         undefined,
                         shopId,
+                        manager,
                     );
                     costPrice = cogsResult.unitCost;
                     totalCogs += cogsResult.totalCost;
@@ -777,20 +816,16 @@ export class SalesService {
                 && unpaidAmount > 0
                 && Number(customer.creditLimit || 0) > 0
             ) {
-                const existingDebtRaw = await manager.createQueryBuilder(Receivable, 'r')
-                    .select('COALESCE(SUM(r.amount - r.paid_amount), 0)', 'remainingDebt')
-                    .where('r.customer_id = :customerId AND r.shop_id = :shopId', { customerId: customer.id, shopId })
-                    .andWhere("UPPER(COALESCE(r.status, '')) NOT IN ('PAID', 'CANCELLED')")
-                    .getRawOne();
-
-                const existingDebt = Number(existingDebtRaw?.remainingDebt || 0);
-                const currentExposure = Math.max(Number(customer.balance || 0), existingDebt);
-                const newDebt = unpaidAmount;
-                const projectedExposure = currentExposure + newDebt;
-                const creditLimit = Number(customer.creditLimit || 0);
-
+                // Use the same effective ledger balance as the customer screen.
+                // A backdated document must not restore credit already used today.
+                const currentExposure = await new CustomerService().balanceInTransaction(
+                    manager, customer, vietnamDateKey(new Date()),
+                );
+                const projectedExposure = openingEffectCents(currentExposure)
+                    + openingEffectCents(unpaidAmount.toFixed(2));
+                const creditLimit = openingEffectCents(customer.creditLimit || 0);
                 if (projectedExposure > creditLimit) {
-                    throw new Error(`Vượt hạn mức tín dụng: công nợ dự kiến ${projectedExposure.toFixed(0)} > hạn mức ${creditLimit.toFixed(0)}`);
+                    throw new Error(`Validation: Vượt hạn mức tín dụng: công nợ dự kiến ${openingEffectText(projectedExposure)} > hạn mức ${openingEffectText(creditLimit)}`);
                 }
             }
 
@@ -871,8 +906,10 @@ export class SalesService {
                 });
                 await manager.save(Receivable, receivable);
 
-                customer.balance = Number(customer.balance || 0) + unpaidAmount;
-                await manager.save(Customer, customer);
+                const balance = await new CustomerService().balanceInTransaction(
+                    manager, customer, vietnamDateKey(new Date()),
+                );
+                await manager.update(Customer, { id: customer.id, shopId }, { balance });
             }
 
             // Commit: trừ tồn kho các lô
@@ -930,53 +967,62 @@ export class SalesService {
                 savedOrder.id,
                 `Bán hàng - Đơn ${savedOrder.orderCode}`,
                 journalLines,
-                manager
+                manager,
+                orderDate,
             );
 
-            await queryRunner.commitTransaction();
-            return this.findById(shopId, savedOrder.id);
+            if (!externalRunner) await queryRunner.commitTransaction();
+            // Uncommitted rows must not be read through another connection.
+            return externalRunner ? savedOrder : this.findById(shopId, savedOrder.id);
         } catch (error) {
-            await queryRunner.rollbackTransaction();
+            if (!externalRunner) await queryRunner.rollbackTransaction();
             throw error;
         } finally {
-            await queryRunner.release();
+            if (!externalRunner) await queryRunner.release();
         }
     }
 
-    async cancel(shopId: number, id: number, createdBy?: number) {
+    async cancel(shopId: number, id: number, createdBy?: number, actor?: SalesWriteActor) {
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
         try {
             const manager = queryRunner.manager;
+            if (actor) await manager.query("SET LOCAL lock_timeout = '5s'");
+            await lockShopMutation(manager, shopId);
+            const member = actor ? await requireSalesWriteAuthority(manager, shopId, actor) : undefined;
             const order = await manager.findOne(SalesOrder, { where: { id, shopId } });
             if (!order) throw new Error('Order not found');
+            if (member) {
+                await requireOpenSalesDay(manager, shopId, new Date(order.orderDate), member.memberType);
+                await requireOpenSalesDay(manager, shopId, new Date(), member.memberType);
+            }
+            const refunds = await readOrderPaymentEvidence(manager, shopId, id, order.paidAmount);
+
             if (order.status === 'CANCELLED') {
                 throw new Error('Validation: Order is already cancelled');
             }
-            
+            if (order.returnStatus && order.returnStatus !== 'NONE') throw new Error('Validation: Không thể hủy đơn đã trả hàng');
+
             order.status = 'CANCELLED';
             await manager.save(SalesOrder, order);
 
-            const receivable = await manager.findOne(Receivable, { 
-                where: { shopId, orderId: id } as any, 
-                relations: ['customer'] 
+            const receivable = await manager.findOne(Receivable, {
+                where: { shopId, orderId: id } as any,
+                relations: ['customer']
             });
             if (receivable && receivable.status !== 'CANCELLED') {
                 receivable.status = 'CANCELLED';
                 await manager.save(Receivable, receivable);
 
-                const unpaidAmount = Number(receivable.amount) - Number(receivable.paidAmount || 0);
-                if (unpaidAmount > 0 && receivable.customer) {
+                if (receivable.customer) {
                     const customer = await manager.findOne(Customer, { where: { id: receivable.customer.id, shopId } });
-                    if (customer) {
-                        customer.balance = Math.max(
-                            Number(customer.balance || 0) - unpaidAmount,
-                            0,
-                        );
-                        await manager.save(Customer, customer);
-                    }
+                    if (!customer) throw new Error('Validation: Công nợ không thuộc khách hàng trong cửa hàng này');
+                    const balance = await new CustomerService().balanceInTransaction(
+                        manager, customer, vietnamDateKey(new Date()),
+                    );
+                    await manager.update(Customer, { id: customer.id, shopId }, { balance });
                 }
             }
 
@@ -984,7 +1030,7 @@ export class SalesService {
             const lotDeductionRepo = manager.getRepository(SalesOrderLotDeduction);
             const lotRepo = manager.getRepository(InventoryLot);
             const deductions = await lotDeductionRepo.find({ where: { orderId: id } });
-            
+
             for (const d of deductions) {
                 const lot = await lotRepo.findOne({ where: { id: d.lotId } });
                 if (lot) {
@@ -1001,7 +1047,7 @@ export class SalesService {
             const movementRepo = manager.getRepository(InventoryMovement);
             const stockRepo = manager.getRepository(InventoryStock);
             const outMovements = await movementRepo.find({ where: { shopId, referenceType: 'SALES_ORDER', referenceId: id, movementType: 'OUT' } as any });
-            
+
             for (const mov of outMovements) {
                 // Tạo movement IN
                 await movementRepo.save(movementRepo.create({
@@ -1033,12 +1079,9 @@ export class SalesService {
                 await journalEntryRepo.save(originalEntry);
             }
 
-            const settledPayments = await manager.find(SalesOrderPayment, {
-                where: { shopId, order: { id } },
-            });
-            const refunds = groupSettledPaymentsByMethod(settledPayments);
             for (const refund of refunds) {
                 await this.financeService.createCashTransaction(shopId, {
+                    transactionCode: 'PC' + randomBytes(9).toString('hex'),
                     amount: refund.amount,
                     type: 'EXPENSE',
                     category: 'REFUND',
@@ -1080,6 +1123,7 @@ export class SalesService {
 
     async updateOrder(shopId: number, id: number, dto: Partial<SalesOrder>) {
         await AppDataSource.transaction(async manager => {
+            await lockShopMutation(manager, shopId);
             const order = await manager.findOne(SalesOrder, {
                 where: { id, shopId },
                 lock: { mode: 'pessimistic_write' },
@@ -1123,244 +1167,106 @@ export class SalesService {
         return this.findById(shopId, id);
     }
 
-    async addPayment(shopId: number, orderId: number, dto: Partial<SalesOrderPayment>) {
-        const queryRunner = AppDataSource.createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
-
-        try {
-            const manager = queryRunner.manager;
-            const order = await manager.findOne(SalesOrder, { where: { id: orderId, shopId } });
-            if (!order) throw new Error('Order not found');
-            if (order.status === 'CANCELLED') {
-                throw new Error('Validation: Cannot pay a cancelled order');
-            }
-            if (order.returnStatus && order.returnStatus !== 'NONE') {
-                throw new Error('Validation: Cannot pay a returned order');
-            }
-            const amount = Number(dto.amount || 0);
-            if (amount <= 0) throw new Error('Validation: Payment amount must be greater than 0');
-            const currentPaid = Number(order.paidAmount || 0);
-            const totalAmount = Number(order.totalAmount || 0);
-            if (currentPaid + amount > totalAmount) {
-                throw new Error('Validation: Payment amount exceeds remaining order balance');
-            }
-            const settledMethod = normalizeSettledPaymentMethod(
-                (dto as any).method || 'CASH',
-            );
-            const payment = await manager.save(SalesOrderPayment, manager.create(SalesOrderPayment, {
-                ...dto,
-                method: settledMethod,
-                shopId,
-                order,
-            }));
-            order.paidAmount = currentPaid + amount;
-            order.status = (Number(order.paidAmount) >= totalAmount) ? 'DELIVERED' : 'PENDING';
-            await manager.save(SalesOrder, order);
-
-            await this.financeService.createCashTransaction(shopId, {
-                amount,
-                type: 'INCOME',
-                category: 'SALES',
-                paymentMethod: settledMethod,
-                referenceType: 'SALES_ORDER',
-                referenceId: order.id,
-                referenceCode: order.orderCode,
-                description: `Thanh toán thêm cho đơn hàng ${order.orderCode}`,
-                transactionDate: new Date(),
-                status: 'COMPLETED',
-                createdBy: (dto as any).createdBy
-            } as any, manager);
-
-            // === Journal Ledger: Thu nợ khách hàng (Nợ TK 111 / Có TK 131) ===
-            await this.postingService.postJournal(
-                shopId,
-                'DEBT_COLLECTION',
-                order.id,
-                `Thu nợ khách hàng - Đơn ${order.orderCode}`,
-                [
-                    {
-                        accountCode: paymentLedgerAccountCode(settledMethod),
-                        amount,
-                        entryType: 'DEBIT',
-                    },
-                    { accountCode: '131', amount, entryType: 'CREDIT' },
-                ],
-                manager
-            );
-
-            // Cập nhật Receivable nếu tồn tại
-            const receivable = await manager.findOne(Receivable, {
-                where: { shopId, orderId } as any,
-                relations: ['customer'],
-            });
-            if (receivable && receivable.status !== 'PAID' && receivable.status !== 'CANCELLED') {
-                const debtPayment = applyDebtPayment(
-                    Number(receivable.amount),
-                    Number(receivable.paidAmount || 0),
-                    amount,
-                );
-                receivable.paidAmount = debtPayment.paidAmount;
-                receivable.status = debtPayment.status;
-                await manager.save(Receivable, receivable);
-                await manager.save(
-                    DebtPaymentHistory,
-                    manager.create(DebtPaymentHistory, {
-                        shopId,
-                        receivable,
-                        amount,
-                        paymentMethod: settledMethod,
-                        paymentDate: new Date(),
-                        notes: (dto as any).notes,
-                        recordedBy: (dto as any).createdBy,
-                    }),
-                );
-
-                // Giảm số dư nợ khách hàng
-                const customer =
-                    receivable.customer?.shopId === shopId
-                        ? receivable.customer
-                        : undefined;
-                if (customer) {
-                    customer.balance = Math.max(Number(customer.balance || 0) - amount, 0);
-                    await manager.save(Customer, customer);
-                }
-            }
-
-            await queryRunner.commitTransaction();
-            return payment;
-        } catch (error) {
-            await queryRunner.rollbackTransaction();
-            throw error;
-        } finally {
-            await queryRunner.release();
-        }
+    async addPayment(shopId: number, orderId: number, dto: unknown, actor: SalesPaymentActor, now = new Date()) {
+        return new SalesOrderPaymentService().record(shopId,orderId,actor,dto,now);
     }
 
-    async createReturn(shopId: number, orderId: number, dto: any) {
+    async createReturn(shopId: number, orderId: number, dto: any, actor?: SalesWriteActor) {
+        const input = normalizeSalesReturn(dto);
+        dto = { ...input, createdBy: actor?.id ?? dto.createdBy };
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
         try {
             const manager = queryRunner.manager;
+            if (actor) await manager.query("SET LOCAL lock_timeout = '5s'");
+            await lockShopMutation(manager, shopId);
+            const member = actor ? await requireSalesWriteAuthority(manager, shopId, actor) : undefined;
             const order = await manager.findOne(SalesOrder, {
                 where: { id: orderId, shopId },
                 relations: ['items', 'items.product'],
             });
             if (!order) throw new Error('Order not found');
             if (order.status === 'CANCELLED') throw new Error('Cannot return a cancelled order');
-            if (order.returnStatus && order.returnStatus !== 'NONE') {
-                throw new Error('Validation: Order has already been returned');
-            }
-
-            const returnDate = dto.returnDate ? new Date(dto.returnDate) : new Date();
-
-            const rawItems: any[] = Array.isArray(dto.items) ? dto.items : [];
-            if (rawItems.length === 0) {
-                throw new Error('Validation: Return items are required');
-            }
-            const soldItems = new Map(
-                order.items.map((item) => [item.product?.id, item]),
-            );
-            let returnedCogs = 0;
-            let returnedQuantity = 0;
-            const normalizedReturnItems: Array<{
-                productId: number;
-                quantity: number;
-                unitPrice: number;
-                subtotal: number;
-                reason?: string;
-            }> = [];
-            const seenProductIds = new Set<number>();
-            for (const rawItem of rawItems) {
-                const productId = Number(rawItem.productId);
-                const quantity = Number(rawItem.quantity || 0);
-                const soldItem = soldItems.get(productId);
-                if (
-                    !soldItem ||
-                    seenProductIds.has(productId) ||
-                    quantity !== Number(soldItem.quantity)
-                ) {
-                    throw new Error('Validation: Return quantity exceeds sold quantity');
+            if (dto.returnCode) {
+                const replay = await manager.findOne(SalesReturn, { where: { shopId, returnCode: dto.returnCode }, relations: ['order', 'items', 'items.product'] });
+                if (replay) {
+                    const shape = (items: any[]) => JSON.stringify(items.map(i => ({ productId: Number(i.productId ?? i.product?.id), quantity: Number(i.quantity) })).sort((a,b) => a.productId-b.productId));
+                    const effectiveShipping = input.refundShippingFee && order.shippingFeePayer === 'CUSTOMER' && Number(order.shippingFee) > 0;
+                    if (replay.order?.id !== orderId || replay.processedBy !== dto.createdBy ||
+                        shape(replay.items) !== shape(input.items) || replay.reason !== input.reason ||
+                        Boolean(replay.refundShippingFee) !== effectiveShipping || (replay.notes ?? '') !== (input.notes ?? '') ||
+                        vietnamDateKey(new Date(replay.returnDate)) !== vietnamDateKey(input.returnDate) ||
+                        (input.refundAmountCents !== undefined && openingEffectCents(replay.refundAmount) !== input.refundAmountCents)) {
+                        throw new Error('Validation: Mã phiếu trả đã được dùng với nội dung khác');
+                    }
+                    await queryRunner.commitTransaction();
+                    return replay;
                 }
-                seenProductIds.add(productId);
-                returnedQuantity += quantity;
-                returnedCogs += quantity * Number(soldItem.costPrice || 0);
-                normalizedReturnItems.push({
-                    productId,
-                    quantity,
-                    unitPrice: Number(soldItem.unitPrice || 0),
-                    subtotal: Number(soldItem.subtotal || 0),
-                    reason: rawItem.reason,
-                });
             }
-            const soldQuantity = order.items.reduce(
-                (sum, item) => sum + Number(item.quantity || 0),
-                0,
-            );
-            if (
-                returnedQuantity !== soldQuantity ||
-                rawItems.length !== order.items.length
-            ) {
-                throw new Error('Validation: Partial returns are not supported yet');
+            if (['FULL_RETURN', 'RETURNED'].includes(order.returnStatus ?? '')) {
+                throw new Error('Validation: Đơn đã trả hết hàng');
             }
-            const settledPayments = await manager.find(SalesOrderPayment, {
-                where: { shopId, order: { id: orderId } },
+            const previousReturns = await manager.find(SalesReturn, {
+                where: { shopId, order: { id: orderId, shopId }, status: 'COMPLETED' } as any,
+                relations: ['items', 'items.product'],
             });
-            const paymentAllocations = groupSettledPaymentsByMethod(settledPayments);
-            const recordedPaymentTotal = paymentAllocations.reduce(
-                (sum, refund) => sum + refund.amount,
-                0,
-            );
+            if (previousReturns.some(row => vietnamDateKey(new Date(row.returnDate)) > vietnamDateKey(input.returnDate))) {
+                throw new Error('Validation: Ngày trả hàng không được trước phiếu trả gần nhất của đơn');
+            }
+
+            const returnDate = input.returnDate;
+            if (member) await requireOpenSalesDay(manager, shopId, returnDate, member.memberType);
+            if (vietnamDateKey(returnDate) < vietnamDateKey(new Date(order.orderDate))) throw new Error('Validation: Ngày trả hàng không được trước ngày lập đơn');
+
+            const plan = planPartialReturn(order, previousReturns, input.items, input.refundShippingFee);
+            const normalizedReturnItems = plan.items.map(item => ({ ...item, reason: input.items.find(i => i.productId === item.productId)?.reason }));
+            const returnedCogs = normalizedReturnItems.reduce((sum, item) => {
+                const sold = order.items.find(line => (line.productId ?? line.product?.id) === item.productId);
+                return sum + item.quantity * Number(sold?.costPrice ?? 0);
+            }, 0);
             const paidAmount = Number(order.paidAmount || 0);
-            if (recordedPaymentTotal + 0.01 < paidAmount) {
-                const fallbackMethod = normalizeSettledPaymentMethod(
-                    order.paymentMethod || dto.refundMethod || 'CASH',
-                );
-                const missingAmount = paidAmount - recordedPaymentTotal;
-                const existing = paymentAllocations.find((entry) => entry.method === fallbackMethod);
-                if (existing) existing.amount += missingAmount;
-                else paymentAllocations.push({ method: fallbackMethod, amount: missingAmount });
+            const paymentAllocations = await readOrderPaymentEvidence(manager, shopId, orderId, order.paidAmount);
+            const priorCash = await manager.query(`SELECT c.amount::text,c.payment_method AS method FROM cash_transactions c
+                JOIN sales_returns r ON r.id=c.reference_id AND r.shop_id=$1 AND r.order_id=$2 AND r.status='COMPLETED'
+                WHERE c.shop_id=$1 AND c.reference_type='SALES_RETURN' AND c.type='EXPENSE' ORDER BY c.id`, [shopId,orderId]);
+            const refunds = allocateReturnRefund(paymentAllocations, priorCash, plan.previousRefund, plan.refund);
+            const refundAmount = openingEffectValue(plan.refund);
+            const merchandiseTotal = openingEffectValue(plan.returnNet + plan.returnTax);
+            const shippingTaxAmount = openingEffectValue(plan.shippingTax);
+            const customerShippingCharge = openingEffectValue(plan.fee);
+            const refundShippingFee = plan.refundShippingFee;
+            const refundedShippingAmount = openingEffectValue(plan.refundedShippingAmount);
+            if (input.refundAmountCents !== undefined && input.refundAmountCents !== plan.refund) {
+                throw new Error('Validation: Tiền hoàn chưa khớp phần hàng và phí được chọn; hãy tải lại đơn');
             }
-            const shippingReturn = calculateShippingReturnAllocation({
-                subtotal: Number(order.subtotal || 0),
-                discountAmount: Number(order.discountAmount || 0),
-                taxAmount: Number(order.taxAmount || 0),
-                paidAmount,
-                shippingFee: Number(order.shippingFee || 0),
-                shippingFeePayer: order.shippingFeePayer,
-                shippingTaxRate: Number(order.shippingTaxRate || 0),
-                refundShippingFee: dto.refundShippingFee === true,
-            });
-            const {
-                merchandiseTotal,
-                shippingTaxAmount,
-                customerShippingCharge,
-                refundShippingFee,
-                refundedShippingAmount,
-                refundAmount,
-            } = shippingReturn;
-            let remainingRefund = refundAmount;
-            const refunds = paymentAllocations.flatMap((payment) => {
-                if (remainingRefund <= 0) return [];
-                const amount = Math.min(payment.amount, remainingRefund);
-                remainingRefund = Number((remainingRefund - amount).toFixed(2));
-                return amount > 0 ? [{ method: payment.method, amount }] : [];
-            });
-            if (
-                dto.refundAmount != null &&
-                Math.abs(Number(dto.refundAmount) - refundAmount) > 0.01
-            ) {
-                throw new Error('Validation: Refund amount does not match the selected shipping-fee option');
+
+            const linkedDebts = await manager.find(Receivable, { where: { shopId, orderId } as any, relations: ['customer'] });
+            if (linkedDebts.length > 1) throw new Error('Validation: Đơn có nhiều khoản công nợ liên kết; cần đối chiếu');
+            const receivable = linkedDebts[0];
+            let returnDebtPlan: ReturnType<typeof partialReturnDebtPlan> | undefined;
+            if (receivable) {
+                const effects = await readOpeningBalanceEffects(manager, { shopId, asOf: vietnamDateKey(new Date()), includeCash: false, payableIds: [], receivableIds: [receivable.id] });
+                if ((effects.receivableDates.get(receivable.id) ?? '') > vietnamDateKey(returnDate)) throw new Error('Validation: Ngày trả hàng trước ngày công nợ có hiệu lực');
+                returnDebtPlan = partialReturnDebtPlan({ amount: receivable.amount, paidAmount: receivable.paidAmount,
+                    adjustment: effects.receivableCents.get(receivable.id) ?? 0n, reversal: plan.reversal, refund: plan.refund });
+                if (receivable.customer?.id !== order.customer?.id) {
+                    const [owner] = await manager.query('SELECT customer_id FROM sales_orders WHERE id=$1 AND shop_id=$2', [orderId, shopId]);
+                    if (receivable.customer?.id !== Number(owner?.customer_id)) throw new Error('Validation: Công nợ không khớp khách hàng của đơn');
+                }
+                if (receivable.customer?.shopId !== shopId) throw new Error('Validation: Công nợ không thuộc cửa hàng này');
             }
+
+            if (!receivable && plan.reversal > plan.refund) throw new Error('Validation: Chưa có công nợ liên kết để đối chiếu phần chưa thanh toán');
 
             const entity = manager.create(SalesReturn, {
                 shopId,
-                returnCode: dto.returnCode || 'RT' + Date.now().toString().slice(-6),
+                returnCode: dto.returnCode || 'RT' + randomBytes(9).toString('hex'),
                 order,
                 returnDate,
                 reason: dto.reason || '',
+                processedBy: dto.createdBy,
                 refundAmount,
                 refundShippingFee,
                 refundedShippingAmount,
@@ -1390,32 +1296,18 @@ export class SalesService {
 
             const savedReturn = await manager.save(SalesReturn, entity) as unknown as SalesReturn;
 
-            order.returnStatus = 'FULL_RETURN';
+            order.returnStatus = plan.allReturned ? 'FULL_RETURN' : 'PARTIAL_RETURN';
             await manager.save(SalesOrder, order);
 
-            const receivable = await manager.findOne(Receivable, {
-                where: { shopId, orderId } as any,
-                relations: ['customer'],
-            });
-            if (receivable && receivable.status !== 'CANCELLED') {
-                const outstandingBeforeReturn = Math.max(
-                    Number(receivable.amount) - Number(receivable.paidAmount || 0),
-                    0,
-                );
-                const outstandingAfterReturn = refundShippingFee
-                    ? 0
-                    : Math.min(outstandingBeforeReturn, customerShippingCharge);
-                const reducedDebt = outstandingBeforeReturn - outstandingAfterReturn;
-                receivable.amount = outstandingAfterReturn;
-                receivable.paidAmount = 0;
-                receivable.status = outstandingAfterReturn > 0 ? 'UNPAID' : 'CANCELLED';
+            if (receivable && receivable.status !== 'CANCELLED' && returnDebtPlan) {
+                const outstandingAfterReturn = returnDebtPlan.remaining;
+                // Keep prior reductions separate from actual payment history.
+                receivable.amount = openingEffectValue(returnDebtPlan.amount);
+                receivable.status = outstandingAfterReturn > 0n ? 'UNPAID' : 'CANCELLED';
                 await manager.save(Receivable, receivable);
-                if (reducedDebt > 0 && receivable.customer) {
-                    receivable.customer.balance = Math.max(
-                        Number(receivable.customer.balance || 0) - reducedDebt,
-                        0,
-                    );
-                    await manager.save(Customer, receivable.customer);
+                if (receivable.customer) {
+                    const balance = await new CustomerService().balanceInTransaction(manager, receivable.customer, vietnamDateKey(new Date()));
+                    await manager.update(Customer, { id: receivable.customer.id, shopId }, { balance });
                 }
             }
 
@@ -1430,29 +1322,27 @@ export class SalesService {
                 let remainingToReturn = Number(item.quantity);
                 if (remainingToReturn <= 0 || !item.product) continue;
 
-                // 1. Tăng stock & ghi movement
-                // Tìm warehouse từ movement OUT lúc mua, hoặc default warehouse
-                const movOut = await movementRepo.findOne({
-                    where: { shopId, referenceType: 'SALES_ORDER', referenceId: orderId, productId: item.product.id, movementType: 'OUT' } as any
-                });
-                if (movOut) {
-                    await movementRepo.save(movementRepo.create({
-                        shopId,
-                        productId: item.product.id,
-                        warehouseId: movOut.warehouseId,
-                        movementType: 'IN',
-                        quantity: remainingToReturn,
-                        referenceType: 'SALES_RETURN',
-                        referenceId: savedReturn.id,
-                        notes: `Hoàn trả từ phiếu trả hàng ${savedReturn.returnCode}`
-                    }));
-                    const stock = await stockRepo.findOne({ where: { shopId, productId: item.product.id, warehouseId: movOut.warehouseId } as any });
-                    if (stock) {
-                        stock.quantity = Number(stock.quantity) + remainingToReturn;
-                        stock.updatedAt = new Date();
-                        await stockRepo.save(stock);
-                    }
+                // Restore only the selected quantity, within the original warehouses' unreturned quantities.
+                const outs = await movementRepo.find({ where: { shopId, referenceType: 'SALES_ORDER', referenceId: orderId, productId: item.product.id, movementType: 'OUT' } as any, order: { id: 'DESC' } });
+                const restoredRows = previousReturns.length ? await manager.query(`SELECT warehouse_id,SUM(quantity)::int AS quantity FROM inventory_movements
+                    WHERE shop_id=$1 AND product_id=$2 AND reference_type='SALES_RETURN' AND reference_id=ANY($3::int[]) AND movement_type='IN' GROUP BY warehouse_id`, [shopId,item.product.id,previousReturns.map(r=>r.id)]) : [];
+                const restored = new Map<number, number>(restoredRows.map((r:any)=>[Number(r.warehouse_id),Number(r.quantity)]));
+                let stockToRestore = remainingToReturn;
+                for (const out of outs) {
+                    const used = Math.min(Number(out.quantity), restored.get(out.warehouseId) ?? 0);
+                    restored.set(out.warehouseId, (restored.get(out.warehouseId) ?? 0)-used);
+                    const take = Math.min(Number(out.quantity)-used, stockToRestore);
+                    if (take <= 0) continue;
+                    const stock = await stockRepo.findOne({ where: { shopId, productId: item.product.id, warehouseId: out.warehouseId } as any });
+                    if (!stock) throw new Error('Validation: Chưa đủ thông tin kho gốc để hoàn hàng');
+                    stock.quantity = Number(stock.quantity)+take; stock.updatedAt = new Date(); await stockRepo.save(stock);
+                    await movementRepo.save(movementRepo.create({ shopId, productId:item.product.id, warehouseId:out.warehouseId,
+                        movementType:'IN', quantity:take, referenceType:'SALES_RETURN', referenceId:savedReturn.id,
+                        notes:`Hoàn trả từ phiếu trả hàng ${savedReturn.returnCode}` }));
+                    stockToRestore -= take;
+                    if (stockToRestore === 0) break;
                 }
+                if (stockToRestore > 0) throw new Error('Validation: Số lượng xuất kho gốc chưa đủ để hoàn phần hàng đã chọn');
 
                 // 2. Hoàn lô hàng
                 const deductions = await lotDeductionRepo.find({
@@ -1466,8 +1356,9 @@ export class SalesService {
                 for (const d of itemDeductions) {
                     if (remainingToReturn <= 0) break;
                     const returnQty = Math.min(Number(d.quantity), remainingToReturn);
-                    
+
                     const lot = await lotRepo.findOne({ where: { id: d.lotId } });
+                    if (!lot || lot.shopId !== shopId || lot.productId !== item.product.id || Number(lot.remainingQty)+returnQty > Number(lot.initialQty)) throw new Error('Validation: Lô gốc chưa khớp để hoàn hàng');
                     if (lot) {
                         lot.remainingQty = Number(lot.remainingQty) + returnQty;
                         await lotRepo.save(lot);
@@ -1480,10 +1371,12 @@ export class SalesService {
                     }
                     remainingToReturn -= returnQty;
                 }
+                if (remainingToReturn > 0) throw new Error('Validation: Chưa đủ dấu vết lô gốc để hoàn phần hàng đã chọn');
             }
 
             for (const refund of refunds) {
                 await this.financeService.createCashTransaction(shopId, {
+                    transactionCode: 'PC' + randomBytes(9).toString('hex'),
                     amount: refund.amount,
                     type: 'EXPENSE',
                     category: 'REFUND',
@@ -1498,15 +1391,8 @@ export class SalesService {
                 } as any, manager);
             }
 
-            const accountingSplit = calculateSalesAccountingSplit(
-                Number(order.subtotal || 0),
-                Number(order.discountAmount || 0),
-                Number(order.taxAmount || 0),
-                Math.min(paidAmount, merchandiseTotal),
-            );
-            const netSalesAmount = accountingSplit.netSales;
-            const taxAmount = accountingSplit.taxAmount;
-            const unpaidAmount = accountingSplit.receivableAmount;
+            const netSalesAmount = openingEffectValue(plan.returnNet);
+            const taxAmount = openingEffectValue(plan.returnTax);
             const returnJournalLines: {
                 accountCode: string;
                 amount: number;
@@ -1549,23 +1435,9 @@ export class SalesService {
                     entryType: 'CREDIT',
                 });
             }
-            if (unpaidAmount > 0) {
-                returnJournalLines.push({
-                    accountCode: '131',
-                    amount: unpaidAmount,
-                    entryType: 'CREDIT',
-                });
-            }
-            if (refundShippingFee) {
-                const unpaidShipping = shippingReturn.unpaidShipping;
-                if (unpaidShipping > 0) {
-                    returnJournalLines.push({
-                        accountCode: '131',
-                        amount: unpaidShipping,
-                        entryType: 'CREDIT',
-                    });
-                }
-            }
+            const reversedDebt = returnDebtPlan ? openingEffectValue(returnDebtPlan.debtReduction) : openingEffectValue(plan.reversal - plan.refund);
+            if (reversedDebt > 0) returnJournalLines.push({ accountCode: '131', amount: reversedDebt, entryType: 'CREDIT' });
+            if (returnDebtPlan && returnDebtPlan.clearing > 0n) returnJournalLines.push({ accountCode: 'OPENING_BALANCE_CLEARING', amount: openingEffectValue(returnDebtPlan.clearing), entryType: 'CREDIT' });
             if (returnedCogs > 0) {
                 returnJournalLines.push(
                     { accountCode: '156', amount: returnedCogs, entryType: 'DEBIT' },
@@ -1579,6 +1451,7 @@ export class SalesService {
                 `Trả hàng - ${savedReturn.returnCode} (Đơn ${order.orderCode})`,
                 returnJournalLines,
                 manager,
+                returnDate,
             );
 
             await queryRunner.commitTransaction();

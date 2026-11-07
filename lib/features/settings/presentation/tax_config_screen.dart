@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -187,7 +188,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Icon(Icons.save_rounded),
+                    : const AppIcon(Icons.save_rounded),
                 label: Text(
                   _isSaving ? 'Đang lưu…' : 'Lưu cấu hình',
                   style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
@@ -208,7 +209,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          AppIcon(
                             Icons.error_outline_rounded,
                             size: 48,
                             color: c.textMuted,
@@ -237,7 +238,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           FilledButton.icon(
                             onPressed: () =>
                                 ref.read(taxConfigProvider.notifier).refresh(),
-                            icon: const Icon(Icons.refresh),
+                            icon: const AppIcon(Icons.refresh),
                             label: const Text('Thử lại'),
                           ),
                           const SizedBox(height: 12),
@@ -245,7 +246,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                             onPressed: () => ref
                                 .read(taxConfigProvider.notifier)
                                 .resetToDefaultPolicy(),
-                            icon: const Icon(Icons.shield_outlined),
+                            icon: const AppIcon(Icons.shield_outlined),
                             label: const Text(
                               'Sử dụng cấu hình chuẩn 2026 ngay',
                             ),
@@ -280,7 +281,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              const AppIcon(
                                 Icons.verified_user_rounded,
                                 color: AppColors.info,
                                 size: 22,
@@ -311,7 +312,10 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                               ),
                               IconButton(
                                 tooltip: 'Thử đồng bộ lại máy chủ',
-                                icon: const Icon(Icons.sync_rounded, size: 20),
+                                icon: const AppIcon(
+                                  Icons.sync_rounded,
+                                  size: 20,
+                                ),
                                 onPressed: () => ref
                                     .read(taxConfigProvider.notifier)
                                     .refresh(),
@@ -334,7 +338,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                           ),
                           TextButton.icon(
                             onPressed: _resetToOfficialBenchmark,
-                            icon: const Icon(
+                            icon: const AppIcon(
                               Icons.restart_alt_rounded,
                               size: 16,
                             ),
@@ -436,7 +440,7 @@ class _TaxConfigScreenState extends ConsumerState<TaxConfigScreen> {
                                     ),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Icon(
+                                  child: AppIcon(
                                     Icons.tune_rounded,
                                     color: AppColors.primary,
                                     size: 20,
@@ -671,7 +675,7 @@ class _BusinessTypeCard extends StatelessWidget {
                     : c.divider.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
+              child: AppIcon(
                 _sectorIcon,
                 color: isSelected ? AppColors.primary : c.textSecondary,
                 size: 24,
@@ -736,7 +740,7 @@ class _BusinessTypeCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
+            AppIcon(
               isSelected
                   ? Icons.check_circle_rounded
                   : Icons.radio_button_off_rounded,
@@ -851,7 +855,7 @@ class _ThresholdCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 24),
+          AppIcon(icon, color: color, size: 24),
           const SizedBox(width: 14),
           Expanded(
             child: Column(

@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
@@ -30,7 +31,7 @@ Future<TaxExportFormat?> showTaxExportFormatDialog({
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
+            child: AppIcon(
               Icons.file_download_outlined,
               color: AppColors.primary,
               size: 22,
@@ -71,10 +72,10 @@ Future<TaxExportFormat?> showTaxExportFormatDialog({
             _FormatOptionTile(
               icon: Icons.code_rounded,
               iconColor: Colors.blue,
-              title: 'Tệp dữ liệu XML (Chuẩn nộp HTKK)',
+              title: 'Tệp dữ liệu XML',
               subtitle:
-                  'Dùng nộp điện tử qua Cổng Thuế (thuedientu.gdt.gov.vn) hoặc import phần mềm HTKK.',
-              badgeText: 'Nộp online',
+                  'Dữ liệu tờ khai để kiểm tra và nhập vào công cụ kê khai phù hợp. Cần kiểm tra tính tương thích trước khi gửi.',
+              badgeText: 'Tệp dữ liệu',
               badgeColor: AppColors.success,
               onTap: () => Navigator.pop(ctx, TaxExportFormat.xml),
             ),
@@ -85,8 +86,8 @@ Future<TaxExportFormat?> showTaxExportFormatDialog({
               iconColor: Colors.redAccent,
               title: 'Bản in PDF (Tờ khai Mẫu 01/CNKD)',
               subtitle:
-                  'Định dạng chuẩn A4 có Quốc hiệu, Tiêu ngữ và chữ ký. Dùng in ra giấy ký tay nộp trực tiếp hoặc lưu trữ sổ sách.',
-              badgeText: 'Bản in & Ký',
+                  'Khổ A4, có thông tin cửa hàng, kỳ kê khai và bảng số liệu. Dùng để xem, in và lưu trữ.',
+              badgeText: 'Xem & In',
               badgeColor: AppColors.primary,
               onTap: () => Navigator.pop(ctx, TaxExportFormat.pdf),
             ),
@@ -148,7 +149,7 @@ class _FormatOptionTile extends StatelessWidget {
                   color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: iconColor, size: 22),
+                child: AppIcon(icon, color: iconColor, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(

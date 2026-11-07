@@ -1,4 +1,6 @@
+import '../../../../core/widgets/panel_scroll_body.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/assets/app_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -154,7 +156,7 @@ class TaxObligationReminder extends ConsumerWidget {
         final displayList = active.take(5).toList();
 
         return Padding(
-          padding: const EdgeInsets.only(top: 14),
+          padding: const EdgeInsets.only(top: 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -162,7 +164,7 @@ class TaxObligationReminder extends ConsumerWidget {
                 final period = t['period'] ?? '';
                 final dueCalDate = parseDueDate(t['dueDate']);
                 final dueDateStr = dueCalDate != null
-                    ? '${dueCalDate.year}-${dueCalDate.month.toString().padLeft(2, '0')}-${dueCalDate.day.toString().padLeft(2, '0')}'
+                    ? DateFormat('dd/MM/yyyy').format(dueCalDate)
                     : null;
                 final vatDeclared =
                     num.tryParse(t['vatDeclared']?.toString() ?? '0') ?? 0;
@@ -225,14 +227,11 @@ class TaxObligationReminder extends ConsumerWidget {
                   onTap: () => context.push('/tax-obligations'),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: urgencyColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(AppRadius.card),
-                      border: Border.all(
-                        color: urgencyColor.withValues(alpha: 0.25),
-                        width: 1.5,
-                      ),
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: c.divider, width: 1),
                     ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -260,7 +259,7 @@ class TaxObligationReminder extends ConsumerWidget {
                                             10,
                                           ),
                                         ),
-                                        child: Icon(
+                                        child: AppIcon(
                                           urgencyIcon,
                                           size: 20,
                                           color: urgencyColor,
@@ -325,12 +324,12 @@ class TaxObligationReminder extends ConsumerWidget {
                         return Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(10),
+                              padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
                                 color: urgencyColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(
+                              child: AppIcon(
                                 urgencyIcon,
                                 size: 22,
                                 color: urgencyColor,
@@ -404,7 +403,10 @@ class TaxObligationReminder extends ConsumerWidget {
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
                       onPressed: () => context.push('/tax-obligations'),
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                      icon: const AppIcon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                      ),
                       label: const Text('Xem tất cả'),
                     ),
                   ),
@@ -453,9 +455,9 @@ class SummaryCard extends StatelessWidget {
         colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
       );
     } else if (icon is IconData) {
-      iconWidget = Icon(icon as IconData, size: 18, color: iconColor);
+      iconWidget = AppIcon(icon as IconData, size: 18, color: iconColor);
     } else {
-      iconWidget = HugeIcon(icon: icon, size: 18, color: iconColor);
+      iconWidget = AppHugeIcon(icon: icon, size: 18, color: iconColor);
     }
 
     return Container(
@@ -590,7 +592,7 @@ class QuickAction extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                HugeIcon(
+                AppHugeIcon(
                   icon: icon,
                   color: theme.colorScheme.primary,
                   size: 18,
@@ -688,12 +690,14 @@ class ComparisonBarChart extends StatefulWidget {
   final List<dynamic> previousData;
   final String label1, label2;
   final Widget? filterWidget;
+  final bool compact;
   const ComparisonBarChart(
     this.currentData,
     this.previousData,
     this.label1,
     this.label2, {
     this.filterWidget,
+    this.compact = false,
     super.key,
   });
 
@@ -838,7 +842,7 @@ class _ComparisonBarChartState extends State<ComparisonBarChart> {
     if (maxRev == 0) maxRev = 1000000;
 
     return Container(
-      height: isMobile ? 390 : 440,
+      height: widget.compact ? (isMobile ? 310 : 330) : (isMobile ? 390 : 440),
       padding: EdgeInsets.fromLTRB(
         isMobile ? 12 : 16,
         14,
@@ -1200,6 +1204,10 @@ double dashboardChartGroupWidth(
 }
 
 String _formatDashboardPeriod(String raw) {
+  final date = DateTime.tryParse(raw);
+  if (date != null && raw.length >= 10) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+  }
   final parts = raw.split('-');
   if (parts.length >= 3) return '${parts[2]}/${parts[1]}';
   if (parts.length == 2) return '${parts[1]}/${parts[0]}';
@@ -1966,7 +1974,7 @@ class LowStockTableWidget extends StatelessWidget {
                         color: AppColors.danger.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: const AppIcon(
                         Icons.warning_amber_rounded,
                         color: AppColors.danger,
                         size: 18,
@@ -1985,7 +1993,7 @@ class LowStockTableWidget extends StatelessWidget {
                 ),
                 TextButton.icon(
                   onPressed: () => context.push('/inventory'),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                  icon: const AppIcon(Icons.arrow_forward_rounded, size: 14),
                   label: const Text(
                     'Quản lý kho',
                     style: TextStyle(fontSize: 12),
@@ -2476,7 +2484,7 @@ class RecentOrdersDataTable extends StatelessWidget {
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: HugeIcon(
+                      child: AppHugeIcon(
                         icon: HugeIcons.strokeRoundedInvoice03,
                         color: theme.colorScheme.primary,
                         size: 18,
@@ -2496,11 +2504,25 @@ class RecentOrdersDataTable extends StatelessWidget {
                 Row(
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () =>
-                          ExcelExportService.exportOrdersToExcel(transactions),
-                      icon: const Icon(Icons.table_chart_rounded, size: 14),
+                      onPressed: () async {
+                        final saved =
+                            await ExcelExportService.exportOrdersToExcel(
+                              transactions,
+                            );
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              saved
+                                  ? 'Đã tạo tệp CSV đơn hàng.'
+                                  : 'Không thể xuất CSV. Kiểm tra dữ liệu và thử lại.',
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const AppIcon(Icons.table_chart_rounded, size: 14),
                       label: const Text(
-                        'Xuất Excel',
+                        'Xuất CSV',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -2521,7 +2543,10 @@ class RecentOrdersDataTable extends StatelessWidget {
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: () => context.push('/sales'),
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                      icon: const AppIcon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                      ),
                       label: const Text(
                         'Xem tất cả',
                         style: TextStyle(fontSize: 12),
@@ -2763,7 +2788,7 @@ class RecentDailyClosingsWidget extends ConsumerWidget {
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: HugeIcon(
+                      child: AppHugeIcon(
                         icon: HugeIcons.strokeRoundedInvoice03,
                         color: theme.colorScheme.primary,
                         size: 18,
@@ -2978,7 +3003,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                             color: theme.colorScheme.primary,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(
+                          child: const AppIcon(
                             Icons.storefront_rounded,
                             color: Colors.white,
                             size: 22,
@@ -3018,7 +3043,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                     const SizedBox(height: 14),
                     ElevatedButton.icon(
                       onPressed: () => context.push('/sales/new'),
-                      icon: const Icon(Icons.flash_on_rounded, size: 16),
+                      icon: const AppIcon(Icons.flash_on_rounded, size: 16),
                       label: const Text('Ghi nhận bán hàng'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
@@ -3044,7 +3069,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                               color: theme.colorScheme.primary,
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Icon(
+                            child: const AppIcon(
                               Icons.storefront_rounded,
                               color: Colors.white,
                               size: 24,
@@ -3085,7 +3110,7 @@ class DashboardHeroHeader extends ConsumerWidget {
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: () => context.push('/sales/new'),
-                      icon: const Icon(Icons.flash_on_rounded, size: 16),
+                      icon: const AppIcon(Icons.flash_on_rounded, size: 16),
                       label: const Text('Ghi nhận bán hàng'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
@@ -3144,7 +3169,7 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
                       color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppRadius.control),
                     ),
-                    child: Icon(icon, size: 20, color: color),
+                    child: AppIcon(icon, size: 20, color: color),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
@@ -3169,7 +3194,11 @@ class UrgentBusinessPulseHeader extends ConsumerWidget {
                     ),
                   ],
                   const SizedBox(width: AppSpacing.xxs),
-                  Icon(Icons.chevron_right, size: 18, color: colors.textMuted),
+                  AppIcon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: colors.textMuted,
+                  ),
                 ],
               ),
             ),
@@ -3371,6 +3400,8 @@ class _DashboardPriorityListState extends ConsumerState<DashboardPriorityList> {
     return SizedBox(
       height: widget.fixedHeight ? 440 : null,
       child: Container(
+        // Clip the severity stripe and ink to the rounded outer surface.
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: colors.surface,
           border: Border.all(color: colors.divider),
@@ -3538,7 +3569,7 @@ class _NoUrgentActions extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AppColors.success),
+          const AppIcon(Icons.check_circle_outline, color: AppColors.success),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -3557,7 +3588,7 @@ class _NoUrgentActions extends StatelessWidget {
                 Text(
                   hasVerifiedSummary
                       ? 'Các trạng thái đã xác minh được tổng hợp bên dưới.'
-                      : 'Tất cả chỉ số vận hành, tồn kho và đơn hàng đều đang trong ngưỡng an toàn.',
+                      : 'Chưa có cảnh báo trong phạm vi dữ liệu và quyền truy cập hiện tại.',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
@@ -3592,7 +3623,7 @@ class _HealthySummary extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          const AppIcon(
             Icons.verified_outlined,
             size: 20,
             color: AppColors.success,
@@ -3668,6 +3699,15 @@ class _PriorityRow extends ConsumerWidget {
     };
 
     bool canNavigateTo(String path) {
+      if (item.shopId != null) {
+        return shopState.userShops.any(
+          (shop) =>
+              parseShopRecordId(shop['shopId']) == item.shopId &&
+              shop['status'] == 'ACTIVE' &&
+              shop['isActive'] != false &&
+              shop['memberType'] == 'OWNER',
+        );
+      }
       if (shopState.userShops.isEmpty || shopState.isOwner) return true;
       if (path.startsWith('/products')) {
         return shopState.hasPermission('products');
@@ -3684,103 +3724,132 @@ class _PriorityRow extends ConsumerWidget {
       if (path.startsWith('/tax-obligations')) {
         return shopState.hasPermission('finance');
       }
+      if (path.startsWith('/supplier-payables-aging')) {
+        return shopState.hasPermission('finance');
+      }
+      if (path.startsWith('/purchases-no-invoice')) return shopState.isOwner;
       if (path.startsWith('/notifications')) return true;
       return true;
     }
 
     final canNavigate = canNavigateTo(item.destination);
-
-    return Semantics(
-      button: canNavigate,
-      label: '${item.badge}: ${item.title}. ${item.detail}',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: canNavigate ? () => context.go(item.destination) : null,
-          mouseCursor: canNavigate
-              ? SystemMouseCursors.click
-              : SystemMouseCursors.basic,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 76),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.045),
-              border: Border(left: BorderSide(color: statusColor, width: 3)),
-            ),
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '$number',
-                    style: AppTheme.tabularStyle(
-                      context,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.detail,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colors.textMuted,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xs,
-                    vertical: AppSpacing.xxs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppRadius.control),
-                    border: Border.all(
-                      color: statusColor.withValues(alpha: 0.24),
-                    ),
-                  ),
-                  child: Text(
-                    item.badge,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: statusColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: AppSpacing.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        border: Border.all(color: statusColor.withValues(alpha: 0.24)),
+      ),
+      child: Text(
+        item.badge,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: statusColor,
+          fontWeight: FontWeight.w700,
         ),
       ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact =
+            constraints.maxWidth < 420 ||
+            MediaQuery.textScalerOf(context).scale(14) > 18;
+        return Semantics(
+          button: canNavigate,
+          label: '${item.badge}: ${item.title}. ${item.detail}',
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: canNavigate
+                  ? () {
+                      if (item.shopId != null) {
+                        ref
+                            .read(shopProvider.notifier)
+                            .switchShop(item.shopId!);
+                      }
+                      context.go(item.destination);
+                    }
+                  : null,
+              mouseCursor: canNavigate
+                  ? SystemMouseCursors.click
+                  : SystemMouseCursors.basic,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 76),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.045),
+                  border: Border(
+                    left: BorderSide(color: statusColor, width: 3),
+                  ),
+                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$number',
+                        style: AppTheme.tabularStyle(
+                          context,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            maxLines: compact ? null : 2,
+                            overflow: compact
+                                ? TextOverflow.visible
+                                : TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.textPrimary,
+                                ),
+                          ),
+                          if (compact) ...[const SizedBox(height: 4), badge],
+                          const SizedBox(height: 4),
+                          Text(
+                            item.detail,
+                            maxLines: compact ? null : 2,
+                            overflow: compact
+                                ? TextOverflow.visible
+                                : TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: colors.textMuted,
+                                  height: 1.4,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!compact) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      badge,
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -3793,7 +3862,7 @@ class DashboardRecentOrdersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final displayItems = transactions.take(4).toList();
+    final displayItems = transactions.take(10).toList();
 
     if (displayItems.isEmpty) {
       return const Padding(
@@ -3807,6 +3876,8 @@ class DashboardRecentOrdersList extends StatelessWidget {
     }
 
     return Container(
+      height: 440,
+      clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(top: AppSpacing.lg),
       decoration: BoxDecoration(
         color: colors.surface,
@@ -3864,50 +3935,63 @@ class DashboardRecentOrdersList extends StatelessWidget {
             ),
           ),
           Divider(height: 1, color: colors.divider),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 720) {
-                return Column(
-                  children: [
-                    for (
-                      var index = 0;
-                      index < displayItems.length;
-                      index++
-                    ) ...[
-                      if (index > 0) Divider(height: 1, color: colors.divider),
-                      _RecentOrderMobileRow(item: displayItems[index]),
-                    ],
-                  ],
-                );
-              }
-
-              return Column(
-                children: [
-                  Container(
-                    color: colors.cardAlt.withValues(alpha: 0.92),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: const Row(
+          Expanded(
+            child: PanelScrollBody(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 720) {
+                    return Column(
                       children: [
-                        Expanded(flex: 2, child: Text('Mã đơn')),
-                        Expanded(flex: 3, child: Text('Khách hàng')),
-                        Expanded(flex: 2, child: Text('Ngày giao dịch')),
-                        Expanded(
-                          flex: 2,
-                          child: Text('Giá trị', textAlign: TextAlign.right),
-                        ),
+                        for (
+                          var index = 0;
+                          index < displayItems.length;
+                          index++
+                        ) ...[
+                          if (index > 0)
+                            Divider(height: 1, color: colors.divider),
+                          _RecentOrderMobileRow(item: displayItems[index]),
+                        ],
                       ],
-                    ),
-                  ),
-                  for (var index = 0; index < displayItems.length; index++) ...[
-                    if (index > 0) Divider(height: 1, color: colors.divider),
-                    _RecentOrderDesktopRow(item: displayItems[index]),
-                  ],
-                ],
-              );
-            },
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      Container(
+                        color: colors.cardAlt.withValues(alpha: 0.92),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: const Row(
+                          children: [
+                            Expanded(flex: 2, child: Text('Mã đơn')),
+                            Expanded(flex: 3, child: Text('Khách hàng')),
+                            Expanded(flex: 2, child: Text('Ngày giao dịch')),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Giá trị',
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      for (
+                        var index = 0;
+                        index < displayItems.length;
+                        index++
+                      ) ...[
+                        if (index > 0)
+                          Divider(height: 1, color: colors.divider),
+                        _RecentOrderDesktopRow(item: displayItems[index]),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),

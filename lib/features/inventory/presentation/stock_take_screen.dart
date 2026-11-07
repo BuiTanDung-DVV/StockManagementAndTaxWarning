@@ -1,3 +1,6 @@
+import '../../../core/widgets/product_thumbnail.dart';
+import '../../../core/utils/search_text.dart';
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -67,7 +70,7 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.history_rounded, size: 22),
+            icon: const AppIcon(Icons.history_rounded, size: 22),
             tooltip: 'Lịch sử kiểm kê',
             onPressed: () async {
               await Navigator.push(
@@ -98,7 +101,7 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               elevation: 3,
-              icon: const Icon(
+              icon: const AppIcon(
                 Icons.fact_check_rounded,
                 color: Colors.white,
                 size: 20,
@@ -142,7 +145,7 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
             );
           }
 
-          final query = _searchQuery.trim().toLowerCase();
+          final query = foldSearchText(_searchQuery);
           final lowStockCount = items.where((raw) {
             if (raw is! Map) return false;
             final qty = parseQuantity(
@@ -157,13 +160,10 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
 
           final filteredItems = items.where((raw) {
             if (raw is! Map) return false;
-            final name =
-                (raw['product']?['name'] ?? raw['productName'] ?? '')
-                    .toString()
-                    .toLowerCase();
-            final sku = (raw['product']?['sku'] ?? raw['sku'] ?? '')
-                .toString()
-                .toLowerCase();
+            final name = foldSearchText(
+              raw['product']?['name'] ?? raw['productName'],
+            );
+            final sku = foldSearchText(raw['product']?['sku'] ?? raw['sku']);
             final matchesSearch =
                 query.isEmpty || name.contains(query) || sku.contains(query);
             if (!matchesSearch) return false;
@@ -207,13 +207,13 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
                               fontSize: 13,
                               color: c.textSecondary,
                             ),
-                            prefixIcon: const Icon(
+                            prefixIcon: const AppIcon(
                               Icons.search_rounded,
                               size: 20,
                             ),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(
+                                    icon: const AppIcon(
                                       Icons.clear_rounded,
                                       size: 18,
                                     ),
@@ -258,7 +258,7 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
                                 onSelected: (_) => setState(
                                   () => _filter = StockTakeFilter.all,
                                 ),
-                                avatar: const Icon(
+                                avatar: const AppIcon(
                                   Icons.list_alt_rounded,
                                   size: 16,
                                 ),
@@ -277,20 +277,18 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
                                       : null,
                                   fontWeight:
                                       _filter == StockTakeFilter.lowStock
-                                          ? FontWeight.bold
-                                          : null,
+                                      ? FontWeight.bold
+                                      : null,
                                 ),
                                 onSelected: (_) => setState(
                                   () => _filter = StockTakeFilter.lowStock,
                                 ),
-                                avatar: Icon(
+                                avatar: AppIcon(
                                   Icons.warning_amber_rounded,
                                   size: 16,
                                   color: _filter == StockTakeFilter.lowStock
                                       ? AppColors.danger
-                                      : AppColors.danger.withValues(
-                                          alpha: 0.8,
-                                        ),
+                                      : AppColors.danger.withValues(alpha: 0.8),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -307,13 +305,13 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
                                       : null,
                                   fontWeight:
                                       _filter == StockTakeFilter.safeStock
-                                          ? FontWeight.bold
-                                          : null,
+                                      ? FontWeight.bold
+                                      : null,
                                 ),
                                 onSelected: (_) => setState(
                                   () => _filter = StockTakeFilter.safeStock,
                                 ),
-                                avatar: Icon(
+                                avatar: AppIcon(
                                   Icons.check_circle_outline_rounded,
                                   size: 16,
                                   color: _filter == StockTakeFilter.safeStock
@@ -426,26 +424,12 @@ class _StockTakeScreenState extends ConsumerState<StockTakeScreen> {
                                         ),
                                         child: Row(
                                           children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(10),
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    (isLow
-                                                            ? AppColors.danger
-                                                            : AppColors.success)
-                                                        .withValues(
-                                                          alpha: 0.08,
-                                                        ),
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                              ),
-                                              child: Icon(
-                                                Icons.inventory_2_rounded,
-                                                color: isLow
-                                                    ? AppColors.danger
-                                                    : AppColors.success,
-                                                size: 20,
-                                              ),
+                                            ProductThumbnail(
+                                              imageUrl:
+                                                  item['product']?['imageUrl']
+                                                      ?.toString(),
+                                              name: item['product']?['name']
+                                                  ?.toString(),
                                             ),
                                             const SizedBox(width: 14),
                                             Expanded(

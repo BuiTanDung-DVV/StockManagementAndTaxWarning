@@ -1,4 +1,6 @@
+import '../../../core/assets/app_icon.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/business_date_field.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +20,8 @@ import '../../settings/providers/shop_provider.dart';
 import '../providers/finance_provider.dart';
 
 class PurchaseNoInvoiceScreen extends ConsumerStatefulWidget {
-  const PurchaseNoInvoiceScreen({super.key});
+  final String? initialStatus;
+  const PurchaseNoInvoiceScreen({super.key, this.initialStatus});
 
   @override
   ConsumerState<PurchaseNoInvoiceScreen> createState() =>
@@ -30,6 +33,18 @@ class _PurchaseNoInvoiceScreenState
   int _page = 1;
   String _statusFilter = 'ALL';
 
+  @override
+  void initState() {
+    super.initState();
+    if (const {
+      'PENDING',
+      'APPROVED',
+      'REJECTED',
+    }.contains(widget.initialStatus?.toUpperCase())) {
+      _statusFilter = widget.initialStatus!.toUpperCase();
+    }
+  }
+
   String _fmt(num v) => NumberFormat.currency(
     locale: 'vi_VN',
     symbol: '₫',
@@ -40,14 +55,14 @@ class _PurchaseNoInvoiceScreenState
     try {
       final shop = ref.read(shopProvider);
       final shopProfile = ref.read(shopProfileProvider).value ?? {};
-      final shopName = shop.currentShopName ??
+      final shopName =
+          shop.currentShopName ??
           shopProfile['shopName']?.toString() ??
           'Hộ kinh doanh SmartStock';
       final shopTaxCode = shopProfile['taxCode']?.toString() ?? '';
       final shopAddress = shopProfile['address']?.toString() ?? '';
       final recordCode = p['recordCode']?.toString() ?? '01-TNDN';
-      final purchaseDate =
-          p['purchaseDate']?.toString().split('T').first ?? '';
+      final purchaseDate = p['purchaseDate']?.toString().split('T').first ?? '';
       final sellerName = p['sellerName']?.toString() ?? '';
       final sellerId = p['sellerIdentityNumber']?.toString() ?? '';
       final sellerAddress = p['sellerAddress']?.toString() ?? '';
@@ -150,7 +165,7 @@ class _PurchaseNoInvoiceScreenState
                         subtitle:
                             'Tạo bảng kê thu mua hàng hóa dịch vụ không có hóa đơn (Mẫu 01/TNDN).',
                         action: ElevatedButton.icon(
-                          icon: const Icon(Icons.receipt_long),
+                          icon: const AppIcon(Icons.receipt_long),
                           label: const Text('Thêm bảng kê'),
                           onPressed: _openAddDialog,
                         ),
@@ -227,7 +242,7 @@ class _PurchaseNoInvoiceScreenState
                               onPressed: _page > 1
                                   ? () => setState(() => _page--)
                                   : null,
-                              icon: const Icon(Icons.chevron_left),
+                              icon: const AppIcon(Icons.chevron_left),
                               label: const Text('Trước'),
                             ),
                             const SizedBox(width: 12),
@@ -242,7 +257,7 @@ class _PurchaseNoInvoiceScreenState
                               onPressed: _page < totalPages
                                   ? () => setState(() => _page++)
                                   : null,
-                              icon: const Icon(Icons.chevron_right),
+                              icon: const AppIcon(Icons.chevron_right),
                               label: const Text('Sau'),
                             ),
                           ],
@@ -302,7 +317,7 @@ class _PurchaseNoInvoiceScreenState
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(
+                                          AppIcon(
                                             Icons.picture_as_pdf_rounded,
                                             size: 13,
                                             color: AppColors.primary,
@@ -400,7 +415,7 @@ class _PurchaseNoInvoiceScreenState
                                       p['id'] as int,
                                       approve: false,
                                     ),
-                                    icon: const Icon(
+                                    icon: const AppIcon(
                                       Icons.close,
                                       color: AppColors.danger,
                                       size: 16,
@@ -418,7 +433,7 @@ class _PurchaseNoInvoiceScreenState
                                       p['id'] as int,
                                       approve: true,
                                     ),
-                                    icon: const Icon(Icons.check, size: 16),
+                                    icon: const AppIcon(Icons.check, size: 16),
                                     label: const Text('Duyệt'),
                                   ),
                                 ),
@@ -469,7 +484,7 @@ class _PurchaseNoInvoiceScreenState
               ? null
               : FloatingActionButton.extended(
                   onPressed: _openAddDialog,
-                  icon: const Icon(Icons.receipt_long),
+                  icon: const AppIcon(Icons.receipt_long),
                   label: const Text('Thêm'),
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -496,7 +511,7 @@ class _PurchaseNoInvoiceScreenState
           ? null
           : FloatingActionButton.extended(
               onPressed: _openAddDialog,
-              icon: const Icon(Icons.receipt_long),
+              icon: const AppIcon(Icons.receipt_long),
               label: const Text('Thêm'),
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -563,7 +578,7 @@ class _PurchaseNoInvoiceScreenState
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: fg),
+            AppIcon(icon, size: 14, color: fg),
             const SizedBox(width: 4),
             Text(
               label,
@@ -668,6 +683,7 @@ class _AddPurchaseNoInvoiceDialogState
   late final TextEditingController unitPriceC;
 
   final lineItems = <Map<String, dynamic>>[];
+  DateTime _purchaseDate = DateTime.now();
   bool _isSubmitting = false;
   int? _selectedProductId;
   String? _errorMessage;
@@ -697,222 +713,261 @@ class _AddPurchaseNoInvoiceDialogState
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Thêm bảng kê'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: sellerC,
-                maxLength: 200,
-                decoration: const InputDecoration(labelText: 'Tên người bán'),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Vui lòng nhập tên người bán'
-                    : null,
-              ),
-              TextFormField(
-                controller: idC,
-                maxLength: 20,
-                decoration: const InputDecoration(labelText: 'CCCD người bán'),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'Vui lòng nhập CCCD người bán';
-                  }
-                  final trimmed = v.trim();
-                  if (!RegExp(r'^\d{9}(\d{3})?$').hasMatch(trimmed)) {
-                    return 'CCCD/CMND phải gồm 9 hoặc 12 chữ số';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 8),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Chi tiết hàng hóa',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+    return PopScope(
+      canPop: !_isSubmitting,
+      child: AlertDialog(
+        title: const Text('Thêm bảng kê'),
+        content: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: sellerC,
+                  enabled: !_isSubmitting,
+                  maxLength: 200,
+                  decoration: const InputDecoration(labelText: 'Tên người bán'),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Vui lòng nhập tên người bán'
+                      : null,
                 ),
-              ),
-              TextFormField(
-                controller: productC,
-                decoration: const InputDecoration(labelText: 'Tên hàng hóa'),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _isSubmitting
-                      ? null
-                      : () => _showProductPicker(
-                          context,
-                          ref,
-                          onPick: (name, unitPrice) {
-                            setState(() {
-                              productC.text = name;
-                              unitPriceC.text = unitPrice > 0
-                                  ? unitPrice.toStringAsFixed(0)
-                                  : '';
-                            });
-                          },
-                          onPickProductId: (id) {
-                            _selectedProductId = id;
-                          },
-                        ),
-                  icon: const Icon(Icons.inventory_2_outlined),
-                  label: const Text('Chọn từ danh sách hàng hóa'),
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: qtyC,
-                      decoration: const InputDecoration(labelText: 'Số lượng'),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
+                TextFormField(
+                  controller: idC,
+                  enabled: !_isSubmitting,
+                  maxLength: 20,
+                  decoration: const InputDecoration(
+                    labelText: 'CCCD người bán',
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: unitPriceC,
-                      decoration: InputDecoration(
-                        labelText: 'Đơn giá',
-                        helperText: unitPriceC.text.trim().isNotEmpty
-                            ? widget.formatCurrency(
-                                parseCurrency(unitPriceC.text),
-                              )
-                            : null,
-                      ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _isSubmitting
-                      ? null
-                      : () {
-                          final productName = productC.text.trim();
-                          final quantity = parseQuantity(qtyC.text);
-                          final unitPrice = parseCurrency(unitPriceC.text);
-                          if (productName.isEmpty ||
-                              quantity <= 0 ||
-                              unitPrice < 0) {
-                            setState(
-                              () => _errorMessage =
-                                  'Kiểm tra lại tên hàng, số lượng và đơn giá',
-                            );
-                            ToastService.showError(
-                              'Kiểm tra lại tên hàng, số lượng và đơn giá',
-                            );
-                            return;
-                          }
-                          setState(() {
-                            _errorMessage = null;
-                            lineItems.add({
-                              'productName': productName,
-                              'productId': _selectedProductId,
-                              'quantity': quantity,
-                              'unitPrice': unitPrice,
-                              'subtotal': quantity * unitPrice,
-                            });
-                            productC.clear();
-                            qtyC.text = '1';
-                            unitPriceC.clear();
-                            _selectedProductId = null;
-                          });
-                        },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Thêm dòng'),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Vui lòng nhập CCCD người bán';
+                    }
+                    final trimmed = v.trim();
+                    if (!RegExp(r'^\d{9}(\d{3})?$').hasMatch(trimmed)) {
+                      return 'CCCD/CMND phải gồm 9 hoặc 12 chữ số';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-              if (lineItems.isNotEmpty)
-                ...lineItems.asMap().entries.map((entry) {
-                  final idx = entry.key;
-                  final line = entry.value;
-                  return ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(line['productName'] as String),
-                    subtitle: Text(
-                      '${line['quantity']} x ${widget.formatCurrency(line['unitPrice'] as num)}',
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.formatCurrency(line['subtotal'] as num),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 18),
-                          onPressed: _isSubmitting
-                              ? null
-                              : () => setState(() => lineItems.removeAt(idx)),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'Tổng: ${widget.formatCurrency(calcTotal())}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
+                const SizedBox(height: 8),
+                BusinessDateField(
+                  label: 'Ngày mua',
+                  selectedDate: _purchaseDate,
+                  enabled: !_isSubmitting,
+                  onChanged: (date) {
+                    setState(() {
+                      _purchaseDate = date;
+                    });
+                  },
                 ),
-              ),
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                const SizedBox(height: 8),
+                const Align(
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: AppColors.danger,
-                      fontSize: 13,
+                    'Chi tiết hàng hóa',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                TextFormField(
+                  controller: productC,
+                  enabled: !_isSubmitting,
+                  decoration: const InputDecoration(labelText: 'Tên hàng hóa'),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _isSubmitting
+                        ? null
+                        : () => _showProductPicker(
+                            context,
+                            ref,
+                            onPick: (name, unitPrice) {
+                              setState(() {
+                                productC.text = name;
+                                unitPriceC.text = unitPrice > 0
+                                    ? unitPrice.toStringAsFixed(0)
+                                    : '';
+                              });
+                            },
+                            onPickProductId: (id) {
+                              _selectedProductId = id;
+                            },
+                          ),
+                    icon: const AppIcon(Icons.inventory_2_outlined),
+                    label: const Text('Chọn từ danh sách hàng hóa'),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: qtyC,
+                        enabled: !_isSubmitting,
+                        decoration: const InputDecoration(
+                          labelText: 'Số lượng',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: unitPriceC,
+                        enabled: !_isSubmitting,
+                        decoration: InputDecoration(
+                          labelText: 'Đơn giá',
+                          helperText: unitPriceC.text.trim().isNotEmpty
+                              ? widget.formatCurrency(
+                                  parseCurrency(unitPriceC.text),
+                                )
+                              : null,
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _isSubmitting
+                        ? null
+                        : () {
+                            final productName = productC.text.trim();
+                            final quantity = parseQuantity(qtyC.text);
+                            final unitPrice = parseCurrency(unitPriceC.text);
+                            if (productName.isEmpty ||
+                                quantity <= 0 ||
+                                unitPrice < 0) {
+                              setState(
+                                () => _errorMessage =
+                                    'Kiểm tra lại tên hàng, số lượng và đơn giá',
+                              );
+                              ToastService.showError(
+                                'Kiểm tra lại tên hàng, số lượng và đơn giá',
+                              );
+                              return;
+                            }
+                            setState(() {
+                              _errorMessage = null;
+                              lineItems.add({
+                                'productName': productName,
+                                'productId': _selectedProductId,
+                                'quantity': quantity,
+                                'unitPrice': unitPrice,
+                                'subtotal': quantity * unitPrice,
+                              });
+                              productC.clear();
+                              qtyC.text = '1';
+                              unitPriceC.clear();
+                              _selectedProductId = null;
+                            });
+                          },
+                    icon: const AppIcon(Icons.add),
+                    label: const Text('Thêm dòng'),
+                  ),
+                ),
+                if (lineItems.isNotEmpty)
+                  ...lineItems.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final line = entry.value;
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(line['productName'] as String),
+                      subtitle: Text(
+                        '${line['quantity']} x ${widget.formatCurrency(line['unitPrice'] as num)}',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.formatCurrency(line['subtotal'] as num),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          IconButton(
+                            icon: const AppIcon(Icons.close, size: 18),
+                            onPressed: _isSubmitting
+                                ? null
+                                : () => setState(() => lineItems.removeAt(idx)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Tổng: ${widget.formatCurrency(calcTotal())}',
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
-            ],
+                if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: _isSubmitting
+                ? null
+                : () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: _isSubmitting ? null : _submit,
+            child: _isSubmitting
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Lưu'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.pop(context, false),
-          child: const Text('Hủy'),
-        ),
-        ElevatedButton(
-          onPressed: _isSubmitting ? null : _submit,
-          child: _isSubmitting
-              ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Text('Lưu'),
-        ),
-      ],
     );
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDateOnly = DateTime(
+      _purchaseDate.year,
+      _purchaseDate.month,
+      _purchaseDate.day,
+    );
+    if (selectedDateOnly.isAfter(today)) {
+      setState(() => _errorMessage = 'Ngày mua không được ở tương lai.');
+      ToastService.showError('Ngày mua không được ở tương lai.');
+      return;
+    }
 
     if (productC.text.trim().isNotEmpty) {
       final quantity = parseQuantity(qtyC.text);
@@ -948,7 +1003,7 @@ class _AddPurchaseNoInvoiceDialogState
         'sellerIdentityNumber': idC.text.trim(),
         'totalAmount': calcTotal(),
         'items': lineItems,
-        'purchaseDate': DateTime.now().toIso8601String().split('T').first,
+        'purchaseDate': _purchaseDate.toIso8601String().split('T').first,
       });
       if (!mounted) return;
       ToastService.showSuccess('Đã lưu bảng kê thành công');

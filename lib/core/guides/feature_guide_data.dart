@@ -7,9 +7,14 @@
 //   + example: Ví dụ nhỏ minh họa
 
 class FeatureGuideItem {
+  final String heading;
   final String intro;
   final String example;
-  const FeatureGuideItem({required this.intro, required this.example});
+  const FeatureGuideItem({
+    this.heading = '',
+    required this.intro,
+    required this.example,
+  });
 }
 
 class FeatureGuide {
@@ -23,34 +28,68 @@ class FeatureGuide {
   });
 }
 
+const productImportGuideItems = <FeatureGuideItem>[
+  FeatureGuideItem(
+    heading: 'Chuẩn bị và chọn file',
+    intro:
+        'Mở Nhập danh mục sản phẩm, nhấn Tải mẫu Excel. Thay hai dòng minh họa bằng dữ liệu của bạn, lưu file .xlsx rồi chọn file trong app. Mỗi lượt tối đa 500 sản phẩm, file tối đa 5 MB. Nếu có nhiều sheet, chọn đúng sheet cần nhập.',
+    example: '',
+  ),
+  FeatureGuideItem(
+    heading: 'Mã hàng, tên và đơn vị',
+    intro:
+        'SKU là mã hàng, bắt buộc và duy nhất trong cửa hàng. Hàng mới phải có tên. Đơn vị phải khớp với sản phẩm đã có. Giữ cột SKU và Mã vạch ở dạng Text trong Excel để không mất số 0 đầu.',
+    example:
+        'SKU 000123 và mã vạch 0000123456789 phải giữ nguyên các số 0 đầu.',
+  ),
+  FeatureGuideItem(
+    heading: 'Giá và mức tối thiểu',
+    intro:
+        'Giá nhập, Giá bán và Giá bán sỉ là ô số không âm. Mức tối thiểu là số nguyên không âm dùng để cảnh báo sắp hết hàng, không phải số lượng tồn ban đầu. Với ô có công thức, sao chép và dán giá trị trước khi nhập.',
+    example: '',
+  ),
+  FeatureGuideItem(
+    heading: 'Danh mục, nhãn và mô tả',
+    intro:
+        'Điền đúng tên danh mục và nhãn đã tạo trong cửa hàng, hoặc để trống. Ngăn nhiều nhãn bằng dấu |. Mô tả là ghi chú ngắn về hàng. Không nhập ảnh hoặc đường dẫn ảnh qua file; cập nhật ảnh riêng trong màn sửa sản phẩm.',
+    example: 'Hai nhãn: Hàng cần theo dõi|Bán chạy.',
+  ),
+  FeatureGuideItem(
+    heading: 'Kiểm tra trước khi nhập',
+    intro:
+        'SKU mới tạo sản phẩm mới; SKU đã có cập nhật thông tin được điền. Ô trống giữ dữ liệu cũ; nhập 0 nếu muốn đặt giá trị số bằng 0. Xem trước từng dòng và sửa lỗi trước khi xác nhận. Nhập danh mục không tăng tồn kho, ghi tiền hoặc tạo công nợ.',
+    example: '',
+  ),
+];
+
 const Map<String, FeatureGuide> featureGuides = {
+  'product_import': FeatureGuide(
+    title: 'Nhập sản phẩm từ Excel',
+    icon: '',
+    items: productImportGuideItems,
+  ),
   // ── 1. Dashboard ──
   'dashboard': FeatureGuide(
     title: 'Trang chủ',
     icon: '📊',
     items: [
       FeatureGuideItem(
+        heading: 'Đọc số liệu theo kỳ',
         intro:
-            'Hiển thị tổng quan kinh doanh: doanh thu, đơn hàng, trung bình/đơn. Mở app là thấy ngay tình hình hôm nay mà không cần giở sổ.',
-        example:
-            'Sáng mở app thấy hôm qua bán 2.5 triệu từ 15 đơn → biết ngay buôn bán tốt.',
+            'Doanh thu thuần, lợi nhuận gộp và số đơn được tính trong kỳ đang chọn. Số dư quỹ là tiền mặt đã ghi nhận đến hiện tại. Nhấn một chỉ số để mở dữ liệu liên quan.',
+        example: '',
       ),
       FeatureGuideItem(
+        heading: 'Ưu tiên việc cần xử lý',
         intro:
-            'Cảnh báo tự động khi sản phẩm sắp hết hàng. Nhấn vào SP cảnh báo để nhập thêm ngay.',
-        example: 'App báo "Sữa TH chỉ còn 3 hộp" → gọi nhà cung cấp nhập thêm.',
+            'Xem hàng hết hoặc chạm định mức tồn, công nợ quá hạn và nghĩa vụ thuế đã ghi. Đối chiếu dữ liệu nguồn trước khi xử lý.',
+        example: '',
       ),
       FeatureGuideItem(
+        heading: 'Ghi nhận nghiệp vụ',
         intro:
-            'Thao tác nhanh: nhấn 1 nút vào ngay Bán hàng, Nhập hàng, Kiểm kho, Nhân viên.',
-        example:
-            'Khi có khách mua hàng, nhấn "Ghi nhận bán hàng" để lập giao dịch mới.',
-      ),
-      FeatureGuideItem(
-        intro:
-            'Tự nhắc khi đến hạn kê khai hoặc nộp thuế, tránh bị phạt vì trễ hạn.',
-        example:
-            'Gần ngày 20/01 → app nhắc "Sắp đến hạn nộp tờ khai VAT quý 4".',
+            'Ghi nghiệp vụ khi phát sinh hoặc nhập lại từ sổ, hóa đơn có sẵn tại các mục Kho, Tài chính và Bán hàng. Chọn đúng ngày nghiệp vụ và cửa hàng.',
+        example: '',
       ),
     ],
   ),
@@ -116,11 +155,18 @@ const Map<String, FeatureGuide> featureGuides = {
     icon: '📦',
     items: [
       FeatureGuideItem(
+        heading: 'Tìm và lọc sản phẩm',
         intro:
-            'Quản lý danh mục SP: thêm tên, giá nhập, giá bán, danh mục, barcode. Tìm kiếm và lọc nhanh.',
-        example:
-            'Bán thêm "Nước giặt Omo 3kg" → thêm vào app giá nhập 85k, bán 95k.',
+            'Nhập tên hoặc SKU, chọn một nhãn để thu hẹp danh sách. “Tất cả” bỏ lọc nhãn; “Bỏ lọc” xóa cả nhãn và nội dung tìm kiếm.',
+        example: '',
       ),
+      FeatureGuideItem(
+        heading: 'Xem chi tiết và xuất dữ liệu',
+        intro:
+            'Chuyển giữa danh sách và lưới ảnh. Chọn sản phẩm để xem thông tin; đánh dấu ô chọn rồi dùng “Xuất Excel”. Chọn tất cả áp dụng cho toàn bộ kết quả đang lọc, kể cả các trang khác; có thể bỏ chọn từng sản phẩm.',
+        example: '“Chọn trang này” chỉ chọn các sản phẩm thuộc trang đang xem.',
+      ),
+      ...productImportGuideItems,
     ],
   ),
 

@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'package:intl/intl.dart';
+import '../../settings/providers/shop_provider.dart';
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,11 +25,166 @@ class InvoiceScanScreen extends ConsumerStatefulWidget {
 class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
   int page = 1;
   bool uploading = false;
+  final _searchController = TextEditingController();
+  Timer? _searchTimer;
+  String _search = '';
+  String? _statusFilter;
+  DateTimeRange? _range;
+  String _day(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+  InvoiceScanFilter get _query => (
+    page: page,
+    search: _search,
+    status: _statusFilter,
+    from: _range == null ? null : _day(_range!.start),
+    to: _range == null ? null : _day(_range!.end),
+  );
+  @override
+  void dispose() {
+    _searchTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _applySearch() {
+    _searchTimer?.cancel();
+    setState(() {
+      _search = _searchController.text.trim();
+      page = 1;
+    });
+  }
+
+  void _clearFilters() {
+    _searchTimer?.cancel();
+    _searchController.clear();
+    setState(() {
+      _search = '';
+      _statusFilter = null;
+      _range = null;
+      page = 1;
+    });
+  }
+
+  Future<void> _chooseDates() async {
+    final selected = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      initialDateRange: _range,
+      helpText: 'Lọc theo ngày quét',
+    );
+    if (selected != null && mounted)
+      setState(() {
+        _range = selected;
+        page = 1;
+      });
+  }
+
+  Widget _filters() => AppCardContainer(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _searchController,
+            maxLength: 120,
+            onChanged: (_) {
+              _searchTimer?.cancel();
+              _searchTimer = Timer(
+                const Duration(milliseconds: 400),
+                _applySearch,
+              );
+            },
+            onSubmitted: (_) => _applySearch(),
+            decoration: InputDecoration(
+              labelText: 'Tìm mã quét, số hóa đơn hoặc đối tác',
+              counterText: '',
+              prefixIcon: const AppIcon(Icons.search),
+              suffixIcon: IconButton(
+                tooltip: 'Tìm kiếm',
+                onPressed: _applySearch,
+                icon: const AppIcon(Icons.arrow_forward),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: 220,
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey(_statusFilter),
+                  initialValue: _statusFilter ?? '',
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Trạng thái'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: '',
+                      child: Text('Tất cả trạng thái'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'REVIEW_REQUIRED',
+                      child: Text('Cần kiểm tra'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'MANUAL_REQUIRED',
+                      child: Text('Cần nhập tay'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'CONFIRMED',
+                      child: Text('Đã tạo hóa đơn'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'PROCESSING',
+                      child: Text('Đang nhận dạng'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'PENDING',
+                      child: Text('Chờ xử lý'),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _statusFilter = value == '' ? null : value;
+                    page = 1;
+                  }),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: _chooseDates,
+                icon: const AppIcon(Icons.date_range_outlined),
+                label: Text(
+                  _range == null
+                      ? 'Ngày quét: Tất cả'
+                      : '${DateFormat('dd/MM/yyyy').format(_range!.start)} – ${DateFormat('dd/MM/yyyy').format(_range!.end)}',
+                ),
+              ),
+              if (_search.isNotEmpty || _statusFilter != null || _range != null)
+                TextButton.icon(
+                  onPressed: _clearFilters,
+                  icon: const AppIcon(Icons.filter_alt_off_outlined),
+                  label: const Text('Bỏ lọc'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Tìm trên toàn bộ phiếu quét của cửa hàng · Mới thêm trước.',
+            style: TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    final scans = ref.watch(invoiceScanListProvider(page));
+    final query = _query;
+    final scans = ref.watch(filteredInvoiceScanListProvider(query));
+    final canEdit = ref.watch(shopProvider).hasPermission('finance', 'edit');
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -40,15 +199,17 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
                   'Nhận dạng ảnh, kiểm tra thủ công rồi mới tạo hóa đơn đầu vào.',
               showBackButton: true,
               action: FilledButton.icon(
-                onPressed: uploading ? null : _pick,
-                icon: const Icon(Icons.document_scanner_outlined),
+                onPressed: uploading || !canEdit ? null : _pick,
+                icon: const AppIcon(Icons.document_scanner_outlined),
                 label: Text(uploading ? 'Đang xử lý…' : 'Chọn ảnh hóa đơn'),
               ),
               compactAction: IconButton.filled(
-                onPressed: uploading ? null : _pick,
-                icon: const Icon(Icons.add_a_photo_outlined),
+                onPressed: uploading || !canEdit ? null : _pick,
+                icon: const AppIcon(Icons.add_a_photo_outlined),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            _filters(),
             const SizedBox(height: AppSpacing.md),
             if (uploading) const LinearProgressIndicator(),
             Expanded(
@@ -60,42 +221,49 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
                     child: AppInlineError(
                       message:
                           'Không thể tải danh sách phiếu quét. Vui lòng thử lại sau.',
-                      onRetry: () =>
-                          ref.invalidate(invoiceScanListProvider(page)),
+                      onRetry: () => ref.invalidate(
+                        filteredInvoiceScanListProvider(query),
+                      ),
                     ),
                   ),
                 ),
                 data: (data) {
                   final items = data['items'] as List? ?? const [];
                   if (items.isEmpty) {
-                    return RefreshIndicator(
-                      onRefresh: () async =>
-                          ref.invalidate(invoiceScanListProvider(page)),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) =>
-                            SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: constraints.maxHeight,
-                                ),
-                                child: Center(
-                                  child: FilledButton.icon(
-                                    onPressed: _pick,
-                                    icon: const Icon(
-                                      Icons.add_a_photo_outlined,
-                                    ),
-                                    label: const Text('Quét hóa đơn đầu tiên'),
-                                  ),
-                                ),
-                              ),
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const AppIcon(Icons.receipt_long_outlined, size: 40),
+                          const SizedBox(height: 12),
+                          Text(
+                            _search.isNotEmpty ||
+                                    _statusFilter != null ||
+                                    _range != null
+                                ? 'Không có phiếu quét khớp bộ lọc.'
+                                : 'Chưa có phiếu quét trong cửa hàng.',
+                          ),
+                          const SizedBox(height: 12),
+                          if (_search.isNotEmpty ||
+                              _statusFilter != null ||
+                              _range != null)
+                            TextButton(
+                              onPressed: _clearFilters,
+                              child: const Text('Xem tất cả phiếu quét'),
                             ),
+                          if (canEdit)
+                            FilledButton.icon(
+                              onPressed: uploading ? null : _pick,
+                              icon: const AppIcon(Icons.add_a_photo_outlined),
+                              label: const Text('Chọn ảnh hóa đơn'),
+                            ),
+                        ],
                       ),
                     );
                   }
                   return RefreshIndicator(
                     onRefresh: () async =>
-                        ref.invalidate(invoiceScanListProvider(page)),
+                        ref.invalidate(filteredInvoiceScanListProvider(query)),
                     child: Column(
                       children: [
                         Expanded(
@@ -112,39 +280,68 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
                               final hasImg =
                                   imgUrl.isNotEmpty && imgUrl != 'null';
                               return AppCardContainer(
-                                child: ListTile(
-                                  onTap: () => context.push(
-                                    '/invoice-scans/${item['id']}',
-                                  ),
-                                  leading: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: hasImg
-                                        ? Image.network(
-                                            imgUrl,
-                                            width: 52,
-                                            height: 52,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, _, _) =>
-                                                const SizedBox(
-                                                  width: 52,
-                                                  child: Icon(
-                                                    Icons.receipt_long_outlined,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: ListTile(
+                                    onTap: () async {
+                                      await context.push(
+                                        '/invoice-scans/${item['id']}',
+                                      );
+                                      if (mounted)
+                                        ref.invalidate(
+                                          filteredInvoiceScanListProvider,
+                                        );
+                                    },
+                                    leading: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: hasImg
+                                          ? Image.network(
+                                              imgUrl,
+                                              width: 52,
+                                              height: 52,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, _, _) =>
+                                                  const SizedBox(
+                                                    width: 52,
+                                                    child: AppIcon(
+                                                      Icons
+                                                          .receipt_long_outlined,
+                                                    ),
                                                   ),
-                                                ),
-                                          )
-                                        : const SizedBox(
-                                            width: 52,
-                                            child: Icon(
-                                              Icons.receipt_long_outlined,
+                                            )
+                                          : const SizedBox(
+                                              width: 52,
+                                              child: AppIcon(
+                                                Icons.receipt_long_outlined,
+                                              ),
                                             ),
-                                          ),
+                                    ),
+                                    title: Text(
+                                      (item['invoice'] is Map
+                                                  ? item['invoice']['invoiceNumber']
+                                                  : null)
+                                              ?.toString() ??
+                                          item['scanCode']?.toString() ??
+                                          'Phiếu quét',
+                                    ),
+                                    subtitle: Text(
+                                      [
+                                        if (item['invoice'] is Map)
+                                          item['invoice']['partnerName']
+                                                  ?.toString() ??
+                                              '',
+                                        '${item['scanCode'] ?? ''} · ${_status(item)}',
+                                        if (DateTime.tryParse(
+                                              '${item['scannedAt']}',
+                                            )
+                                            case final date?)
+                                          'Quét: ${DateFormat('dd/MM/yyyy HH:mm').format(date.toLocal())}',
+                                      ].where((value) => value.isNotEmpty).join('\n'),
+                                    ),
+                                    trailing: const AppIcon(
+                                      Icons.chevron_right,
+                                    ),
                                   ),
-                                  title: Text(
-                                    item['scanCode']?.toString() ??
-                                        'Phiếu quét',
-                                  ),
-                                  subtitle: Text(_status(item)),
-                                  trailing: const Icon(Icons.chevron_right),
                                 ),
                               );
                             },
@@ -153,18 +350,20 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            Text('Trang $page/${data['totalPages'] ?? 1}'),
+                            Text(
+                              '${data['total'] ?? items.length} phiếu · Trang $page/${data['totalPages'] ?? 1}',
+                            ),
                             IconButton(
                               onPressed: page > 1
                                   ? () => setState(() => page--)
                                   : null,
-                              icon: const Icon(Icons.chevron_left),
+                              icon: const AppIcon(Icons.chevron_left),
                             ),
                             IconButton(
                               onPressed: page < (data['totalPages'] ?? 1)
                                   ? () => setState(() => page++)
                                   : null,
-                              icon: const Icon(Icons.chevron_right),
+                              icon: const AppIcon(Icons.chevron_right),
                             ),
                           ],
                         ),
@@ -189,19 +388,28 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
   };
 
   Future<void> _pick() async {
+    final shopId = ref.read(shopProvider).currentShopId;
+    if (uploading ||
+        shopId == null ||
+        !ref.read(shopProvider).hasPermission('finance', 'edit'))
+      return;
+    bool current() =>
+        mounted &&
+        ref.read(shopProvider).currentShopId == shopId &&
+        ref.read(shopProvider).hasPermission('finance', 'edit');
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
+              leading: const AppIcon(Icons.camera_alt_outlined),
               title: const Text('Chụp ảnh hóa đơn'),
               subtitle: const Text('Dùng máy ảnh chụp trực tiếp'),
               onTap: () => Navigator.pop(ctx, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const AppIcon(Icons.photo_library_outlined),
               title: const Text('Chọn ảnh từ thư viện'),
               subtitle: const Text('Tải ảnh hóa đơn có sẵn từ máy'),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
@@ -210,14 +418,15 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
         ),
       ),
     );
-    if (source == null) return;
+    if (source == null || !current()) return;
 
     final file = await ImagePicker().pickImage(
       source: source,
       imageQuality: 92,
     );
-    if (file == null) return;
+    if (file == null || !current()) return;
     final bytes = await file.readAsBytes();
+    if (!current()) return;
     if (bytes.length > 4 * 1024 * 1024) {
       ToastService.showError('Ảnh phải nhỏ hơn 4 MB');
       return;
@@ -233,8 +442,10 @@ class _InvoiceScanScreenState extends ConsumerState<InvoiceScanScreen> {
       final scan = await ref
           .read(invoiceScanRepositoryProvider)
           .upload(bytes, file.name, type);
-      ref.invalidate(invoiceScanListProvider(page));
-      if (mounted) context.push('/invoice-scans/${scan['id']}');
+      ref.invalidate(filteredInvoiceScanListProvider);
+      ref.invalidate(invoiceScanListProvider);
+      if (current()) _clearFilters();
+      if (current()) context.push('/invoice-scans/${scan['id']}');
     } catch (error) {
       ToastService.showError(
         error is ApiException

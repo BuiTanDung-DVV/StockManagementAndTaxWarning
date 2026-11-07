@@ -15,6 +15,9 @@ import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import 'product_form_screen.dart';
 import 'widgets/product_details_content.dart';
+import 'widgets/product_batch_section.dart';
+import '../../inventory/presentation/inventory_movement_details.dart';
+import '../../settings/providers/shop_provider.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final int id;
@@ -143,6 +146,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     children: [
                       ProductDetailsContent(product: p),
                       const SizedBox(height: 20),
+                      ProductBatchSection(productId: id),
+                      const SizedBox(height: 20),
 
                       // Info Section: Inventory Movements
                       Padding(
@@ -229,6 +234,17 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                     ).format(parsedQty.toInt())
                                   : NumberFormat('#,###.##').format(parsedQty);
                               return ListTile(
+                                onTap: () => showInventoryMovementDetails(
+                                  context,
+                                  m as Map,
+                                  productName:
+                                      detailAsync.value?['name']?.toString() ??
+                                      'Sản phẩm #$id',
+                                  unit:
+                                      detailAsync.value?['unit']?.toString() ??
+                                      '',
+                                  shopId: ref.read(shopProvider).currentShopId,
+                                ),
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(
                                   m['notes'] ??

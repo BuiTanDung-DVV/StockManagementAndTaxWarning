@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -284,7 +285,11 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
           ),
           child: Center(
             child: isCompleted
-                ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                ? const AppIcon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: Colors.white,
+                  )
                 : Text(
                     '${index + 1}',
                     style: GoogleFonts.manrope(
@@ -381,7 +386,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                       ),
                       decoration: InputDecoration(
                         labelText: 'Kho kiểm kê *',
-                        prefixIcon: Icon(
+                        prefixIcon: AppIcon(
                           Icons.warehouse_rounded,
                           color: theme.colorScheme.primary,
                         ),
@@ -467,7 +472,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
               ),
               TextButton.icon(
                 onPressed: _addItem,
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const AppIcon(Icons.add_rounded, size: 18),
                 label: Text(
                   'Thêm dòng',
                   style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
@@ -562,7 +567,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(
+                        icon: const AppIcon(
                           Icons.delete_outline_rounded,
                           color: AppColors.danger,
                         ),
@@ -978,7 +983,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
       ),
       child: Row(
         children: [
-          Icon(
+          AppIcon(
             Icons.lightbulb_outline_rounded,
             color: theme.colorScheme.primary,
             size: 18,
@@ -1018,7 +1023,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
             if (!isFirstStep) ...[
               OutlinedButton.icon(
                 onPressed: _prevStep,
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 14),
+                icon: const AppIcon(Icons.arrow_back_ios_new_rounded, size: 14),
                 label: Text(
                   'Quay lại',
                   style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
@@ -1048,7 +1053,7 @@ class _StockTakeFormScreenState extends ConsumerState<StockTakeFormScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : Icon(
+                    : AppIcon(
                         isLastStep
                             ? Icons.check_circle_rounded
                             : Icons.arrow_forward_ios_rounded,

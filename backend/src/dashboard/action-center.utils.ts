@@ -15,7 +15,39 @@ export interface DashboardActionItem {
     amount?: number;
     dueAt?: string | null;
     sourceUpdatedAt?: string | null;
+    shopId?: number;
 }
+
+export const businessDateKey = (date: Date): string => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(date);
+    const part = (type: string) => parts.find(value => value.type === type)?.value;
+    return `${part('year')}-${part('month')}-${part('day')}`;
+};
+
+export const debtReminderItems = (
+    kind: 'RECEIVABLE' | 'PAYABLE', row: Record<string, unknown>, today: string,
+): DashboardActionItem[] => {
+    const name = kind === 'PAYABLE' ? 'phải trả nhà cung cấp' : 'phải thu';
+    return (['overdue', 'today', 'soon'] as const).flatMap(period => {
+        const count = Number(row[`${period}_count`] || 0);
+        const amount = Number(row[`${period}_amount`] || 0);
+        const dueAt = row[`${period}_due_at`]?.toString().slice(0, 10) ?? null;
+        if (!Number.isSafeInteger(count) || count <= 0 || !Number.isFinite(amount) || amount <= 0) return [];
+        const days = dueAt ? Math.max(0, Math.floor((Date.parse(today) - Date.parse(dueAt)) / 86_400_000)) : 0;
+        const label = period === 'overdue' ? 'quá hạn' : period === 'today' ? 'đến hạn hôm nay' : 'đến hạn trong 7 ngày tới';
+        return [{
+            actionKey: `${kind}_${period === 'overdue' ? 'OVERDUE' : period === 'today' ? 'DUE_TODAY' : 'DUE_SOON'}`,
+            severity: period === 'soon' ? 'INFO' as const : 'WARNING' as const,
+            priorityScore: scorePriority({ daysOverdue: days, affectedCount: count, affectedAmount: amount }),
+            title: `${count} khoản ${name} ${label}`,
+            detail: `${amount.toLocaleString('vi-VN')} đ${period === 'overdue' ? ` · quá hạn lâu nhất ${days} ngày` : ' · kiểm tra chứng từ và kế hoạch thanh toán'}`,
+            badge: period === 'overdue' ? 'Quá hạn' : period === 'today' ? 'Hôm nay' : 'Sắp đến hạn',
+            count, amount, dueAt,
+        }];
+    });
+};
 
 export const lowStockActionCopy = (count: number): {
     title: string;

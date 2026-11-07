@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/widgets/product_thumbnail.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -26,8 +27,11 @@ class ReturnDetailScreen extends ConsumerWidget {
 
     final returnCode = returnInfo['returnCode'] ?? 'RET-${returnInfo['id']}';
     final reason = returnInfo['reason'] ?? 'Không có lý do';
-    final refundedAmount = asDouble(returnInfo['refundedAmount']);
+    final refundedAmount = asDouble(
+      returnInfo['refundAmount'] ?? returnInfo['refundedAmount'],
+    );
     final createdAt =
+        returnInfo['returnDate']?.toString() ??
         returnInfo['createdAt']?.toString() ??
         returnInfo['date']?.toString() ??
         '';
@@ -190,6 +194,12 @@ class ReturnDetailScreen extends ConsumerWidget {
                             ),
                             child: Row(
                               children: [
+                                ProductThumbnail(
+                                  imageUrl: item['product']?['imageUrl']
+                                      ?.toString(),
+                                  name: itemName.toString(),
+                                ),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -204,6 +214,8 @@ class ReturnDetailScreen extends ConsumerWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 2),
+                                      if (item['product']?['sku'] != null)
+                                        Text('SKU: ${item['product']['sku']}'),
                                       if (unitPrice > 0)
                                         Text(
                                           'SL: $qty x ${_currFmt.format(unitPrice)}',

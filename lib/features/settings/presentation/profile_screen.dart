@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,8 @@ import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'avatar_picker_dialog.dart';
+import 'profile_email_verification_dialog.dart';
+import 'profile_email_change_dialog.dart';
 import 'package:go_router/go_router.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -31,6 +34,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   bool _loading = true;
   bool _saving = false;
+  bool _loadError = false;
+  bool? _emailVerified;
+  bool? _hasPassword;
+  bool? _googleLinked;
+  String _username = '';
 
   @override
   void initState() {
@@ -48,21 +56,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
+    setState(() {
+      _loading = true;
+      _loadError = false;
+    });
     try {
       final api = ref.read(apiClientProvider);
-      final res = await api.get('/profile');
-      final data = res;
+      final data = Map<String, dynamic>.from(await api.get('/profile'));
+      if (!mounted) return;
       _nameCtrl.text = data['fullName'] ?? '';
       _emailCtrl.text = data['email'] ?? '';
       _phoneCtrl.text = data['phone'] ?? '';
+      _username = data['username'] ?? '';
+      _hasPassword = data['hasPassword'] is bool
+          ? data['hasPassword'] as bool
+          : null;
+      _googleLinked = data['googleLinked'] is bool
+          ? data['googleLinked'] as bool
+          : null;
+      _emailVerified = data['emailVerified'] is bool
+          ? data['emailVerified'] as bool
+          : null;
     } catch (_) {
-      // Fallback to auth state
-      final user = ref.read(authProvider).user;
-      _nameCtrl.text = user?['fullName'] ?? '';
-      _emailCtrl.text = user?['email'] ?? '';
-      _phoneCtrl.text = user?['phone'] ?? '';
+      if (!mounted) return;
+      _loadError = true;
     }
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _save() async {
@@ -76,6 +95,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           'phone': _phoneCtrl.text.trim(),
         },
       );
+      if (!mounted) return;
       final updatedUser = res;
       // Update auth state with new user info
       final currentAuth = ref.read(authProvider);
@@ -95,7 +115,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
       }
     }
-    setState(() => _saving = false);
+    if (mounted) setState(() => _saving = false);
+  }
+
+  Future<void> _verifyEmail() async {
+    final userId = ref.read(authProvider).user?['id'];
+    final email = _emailCtrl.text.trim();
+    final verified = await showDialog<bool>(
+      context: context,
+      builder: (_) => ProfileEmailVerificationDialog(email: email),
+    );
+    if (!mounted || verified != true) return;
+    final user = ref.read(authProvider).user;
+    if (user != null && user['id'] == userId) {
+      setState(() => _emailVerified = true);
+      ref.read(authProvider.notifier).updateUser({
+        ...user,
+        'email': email,
+        'emailVerified': true,
+      });
+    }
+  }
+
+  Future<void> _changeEmail() async {
+    final notifier = ref.read(authProvider.notifier);
+    final userId = ref.read(authProvider).user?['id'];
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ProfileEmailChangeDialog(
+        currentEmail: _emailCtrl.text.trim(),
+        hasPassword: _hasPassword == true,
+        googleLinked: _googleLinked == true,
+      ),
+    );
+    if (!mounted ||
+        result == null ||
+        ref.read(authProvider).user?['id'] != userId) {
+      return;
+    }
+    ToastService.showSuccess(
+      'Đã đổi Gmail. Hãy đăng nhập lại bằng ${result['email']}.',
+    );
+    await notifier.finishEmailChange();
+    if (mounted) context.go('/login');
   }
 
   @override
@@ -135,6 +198,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _loadError
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Không thể tải thông tin cá nhân. Vui lòng thử lại.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _loadProfile,
+                      icon: const AppIcon(Icons.refresh_rounded, size: 20),
+                      label: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
+            )
           : SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.all(24),
@@ -155,7 +239,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    auth.user?['username'] ?? '',
+                    _username.contains('@') ? _emailCtrl.text : _username,
                     style: GoogleFonts.manrope(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -187,7 +271,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildGlowingField(
-                    labelText: 'Gmail đã xác minh',
+                    labelText: 'Gmail',
+                    helperText: _emailCtrl.text.trim().isEmpty
+                        ? 'Chưa có Gmail'
+                        : switch (_emailVerified) {
+                            true => 'Đã xác minh',
+                            false => 'Chưa xác minh',
+                            null => 'Chưa có thông tin xác minh',
+                          },
                     controller: _emailCtrl,
                     focusNode: _emailFocus,
                     hasFocus: _emailHasFocus,
@@ -197,6 +288,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     c: c,
                     theme: theme,
                   ),
+                  if (_hasPassword != null &&
+                      _googleLinked != null &&
+                      _emailVerified == false &&
+                      _emailCtrl.text.trim().isNotEmpty)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: _saving ? null : _verifyEmail,
+                        child: const Text('Xác minh Gmail'),
+                      ),
+                    ),
+                  if (_emailVerified == true &&
+                      _emailCtrl.text.trim().isNotEmpty &&
+                      _hasPassword != null &&
+                      _googleLinked != null &&
+                      (_hasPassword == true || _googleLinked == true))
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: _saving ? null : _changeEmail,
+                        child: const Text('Đổi Gmail'),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   _buildGlowingField(
                     labelText: 'Số điện thoại',
@@ -224,7 +338,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(Icons.save_rounded, size: 20),
+                          : const AppIcon(Icons.save_rounded, size: 20),
                       label: Text(
                         _saving ? 'Đang lưu...' : 'Lưu thay đổi',
                         style: GoogleFonts.manrope(
@@ -250,7 +364,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () => context.push('/change-password'),
-                      icon: const Icon(Icons.lock_reset_rounded, size: 20),
+                      icon: const AppIcon(Icons.lock_reset_rounded, size: 20),
                       label: Text(
                         'Đổi mật khẩu bảo mật',
                         style: GoogleFonts.manrope(
@@ -276,6 +390,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildGlowingField({
     required String labelText,
+    String? helperText,
     required TextEditingController controller,
     required FocusNode focusNode,
     required bool hasFocus,
@@ -306,7 +421,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
         decoration: InputDecoration(
           labelText: labelText,
-          prefixIcon: Icon(icon, color: c.textMuted, size: 20),
+          helperText: helperText,
+          prefixIcon: AppIcon(icon, color: c.textMuted, size: 20),
           filled: true,
           fillColor: c.card,
           border: OutlineInputBorder(

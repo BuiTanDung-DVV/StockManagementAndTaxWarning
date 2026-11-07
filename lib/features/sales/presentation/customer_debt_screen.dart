@@ -1,6 +1,9 @@
+import '../../settings/providers/shop_provider.dart';
+import '../../../core/assets/app_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../core/providers/data_freshness_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,13 +20,15 @@ import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../customers/providers/customer_provider.dart';
+import '../../customers/models/receivable_balance.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/sales_provider.dart';
 
 final _debtCurrencyFormat = NumberFormat.currency(
   locale: 'vi_VN',
   symbol: '₫',
-  decimalDigits: 0,
-);
+  decimalDigits: 2,
+)..minimumFractionDigits = 0;
 
 Map<String, dynamic> customerDebtListQuery({
   int page = 1,
@@ -42,13 +47,17 @@ Map<String, dynamic> customerDebtListQuery({
 }
 
 double customerDebtRemaining(Map<String, dynamic> debt) {
-  final authoritative = num.tryParse(debt['remaining']?.toString() ?? '');
-  if (authoritative != null && authoritative.isFinite && authoritative >= 0) {
-    return authoritative.toDouble();
+  return customerReceivableRemaining(debt);
+}
+
+String? customerDebtAdjustmentLabel(Map<String, dynamic> debt) {
+  final adjustment = num.tryParse(
+    debt['openingAdjustmentAmount']?.toString() ?? '0',
+  );
+  if (adjustment == null || !adjustment.isFinite || adjustment == 0) {
+    return null;
   }
-  final total = num.tryParse(debt['totalAmount']?.toString() ?? '0') ?? 0;
-  final paid = num.tryParse(debt['paidAmount']?.toString() ?? '0') ?? 0;
-  return (total - paid).clamp(0, double.infinity).toDouble();
+  return 'Điều chỉnh đầu kỳ: ${adjustment > 0 ? '+' : '−'}${_debtCurrencyFormat.format(adjustment.abs())}';
 }
 
 ({int orderId, int receivableId}) customerDebtPaymentTarget(
@@ -139,14 +148,18 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
   int _total = 0;
   int _totalPages = 1;
   int _requestVersion = 0;
+  int _exportScopeVersion = 0;
   String _status = 'ALL';
   String _sort = 'DUE_DATE_ASC';
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialStatus?.toUpperCase() == 'OVERDUE') {
-      _status = 'OVERDUE';
+    if (const {
+      'OVERDUE',
+      'CURRENT',
+    }.contains(widget.initialStatus?.toUpperCase())) {
+      _status = widget.initialStatus!.toUpperCase();
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadDebts());
   }
@@ -196,6 +209,24 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
       if (rawItems is! List || rawSummary is! Map) {
         throw const FormatException('Dữ liệu công nợ không đúng định dạng');
       }
+      for (final key in [
+        'outstanding',
+        'overdue',
+        'customerCount',
+        'receivableCount',
+      ]) {
+        final value = rawSummary[key];
+        if (value is! num ||
+            !value.isFinite ||
+            value < 0 ||
+            (const {'customerCount', 'receivableCount'}.contains(key) &&
+                value != value.truncate())) {
+          throw const FormatException('Dữ liệu tổng hợp công nợ không đầy đủ');
+        }
+      }
+      if ((rawSummary['overdue'] as num) > (rawSummary['outstanding'] as num)) {
+        throw const FormatException('Dữ liệu tổng hợp công nợ không khớp');
+      }
 
       final debts = rawItems
           .whereType<Map>()
@@ -239,18 +270,28 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
   }
 
   Widget _buildPageHeader() {
+    final shop = ref.watch(shopProvider);
     return AppPageHeader(
       title: 'Công nợ khách hàng',
       subtitle:
           'Theo dõi khoản cần thu, ghi nhận thanh toán và nhắc nợ theo từng đơn hàng.',
       action: OutlinedButton(
-        onPressed: _isExporting || _total == 0 ? null : _exportDebts,
+        onPressed:
+            _isExporting ||
+                _total == 0 ||
+                shop.isAllShops ||
+                shop.currentShopId == null ||
+                !shop.hasPermission('customers')
+            ? null
+            : _exportDebts,
+        style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
         child: Text(_isExporting ? 'Đang xuất…' : 'Xuất Excel'),
       ),
     );
   }
 
   void _onSearchChanged(String _) {
+    _exportScopeVersion++;
     _searchDebounce?.cancel();
     _searchDebounce = Timer(
       const Duration(milliseconds: 400),
@@ -286,6 +327,17 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                         fontSize: 12,
                       ),
                     ),
+                    if (_total > 0) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Excel gồm tất cả $_total bản ghi theo bộ lọc hiện tại, kể cả các trang khác.',
+                        style: TextStyle(
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -297,6 +349,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                     setState(() {
                       _status = 'ALL';
                       _sort = 'DUE_DATE_ASC';
+                      _exportScopeVersion++;
                     });
                     _loadDebts(showLoading: false, resetPage: true);
                   },
@@ -312,7 +365,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                 onChanged: _onSearchChanged,
                 decoration: const InputDecoration(
                   labelText: 'Tìm khách hàng, SĐT hoặc mã đơn',
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: AppIcon(Icons.search),
                 ),
               );
               final status = DropdownButtonFormField<String>(
@@ -330,7 +383,10 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                 ],
                 onChanged: (value) {
                   if (value == null || value == _status) return;
-                  setState(() => _status = value);
+                  setState(() {
+                    _status = value;
+                    _exportScopeVersion++;
+                  });
                   _loadDebts(showLoading: false, resetPage: true);
                 },
               );
@@ -355,7 +411,10 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                 ],
                 onChanged: (value) {
                   if (value == null || value == _sort) return;
-                  setState(() => _sort = value);
+                  setState(() {
+                    _sort = value;
+                    _exportScopeVersion++;
+                  });
                   _loadDebts(showLoading: false, resetPage: true);
                 },
               );
@@ -442,6 +501,36 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
 
   @override
   Widget build(BuildContext context) {
+    listenToDataChanges(
+      ref,
+      DataArea.customers,
+      () => _loadDebts(showLoading: false),
+    );
+    ref.listen(
+      authProvider.select(
+        (state) => (state.isLoggedIn, state.user?['id']?.toString()),
+      ),
+      (previous, next) {
+        if (previous != next) _exportScopeVersion++;
+      },
+    );
+    ref.listen(shopProvider, (previous, next) {
+      if (previous?.currentShopId != next.currentShopId ||
+          previous?.isAllShops != next.isAllShops ||
+          previous?.hasPermission('customers') !=
+              next.hasPermission('customers')) {
+        _exportScopeVersion++;
+      }
+    });
+    ref.listen(shopProvider.select((state) => state.currentShopId), (
+      previous,
+      next,
+    ) {
+      if (previous != next) {
+        _page = 1;
+        _loadDebts();
+      }
+    });
     final colors = AppThemeColors.of(context);
     final overview = _overview;
 
@@ -469,25 +558,41 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                       AppFillGrid(
                         minItemWidth: 155,
                         maxColumns: 4,
-                        itemHeight: 96,
+                        itemHeight:
+                            148 +
+                            (MediaQuery.textScalerOf(context).scale(16) - 16)
+                                    .clamp(0, 32) *
+                                4,
                         children: [
                           AppKpiCard(
                             title: 'Tổng nợ cần thu',
                             value: _debtCurrencyFormat.format(
                               overview.outstanding,
                             ),
-                            color: AppColors.warning,
+                            color: overview.outstanding > 0
+                                ? AppColors.warning
+                                : AppColors.success,
                             assetPath: AppAssets.cash,
-                            badgeText: 'Cần thu',
+                            badgeText: overview.outstanding > 0
+                                ? 'Cần thu'
+                                : 'Không có nợ',
                             compact: true,
+                            titleMaxLines: 3,
+                            badgeBelowValue: true,
                           ),
                           AppKpiCard(
                             title: 'Nợ quá hạn',
                             value: _debtCurrencyFormat.format(overview.overdue),
-                            color: AppColors.danger,
+                            color: overview.overdue > 0
+                                ? AppColors.danger
+                                : AppColors.success,
                             assetPath: AppAssets.orders,
-                            badgeText: 'Cần ưu tiên',
+                            badgeText: overview.overdue > 0
+                                ? 'Cần ưu tiên'
+                                : 'Không quá hạn',
                             compact: true,
+                            titleMaxLines: 3,
+                            badgeBelowValue: true,
                           ),
                           AppKpiCard(
                             title: 'Khách hàng còn nợ',
@@ -496,6 +601,8 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                             assetPath: AppAssets.orders,
                             badgeText: 'Không đếm trùng',
                             compact: true,
+                            titleMaxLines: 3,
+                            badgeBelowValue: true,
                           ),
                           AppKpiCard(
                             title: 'Khoản phải thu',
@@ -504,6 +611,8 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                             assetPath: AppAssets.cash,
                             badgeText: 'Theo đơn hàng',
                             compact: true,
+                            titleMaxLines: 3,
+                            badgeBelowValue: true,
                           ),
                         ],
                       ),
@@ -576,7 +685,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                                       flex: 2,
                                     ),
                                     AppDataTableColumn(
-                                      title: 'TỔNG NỢ',
+                                      title: 'NỢ GỐC',
                                       flex: 2,
                                       alignRight: true,
                                     ),
@@ -640,17 +749,48 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
 
   Future<void> _exportDebts() async {
     if (_isExporting || _total == 0) return;
+    final shop = ref.read(shopProvider);
+    final shopId = shop.currentShopId;
+    final userId = ref.read(authProvider).user?['id']?.toString();
+    final version = _exportScopeVersion;
+    final search = _searchController.text;
+    final status = _status;
+    final sort = _sort;
+    bool current() {
+      if (!mounted || version != _exportScopeVersion) return false;
+      final auth = ref.read(authProvider);
+      final selected = ref.read(shopProvider);
+      return auth.isLoggedIn &&
+          !auth.isOfflineSession &&
+          userId != null &&
+          auth.user?['id']?.toString() == userId &&
+          !selected.isAllShops &&
+          shopId != null &&
+          selected.currentShopId == shopId &&
+          selected.hasPermission('customers') &&
+          _searchController.text == search &&
+          _status == status &&
+          _sort == sort;
+    }
+
+    if (!current()) return;
     setState(() => _isExporting = true);
     try {
       final raw = await ref
           .read(customerRepoProvider)
-          .exportOpenReceivables(
+          .exportOpenReceivablesInShop(
+            shopId!,
             params: customerDebtListQuery(
-              search: _searchController.text,
-              status: _status,
-              sort: _sort,
+              search: search,
+              status: status,
+              sort: sort,
             ),
+            isCurrentScope: current,
           );
+      if (!current()) return;
+      if (raw.any((item) => item is! Map)) {
+        throw const FormatException('Dữ liệu xuất công nợ không đầy đủ');
+      }
       final exportRows = raw
           .whereType<Map>()
           .map((item) => Map<String, dynamic>.from(item))
@@ -660,17 +800,36 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
       }
       final launched = await ExcelExportService.exportCustomerDebtsToExcel(
         exportRows,
+        shopId: shopId,
+        shopName: shop.currentShopName,
+        filterDescription: [
+          search.trim().isEmpty
+              ? 'Tất cả khách hàng'
+              : 'Từ khóa: ${search.trim()}',
+          switch (status) {
+            'OVERDUE' => 'Đã quá hạn',
+            'CURRENT' => 'Chưa quá hạn',
+            _ => 'Tất cả trạng thái',
+          },
+          switch (sort) {
+            'REMAINING_DESC' => 'Số nợ cao nhất',
+            'CUSTOMER_ASC' => 'Tên khách hàng',
+            _ => 'Hạn thu gần nhất',
+          },
+        ].join(' · '),
       );
-      if (!mounted) return;
+      if (!current()) return;
       if (launched) {
-        ToastService.showSuccess('Đã tạo file Excel sổ nợ.');
+        ToastService.showSuccess(
+          'Đã tạo tệp Excel gồm ${exportRows.length} bản ghi. Kiểm tra mục tải xuống.',
+        );
       } else {
         ToastService.showError(
           'Trình duyệt không cho phép tải file. Vui lòng thử lại.',
         );
       }
     } catch (_) {
-      if (mounted) {
+      if (current()) {
         ToastService.showError('Không thể xuất file sổ nợ. Vui lòng thử lại.');
       }
     } finally {
@@ -684,13 +843,18 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
     double remaining,
   ) async {
     final controller = TextEditingController(
-      text: remaining.toStringAsFixed(0),
+      text: remaining.toStringAsFixed(remaining % 1 == 0 ? 0 : 2),
     );
     var selectedMethod = 'CASH';
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          scrollable: true,
           title: const Text('Ghi nhận thu nợ'),
           content: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 440),
@@ -712,6 +876,11 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                if (customerDebtAdjustmentLabel(item) case final String label)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs),
+                    child: Text('$label. Khoản này không phải tiền đã thu.'),
+                  ),
                 const SizedBox(height: AppSpacing.lg),
                 TextField(
                   controller: controller,
@@ -734,6 +903,7 @@ class _CustomerDebtScreenState extends ConsumerState<CustomerDebtScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: selectedMethod,
                   decoration: const InputDecoration(
                     labelText: 'Phương thức thu tiền',
@@ -945,14 +1115,31 @@ class _DesktopDebtRow extends StatelessWidget {
           ),
           Expanded(
             flex: 2,
-            child: Text(
-              _debtCurrencyFormat.format(remaining),
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: AppColors.warning,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _debtCurrencyFormat.format(remaining),
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: AppColors.warning,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                if (customerDebtAdjustmentLabel(item) case final String label)
+                  Tooltip(
+                    message: '$label. Không tính là tiền đã thu.',
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           Expanded(
@@ -1133,7 +1320,7 @@ class _MobileDebtRow extends StatelessWidget {
             children: [
               Expanded(
                 child: _DebtValue(
-                  label: 'Tổng nợ',
+                  label: 'Nợ gốc',
                   value: _debtCurrencyFormat.format(total),
                 ),
               ),
@@ -1147,6 +1334,14 @@ class _MobileDebtRow extends StatelessWidget {
               ),
             ],
           ),
+          if (customerDebtAdjustmentLabel(item) case final String label)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Text(
+                '$label · Không phải tiền đã thu.',
+                style: TextStyle(color: colors.textSecondary, fontSize: 12),
+              ),
+            ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [

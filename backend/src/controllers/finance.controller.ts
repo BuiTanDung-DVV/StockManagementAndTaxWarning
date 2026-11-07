@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { FinanceService } from '../services/finance.service';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { InvoiceQueryInputError } from '../finance/invoice-query.utils';
+import { CashLedgerExportInputError } from '../finance/cash-ledger-export.utils';
 
 const financeService = new FinanceService();
 
@@ -27,6 +28,20 @@ export const getCashTransactions = async (req: Request, res: Response) => {
         res.status(invalidPeriod ? 400 : 500).json({ success: false, message: e.message });
     }
 };
+export const exportCashTransactions = async (req: Request, res: Response) => {
+    try {
+        res.json({ success: true, data: await financeService.exportCashTransactions(
+            (req as AuthRequest).shopId as number,
+            { from: req.query.from as string, to: req.query.to as string,
+                type: req.query.type as string, category: req.query.category as string },
+        ) });
+    } catch (error) {
+        const invalid = error instanceof CashLedgerExportInputError;
+        res.status(invalid ? 400 : 500).json({ success: false,
+            message: invalid ? error.message : 'Không thể xuất sổ thu chi. Vui lòng thử lại.' });
+    }
+};
+
 export const getCashTransaction = async (req: Request, res: Response) => {
     try {
         res.json({
@@ -44,6 +59,7 @@ export const getCashTransaction = async (req: Request, res: Response) => {
 };
 export const createCashTransaction = async (req: Request, res: Response) => {
     try { 
+        if (['id', 'shopId', 'referenceId', 'referenceType', 'account'].some(key => Object.prototype.hasOwnProperty.call(req.body, key))) throw new Error('Validation: Tham chiếu nguồn giao dịch do máy chủ quản lý');
         req.body.createdBy = (req as any).user?.sub;
         res.json({ success: true, data: await financeService.createCashTransaction((req as any).shopId, req.body) }); 
     }
@@ -298,4 +314,9 @@ export const rejectPurchaseWithoutInvoice = async (req: AuthRequest, res: Respon
         }
         res.status(500).json({ success: false, message: e.message });
     }
+};
+
+export const getCashflowProjection = async (req: Request, res: Response) => {
+    try { res.json({ success: true, data: await financeService.getCashflowProjection((req as any).shopId, Number(req.query.days || 30)) }); }
+    catch (e: any) { const invalid=String(e.message).startsWith('Validation:'); res.status(invalid?400:500).json({ success:false, message:invalid?e.message:'Không thể tải dự báo dòng tiền' }); }
 };

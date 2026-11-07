@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
 
-class FilterBar extends StatelessWidget {
+class FilterBar extends StatefulWidget {
   final String searchHint;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback? onFilterTap;
@@ -21,7 +21,26 @@ class FilterBar extends StatelessWidget {
   });
 
   @override
+  State<FilterBar> createState() => _FilterBarState();
+}
+
+class _FilterBarState extends State<FilterBar> {
+  final _search = TextEditingController();
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final searchHint = widget.searchHint;
+    final onSearchChanged = widget.onSearchChanged;
+    final onFilterTap = widget.onFilterTap;
+    final trailing = widget.trailing;
+    final dense = widget.dense;
+    final showSearchIcon = widget.showSearchIcon;
+
     final c = AppThemeColors.of(context);
 
     return Container(
@@ -33,12 +52,31 @@ class FilterBar extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final searchField = TextField(
-            onChanged: onSearchChanged,
+            controller: _search,
+            onChanged: (value) {
+              setState(() {});
+              onSearchChanged(value);
+            },
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: c.textPrimary),
             decoration: InputDecoration(
               hintText: searchHint,
+              labelText: 'Tìm trong danh sách',
+              suffixIcon: _search.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Xóa tìm kiếm',
+                      onPressed: () {
+                        _search.clear();
+                        setState(() {});
+                        onSearchChanged('');
+                      },
+                      icon: const AppAssetIcon(
+                        assetPath: AppAssets.close,
+                        size: 18,
+                      ),
+                    ),
               hintStyle: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: c.textMuted),

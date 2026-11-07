@@ -9,7 +9,8 @@ export class PostingService {
         referenceId: number,
         description: string,
         lines: { accountCode: string, amount: number, entryType: 'DEBIT' | 'CREDIT' }[],
-        manager?: EntityManager
+        manager?: EntityManager,
+        entryDate?: Date,
     ) {
         const repoEntry = manager ? manager.getRepository(JournalEntry) : AppDataSource.getRepository(JournalEntry);
 
@@ -27,7 +28,8 @@ export class PostingService {
             referenceType,
             referenceId,
             description,
-            lines
+            lines,
+            ...(entryDate ? { entryDate } : {}),
         });
 
         await repoEntry.save(entry);

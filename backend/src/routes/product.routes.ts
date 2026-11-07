@@ -6,7 +6,12 @@ const router = Router();
 
 // Products
 router.get('/products', requirePermission('products', 'view'), productCtrl.findAllProducts);
+router.get('/products/export', requirePermission('products', 'view'), productCtrl.exportProducts);
 router.post('/products', requirePermission('products', 'edit'), productCtrl.createProduct);
+router.post('/products/import/inspect', requirePermission('products', 'edit'), productCtrl.inspectProductImport);
+router.post('/products/import/preview', requirePermission('products', 'edit'), productCtrl.previewProductImport);
+router.post('/products/import/commit', requirePermission('products', 'edit'), productCtrl.commitProductImport);
+router.get('/products/import/operations/:operationId', requirePermission('products', 'edit'), productCtrl.findProductImportResult);
 router.post(
     '/products/image-upload',
     requirePermission('products', 'edit'),
@@ -32,6 +37,7 @@ router.get('/products/:id/price-history', requirePermission('products', 'view'),
 // Product Batches
 router.get('/products/:id/batches', requirePermission('products', 'view'), productCtrl.getBatches);
 router.post('/products/:id/batches', requirePermission('products', 'edit'), productCtrl.createBatch);
+router.put('/products/:id/batches/:batchId', requirePermission('products', 'edit'), productCtrl.updateBatchDates);
 
 // Product Conversions
 router.get('/products/:id/conversions', requirePermission('products', 'view'), productCtrl.getConversions);

@@ -1,9 +1,31 @@
+import { InvoiceScanQueryError } from '../finance/invoice-scan-query.utils';
 import { Request, Response } from 'express';
 import { SystemService } from '../services/system.service';
 import { ImageStorageError } from '../services/image-storage.service';
 import { taxPolicyService } from '../services/tax-policy.service';
 
 const systemService = new SystemService();
+
+export const uploadReceiptLogo = async (req: Request, res: Response) => {
+    try {
+        if ((req as any).isAllShops || !(req as any).shopId) {
+            return res.status(400).json({ success: false, message: 'Vui lòng chọn một cửa hàng cụ thể' });
+        }
+        const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+        const data = await systemService.uploadReceiptLogo((req as any).shopId, {
+            fileName: String(req.headers['x-file-name'] || 'logo'),
+            contentType: String(req.headers['content-type'] || '').split(';')[0],
+            size: bytes.length,
+        }, bytes);
+        return res.json({ success: true, data });
+    } catch (error) {
+        const managed = error instanceof ImageStorageError;
+        return res.status(managed ? error.statusCode : 500).json({
+            success: false,
+            message: managed ? error.message : 'Không thể tải logo phiếu lên',
+        });
+    }
+};
 
 const paymentQrError = (res: Response, error: unknown) => {
     if (error instanceof ImageStorageError) {
@@ -107,8 +129,12 @@ export const getActivityLogs = async (req: Request, res: Response) => {
 };
 
 export const getInvoiceScans = async (req: Request, res: Response) => {
-    try { res.json({ success: true, data: await systemService.getInvoiceScans((req as any).shopId, +(req.query.page || 1), +(req.query.limit || 20)) }); }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    try { res.json({ success: true, data: await systemService.getInvoiceScans((req as any).shopId,
+        +(req.query.page || 1), +(req.query.limit || 12), {
+            search: req.query.search, status: req.query.status, from: req.query.from, to: req.query.to,
+        }) }); }
+    catch (e: any) { res.status(e instanceof InvoiceScanQueryError ? 400 : 500)
+        .json({ success: false, message: e.message }); }
 };
 
 export const createInvoiceScan = async (req: Request, res: Response) => {

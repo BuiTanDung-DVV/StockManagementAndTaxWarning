@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import { ImageStorageError } from '../services/image-storage.service';
 import { InvoiceOcrError, InvoiceOcrService } from '../services/invoice-ocr.service';
+import { PurchaseWriteError } from '../inventory/purchase-write-authorization';
+import { PurchaseOrderInputError } from '../inventory/purchase-order-input.utils';
 
 const service = new InvoiceOcrService();
-const fail = (res: Response, error: any) => res.status(error instanceof ImageStorageError || error instanceof InvoiceOcrError ? error.statusCode : 500).json({ success: false, message: error?.message || 'Không thể xử lý ảnh hóa đơn' });
+const fail = (res: Response, error: any) => res.status(error instanceof ImageStorageError || error instanceof InvoiceOcrError ? error.statusCode : error instanceof PurchaseWriteError ? error.status : error instanceof PurchaseOrderInputError ? 400 : 500).json({ success: false, message: error?.message || 'Không thể xử lý ảnh hóa đơn' });
 export const upload = async (req: Request, res: Response) => {
     try {
         const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
@@ -14,3 +16,5 @@ export const upload = async (req: Request, res: Response) => {
 export const get = async (req: Request, res: Response) => { try { return res.json({ success: true, data: await service.get((req as any).shopId, Number(req.params.id)) }); } catch (error) { return fail(res, error); } };
 export const retry = async (req: Request, res: Response) => { try { return res.json({ success: true, data: await service.retry((req as any).shopId, Number(req.params.id)) }); } catch (error) { return fail(res, error); } };
 export const confirm = async (req: Request, res: Response) => { try { return res.json({ success: true, data: await service.confirm((req as any).shopId, Number(req.params.id), Number((req as any).user?.sub), req.body) }); } catch (error) { return fail(res, error); } };
+export const updateInvoice = async (req: Request, res: Response) => { try { return res.json({ success: true, data: await service.updateConfirmedInvoice((req as any).shopId, Number(req.params.id), Number((req as any).user?.sub), req.body) }); } catch (error) { return fail(res, error); } };
+export const createPurchaseDraft = async (req: Request, res: Response) => { try { return res.status(201).json({ success: true, data: await service.createPurchaseDraft((req as any).shopId, Number(req.params.id), { id: Number((req as any).user?.sub), authVersion: Number((req as any).user?.ver) }, req.body) }); } catch (error) { return fail(res, error); } };

@@ -1,8 +1,14 @@
+import '../models/invoice_purchase_source.dart';
+import '../../settings/providers/shop_provider.dart';
+import '../../../core/widgets/business_date_field.dart';
+import '../../finance/providers/invoice_scan_provider.dart';
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/inventory_provider.dart';
@@ -10,6 +16,13 @@ import '../../suppliers/providers/supplier_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
+import '../../../core/offline/offline_providers.dart';
+import '../../../core/offline/offline_store.dart';
+import '../../../core/offline/offline_form_draft.dart';
+import '../../../core/network/api_client.dart';
+import 'dart:async';
+import '../models/purchase_order_suggestion.dart';
+import '../../../core/widgets/product_thumbnail.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -21,6 +34,7 @@ class _PoItem {
   int? productId;
   String? productName;
   String? productSku;
+  String? sourceLabel;
   int quantity = 1;
   TextEditingController qtyCtrl = TextEditingController(text: '1');
   TextEditingController priceCtrl = TextEditingController();
@@ -37,7 +51,13 @@ class _PoItem {
 }
 
 class PurchaseOrderFormScreen extends ConsumerStatefulWidget {
-  const PurchaseOrderFormScreen({super.key});
+  final PurchaseOrderSuggestion? suggestion;
+  final InvoicePurchaseSource? sourceInvoice;
+  const PurchaseOrderFormScreen({
+    super.key,
+    this.suggestion,
+    this.sourceInvoice,
+  });
   @override
   ConsumerState<PurchaseOrderFormScreen> createState() =>
       _PurchaseOrderFormScreenState();
@@ -54,10 +74,219 @@ class _PurchaseOrderFormScreenState
   String _warehouseName = '';
   final List<_PoItem> _items = [];
   bool _saving = false;
+  bool _suggestionApplying = false;
+  PurchaseOrderSuggestion? _pendingSuggestion;
+  OfflineFormDraft? _draft;
+  bool _draftLoading = true;
+  bool _completed = false;
+  int _draftEditRevision = 0;
+  String? _draftNotice;
+  ProviderSubscription<OfflineScope?>? _scopeSubscription;
+  bool _notPreviouslyReceived = false;
+  DateTime _sourceDate = DateTime.now();
   int _currentStep = 0; // 0 = Info, 1 = Items, 2 = Confirm
 
   @override
+  void initState() {
+    super.initState();
+    _pendingSuggestion = widget.suggestion;
+    _sourceDate =
+        DateTime.tryParse(widget.sourceInvoice?.invoiceDate ?? '') ??
+        DateTime.now();
+    _notesCtrl.addListener(_persistDraft);
+    _scopeSubscription = ref.listenManual(offlineScopeProvider, (_, next) {
+      if (_draft == null || _draft?.scope.key != next?.key) {
+        unawaited(_restoreDraft(next));
+      }
+    }, fireImmediately: true);
+  }
+
+  Map<String, dynamic> _draftData() => {
+    'sourceDate': DateFormat('yyyy-MM-dd').format(_sourceDate),
+    'supplierId': _supplierId,
+    'supplierName': _supplierName,
+    'warehouseId': _warehouseId,
+    'warehouseName': _warehouseName,
+    'notes': _notesCtrl.text,
+    'items': _items
+        .map(
+          (item) => {
+            'productId': item.productId,
+            'productName': item.productName,
+            'productSku': item.productSku,
+            'sourceLabel': item.sourceLabel,
+            'quantityText': item.qtyCtrl.text,
+            'priceText': item.priceCtrl.text,
+          },
+        )
+        .toList(),
+  };
+
+  _PoItem _makeItem([Map<String, dynamic>? data]) {
+    final item = _PoItem();
+    if (data != null) {
+      item.productId = int.tryParse('${data['productId']}');
+      item.productName = data['productName'] as String?;
+      item.productSku = data['productSku'] as String?;
+      item.sourceLabel = data['sourceLabel'] as String?;
+      item.qtyCtrl.text = data['quantityText']?.toString() ?? '1';
+      item.quantity = int.tryParse(item.qtyCtrl.text) ?? 0;
+      item.priceCtrl.text = data['priceText']?.toString() ?? '';
+    }
+    item.qtyCtrl.addListener(_persistDraft);
+    item.priceCtrl.addListener(_persistDraft);
+    return item;
+  }
+
+  Future<void> _restoreDraft(OfflineScope? scope) async {
+    if (!mounted) return;
+    setState(() => _draftLoading = true);
+    _completed = false;
+    final draft = scope == null
+        ? null
+        : OfflineFormDraft(
+            store: ref.read(offlineStoreProvider.future),
+            scope: scope,
+            slot: widget.sourceInvoice == null
+                ? 'purchase-form'
+                : 'purchase-from-invoice-${widget.sourceInvoice!.invoiceId}',
+            kind: 'PURCHASE_ORDER_CREATE',
+          );
+    _draft = draft;
+    try {
+      final saved = await draft?.restore();
+      if (!mounted || !identical(_draft, draft)) return;
+      for (final item in _items) {
+        item.dispose();
+      }
+      _items.clear();
+      final data = saved?.data ?? <String, dynamic>{};
+      _sourceDate =
+          DateTime.tryParse('${data['sourceDate'] ?? ''}') ?? _sourceDate;
+      _supplierId = int.tryParse('${data['supplierId']}');
+      _supplierName = data['supplierName']?.toString() ?? '';
+      _warehouseId = int.tryParse('${data['warehouseId']}');
+      _warehouseName = data['warehouseName']?.toString() ?? '';
+      _notesCtrl.text = data['notes']?.toString() ?? '';
+      for (final item in data['items'] as List? ?? []) {
+        _items.add(_makeItem(Map<String, dynamic>.from(item as Map)));
+      }
+      final source = widget.sourceInvoice;
+      if (saved == null &&
+          source != null &&
+          '${scope?.shopId}' == '${source.shopId}') {
+        _items.addAll(source.suggestedRows().map(_makeItem));
+        _notesCtrl.text =
+            'Nhập hàng theo hóa đơn ${source.number}; đã đối chiếu ảnh và quy đổi đơn vị.';
+      }
+      _currentStep = 0;
+      _draftNotice = saved?.alreadyQueued == true
+          ? 'Phiếu trước đã được gửi xử lý. Kiểm tra danh sách đơn nhập trước khi tạo phiếu khác.'
+          : saved == null
+          ? null
+          : 'Đã khôi phục bản nháp trên thiết bị. Kiểm tra thông tin trước khi ghi.';
+      if (saved?.alreadyQueued == true) await draft!.clear();
+    } catch (_) {
+      if (mounted && identical(_draft, draft)) {
+        _draftNotice =
+            'Chưa đọc được bản nháp. Nội dung mới chưa được xác nhận đã giữ trên thiết bị.';
+      }
+    } finally {
+      if (mounted && identical(_draft, draft)) {
+        setState(() => _draftLoading = false);
+      }
+    }
+    if (mounted &&
+        identical(_draft, draft) &&
+        _pendingSuggestion != null &&
+        _items.isEmpty) {
+      await _applySuggestion();
+    }
+  }
+
+  Future<void> _applySuggestion() async {
+    final suggestion = _pendingSuggestion;
+    final scope = ref.read(offlineScopeProvider);
+    if (suggestion == null || _suggestionApplying || _saving) return;
+    if (scope == null || !suggestion.matches(scope.userId, scope.shopId)) {
+      setState(() {
+        _pendingSuggestion = null;
+        _draftNotice =
+            'Đề xuất thuộc tài khoản hoặc cửa hàng khác. Chưa thêm sản phẩm.';
+      });
+      return;
+    }
+    setState(() => _suggestionApplying = true);
+    try {
+      final products = await ref.read(productOptionsProvider.future);
+      if (!mounted || ref.read(offlineScopeProvider)?.key != scope.key) return;
+      final merged = suggestion.merge(
+        _draftData()['items'] as List,
+        products['items'] as List? ?? [],
+      );
+      setState(() {
+        _draftLoading = true;
+        for (final item in _items) {
+          item.dispose();
+        }
+        _items.clear();
+        _items.addAll(merged.map(_makeItem));
+        if (_notesCtrl.text.trim().isEmpty) {
+          _notesCtrl.text =
+              'Đề xuất bổ sung hàng dưới định mức. Kiểm tra số lượng và đơn giá trước khi nhập.';
+        }
+        _pendingSuggestion = null;
+        _draftLoading = false;
+      });
+      _persistDraft();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _draftNotice =
+              'Chưa thêm được đề xuất. Bản nháp hiện tại được giữ nguyên; kiểm tra danh mục rồi thử lại.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _suggestionApplying = false);
+    }
+  }
+
+  void _persistDraft() {
+    final draft = _draft;
+    if (_draftLoading || _completed || draft == null) return;
+    final revision = ++_draftEditRevision;
+    final data = _draftData();
+    setState(() => _draftNotice = 'Đang giữ bản nháp…');
+    unawaited(
+      draft
+          .save(data)
+          .then(
+            (_) {
+              if (mounted &&
+                  identical(_draft, draft) &&
+                  revision == _draftEditRevision &&
+                  !_completed) {
+                setState(() => _draftNotice = 'Bản nháp đã lưu trên thiết bị.');
+              }
+            },
+            onError: (Object _) {
+              if (mounted &&
+                  identical(_draft, draft) &&
+                  revision == _draftEditRevision &&
+                  !_completed) {
+                setState(
+                  () => _draftNotice =
+                      'Chưa giữ được bản nháp. Đừng rời trang khi còn nội dung chưa lưu.',
+                );
+              }
+            },
+          ),
+    );
+  }
+
+  @override
   void dispose() {
+    _scopeSubscription?.close();
     _notesCtrl.dispose();
     for (var i in _items) {
       i.dispose();
@@ -66,7 +295,8 @@ class _PurchaseOrderFormScreenState
   }
 
   void _addItem() {
-    setState(() => _items.add(_PoItem()));
+    setState(() => _items.add(_makeItem()));
+    _persistDraft();
   }
 
   void _removeItem(int index) {
@@ -74,6 +304,7 @@ class _PurchaseOrderFormScreenState
       _items[index].dispose();
       _items.removeAt(index);
     });
+    _persistDraft();
   }
 
   double get _totalAmount {
@@ -83,9 +314,29 @@ class _PurchaseOrderFormScreenState
   void _nextStep() {
     if (_currentStep == 0) {
       final suppliersAsync = ref.read(supplierOptionsProvider);
+      final warehousesAsync = ref.read(warehousesProvider);
+      if (suppliersAsync.isLoading ||
+          warehousesAsync.isLoading ||
+          suppliersAsync.hasError ||
+          warehousesAsync.hasError) {
+        ToastService.showError(
+          'Chờ tải đúng nhà cung cấp và kho của cửa hàng, hoặc thử lại khi có lỗi.',
+        );
+        return;
+      }
+      final warehouses = warehousesAsync.asData?.value ?? [];
+      if (warehouses.isNotEmpty &&
+          !warehouses.any((item) => item['id'] == _warehouseId)) {
+        ToastService.showError(
+          'Vui lòng chọn kho lưu trữ thuộc cửa hàng hiện tại.',
+        );
+        return;
+      }
       final hasSuppliers =
           ((suppliersAsync.value?['items'] as List?)?.isNotEmpty ?? false);
-      if (_supplierId == null && hasSuppliers) {
+      final selectedExists = (suppliersAsync.value?['items'] as List? ?? [])
+          .any((item) => item['id'] == _supplierId);
+      if (!selectedExists && hasSuppliers) {
         ToastService.showError('Vui lòng chọn Nhà cung cấp!');
         return;
       }
@@ -104,7 +355,10 @@ class _PurchaseOrderFormScreenState
         return;
       }
       for (var i in _items) {
-        if (i.productId == null) {
+        final loadedProducts =
+            ref.read(productOptionsProvider).value?['items'] as List? ?? [];
+        if (i.productId == null ||
+            !loadedProducts.any((product) => product['id'] == i.productId)) {
           ToastService.showError('Vui lòng chọn sản phẩm cho tất cả các dòng!');
           return;
         }
@@ -112,8 +366,8 @@ class _PurchaseOrderFormScreenState
           ToastService.showError('Số lượng sản phẩm nhập phải lớn hơn 0!');
           return;
         }
-        if (i.unitPrice < 0) {
-          ToastService.showError('Đơn giá nhập hàng không thể là số âm!');
+        if (!i.unitPrice.isFinite || i.unitPrice <= 0) {
+          ToastService.showError('Đơn giá nhập hàng phải lớn hơn 0!');
           return;
         }
       }
@@ -135,12 +389,24 @@ class _PurchaseOrderFormScreenState
   }
 
   Future<void> _save() async {
+    if (_saving || _suggestionApplying) return;
+    final source = widget.sourceInvoice;
+    if (source != null &&
+        (!_notPreviouslyReceived ||
+            ref.read(shopProvider).currentShopId != source.shopId)) {
+      ToastService.showError(
+        'Chọn đúng cửa hàng và xác nhận hàng chưa được ghi tăng kho.',
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       final payload = {
         'supplierId': _supplierId,
         'warehouseId': _warehouseId,
-        'orderDate': DateTime.now().toIso8601String(),
+        'orderDate': DateFormat(
+          'yyyy-MM-dd',
+        ).format(source == null ? DateTime.now() : _sourceDate),
         'notes': _notesCtrl.text.trim(),
         'items': _items
             .map(
@@ -153,8 +419,38 @@ class _PurchaseOrderFormScreenState
             .toList(),
       };
 
-      await ref.read(inventoryRepoProvider).createPurchaseOrder(payload);
+      final scope = ref.read(offlineScopeProvider);
+      if (scope == null) {
+        throw ApiException(
+          'Chọn một cửa hàng và chờ tải tài khoản trước khi ghi phiếu nhập.',
+        );
+      }
+      final draft = _draft;
+      if (draft != null && draft.scope.key != scope.key) {
+        throw ApiException('Phạm vi bản nháp đã thay đổi.');
+      }
+      if (source == null) {
+        await ref.read(inventoryRepoProvider).createPurchaseOrder(payload);
+      } else {
+        await ref
+            .read(inventoryRepoProvider)
+            .createPurchaseFromScan(source.scanId, {
+              ...payload,
+              'invoiceRevision': source.revision,
+              'confirmNotPreviouslyReceived': _notPreviouslyReceived,
+            });
+        ref.invalidate(invoiceScanDetailProvider(source.scanId));
+        ref.invalidate(filteredInvoiceScanListProvider);
+      }
+      if (!mounted || ref.read(offlineScopeProvider)?.key != scope.key) return;
+      _completed = true;
+      try {
+        await draft?.clear();
+      } catch (_) {
+        /* The server already confirmed the purchase. */
+      }
       ref.invalidate(purchaseOrdersProvider);
+      ref.invalidate(purchaseOrderQueryProvider);
       ref.invalidate(stockProvider);
       ref.invalidate(stockPageProvider);
       ref.invalidate(productListProvider);
@@ -163,12 +459,23 @@ class _PurchaseOrderFormScreenState
 
       if (mounted) {
         ToastService.showSuccess('Tạo đơn nhập hàng thành công!');
-        Navigator.pop(context, true);
+        final router = GoRouter.maybeOf(context);
+        if (router != null) {
+          if (router.canPop()) {
+            router.pop(true);
+          } else {
+            router.go('/purchase-orders');
+          }
+        } else if (Navigator.of(context).canPop()) {
+          Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       if (mounted) {
         ToastService.showError(
-          'Không thể tạo đơn nhập hàng. Vui lòng thử lại sau.',
+          e is ApiException
+              ? e.message
+              : 'Chưa lưu được phiếu nhập. Nội dung vẫn được giữ để thử lại.',
         );
       }
     } finally {
@@ -184,6 +491,9 @@ class _PurchaseOrderFormScreenState
     final productsAsync = ref.watch(productOptionsProvider);
     final warehousesAsync = ref.watch(warehousesProvider);
 
+    if (_draftLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
@@ -191,7 +501,18 @@ class _PurchaseOrderFormScreenState
         leadingWidth: Navigator.of(context).canPop() ? 60 : null,
         leading: Navigator.of(context).canPop()
             ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () async {
+                  if (_saving) return;
+                  try {
+                    await _draft?.flush();
+                  } catch (_) {
+                    ToastService.showError(
+                      'Chưa giữ được bản nháp. Hãy thử lại trước khi rời trang.',
+                    );
+                    return;
+                  }
+                  if (context.mounted) Navigator.of(context).pop();
+                },
               )
             : null,
         title: Text(
@@ -204,41 +525,147 @@ class _PurchaseOrderFormScreenState
         ),
         centerTitle: true,
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1040),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                // Elegant Steps Indicator
-                _buildStepsHeader(c, theme),
-
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
+      body: AbsorbPointer(
+        absorbing: _saving || _suggestionApplying,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1040),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  // Elegant Steps Indicator
+                  _buildStepsHeader(c, theme),
+                  if (_pendingSuggestion != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Có đề xuất ${_pendingSuggestion!.items.length} sản phẩm. Nháp hiện tại vẫn được giữ; dòng trùng giữ số lượng lớn hơn và đơn giá đang nhập.',
+                          ),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: _suggestionApplying
+                                  ? null
+                                  : _applySuggestion,
+                              child: Text(
+                                _suggestionApplying
+                                    ? 'Đang thêm đề xuất…'
+                                    : 'Thêm đề xuất vào nháp',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _buildCurrentStepView(
-                        c,
-                        theme,
-                        suppliersAsync,
-                        productsAsync,
-                        warehousesAsync,
+                  if (_draftNotice != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Text(
+                        _draftNotice!,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (widget.sourceInvoice != null) _sourceInfo(),
+                            _buildCurrentStepView(
+                              c,
+                              theme,
+                              suppliersAsync,
+                              productsAsync,
+                              warehousesAsync,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                // Bottom Buttons Bar
-                _buildBottomActionBar(c, theme),
-              ],
+                  // Bottom Buttons Bar
+                  _buildBottomActionBar(c, theme),
+                ],
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sourceInfo() {
+    final source = widget.sourceInvoice!;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Từ hóa đơn ${source.number}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            Text(
+              'Đối tác trên ảnh: ${source.partnerName} · Tổng: ${_currFmt.format(source.total)}',
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Chọn đúng nhà cung cấp, kho và ghép từng dòng với mã hàng. Đơn giá gợi ý phân bổ theo tổng tiền hóa đơn (gồm thuế/phí); kiểm tra lại giá vốn và số lượng theo đơn vị trong kho. Không tự ghép sản phẩm theo tên.',
+            ),
+            if (_currentStep == 0) ...[
+              const SizedBox(height: 12),
+              BusinessDateField(
+                label: 'Ngày nhận hàng',
+                selectedDate: _sourceDate,
+                onChanged: (value) {
+                  setState(() => _sourceDate = value);
+                  _persistDraft();
+                },
+              ),
+            ],
+            if (_currentStep == 1 &&
+                ref.watch(shopProvider).hasPermission('products', 'edit'))
+              TextButton.icon(
+                onPressed: () async {
+                  await context.push('/products/form');
+                  ref.invalidate(productOptionsProvider);
+                },
+                icon: const AppIcon(Icons.add),
+                label: const Text('Chưa có mã hàng? Tạo sản phẩm trước'),
+              ),
+            if (_currentStep == 2) ...[
+              Text(
+                'Tổng giá vốn nhập: ${_currFmt.format(_items.fold<double>(0, (sum, item) => sum + item.subtotal))}. Sai số cho phép với hóa đơn: tối đa 1 đồng.',
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _notPreviouslyReceived,
+                onChanged: (value) =>
+                    setState(() => _notPreviouslyReceived = value ?? false),
+                title: const Text(
+                  'Các hàng này chưa được ghi tăng kho trong ứng dụng.',
+                ),
+              ),
+              const Text(
+                'Tạo phiếu chờ chưa tăng tồn, chưa ghi công nợ hoặc chi tiền. Hoàn tất phiếu nhập khi đã kiểm nhận hàng.',
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -296,7 +723,11 @@ class _PurchaseOrderFormScreenState
           ),
           child: Center(
             child: isCompleted
-                ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                ? const AppIcon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: Colors.white,
+                  )
                 : Text(
                     '${index + 1}',
                     style: GoogleFonts.manrope(
@@ -346,7 +777,7 @@ class _PurchaseOrderFormScreenState
       case 1:
         return _buildItemsStep(c, theme, productsAsync);
       case 2:
-        return _buildConfirmStep(c, theme);
+        return _buildConfirmStep(c, theme, productsAsync);
       default:
         return const SizedBox.shrink();
     }
@@ -380,7 +811,7 @@ class _PurchaseOrderFormScreenState
                       color: theme.colorScheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(
+                    child: AppIcon(
                       Icons.business_center_rounded,
                       size: 18,
                       color: theme.colorScheme.primary,
@@ -401,6 +832,7 @@ class _PurchaseOrderFormScreenState
 
               // Chọn NCC
               suppliersAsync.when(
+                skipLoadingOnRefresh: false,
                 data: (data) {
                   final items = (data['items'] as List?) ?? [];
                   if (items.isEmpty) {
@@ -417,7 +849,9 @@ class _PurchaseOrderFormScreenState
                     );
                   }
                   return DropdownButtonFormField<int>(
-                    initialValue: _supplierId,
+                    initialValue: items.any((item) => item['id'] == _supplierId)
+                        ? _supplierId
+                        : null,
                     dropdownColor: c.card,
                     style: GoogleFonts.inter(
                       color: c.textPrimary,
@@ -452,14 +886,14 @@ class _PurchaseOrderFormScreenState
                     onChanged: (v) {
                       setState(() {
                         _supplierId = v;
-                        final matched = items.firstWhere(
-                          (e) => e['id'] == v,
-                          orElse: () => null,
-                        );
+                        final matched = items
+                            .where((e) => e['id'] == v)
+                            .firstOrNull;
                         if (matched != null) {
                           _supplierName = matched['name'] ?? '';
                         }
                       });
+                      _persistDraft();
                     },
                     validator: (v) => v == null ? 'Vui lòng chọn NCC' : null,
                   );
@@ -474,6 +908,7 @@ class _PurchaseOrderFormScreenState
 
               // Chọn Kho
               warehousesAsync.when(
+                skipLoadingOnRefresh: false,
                 data: (data) {
                   if (data.isEmpty) {
                     return Padding(
@@ -489,17 +924,31 @@ class _PurchaseOrderFormScreenState
                   }
 
                   // Auto-select first warehouse if none selected
-                  if (_warehouseId == null && data.isNotEmpty) {
+                  if (!warehousesAsync.isLoading &&
+                      data.isNotEmpty &&
+                      !data.any((item) => item['id'] == _warehouseId)) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      final latest = ref.read(warehousesProvider);
+                      if (_draftLoading ||
+                          latest.isLoading ||
+                          !identical(latest.asData?.value, data) ||
+                          data.any((item) => item['id'] == _warehouseId)) {
+                        return;
+                      }
                       setState(() {
                         _warehouseId = data[0]['id'];
                         _warehouseName = data[0]['name'] ?? '';
                       });
+                      _persistDraft();
                     });
                   }
 
                   return DropdownButtonFormField<int>(
-                    initialValue: _warehouseId,
+                    key: ValueKey('warehouse-$_warehouseId'),
+                    initialValue: data.any((item) => item['id'] == _warehouseId)
+                        ? _warehouseId
+                        : null,
                     dropdownColor: c.card,
                     style: GoogleFonts.inter(
                       color: c.textPrimary,
@@ -534,14 +983,14 @@ class _PurchaseOrderFormScreenState
                     onChanged: (v) {
                       setState(() {
                         _warehouseId = v;
-                        final matched = data.firstWhere(
-                          (e) => e['id'] == v,
-                          orElse: () => null,
-                        );
+                        final matched = data
+                            .where((e) => e['id'] == v)
+                            .firstOrNull;
                         if (matched != null) {
                           _warehouseName = matched['name'] ?? '';
                         }
                       });
+                      _persistDraft();
                     },
                   );
                 },
@@ -587,6 +1036,7 @@ class _PurchaseOrderFormScreenState
     ThemeData theme,
     AsyncValue<Map<String, dynamic>> productsAsync,
   ) {
+    final productsById = _productsById(productsAsync);
     return Column(
       key: const ValueKey('step_items'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,7 +1054,7 @@ class _PurchaseOrderFormScreenState
             ),
             TextButton.icon(
               onPressed: _addItem,
-              icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+              icon: const AppIcon(Icons.add_circle_outline_rounded, size: 18),
               label: Text(
                 'Thêm dòng',
                 style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
@@ -638,30 +1088,47 @@ class _PurchaseOrderFormScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (item.sourceLabel != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Trên hóa đơn: ${item.sourceLabel}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    CircleAvatar(
-                      radius: 12,
-                      backgroundColor: theme.colorScheme.primary.withValues(
-                        alpha: 0.1,
-                      ),
-                      child: Text(
-                        '${idx + 1}',
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                    if (item.productId != null)
+                      _itemThumbnail(item, productsById)
+                    else
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundColor: theme.colorScheme.primary.withValues(
+                          alpha: 0.1,
+                        ),
+                        child: Text(
+                          '${idx + 1}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
-                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: productsAsync.when(
+                        skipLoadingOnRefresh: false,
                         data: (data) {
                           final prods = (data['items'] as List?) ?? [];
                           return DropdownButtonFormField<int>(
-                            initialValue: item.productId,
+                            initialValue:
+                                prods.any(
+                                  (product) => product['id'] == item.productId,
+                                )
+                                ? item.productId
+                                : null,
                             isExpanded: true,
                             dropdownColor: c.card,
                             style: GoogleFonts.inter(
@@ -681,7 +1148,9 @@ class _PurchaseOrderFormScreenState
                               return DropdownMenuItem<int>(
                                 value: e['id'],
                                 child: Text(
-                                  '${e['sku'] ?? 'N/A'} - ${e['name'] ?? 'Không tên'}',
+                                  widget.sourceInvoice == null
+                                      ? '${e['sku'] ?? 'N/A'} - ${e['name'] ?? 'Không tên'}'
+                                      : '${e['sku'] ?? 'N/A'} - ${e['name'] ?? 'Không tên'} · Tồn ${e['currentStock'] ?? 0} ${e['unit'] ?? ''}',
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               );
@@ -689,10 +1158,9 @@ class _PurchaseOrderFormScreenState
                             onChanged: (v) {
                               setState(() {
                                 item.productId = v;
-                                final matched = prods.firstWhere(
-                                  (e) => e['id'] == v,
-                                  orElse: () => null,
-                                );
+                                final matched = prods
+                                    .where((e) => e['id'] == v)
+                                    .firstOrNull;
                                 if (matched != null) {
                                   item.productName = matched['name'];
                                   item.productSku = matched['sku'];
@@ -702,6 +1170,7 @@ class _PurchaseOrderFormScreenState
                                   }
                                 }
                               });
+                              _persistDraft();
                             },
                           );
                         },
@@ -714,7 +1183,7 @@ class _PurchaseOrderFormScreenState
                     ),
                     const SizedBox(width: 6),
                     IconButton(
-                      icon: const Icon(
+                      icon: const AppIcon(
                         Icons.delete_outline_rounded,
                         color: AppColors.danger,
                         size: 20,
@@ -787,7 +1256,25 @@ class _PurchaseOrderFormScreenState
     );
   }
 
-  Widget _buildConfirmStep(AppThemeColors c, ThemeData theme) {
+  Map<String, Map> _productsById(AsyncValue<Map<String, dynamic>> data) => {
+    for (final product
+        in (data.value?['items'] as List? ?? []).whereType<Map>())
+      '${product['id']}': product,
+  };
+
+  Widget _itemThumbnail(_PoItem item, Map<String, Map> productsById) =>
+      ProductThumbnail(
+        imageUrl: productsById['${item.productId}']?['imageUrl']?.toString(),
+        name: item.productName,
+        size: 44,
+      );
+
+  Widget _buildConfirmStep(
+    AppThemeColors c,
+    ThemeData theme,
+    AsyncValue<Map<String, dynamic>> productsAsync,
+  ) {
+    final productsById = _productsById(productsAsync);
     return Column(
       key: const ValueKey('step_confirm'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -823,8 +1310,10 @@ class _PurchaseOrderFormScreenState
               ),
               const SizedBox(height: 6),
               _buildDetailTextRow(
-                'Ngày đặt:',
-                DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
+                widget.sourceInvoice == null ? 'Ngày đặt:' : 'Ngày nhận hàng:',
+                DateFormat('dd/MM/yyyy').format(
+                  widget.sourceInvoice == null ? DateTime.now() : _sourceDate,
+                ),
                 c,
               ),
               if (_notesCtrl.text.isNotEmpty) ...[
@@ -864,6 +1353,8 @@ class _PurchaseOrderFormScreenState
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
                     children: [
+                      _itemThumbnail(item, productsById),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1029,7 +1520,7 @@ class _PurchaseOrderFormScreenState
                           color: Colors.white,
                         ),
                       )
-                    : Icon(
+                    : AppIcon(
                         _currentStep == 2
                             ? Icons.check_circle_outline_rounded
                             : Icons.arrow_forward_rounded,

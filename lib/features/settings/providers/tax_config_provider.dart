@@ -1,3 +1,4 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -275,6 +276,7 @@ class TaxConfig {
 class TaxConfigNotifier extends Notifier<TaxConfig> {
   @override
   TaxConfig build() {
+    watchDataFreshness(ref, DataArea.taxConfig);
     final shop = ref.watch(shopProvider);
     if (shop.isLoading) return const TaxConfig.loading();
     if (shop.isAllShops || shop.currentShopId == null) {

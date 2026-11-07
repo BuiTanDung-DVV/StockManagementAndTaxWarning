@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -44,13 +45,21 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
     final docsAsync = ref.watch(aiKnowledgeProvider);
     final docs = docsAsync.asData?.value ?? const <AiDocument>[];
 
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final compactLayout =
+        MediaQuery.sizeOf(context).width < 900 || textScale > 1.15;
+    final double calculatedHeight = 18 * 2 * textScale * 1.2 + 24;
+    final double toolbarHeight = compactLayout && calculatedHeight > 68.0
+        ? calculatedHeight
+        : 68.0;
+
     return Scaffold(
       backgroundColor: c.bg,
       appBar: AppBar(
         backgroundColor: c.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        toolbarHeight: 68,
+        toolbarHeight: toolbarHeight,
         automaticallyImplyLeading: false,
         leadingWidth: 56,
         leading: Padding(
@@ -69,78 +78,99 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
         ),
         title: Row(
           children: [
-            Text(
-              'Nguồn tài liệu tham khảo',
-              style: GoogleFonts.manrope(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: c.textPrimary,
-                letterSpacing: -0.3,
+            Flexible(
+              child: Text(
+                'Nguồn tài liệu tham khảo',
+                style: GoogleFonts.manrope(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: c.textPrimary,
+                  letterSpacing: -0.3,
+                ),
+                maxLines: compactLayout ? 2 : 1,
+                softWrap: compactLayout,
+                overflow: compactLayout
+                    ? TextOverflow.visible
+                    : TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.25),
-                  width: 1,
+            if (!compactLayout) ...[
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppIcon(
+                      Icons.auto_awesome,
+                      size: 12,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'RAG Grounding',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.auto_awesome, size: 12, color: AppColors.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    'RAG Grounding',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ],
         ),
         actions: [
           IconButton(
             tooltip: 'Làm mới',
-            icon: const Icon(Icons.refresh_rounded, size: 20),
+            icon: const AppIcon(Icons.refresh_rounded, size: 20),
             color: c.textSecondary,
             onPressed: () => ref.invalidate(aiKnowledgeProvider),
           ),
           const SizedBox(width: 6),
-          FilledButton.icon(
-            onPressed: () => _showAddDocumentModal(context, ref),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Nạp tài liệu mới'),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              textStyle: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+          if (compactLayout)
+            IconButton(
+              tooltip: 'Nạp tài liệu mới',
+              icon: const AppIcon(Icons.add_rounded, size: 24),
+              color: AppColors.primary,
+              onPressed: () => _showAddDocumentModal(context, ref),
+            )
+          else
+            FilledButton.icon(
+              onPressed: () => _showAddDocumentModal(context, ref),
+              icon: const AppIcon(Icons.add_rounded, size: 18),
+              label: const Text('Nạp tài liệu mới'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                textStyle: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
           const SizedBox(width: 20),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: c.divider,
-            height: 1,
-          ),
+          child: Container(color: c.divider, height: 1),
         ),
       ),
       body: RefreshIndicator(
@@ -168,7 +198,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                         color: AppColors.primary.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
+                      child: AppIcon(
                         Icons.verified_user_rounded,
                         color: AppColors.primary,
                         size: 22,
@@ -364,7 +394,7 @@ class AiKnowledgeManagementScreen extends ConsumerWidget {
                                       );
                                     }
                                   },
-                                  icon: const Icon(
+                                  icon: const AppIcon(
                                     Icons.delete_forever_rounded,
                                     size: 16,
                                     color: AppColors.danger,
@@ -444,9 +474,11 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
           '3. Hộ kê khai phải mở sổ sách kế toán theo Thông tư 88/2021/TT-BTC và sử dụng hóa đơn điện tử hợp pháp.',
     },
     {
-      'title': 'Nghị định 123/2020/NĐ-CP & TT 78 - Hóa đơn điện tử máy tính tiền',
+      'title':
+          'Nghị định 123/2020/NĐ-CP & TT 78 - Hóa đơn điện tử máy tính tiền',
       'category': 'Thuế HKD',
-      'desc': 'Quy định xuất HĐĐT khởi tạo từ máy tính tiền kết nối cơ quan thuế',
+      'desc':
+          'Quy định xuất HĐĐT khởi tạo từ máy tính tiền kết nối cơ quan thuế',
       'content':
           'Căn cứ Nghị định 123/2020/NĐ-CP và Thông tư 78/2021/TT-BTC:\n'
           '1. Đối tượng áp dụng: Hộ kinh doanh nộp thuế theo phương pháp kê khai có hoạt động bán lẻ trực tiếp đến người tiêu dùng (trung tâm thương mại, siêu thị, bán lẻ hàng tiêu dùng, ăn uống, nhà hàng, khách sạn, hiệu thuốc...).\n'
@@ -454,7 +486,8 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
           '3. Chế tài: Xử phạt hành vi không lập hóa đơn khi bán hàng hóa, cung cấp dịch vụ theo Nghị định 125/2020/NĐ-CP từ 10 - 20 triệu đồng.',
     },
     {
-      'title': 'Thời hạn nộp hồ sơ khai thuế & Phạt chậm nộp (Luật QLT 38 & NĐ 125)',
+      'title':
+          'Thời hạn nộp hồ sơ khai thuế & Phạt chậm nộp (Luật QLT 38 & NĐ 125)',
       'category': 'Thuế HKD',
       'desc': 'Hạn chót ngày cuối tháng đầu quý sau, mức phạt chậm nộp tờ khai',
       'content':
@@ -470,7 +503,8 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
     {
       'title': 'Quy chế Quản lý & Thu hồi Công nợ bán lẻ cửa hàng',
       'category': 'Bán Hàng & Sổ Nợ',
-      'desc': 'Giới hạn nợ tối đa 30 ngày, đối soát định kỳ, chặn bán nợ vượt trần',
+      'desc':
+          'Giới hạn nợ tối đa 30 ngày, đối soát định kỳ, chặn bán nợ vượt trần',
       'content':
           'Quy chế quản lý công nợ khách hàng và nhà cung cấp nội bộ:\n'
           '1. Hạn mức tín dụng khách quen: Tối đa không quá 10.000.000 VNĐ hoặc thời gian nợ tối đa 30 ngày tính từ ngày ghi sổ.\n'
@@ -480,7 +514,8 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
     {
       'title': 'Quy chế Kiểm kê & Quản lý Hao hụt Kho hàng (FIFO)',
       'category': 'Kho & Tài Chính',
-      'desc': 'Kiểm kê định kỳ cuối tháng, xuất trước nhập trước, lập biên bản hủy',
+      'desc':
+          'Kiểm kê định kỳ cuối tháng, xuất trước nhập trước, lập biên bản hủy',
       'content':
           'Quy chuẩn quản lý tồn kho và xử lý hao hụt hàng hóa:\n'
           '1. Nguyên tắc xuất kho: Áp dụng phương pháp Nhập trước - Xuất trước (FIFO) đối với toàn bộ mặt hàng có hạn sử dụng hoặc bao bì biến đổi theo lô.\n'
@@ -517,23 +552,25 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
       } else {
         // Đối với PDF hoặc DOCX: Giải mã chuỗi UTF-8 tiếng Việt an toàn
         final utf8Decoded = utf8.decode(bytes, allowMalformed: true);
-        final matches = RegExp(
-          r'[\p{L}\p{N}\s,.\-:;/()""''–—]{6,}',
-          unicode: true,
-        )
-            .allMatches(utf8Decoded)
-            .map((m) => m.group(0)!.trim())
-            .where(
-              (s) =>
-                  s.length > 8 &&
-                  !s.contains('Font') &&
-                  !s.contains('obj') &&
-                  !s.contains('endobj') &&
-                  !s.contains('XML') &&
-                  !s.contains('xmlns'),
-            )
-            .take(150)
-            .toList();
+        final matches =
+            RegExp(
+                  r'[\p{L}\p{N}\s,.\-:;/()""'
+                  '–—]{6,}',
+                  unicode: true,
+                )
+                .allMatches(utf8Decoded)
+                .map((m) => m.group(0)!.trim())
+                .where(
+                  (s) =>
+                      s.length > 8 &&
+                      !s.contains('Font') &&
+                      !s.contains('obj') &&
+                      !s.contains('endobj') &&
+                      !s.contains('XML') &&
+                      !s.contains('xmlns'),
+                )
+                .take(150)
+                .toList();
 
         if (matches.isNotEmpty) {
           extractedContent = matches.join('\n');
@@ -632,31 +669,28 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppColors.primary,
-                      radius: 16,
-                      child: const Icon(
-                        Icons.note_add_rounded,
-                        size: 18,
-                        color: Colors.white,
-                      ),
+                CircleAvatar(
+                  backgroundColor: AppColors.primary,
+                  radius: 16,
+                  child: const AppIcon(
+                    Icons.note_add_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Thêm nguồn tham khảo',
+                    style: GoogleFonts.manrope(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Thêm nguồn tham khảo',
-                      style: GoogleFonts.manrope(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const AppIcon(Icons.close),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -695,7 +729,10 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                     children: [
                       OutlinedButton.icon(
                         onPressed: _isLoading ? null : _pickDocumentFile,
-                        icon: const Icon(Icons.upload_file_rounded, size: 16),
+                        icon: const AppIcon(
+                          Icons.upload_file_rounded,
+                          size: 16,
+                        ),
                         label: const Text('Tải tệp (PDF, Word, TXT, JSON)'),
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
@@ -711,7 +748,7 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                             : () => setState(
                                 () => _showUrlInput = !_showUrlInput,
                               ),
-                        icon: const Icon(Icons.link_rounded, size: 16),
+                        icon: const AppIcon(Icons.link_rounded, size: 16),
                         label: Text(
                           _showUrlInput
                               ? 'Ẩn ô dán link'
@@ -739,7 +776,7 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                               isDense: true,
                               hintText:
                                   'https://thuvienphapluat.vn/... hoặc link bài viết',
-                              prefixIcon: Icon(
+                              prefixIcon: AppIcon(
                                 Icons.language_rounded,
                                 size: 18,
                               ),
@@ -783,7 +820,10 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                           ActionChip(
                             padding: EdgeInsets.zero,
                             visualDensity: VisualDensity.compact,
-                            label: const Text('thuedientu.gdt.gov.vn', style: TextStyle(fontSize: 11)),
+                            label: const Text(
+                              'thuedientu.gdt.gov.vn',
+                              style: TextStyle(fontSize: 11),
+                            ),
                             onPressed: () {
                               _urlCtrl.text = 'https://thuedientu.gdt.gov.vn';
                             },
@@ -792,7 +832,10 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                           ActionChip(
                             padding: EdgeInsets.zero,
                             visualDensity: VisualDensity.compact,
-                            label: const Text('vbpl.vn', style: TextStyle(fontSize: 11)),
+                            label: const Text(
+                              'vbpl.vn',
+                              style: TextStyle(fontSize: 11),
+                            ),
                             onPressed: () {
                               _urlCtrl.text = 'https://vbpl.vn';
                             },
@@ -801,7 +844,10 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                           ActionChip(
                             padding: EdgeInsets.zero,
                             visualDensity: VisualDensity.compact,
-                            label: const Text('thuvienphapluat.vn', style: TextStyle(fontSize: 11)),
+                            label: const Text(
+                              'thuvienphapluat.vn',
+                              style: TextStyle(fontSize: 11),
+                            ),
                             onPressed: () {
                               _urlCtrl.text = 'https://thuvienphapluat.vn';
                             },
@@ -817,7 +863,10 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
 
             // Khối Mẫu quy định pháp lý chuẩn 1-chạm (Presets)
             ExpansionTile(
-              tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              tilePadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 0,
+              ),
               childrenPadding: const EdgeInsets.only(bottom: 8),
               collapsedShape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -825,9 +874,11 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                side: BorderSide(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
-              leading: Icon(
+              leading: AppIcon(
                 Icons.bookmark_added_rounded,
                 size: 20,
                 color: AppColors.primary,
@@ -847,14 +898,17 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
               children: _legalPresets.map((preset) {
                 return ListTile(
                   dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 2,
+                  ),
                   leading: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
+                    child: AppIcon(
                       Icons.auto_stories_rounded,
                       size: 16,
                       color: AppColors.primary,
@@ -870,12 +924,18 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                   ),
                   subtitle: Text(
                     preset['desc'] ?? '',
-                    style: GoogleFonts.inter(fontSize: 11, color: c.textSecondary),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: c.textSecondary,
+                    ),
                   ),
                   trailing: TextButton.icon(
                     onPressed: () => _applyPreset(preset),
-                    icon: const Icon(Icons.flash_on_rounded, size: 14),
-                    label: const Text('Áp dụng', style: TextStyle(fontSize: 11.5)),
+                    icon: const AppIcon(Icons.flash_on_rounded, size: 14),
+                    label: const Text(
+                      'Áp dụng',
+                      style: TextStyle(fontSize: 11.5),
+                    ),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       foregroundColor: AppColors.primary,
@@ -960,7 +1020,10 @@ class _AddDocumentSheetState extends ConsumerState<_AddDocumentSheet> {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.check_circle_rounded, color: Colors.white),
+                  : const AppIcon(
+                      Icons.check_circle_rounded,
+                      color: Colors.white,
+                    ),
               label: Text(
                 _isLoading ? 'Đang xử lý...' : 'Lưu nguồn',
                 style: GoogleFonts.manrope(

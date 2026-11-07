@@ -5,7 +5,7 @@ export class User {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ unique: true })
+    @Column({ unique: true, length: 254 })
     username: string;
 
     // In the SQL schema (backend/database/QLKH.sql) the column is named `password`.
@@ -15,7 +15,7 @@ export class User {
     @Column({ name: 'full_name' })
     fullName: string;
 
-    @Column({ nullable: true })
+    @Column({ nullable: true, length: 254 })
     email: string;
 
     @Column({ name: 'email_verified', default: false })

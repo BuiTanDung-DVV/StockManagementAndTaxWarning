@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,6 +14,7 @@ import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/supplier_provider.dart';
 import 'supplier_form_screen.dart';
+import 'supplier_payables_section.dart';
 import 'package:bot_toast/bot_toast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -63,7 +65,7 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
               )
             : null,
         title: Text(
-          'Chi Tiết Nhà Cung Cấp',
+          'Nhà cung cấp',
           style: GoogleFonts.manrope(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -73,8 +75,8 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            tooltip: 'Xóa nhà cung cấp',
+            icon: const AppIcon(Icons.delete_outline, color: Colors.redAccent),
+            tooltip: 'Ngừng sử dụng nhà cung cấp',
             onPressed: () => _confirmDelete(context, ref),
           ),
           featureGuideButton(context, 'supplier_detail'),
@@ -140,47 +142,73 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                   ),
                   child: Column(
                     children: [
-                      // Premium visual card for company logo avatar
-                      Center(
-                        child: Container(
-                          width: 90,
-                          height: 90,
-                          decoration: BoxDecoration(
-                            color: AppColors.info.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(26),
-                            border: Border.all(
-                              color: AppColors.info.withValues(alpha: 0.15),
-                              width: 1.5,
+                      Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: c.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ),
-                          child: Center(
                             child: Text(
                               name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: GoogleFonts.manrope(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.info,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: c.primary,
                               ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
+                                    color: c.textPrimary,
+                                  ),
+                                ),
+                                if ((s['code']?.toString() ?? '').isNotEmpty)
+                                  Text(
+                                    s['code'].toString(),
+                                    style: TextStyle(
+                                      color: c.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            name,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.manrope(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: c.textPrimary,
-                            ),
+                      _SupplierLedgerSummary(
+                        balance: balance,
+                        totalPurchase: totalPurchase,
+                      ),
+                      const SizedBox(height: 16),
+                      SupplierPayablesSection(
+                        supplierId: widget.id,
+                        supplierName: name.toString(),
+                      ),
+                      const SizedBox(height: 20),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Thông tin liên hệ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 8),
 
                       // Info Section 1: Business Parameters
                       _Card([
@@ -207,41 +235,24 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
                       ]),
                       if (phone.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
+                        Align(
+                          alignment: Alignment.centerLeft,
                           child: OutlinedButton.icon(
-                            icon: const Icon(Icons.phone_rounded, size: 16),
+                            icon: const AppIcon(Icons.phone_rounded, size: 16),
                             label: const Text('Gọi cho nhà cung cấp'),
                             onPressed: () async {
                               final uri = Uri.parse('tel:$phone');
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri);
                               } else {
-                                ToastService.showError('Không thể thực hiện cuộc gọi');
+                                ToastService.showError(
+                                  'Không thể thực hiện cuộc gọi',
+                                );
                               }
                             },
                           ),
                         ),
                       ],
-                      const SizedBox(height: 12),
-
-                      // Info Section 2: Ledger Summary parameters
-                      _Card([
-                        if (totalPurchase > 0)
-                          _R(
-                            'Lũy kế nhập hàng từ NCC',
-                            _currFmt.format(totalPurchase),
-                            c,
-                          ),
-                        _R(
-                          'Công nợ hiện tại với NCC',
-                          _currFmt.format(balance),
-                          c,
-                          valColor: balance > 0
-                              ? AppColors.danger
-                              : AppColors.success,
-                        ),
-                      ]),
                       const SizedBox(height: 12),
 
                       if (phone.isEmpty && email.isEmpty && address.isEmpty)
@@ -271,10 +282,10 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await AppConfirmModal.show(
       context,
-      title: 'Xóa nhà cung cấp',
+      title: 'Ngừng sử dụng nhà cung cấp',
       message:
-          'Bạn có chắc chắn muốn xóa nhà cung cấp này? Mọi dữ liệu liên quan sẽ không thể khôi phục.',
-      confirmText: 'Xóa nhà cung cấp',
+          'Nhà cung cấp sẽ được ẩn khỏi danh sách sử dụng. Công nợ và chứng từ đã ghi vẫn được giữ.',
+      confirmText: 'Ngừng sử dụng',
       isDestructive: true,
     );
     if (confirmed != true) return;
@@ -285,13 +296,13 @@ class _SupplierDetailScreenState extends ConsumerState<SupplierDetailScreen> {
     try {
       await ref.read(supplierRepoProvider).delete(widget.id);
       cancel();
-      ToastService.showSuccess('Xóa nhà cung cấp thành công');
+      ToastService.showSuccess('Đã ngừng sử dụng nhà cung cấp');
       ref.invalidate(supplierListProvider);
       if (context.mounted) context.pop();
     } catch (e) {
       cancel();
       ToastService.showError(
-        'Không thể xóa nhà cung cấp. Vui lòng thử lại sau.',
+        'Chưa thể ngừng sử dụng nhà cung cấp. Vui lòng thử lại.',
       );
     }
   }
@@ -318,45 +329,96 @@ class _Card extends StatelessWidget {
   }
 }
 
+class _SupplierLedgerSummary extends StatelessWidget {
+  final double balance, totalPurchase;
+  const _SupplierLedgerSummary({
+    required this.balance,
+    required this.totalPurchase,
+  });
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    Widget metric(String label, double value) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: c.textSecondary, fontSize: 13)),
+        const SizedBox(height: 6),
+        Text(
+          _currFmt.format(value),
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: c.textPrimary,
+          ),
+        ),
+      ],
+    );
+    return _Card([
+      LayoutBuilder(
+        builder: (context, constraints) {
+          if (totalPurchase <= 0) {
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: metric('Còn phải trả nhà cung cấp', balance),
+            );
+          }
+          if (constraints.maxWidth < 560) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                metric('Còn phải trả nhà cung cấp', balance),
+                const Divider(height: 24),
+                _R('Lũy kế nhập hàng', _currFmt.format(totalPurchase), c),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: metric('Còn phải trả nhà cung cấp', balance)),
+              Container(width: 1, height: 52, color: c.divider),
+              const SizedBox(width: 24),
+              Expanded(child: metric('Lũy kế nhập hàng', totalPurchase)),
+            ],
+          );
+        },
+      ),
+    ]);
+  }
+}
+
 class _R extends StatelessWidget {
   final String l, v;
   final AppThemeColors c;
-  final Color? valColor;
-  const _R(this.l, this.v, this.c, {this.valColor});
-
+  const _R(this.l, this.v, this.c);
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l,
-            style: GoogleFonts.inter(
-              color: c.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+          SizedBox(
+            width: constraints.maxWidth < 500 ? 118 : 180,
+            child: Text(
+              l,
+              style: TextStyle(color: c.textSecondary, fontSize: 13),
             ),
           ),
-          const SizedBox(width: 16),
-          Flexible(
-            child: Text(
+          const SizedBox(width: 12),
+          Expanded(
+            child: SelectableText(
               v,
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: valColor ?? c.textPrimary,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                color: c.textPrimary,
               ),
-              textAlign: TextAlign.end,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 String _formatPaymentTerm(dynamic term, {String fallback = '—'}) {

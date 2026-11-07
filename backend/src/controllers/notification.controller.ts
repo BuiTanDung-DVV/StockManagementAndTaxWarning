@@ -11,7 +11,11 @@ export const listNotifications = async (req: AuthRequest, res: Response) => {
         const limit = +(req.query.limit || 20);
         res.json({ success: true, data: await svc.findAll(userId, page, limit) });
     }
-    catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+    catch (e: any) {
+        const validation = String(e.message).startsWith('Validation:');
+        res.status(validation ? 400 : 500).json({ success: false,
+            message: validation ? e.message.replace('Validation: ', '') : 'Không thể tải thông báo' });
+    }
 };
 
 export const getUnreadCount = async (req: AuthRequest, res: Response) => {

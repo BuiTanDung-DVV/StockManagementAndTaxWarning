@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -56,7 +57,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                   const SizedBox(height: AppSpacing.md),
                   FilledButton.icon(
                     onPressed: _busy ? null : _export,
-                    icon: const Icon(Icons.download_outlined),
+                    icon: const AppIcon(Icons.download_outlined),
                     label: const Text('Tải bản sao .smartstock-backup.gz'),
                   ),
                 ],
@@ -81,7 +82,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                   const SizedBox(height: AppSpacing.md),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _pickAndValidate,
-                    icon: const Icon(Icons.upload_file_outlined),
+                    icon: const AppIcon(Icons.upload_file_outlined),
                     label: const Text('Chọn và kiểm tra bản sao'),
                   ),
                   if (_preview != null) ...[
@@ -90,7 +91,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     const SizedBox(height: AppSpacing.md),
                     FilledButton.icon(
                       onPressed: _busy ? null : _restore,
-                      icon: const Icon(Icons.restore),
+                      icon: const AppIcon(Icons.restore),
                       label: const Text('Xác nhận thay thế dữ liệu'),
                     ),
                   ],
@@ -99,7 +100,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     const Text('Đã tạo điểm hoàn tác trước khi khôi phục.'),
                     TextButton.icon(
                       onPressed: _busy ? null : _rollback,
-                      icon: const Icon(Icons.undo),
+                      icon: const AppIcon(Icons.undo),
                       label: const Text('Hoàn tác lần khôi phục vừa rồi'),
                     ),
                   ],
@@ -119,7 +120,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
   Future<String?> _password(String title) async {
     final controller = TextEditingController();
-    final value = await showDialog<String>(
+    final route = DialogRoute<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(title),
@@ -141,6 +142,8 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ],
       ),
     );
+    final value = await Navigator.of(context, rootNavigator: true).push(route);
+    await route.completed;
     controller.dispose();
     return value?.trim().isNotEmpty == true ? value : null;
   }

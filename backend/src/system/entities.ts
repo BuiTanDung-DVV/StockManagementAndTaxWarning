@@ -189,7 +189,17 @@ export class InvoiceScan {
     @Column({ name: 'confirmed_data', type: 'text', nullable: true })
     confirmedData: string;
 
-    @Column({ name: 'confidence_score', nullable: true })
+    @Column({
+        name: 'confidence_score',
+        type: 'decimal',
+        precision: 9,
+        scale: 6,
+        nullable: true,
+        transformer: {
+            to: (value: number | null | undefined) => value,
+            from: (value: string | number | null) => value == null ? null : Number(value),
+        },
+    })
     confidenceScore: number;
 
     @Column({ name: 'total_amount', type: 'decimal', precision: 18, scale: 2, nullable: true })

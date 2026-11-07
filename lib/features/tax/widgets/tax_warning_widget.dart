@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -92,7 +93,7 @@ class TaxWarningWidget extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: Icon(
+                icon: AppIcon(
                   Icons.info_outline,
                   color: AppColors.warning.withBlue(0).withGreen(100),
                 ),
@@ -123,7 +124,7 @@ class TaxWarningWidget extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
+                AppIcon(
                   Icons.lightbulb_outline,
                   size: 16,
                   color: AppColors.warning.withBlue(0).withGreen(100),

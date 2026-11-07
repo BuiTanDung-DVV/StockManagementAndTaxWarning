@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
@@ -59,7 +60,7 @@ class SectionedFormDialog extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close, color: c.textSecondary),
+                    icon: AppIcon(Icons.close, color: c.textSecondary),
                     onPressed: onCancel,
                     splashRadius: 24,
                   ),

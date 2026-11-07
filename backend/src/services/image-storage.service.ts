@@ -57,6 +57,11 @@ export function isOwnedShopPaymentQrKey(shopId: number, key: string): boolean {
         !key.includes('..');
 }
 
+export function receiptLogoKeyFromPublicUrl(shopId: number, imageUrl: string, cloudName: string): string | null {
+    const key = cloudinaryPublicIdFromUrl(imageUrl, cloudName);
+    return key && key.startsWith(`smartstock/shops/${shopId}/receipt-logos/`) && !key.includes('..') ? key : null;
+}
+
 export function isOwnedDebtEvidenceImageKey(
     shopId: number,
     key: string,
@@ -144,6 +149,17 @@ export function invoiceScanImageKeyFromPublicUrl(
 
 export class ImageStorageService {
     private configured = false;
+
+    async uploadReceiptLogo(shopId: number, request: ProductImageUploadRequest, bytes: Buffer) {
+        return this.uploadBuffer(shopId, request, bytes, 'receipt-logos');
+    }
+
+    async confirmReceiptLogo(shopId: number, key: string) {
+        if (!key.startsWith(`smartstock/shops/${shopId}/receipt-logos/`) || key.includes('..')) {
+            throw new ImageStorageError('Logo phiếu không thuộc cửa hàng đang chọn', 400);
+        }
+        return this.confirmImage(key, 'Logo phiếu');
+    }
 
     async uploadProductImage(
         shopId: number,
@@ -323,7 +339,7 @@ export class ImageStorageService {
         shopId: number,
         request: ProductImageUploadRequest,
         bytes: Buffer,
-        scope: 'products' | 'payment-qr' | 'debt-evidence' | 'invoice-scans',
+        scope: 'products' | 'payment-qr' | 'debt-evidence' | 'invoice-scans' | 'receipt-logos',
     ) {
         const validated = validateProductImageUpload(request);
         if (!Buffer.isBuffer(bytes) || bytes.length !== validated.size) {

@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/customer_provider.dart';
+import '../models/receivable_balance.dart';
 import '../../sales/providers/sales_provider.dart';
 import 'customer_form_screen.dart';
 import 'package:bot_toast/bot_toast.dart';
@@ -83,7 +85,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
         title: Text('Khách hàng #${widget.id}'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            icon: const AppIcon(Icons.delete_outline, color: Colors.redAccent),
             tooltip: 'Xóa khách hàng',
             onPressed: () => _confirmDelete(context, ref),
           ),
@@ -129,7 +131,15 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           final phone = c['phone'] ?? '';
           final email = c['email'] ?? '';
           final address = c['address'] ?? '';
-          final customerType = c['customerType'] ?? 'RETAIL';
+          final rawCustomerType = (c['customerType'] ?? 'RETAIL')
+              .toString()
+              .toUpperCase();
+          final String displayCustomerType = switch (rawCustomerType) {
+            'RETAIL' => 'Khách lẻ',
+            'WHOLESALE' => 'Khách sỉ',
+            'VIP' => 'Khách VIP',
+            _ => 'Nhóm khách hàng khác',
+          };
           final balance = asDouble(
             c['totalDebt'] ?? c['balance'] ?? c['debt'] ?? c['currentDebt'],
           );
@@ -172,7 +182,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (customerType.isNotEmpty)
+                      if (displayCustomerType.isNotEmpty)
                         Container(
                           margin: EdgeInsets.only(top: 4),
                           padding: EdgeInsets.symmetric(
@@ -184,7 +194,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            customerType,
+                            displayCustomerType,
                             style: TextStyle(
                               color: AppColors.primary,
                               fontSize: 11,
@@ -206,14 +216,19 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                icon: const Icon(Icons.phone_rounded, size: 16),
+                                icon: const AppIcon(
+                                  Icons.phone_rounded,
+                                  size: 16,
+                                ),
                                 label: const Text('Gọi điện'),
                                 onPressed: () async {
                                   final uri = Uri.parse('tel:$phone');
                                   if (await canLaunchUrl(uri)) {
                                     await launchUrl(uri);
                                   } else {
-                                    ToastService.showError('Không thể thực hiện cuộc gọi');
+                                    ToastService.showError(
+                                      'Không thể thực hiện cuộc gọi',
+                                    );
                                   }
                                 },
                               ),
@@ -222,23 +237,32 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.message_rounded, size: 16),
+                                  icon: const AppIcon(
+                                    Icons.message_rounded,
+                                    size: 16,
+                                  ),
                                   label: const Text('Nhắc nợ SMS'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppColors.danger,
                                     side: BorderSide(
-                                      color: AppColors.danger.withValues(alpha: 0.5),
+                                      color: AppColors.danger.withValues(
+                                        alpha: 0.5,
+                                      ),
                                     ),
                                   ),
                                   onPressed: () async {
                                     final text = Uri.encodeComponent(
                                       'SmartStock kính gửi quý khách $name: Khoản công nợ hiện tại là ${_currFmt.format(balance)}. Quý khách vui lòng đối soát và thanh toán sớm. Trân trọng!',
                                     );
-                                    final uri = Uri.parse('sms:$phone?body=$text');
+                                    final uri = Uri.parse(
+                                      'sms:$phone?body=$text',
+                                    );
                                     if (await canLaunchUrl(uri)) {
                                       await launchUrl(uri);
                                     } else {
-                                      ToastService.showError('Không thể mở ứng dụng tin nhắn');
+                                      ToastService.showError(
+                                        'Không thể mở ứng dụng tin nhắn',
+                                      );
                                     }
                                   },
                                 ),
@@ -388,10 +412,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           : await ref.read(customerReceivablesProvider(widget.id).future);
       final openReceivables = receivables.where((item) {
         final map = Map<String, dynamic>.from(item as Map);
-        final amount = num.tryParse(map['amount']?.toString() ?? '') ?? 0;
-        final paid = num.tryParse(map['paidAmount']?.toString() ?? '') ?? 0;
-        final status = map['status']?.toString().toUpperCase() ?? '';
-        return amount - paid > 0 && status != 'PAID' && status != 'CANCELLED';
+        return customerReceivableRemaining(map) > 0;
       }).toList();
 
       if (openReceivables.isEmpty) {
@@ -496,19 +517,30 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                     final item = Map<String, dynamic>.from(
                       receivables[index] as Map,
                     );
-                    final amount =
-                        num.tryParse(item['amount']?.toString() ?? '') ?? 0;
-                    final paid =
-                        num.tryParse(item['paidAmount']?.toString() ?? '') ?? 0;
+                    final remaining = customerReceivableRemaining(item);
+                    final adjustment =
+                        num.tryParse(
+                          item['openingAdjustmentAmount']?.toString() ?? '0',
+                        ) ??
+                        0;
                     final dueDate = item['dueDate']?.toString();
                     return ListTile(
                       title: Text(
-                        'Công nợ #${item['id']} · còn ${_currFmt.format(amount - paid)}',
+                        'Công nợ #${item['id']} · còn ${_currFmt.format(remaining)}',
                       ),
-                      subtitle: Text(
-                        dueDate == null || dueDate.length < 10
-                            ? 'Chưa có hạn thanh toán'
-                            : 'Hạn thanh toán ${dueDate.substring(0, 10)}',
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            dueDate == null || dueDate.length < 10
+                                ? 'Chưa có hạn thanh toán'
+                                : 'Hạn thanh toán ${dueDate.substring(0, 10)}',
+                          ),
+                          if (adjustment.isFinite && adjustment != 0)
+                            Text(
+                              'Điều chỉnh đầu kỳ: ${_currFmt.format(adjustment)} · Không phải tiền đã thu.',
+                            ),
+                        ],
                       ),
                       onTap: () => Navigator.pop(
                         sheetContext,

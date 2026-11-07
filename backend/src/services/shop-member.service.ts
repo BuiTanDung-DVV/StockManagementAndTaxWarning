@@ -159,7 +159,7 @@ export class ShopMemberService {
                 type: 'JOIN_REQUEST',
                 title: 'Yêu cầu gia nhập cửa hàng',
                 message: `Tài khoản ${user?.fullName || user?.username} xin gia nhập cửa hàng.`,
-                data: JSON.stringify({ shopId, memberId: saved.id, userId }),
+                data: JSON.stringify({ shopId, shopName: shop.shopName, memberId: saved.id, userId }),
             });
             await this.notifRepo.save(notif);
         }
@@ -178,6 +178,7 @@ export class ShopMemberService {
             throw new Error('Vai trò không thuộc cửa hàng này');
         }
         member.roleId = roleId;
+        member.role = role;
         const saved = await this.memberRepo.save(member);
 
         // Notify user of role change
@@ -187,7 +188,7 @@ export class ShopMemberService {
             type: 'ROLE_CHANGE',
             title: 'Thay đổi vai trò',
             message: `Vai trò của bạn tại "${shop?.shopName}" đã đổi thành "${role?.name}"`,
-            data: JSON.stringify({ shopId: member.shopId, roleId }),
+            data: JSON.stringify({ shopId: member.shopId, shopName: shop?.shopName, roleId }),
         });
         await this.notifRepo.save(notif);
 
@@ -218,7 +219,7 @@ export class ShopMemberService {
             type: 'REQUEST_APPROVED',
             title: 'Yêu cầu được phê duyệt',
             message: `Yêu cầu tham gia cửa hàng "${shop?.shopName}" của bạn đã được phê duyệt.`,
-            data: JSON.stringify({ shopId: member.shopId }),
+            data: JSON.stringify({ shopId: member.shopId, shopName: shop?.shopName }),
         });
         await this.notifRepo.save(notif);
         return saved;
@@ -231,6 +232,13 @@ export class ShopMemberService {
         member.status = 'REJECTED';
         member.isActive = false;
         const saved = await this.memberRepo.save(member);
+        const shop = await this.shopRepo.findOne({ where: { id: member.shopId } });
+        await this.notifRepo.save(this.notifRepo.create({
+            userId: member.userId,
+            type: 'REQUEST_REJECTED', title: 'Yêu cầu gia nhập chưa được chấp thuận',
+            message: `Yêu cầu tham gia cửa hàng "${shop?.shopName}" của bạn đã bị từ chối.`,
+            data: JSON.stringify({ shopId: member.shopId, shopName: shop?.shopName }),
+        }));
         return saved;
     }
 

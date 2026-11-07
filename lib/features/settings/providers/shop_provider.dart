@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/data_freshness_provider.dart';
 import '../../../core/network/api_client.dart';
 
 bool _isUsableShopRecord(Map<String, dynamic> shop) =>
@@ -129,7 +130,18 @@ class ShopState {
 // ── Shop Notifier ──
 class ShopNotifier extends Notifier<ShopState> {
   @override
-  ShopState build() => const ShopState();
+  ShopState build() {
+    ref.listen(dataFreshnessProvider.select((s) => s[DataArea.access] ?? 0), (
+      _,
+      _,
+    ) {
+      Future.microtask(() {
+        if (ref.mounted && state.currentShopId != null)
+          loadUserShops(showLoading: false);
+      });
+    });
+    return const ShopState();
+  }
 
   ApiClient get _api => ref.read(apiClientProvider);
 
@@ -138,21 +150,35 @@ class ShopNotifier extends Notifier<ShopState> {
     final parsed = shops
         .map((s) => Map<String, dynamic>.from(s as Map))
         .toList();
-    if (parsed.isEmpty) return;
+    if (parsed.isEmpty) {
+      _api.setShopId(null);
+      state = const ShopState(isLoading: false);
+      return;
+    }
+    if (_api.shopId == 'all') {
+      _selectAllShops(parsed);
+      return;
+    }
+    final selectedId = int.tryParse(_api.shopId ?? '');
 
     // Prefer a usable membership when stale pending/inactive rows also exist.
     final current = parsed.firstWhere(
-      _isUsableShop,
-      orElse: () => parsed.first,
+      (shop) =>
+          parseShopRecordId(shop['shopId']) == selectedId &&
+          _isUsableShop(shop),
+      orElse: () =>
+          parsed.firstWhere(_isUsableShop, orElse: () => parsed.first),
     );
     _selectShop(parsed, current);
   }
 
   /// Load user shops from API
-  Future<void> loadUserShops() async {
-    state = state.copyWith(isLoading: true, clearError: true);
+  Future<void> loadUserShops({bool showLoading = true}) async {
+    final sessionVersion = _api.sessionVersion;
+    if (showLoading) state = state.copyWith(isLoading: true, clearError: true);
     try {
       final data = await _api.get('/my-shops');
+      if (!ref.mounted || _api.sessionVersion != sessionVersion) return;
       if (data is! List) {
         throw const FormatException('Danh sách cửa hàng từ API không hợp lệ');
       }

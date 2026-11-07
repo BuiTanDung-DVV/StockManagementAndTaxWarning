@@ -1,3 +1,4 @@
+import { assertPastOrToday } from '../utils/business-date';
 export class StockTakeInputError extends Error {}
 
 export type StockTakeItemInput = {
@@ -34,6 +35,7 @@ export function normalizeStockTakeCreateInput(input: unknown) {
 
     const dateValue = raw.stockTakeDate ?? raw.takeDate;
     const date = String(dateValue || '').trim();
+    assertPastOrToday(date, 'Ngày kiểm kê');
     if (!/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(date) || Number.isNaN(Date.parse(date.length === 10 ? `${date}T00:00:00Z` : date))) {
         throw new StockTakeInputError('Ngày kiểm kê không hợp lệ');
     }

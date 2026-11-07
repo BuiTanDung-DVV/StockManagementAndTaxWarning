@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/assets/app_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +19,8 @@ import '../../core/widgets/global_search_delegate.dart';
 import '../../core/widgets/reporting_period_control.dart';
 import '../settings/presentation/shop_payment_qr_dialog.dart';
 import '../settings/providers/shop_provider.dart';
+import '../settings/providers/notification_provider.dart';
+import '../dashboard/providers/dashboard_action_provider.dart';
 
 enum MainShellNavigationMode { bottomBar, rail, sidebar }
 
@@ -103,14 +107,44 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> {
+class _MainShellState extends ConsumerState<MainShell>
+    with WidgetsBindingObserver {
   static const _sidebarCollapsedKey = 'main_sidebar_collapsed_v1';
   bool _sidebarCollapsed = false;
+  Timer? _notificationTimer;
 
   @override
   void initState() {
     super.initState();
     _restoreSidebarState();
+    WidgetsBinding.instance.addObserver(this);
+    Future.microtask(_refreshNotifications);
+    _notificationTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (lifecycle == null || lifecycle == AppLifecycleState.resumed) {
+        _refreshNotifications();
+      }
+    });
+  }
+
+  void _refreshNotifications() {
+    if (!mounted) return;
+    ref.read(notificationProvider.notifier).loadUnreadCount();
+    if (canViewDashboardActions(ref.read(shopProvider))) {
+      ref.invalidate(dashboardActionProvider);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshNotifications();
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _restoreSidebarState() async {
@@ -141,6 +175,22 @@ class _MainShellState extends ConsumerState<MainShell> {
     final colors = AppThemeColors.of(context);
     final tr = context.tr;
     final shop = ref.watch(shopProvider);
+    final notifications = ref.watch(notificationProvider);
+    final unread = notifications.unreadCount;
+    final actionState = canViewDashboardActions(shop)
+        ? ref.watch(dashboardActionProvider)
+        : null;
+    final actions = actionState?.asData?.value.items.length ?? 0;
+    final countHint =
+        notifications.errorMessage == 'Không thể tải số thông báo chưa đọc.'
+        ? 'Chưa cập nhật được số thông báo chưa đọc'
+        : '$unread thông báo tài khoản chưa đọc';
+    final actionHint = actionState?.hasError == true
+        ? 'Chưa tải được việc cần xử lý'
+        : actionState?.isLoading == true
+        ? 'Đang cập nhật việc cần xử lý'
+        : '$actions nhóm việc cần xử lý';
+    final notificationHint = '$countHint · $actionHint';
     final tabs = <_NavDef>[
       _NavDef(
         assetPath: AppAssets.home,
@@ -237,6 +287,8 @@ class _MainShellState extends ConsumerState<MainShell> {
                     showShopQr: shouldShowShopPaymentQr(
                       isAllShops: shop.isAllShops,
                     ),
+                    notificationCount: unread + actions,
+                    notificationHint: notificationHint,
                     onSearch: () async {
                       final route = await showGlobalSearchPanel(
                         context,
@@ -264,7 +316,14 @@ class _MainShellState extends ConsumerState<MainShell> {
                       ref.read(aiAssistantOpenProvider.notifier).open();
                     },
                   ),
-                Expanded(child: widget.child),
+                Expanded(
+                  child: KeyedSubtree(
+                    key: ValueKey(
+                      'shop-${shop.currentShopId}-${shop.isAllShops}',
+                    ),
+                    child: widget.child,
+                  ),
+                ),
               ],
             ),
             if (showAi)
@@ -287,11 +346,13 @@ class _MainShellState extends ConsumerState<MainShell> {
             backgroundColor: Colors.transparent,
             body: Row(
               children: [
-                _DesktopSidebar(
-                  tabs: tabs,
-                  currentIndex: currentIndex,
-                  collapsed: _sidebarCollapsed,
-                  onToggleCollapsed: _toggleSidebar,
+                _NavigationSurface(
+                  child: _DesktopSidebar(
+                    tabs: tabs,
+                    currentIndex: currentIndex,
+                    collapsed: _sidebarCollapsed,
+                    onToggleCollapsed: _toggleSidebar,
+                  ),
                 ),
                 VerticalDivider(width: 1, color: colors.divider),
                 Expanded(child: page),
@@ -303,7 +364,12 @@ class _MainShellState extends ConsumerState<MainShell> {
             backgroundColor: Colors.transparent,
             body: Row(
               children: [
-                _TabletNavigationRail(tabs: tabs, currentIndex: currentIndex),
+                _NavigationSurface(
+                  child: _TabletNavigationRail(
+                    tabs: tabs,
+                    currentIndex: currentIndex,
+                  ),
+                ),
                 VerticalDivider(width: 1, color: colors.divider),
                 Expanded(child: page),
               ],
@@ -322,7 +388,7 @@ class _MainShellState extends ConsumerState<MainShell> {
 
         return ColoredBox(
           color: colors.bg,
-          child: AppBackgroundWrapper(child: navigationShell),
+          child: SafeArea(child: AppBackgroundWrapper(child: navigationShell)),
         );
       },
     );
@@ -335,6 +401,8 @@ class _ShellUtilityHeader extends StatelessWidget {
   final String currentPath;
   final bool showAiRestore;
   final bool showShopQr;
+  final int notificationCount;
+  final String notificationHint;
   final VoidCallback onSearch;
   final VoidCallback onNotifications;
   final ValueChanged<int> onShopSelected;
@@ -347,6 +415,8 @@ class _ShellUtilityHeader extends StatelessWidget {
     required this.currentPath,
     required this.showAiRestore,
     required this.showShopQr,
+    required this.notificationCount,
+    required this.notificationHint,
     required this.onSearch,
     required this.onNotifications,
     required this.onShopSelected,
@@ -383,22 +453,22 @@ class _ShellUtilityHeader extends StatelessWidget {
           children: [
             Flexible(
               child: Text(
-                compact ? 'SmartStock · $resolvedShop' : resolvedShop,
+                resolvedShop,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: colors.textPrimary,
+                  fontSize: compact ? 14 : null,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
             if (canSwitchShop) ...[
               const SizedBox(width: 4),
-              AppAssetIcon(
-                assetPath: AppAssets.expand,
+              AppIcon(
+                Icons.keyboard_arrow_down_rounded,
                 size: 15,
                 color: colors.textSecondary,
-                semanticLabel: context.tr.nav.expandTooltip,
               ),
             ],
           ],
@@ -452,26 +522,13 @@ class _ShellUtilityHeader extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 24),
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: colors.divider)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0D17324D),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         child: Row(
           children: [
             if (compact) ...[
               Container(
-                width: 36,
-                height: 36,
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: colors.cardAlt,
-                  borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: colors.divider),
-                ),
+                width: 28,
+                height: 28,
                 child: const AppAssetIcon(
                   assetPath: AppAssets.appIcon,
                   size: 26,
@@ -483,7 +540,7 @@ class _ShellUtilityHeader extends StatelessWidget {
             Expanded(
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: shopIdentity,
+                child: Tooltip(message: resolvedShop, child: shopIdentity),
               ),
             ),
             if (compact) ...[
@@ -491,74 +548,97 @@ class _ShellUtilityHeader extends StatelessWidget {
                 _HeaderPeriodButtonCompact(currentPath: currentPath),
                 const SizedBox(width: AppSpacing.xs),
               ],
-              if (showAiRestore) ...[
-                _HeaderAssetButton(
-                  assetPath: AppAssets.aiMascot,
-                  semanticLabel: context.tr.nav.aiAssistantTitle,
-                  onPressed: onRestoreAi,
-                  preserveAssetColor: true,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-              ],
-              if (showShopQr) ...[
-                _HeaderAssetButton(
-                  assetPath: AppAssets.qrPayment,
-                  semanticLabel: context.isEnglish
-                      ? 'Open store QR'
-                      : 'Mở QR của cửa hàng',
-                  onPressed: onShopQr,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-              ],
               _HeaderAssetButton(
                 assetPath: AppAssets.notification,
-                semanticLabel: context.isEnglish
-                    ? 'Open notifications'
-                    : 'Mở thông báo',
+                semanticLabel: notificationHint,
+                badgeCount: notificationCount,
                 onPressed: onNotifications,
               ),
+              if (showAiRestore || showShopQr)
+                PopupMenuButton<String>(
+                  tooltip: context.isEnglish ? 'Utilities' : 'Tiện ích',
+                  icon: AppIcon(
+                    Icons.more_horiz_rounded,
+                    size: 20,
+                    color: colors.textSecondary,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'assistant') onRestoreAi();
+                    if (value == 'qr') onShopQr();
+                  },
+                  itemBuilder: (_) => [
+                    if (showAiRestore)
+                      PopupMenuItem(
+                        value: 'assistant',
+                        child: Row(
+                          children: [
+                            AppAssetIcon(
+                              assetPath: AppAssets.assistant,
+                              size: 20,
+                              color: colors.textSecondary,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(context.tr.nav.aiAssistantTitle),
+                          ],
+                        ),
+                      ),
+                    if (showShopQr)
+                      PopupMenuItem(
+                        value: 'qr',
+                        child: Row(
+                          children: [
+                            AppAssetIcon(
+                              assetPath: AppAssets.qrPayment,
+                              size: 20,
+                              color: colors.textSecondary,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              context.isEnglish
+                                  ? 'Open store QR'
+                                  : 'Mở QR của cửa hàng',
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
             ],
             if (!compact) ...[
               if (showPeriodFilter) ...[
                 _HeaderPeriodSelector(currentPath: currentPath),
                 const SizedBox(width: AppSpacing.sm),
               ],
-              OutlinedButton(
+              IconButton(
+                tooltip: context.tr.nav.searchPlaceholder,
                 onPressed: onSearch,
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(200, 40),
-                  alignment: Alignment.centerLeft,
+                style: IconButton.styleFrom(
                   foregroundColor: colors.textMuted,
-                  backgroundColor: colors.cardAlt,
-                  side: BorderSide(color: colors.divider),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  backgroundColor: Colors.transparent,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AppAssetIcon(
-                      assetPath: AppAssets.search,
-                      size: 17,
-                      semanticLabel: context.tr.common.search,
-                    ),
-                    const SizedBox(width: 9),
-                    Text(context.tr.nav.searchPlaceholder),
-                  ],
+                icon: AppAssetIcon(
+                  assetPath: AppAssets.search,
+                  size: 17,
+                  semanticLabel: context.tr.common.search,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               if (showAiRestore) ...[
                 _HeaderAssetButton(
-                  assetPath: AppAssets.aiMascot,
+                  assetPath: AppAssets.assistant,
                   semanticLabel: context.tr.nav.aiAssistantTitle,
+                  label: MediaQuery.sizeOf(context).width >= 1100
+                      ? (context.isEnglish ? 'Assistant' : 'Trợ lý')
+                      : null,
                   onPressed: onRestoreAi,
-                  preserveAssetColor: true,
+                  preserveAssetColor: false,
                 ),
                 const SizedBox(width: AppSpacing.sm),
               ],
               if (showShopQr) ...[
                 _HeaderAssetButton(
                   assetPath: AppAssets.qrPayment,
+                  label: MediaQuery.sizeOf(context).width >= 1100 ? 'QR' : null,
                   semanticLabel: context.isEnglish
                       ? 'Open store QR'
                       : 'Mở QR của cửa hàng',
@@ -568,9 +648,11 @@ class _ShellUtilityHeader extends StatelessWidget {
               ],
               _HeaderAssetButton(
                 assetPath: AppAssets.notification,
-                semanticLabel: context.isEnglish
-                    ? 'Open notifications'
-                    : 'Mở thông báo',
+                label: MediaQuery.sizeOf(context).width >= 1100
+                    ? (context.isEnglish ? 'Notifications' : 'Thông báo')
+                    : null,
+                semanticLabel: notificationHint,
+                badgeCount: notificationCount,
                 onPressed: onNotifications,
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -690,37 +772,25 @@ class _HeaderPeriodButtonCompact extends ConsumerWidget {
     final tabKey = resolveTabKeyFromLocation(currentPath);
     final selection = ref.watch(tabSelectionProvider(tabKey));
 
-    return Material(
-      color: colors.cardAlt,
-      borderRadius: BorderRadius.circular(9),
-      child: InkWell(
-        onTap: () async {
-          final updated = await showReportingPeriodEditor(
-            context,
-            initialSelection: selection,
-            today: DateTime.now(),
-          );
-          if (updated != null) {
-            ref
-                .read(reportingPeriodNotifierProvider.notifier)
-                .setPeriodForTab(tabKey, updated);
-          }
-        },
-        borderRadius: BorderRadius.circular(9),
-        child: Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: colors.divider),
-          ),
-          child: AppAssetIcon(
-            assetPath: AppAssets.calendar,
-            size: 16,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
+    return IconButton(
+      tooltip: context.isEnglish ? 'Reporting period' : 'Chọn kỳ báo cáo',
+      onPressed: () async {
+        final updated = await showReportingPeriodEditor(
+          context,
+          initialSelection: selection,
+          today: DateTime.now(),
+        );
+        if (updated != null) {
+          ref
+              .read(reportingPeriodNotifierProvider.notifier)
+              .setPeriodForTab(tabKey, updated);
+        }
+      },
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+      icon: AppAssetIcon(
+        assetPath: AppAssets.calendar,
+        size: 20,
+        color: colors.textSecondary,
       ),
     );
   }
@@ -767,48 +837,71 @@ class _HeaderAssetButton extends StatelessWidget {
   final String semanticLabel;
   final VoidCallback onPressed;
   final bool preserveAssetColor;
+  final String? label;
+  final int badgeCount;
 
   const _HeaderAssetButton({
     required this.assetPath,
     required this.semanticLabel,
     required this.onPressed,
     this.preserveAssetColor = false,
+    this.label,
+    this.badgeCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final primary = Theme.of(context).colorScheme.primary;
 
+    final icon = Badge(
+      isLabelVisible: badgeCount > 0,
+      label: Text(badgeCount > 99 ? '99+' : '$badgeCount'),
+      child: AppAssetIcon(
+        assetPath: assetPath,
+        size: 20,
+        color: preserveAssetColor ? null : colors.textSecondary,
+      ),
+    );
+    if (label != null) {
+      return Tooltip(
+        message: semanticLabel,
+        child: TextButton.icon(
+          onPressed: onPressed,
+          icon: icon,
+          label: Text(label!),
+          style: TextButton.styleFrom(
+            foregroundColor: colors.textPrimary,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: const Size(0, 40),
+          ),
+        ),
+      );
+    }
     return Semantics(
       button: true,
       label: semanticLabel,
-      child: Tooltip(
-        message: semanticLabel,
-        child: Material(
-          color: colors.cardAlt,
-          borderRadius: BorderRadius.circular(AppRadius.control),
-          child: InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(AppRadius.control),
-            child: Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.control),
-                border: Border.all(color: colors.divider),
-              ),
-              child: AppAssetIcon(
-                assetPath: assetPath,
-                size: 19,
-                color: preserveAssetColor ? null : primary,
-                semanticLabel: semanticLabel,
-              ),
-            ),
-          ),
-        ),
+      child: IconButton(
+        tooltip: semanticLabel,
+        onPressed: onPressed,
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+        icon: icon,
       ),
+    );
+  }
+}
+
+class _NavigationSurface extends StatelessWidget {
+  const _NavigationSurface({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(right: BorderSide(color: colors.divider)),
+      ),
+      child: child,
     );
   }
 }
@@ -918,7 +1011,7 @@ class _DesktopSidebar extends StatelessWidget {
                       label: context.tr.nav.helpCenter,
                       assetPath: AppAssets.help,
                       collapsed: collapsed,
-                      onPressed: () => context.push('/settings/ai-knowledge'),
+                      onPressed: () => context.push('/help-center'),
                     ),
                     const SizedBox(height: 4),
                     _SidebarUtilityItem(
@@ -929,8 +1022,8 @@ class _DesktopSidebar extends StatelessWidget {
                           ? context.tr.nav.expandTooltip
                           : context.tr.nav.collapseTooltip,
                       assetPath: collapsed
-                          ? AppAssets.expand
-                          : AppAssets.collapse,
+                          ? AppAssets.panelExpand
+                          : AppAssets.panelCollapse,
                       collapsed: collapsed,
                       onPressed: onToggleCollapsed,
                     ),
@@ -953,27 +1046,13 @@ class _SidebarLogo extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final primary = colors.primary;
     return Container(
-      width: 40,
-      height: 40,
-      padding: const EdgeInsets.all(7),
+      width: 32,
+      height: 32,
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            primary.withValues(alpha: 0.16),
-            primary.withValues(alpha: 0.06),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: colors.primaryBorder, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: primary.withValues(alpha: 0.12),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: primary.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.divider),
       ),
       child: const AppAssetIcon(
         assetPath: AppAssets.appIcon,
@@ -1081,11 +1160,10 @@ class _SidebarNavItem extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected ? colors.primarySubtle : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadius.input),
-              border: Border(
-                left: BorderSide(
-                  color: selected ? primary : Colors.transparent,
-                  width: 3.5,
-                ),
+              border: Border.all(
+                color: selected
+                    ? primary.withValues(alpha: 0.25)
+                    : Colors.transparent,
               ),
             ),
             alignment: Alignment.centerLeft,
@@ -1107,7 +1185,7 @@ class _SidebarNavItem extends StatelessWidget {
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: selected ? primary : colors.textPrimary,
                         fontWeight: selected
-                            ? FontWeight.w700
+                            ? FontWeight.w600
                             : FontWeight.w500,
                       ),
                     ),
@@ -1172,7 +1250,7 @@ class _TabletNavigationRail extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: () => context.push('/settings/ai-knowledge'),
+                onPressed: () => context.push('/help-center'),
                 style: TextButton.styleFrom(foregroundColor: primary),
                 child: const Text('Trợ giúp', textAlign: TextAlign.center),
               ),
@@ -1251,6 +1329,8 @@ class _MobileNavigationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final primary = Theme.of(context).colorScheme.primary;
+    final labelHeight = MediaQuery.textScalerOf(context).scale(10) * 2.4;
+    final navigationHeight = labelHeight + 40 < 68 ? 68.0 : labelHeight + 40;
 
     Widget buildItem(int index) => Semantics(
       button: true,
@@ -1278,17 +1358,21 @@ class _MobileNavigationBar extends StatelessWidget {
                 semanticLabel: tabs[index].label,
               ),
               const SizedBox(height: 4),
-              Text(
-                tabs[index].label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontSize: 10,
-                  color: index == currentIndex ? primary : colors.textMuted,
-                  fontWeight: index == currentIndex
-                      ? FontWeight.w700
-                      : FontWeight.w500,
+              SizedBox(
+                height: labelHeight,
+                child: Text(
+                  tabs[index].label,
+                  maxLines: 2,
+                  softWrap: true,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontSize: 10,
+                    height: 1.2,
+                    color: index == currentIndex ? primary : colors.textMuted,
+                    fontWeight: index == currentIndex
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -1302,7 +1386,7 @@ class _MobileNavigationBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Container(
-          height: 68,
+          height: navigationHeight,
           padding: const EdgeInsets.fromLTRB(8, 7, 8, 6),
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: colors.divider)),

@@ -1,3 +1,4 @@
+import '../../../core/utils/order_debt_balance.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -11,7 +12,6 @@ import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/reporting_period.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/app_badge.dart';
 import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
@@ -1142,7 +1142,7 @@ class _PaymentMethodBreakdown extends StatelessWidget {
 
     return ChartCard(
       title: 'Tiền đã thu theo phương thức',
-      height: 230,
+      height: 270,
       trailing: Text(
         periodLabel,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -1486,13 +1486,7 @@ class _OrderRow extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final status = _OrderStatus.from(order['status']?.toString());
     final total = double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0;
-    final paid =
-        double.tryParse(
-          order['amountPaid']?.toString() ??
-              order['paidAmount']?.toString() ??
-              '0',
-        ) ??
-        0;
+    final debtBalance = OrderDebtBalance.fromMap(order);
     final customer = order['customer']?['name']?.toString() ?? 'Khách mua lẻ';
     final code = order['orderCode']?.toString() ?? 'DH-${order['id']}';
     final orderDate = salesOrderDateLabel(order['orderDate']);
@@ -1566,9 +1560,15 @@ class _OrderRow extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 8),
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: PaymentStatusBadge(
-                          isPaid: paid >= total && paid > 0,
-                          isPartiallyPaid: paid > 0 && paid < total,
+                        child: AppStatusBadge(
+                          label: debtBalance.label,
+                          color: debtBalance.isInactive
+                              ? colors.textSecondary
+                              : debtBalance.remaining == null
+                              ? AppColors.warning
+                              : debtBalance.remaining == 0
+                              ? AppColors.success
+                              : AppColors.warning,
                         ),
                       ),
                     ),
@@ -1664,9 +1664,15 @@ class _OrderRow extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       AppStatusBadge(label: status.label, color: status.color),
-                      PaymentStatusBadge(
-                        isPaid: paid >= total && paid > 0,
-                        isPartiallyPaid: paid > 0 && paid < total,
+                      AppStatusBadge(
+                        label: debtBalance.label,
+                        color: debtBalance.isInactive
+                            ? colors.textSecondary
+                            : debtBalance.remaining == null
+                            ? AppColors.warning
+                            : debtBalance.remaining == 0
+                            ? AppColors.success
+                            : AppColors.warning,
                       ),
                     ],
                   ),

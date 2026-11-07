@@ -1,3 +1,4 @@
+import { salesOrderPaymentStatus } from '../controllers/sales-order-payment.controller';
 import { Router } from 'express';
 import * as salesCtrl from '../controllers/sales.controller';
 import { requirePermission } from '../middleware/permission.middleware';
@@ -12,6 +13,7 @@ router.get('/sales-orders/summary', requirePermission(['sales', 'finance', 'dash
 router.get('/sales-orders/payment-summary', requirePermission(['sales', 'finance', 'dashboard'], 'view', { allowAllShops: true }), salesCtrl.paymentSummary);
 router.get('/sales-orders/top-products', requirePermission(['sales', 'finance', 'dashboard'], 'view', { allowAllShops: true }), salesCtrl.topProducts);
 router.get('/sales-orders/top-returns', requirePermission(['sales', 'finance', 'dashboard'], 'view', { allowAllShops: true }), salesCtrl.topReturnedProducts);
+router.get('/sales-orders/:id/payment-attempts/:operationId', requirePermission('sales', 'edit'), salesOrderPaymentStatus);
 router.get('/sales-orders/:id', requirePermission('sales', 'view'), salesCtrl.findOne);
 router.post('/sales-orders', requirePermission('sales', 'edit'), salesCtrl.create);
 router.put('/sales-orders/:id', requirePermission('sales', 'edit'), salesCtrl.updateOrder);

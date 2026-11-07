@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppBadge extends StatelessWidget {
@@ -26,7 +27,7 @@ class AppBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 10, color: color),
+            AppIcon(icon, size: 10, color: color),
             const SizedBox(width: 4),
           ],
           Text(
@@ -67,7 +68,7 @@ class PaymentStatusBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            const AppIcon(
               Icons.check_circle_outline_rounded,
               size: 12,
               color: Color(0xFF059669),
@@ -97,7 +98,7 @@ class PaymentStatusBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            const AppIcon(
               Icons.hourglass_bottom_rounded,
               size: 12,
               color: Color(0xFFD97706),
@@ -126,7 +127,7 @@ class PaymentStatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          const AppIcon(
             Icons.error_outline_rounded,
             size: 12,
             color: Color(0xFFDC2626),
@@ -174,7 +175,7 @@ class StockStatusBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            const AppIcon(
               Icons.remove_circle_outline_rounded,
               size: 12,
               color: Color(0xFFDC2626),
@@ -204,7 +205,7 @@ class StockStatusBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            const AppIcon(
               Icons.warning_amber_rounded,
               size: 12,
               color: Color(0xFFD97706),
@@ -233,7 +234,7 @@ class StockStatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          const AppIcon(
             Icons.check_circle_outline_rounded,
             size: 12,
             color: Color(0xFF059669),

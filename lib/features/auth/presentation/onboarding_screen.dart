@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
@@ -10,6 +11,7 @@ import '../../../core/assets/app_assets.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/auth_scaffold.dart';
+import '../../../core/widgets/app_confirm_modal.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -573,8 +575,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     return AuthScaffold(
       maxWidth: 680,
-      canPop: true,
-      onPop: () => context.canPop() ? context.pop() : context.go('/login'),
+      // Step navigation lives in the footer. Leaving this route before setup
+      // completes would be redirected straight back here by the auth guard.
       brandHeadline: 'Thiết lập tài khoản & cửa hàng của bạn.',
       brandDescription:
           'Chọn vai trò và sẵn sàng vận hành bán hàng, quản lý kho trên SmartStock.',
@@ -586,6 +588,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: state.isLoading
+                  ? null
+                  : () async {
+                      final confirmed = await AppConfirmModal.show(
+                        context,
+                        title: 'Đổi tài khoản',
+                        message:
+                            'Bạn sẽ đăng xuất khỏi tài khoản hiện tại. Thông tin thiết lập chưa lưu sẽ không được giữ lại.',
+                        confirmText: 'Đăng xuất',
+                        cancelText: 'Tiếp tục thiết lập',
+                      );
+                      if (confirmed != true || !context.mounted) return;
+                      await ref.read(authProvider.notifier).logout();
+                      if (context.mounted) context.go('/login');
+                    },
+              icon: const AppIcon(Icons.logout_rounded, size: 18),
+              label: const Text('Đổi tài khoản'),
+            ),
+          ),
           _buildOnboardingSlides(c, theme),
           if (_introStep == 2) ...[
             const SizedBox(height: 28),
@@ -607,7 +631,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                   ],
                 ),
-                child: Icon(
+                child: AppIcon(
                   Icons.person_pin_rounded,
                   size: 48,
                   color: theme.colorScheme.primary,
@@ -746,7 +770,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       itemBuilder: (context, index) {
                         final suggestion = _addressSuggestions[index];
                         return ListTile(
-                          leading: Icon(
+                          leading: AppIcon(
                             Icons.location_on_rounded,
                             color: theme.colorScheme.primary,
                             size: 20,
@@ -799,7 +823,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          AppIcon(
                             Icons.map_rounded,
                             color: theme.colorScheme.primary,
                             size: 20,
@@ -870,7 +894,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                         ),
                                         width: 40,
                                         height: 40,
-                                        child: const Icon(
+                                        child: const AppIcon(
                                           Icons.location_pin,
                                           color: AppColors.danger,
                                           size: 36,
@@ -1133,7 +1157,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.close_rounded, color: c.textMuted),
+                        icon: AppIcon(Icons.close_rounded, color: c.textMuted),
                         onPressed: () => setState(() {
                           _selectedShop = null;
                           _shopCodeCtrl.clear();
@@ -1172,7 +1196,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    const AppIcon(
                       Icons.error_outline_rounded,
                       color: AppColors.danger,
                       size: 20,
@@ -1271,7 +1295,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         decoration: InputDecoration(
           labelText: labelText,
           hintText: hintText,
-          prefixIcon: Icon(icon, color: c.textMuted, size: 20),
+          prefixIcon: AppIcon(icon, color: c.textMuted, size: 20),
           suffixIcon: suffixIcon,
           filled: true,
           fillColor: c.card,

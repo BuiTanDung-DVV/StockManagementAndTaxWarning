@@ -1,11 +1,23 @@
+import 'sales_return_dialog.dart';
+import '../../inventory/providers/inventory_provider.dart';
+import '../../products/providers/product_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../customers/providers/customer_provider.dart';
+import '../../finance/providers/finance_provider.dart';
+import '../../dashboard/providers/dashboard_action_provider.dart';
+import 'sales_payment_dialog.dart';
+import 'sales_payment_recovery_dialog.dart';
+import '../../../core/utils/order_debt_balance.dart';
+import '../../../core/widgets/order_debt_summary.dart';
+import '../../../core/widgets/product_thumbnail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import '../../../core/assets/app_icon.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
-import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
@@ -28,11 +40,10 @@ class OrderDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
-    final memberType = ref.watch(shopProvider).memberType?.toUpperCase();
-    final canReturn =
-        memberType == 'OWNER' ||
-        memberType == 'MANAGER' ||
-        memberType == 'STORE_MANAGER';
+    final canRecordPayment = ref
+        .watch(shopProvider)
+        .hasPermission('sales', 'edit');
+    final canReturn = canRecordPayment;
     final orderAsync = ref.watch(salesDetailProvider(id));
 
     return Scaffold(
@@ -57,7 +68,7 @@ class OrderDetailScreen extends ConsumerWidget {
         actions: [
           featureGuideButton(context, 'order_detail'),
           IconButton(
-            icon: const Icon(Icons.print_rounded, size: 20),
+            icon: const AppIcon(Icons.print_rounded, size: 20),
             onPressed: () async {
               try {
                 final values = await Future.wait([
@@ -72,6 +83,8 @@ class OrderDetailScreen extends ConsumerWidget {
                   onLayout: (_) async => bytes,
                   name: 'phieu-ban-hang-$id.pdf',
                 );
+              } on ReceiptImageException catch (error) {
+                ToastService.showError(error.message);
               } catch (_) {
                 ToastService.showError(
                   'Chưa thể tạo phiếu in. Vui lòng thử lại sau.',
@@ -100,14 +113,14 @@ class OrderDetailScreen extends ConsumerWidget {
               double.tryParse(order['totalAmount']?.toString() ?? '0') ?? 0.0;
           final paidAmount =
               double.tryParse(order['paidAmount']?.toString() ?? '0') ?? 0.0;
-          final remaining = (totalAmount - paidAmount) < 0
-              ? 0.0
-              : (totalAmount - paidAmount);
+          final debtBalance = OrderDebtBalance.fromMap(order);
+          final remaining = debtBalance.remaining ?? 0;
 
           final items = (order['items'] as List?) ?? const [];
 
           // Payment status
-          final bool isFullyPaid = remaining <= 0;
+          final bool isFullyPaid =
+              debtBalance.remaining != null && remaining <= 0;
           final bool isCancelled = status == 'CANCELLED';
           final bool isPartiallyReturned = returnStatus == 'PARTIAL_RETURN';
           final bool isFullyReturned =
@@ -120,8 +133,8 @@ class OrderDetailScreen extends ConsumerWidget {
           if (isReturned) {
             statusColor = AppColors.danger;
             statusLabel = isFullyReturned
-                ? 'Đã hoàn toàn bộ'
-                : 'Đã hoàn một phần';
+                ? 'Đã trả toàn bộ hàng'
+                : 'Đã trả một phần hàng';
           } else {
             switch (status) {
               case 'COMPLETED':
@@ -142,16 +155,16 @@ class OrderDetailScreen extends ConsumerWidget {
           // Payment status label
           String paymentLabel;
           Color paymentColor;
-          if (isFullyPaid) {
-            paymentLabel = 'Đã trả đủ';
-            paymentColor = AppColors.success;
-          } else if (paidAmount > 0) {
-            paymentLabel = 'Trả một phần';
-            paymentColor = AppColors.warning;
-          } else {
-            paymentLabel = 'Chưa trả tiền';
-            paymentColor = AppColors.danger;
-          }
+          paymentLabel = debtBalance.label;
+          paymentColor = debtBalance.isInactive
+              ? c.textSecondary
+              : debtBalance.remaining == null
+              ? AppColors.warning
+              : isFullyPaid
+              ? AppColors.success
+              : paidAmount > 0
+              ? AppColors.warning
+              : AppColors.danger;
 
           return Center(
             child: ConstrainedBox(
@@ -351,6 +364,15 @@ class OrderDetailScreen extends ConsumerWidget {
                                   ),
                                   child: Row(
                                     children: [
+                                      ProductThumbnail(
+                                        imageUrl:
+                                            it['product']?['imageUrl']
+                                                ?.toString() ??
+                                            it['imageUrl']?.toString(),
+                                        name: it['product']?['name']
+                                            ?.toString(),
+                                      ),
+                                      const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:
@@ -414,7 +436,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(
+                                        const AppIcon(
                                           Icons.assignment_return_rounded,
                                           color: AppColors.danger,
                                           size: 20,
@@ -561,43 +583,20 @@ class OrderDetailScreen extends ConsumerWidget {
                                       c,
                                     ),
                                   ],
-                                  _InfoRow(
-                                    'Tổng tiền thanh toán',
-                                    _currFmt.format(totalAmount),
-                                    c,
-                                  ),
-                                  _InfoRow(
-                                    'Khách đã thanh toán',
-                                    _currFmt.format(paidAmount),
-                                    c,
-                                  ),
-                                  Divider(height: 20, color: c.divider),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Dư nợ còn lại',
-                                        style: GoogleFonts.manrope(
-                                          color: remaining > 0
-                                              ? AppColors.danger
-                                              : AppColors.success,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
+                                  OrderDebtSummary(order: order),
+                                  if (canRecordPayment)
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton(
+                                        onPressed: () => _showSalesRecovery(
+                                          context,
+                                          ref,
+                                          id,
+                                          order,
                                         ),
+                                        child: const Text('Kiểm tra thu tiền'),
                                       ),
-                                      Text(
-                                        _currFmt.format(remaining),
-                                        style: GoogleFonts.manrope(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 18,
-                                          color: remaining > 0
-                                              ? AppColors.danger
-                                              : AppColors.success,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -652,7 +651,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                             10,
                                           ),
                                         ),
-                                        child: const Icon(
+                                        child: const AppIcon(
                                           Icons.check_circle_outline_rounded,
                                           size: 18,
                                           color: AppColors.success,
@@ -732,7 +731,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                         id,
                                         order,
                                       ),
-                                      icon: const Icon(
+                                      icon: const AppIcon(
                                         Icons.local_shipping_outlined,
                                       ),
                                       label: Text(
@@ -742,7 +741,7 @@ class OrderDetailScreen extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 10),
                                 ],
-                                if (!isFullyPaid)
+                                if (debtBalance.canCollect && canRecordPayment)
                                   SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton.icon(
@@ -750,38 +749,38 @@ class OrderDetailScreen extends ConsumerWidget {
                                         context,
                                         ref,
                                         id,
-                                        remaining,
+                                        order,
                                       ),
-                                      icon: const Icon(
+                                      icon: const AppIcon(
                                         Icons.payment_rounded,
                                         size: 18,
                                         color: Colors.white,
                                       ),
                                       label: Text(
-                                        'Thanh toán ngay (${_currFmt.format(remaining)})',
+                                        debtBalance.basis == 'RETURN_LEDGER'
+                                            ? 'Ghi nhận thu phí giao (${_currFmt.format(remaining)})'
+                                            : 'Ghi nhận thu tiền (${_currFmt.format(remaining)})',
                                         style: GoogleFonts.manrope(
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),
                                       ),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.success,
+                                        backgroundColor: c.primary,
                                         padding: const EdgeInsets.symmetric(
                                           vertical: 14,
                                         ),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
-                                            16,
+                                            10,
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                if (status == 'DELIVERED' ||
-                                    status == 'COMPLETED' ||
-                                    isFullyPaid) ...[
+                                if (canReturn && !isFullyReturned) ...[
                                   if (!isFullyPaid) const SizedBox(height: 10),
-                                  if (!isReturned)
+                                  if (!isFullyReturned)
                                     SizedBox(
                                       width: double.infinity,
                                       child: OutlinedButton.icon(
@@ -800,39 +799,37 @@ class OrderDetailScreen extends ConsumerWidget {
                                                   'Chỉ Quản lý hoặc Chủ cửa hàng mới có quyền tạo yêu cầu trả hàng.',
                                                 );
                                               },
-                                        icon: Icon(
+                                        icon: AppIcon(
                                           canReturn
                                               ? Icons.assignment_return_rounded
                                               : Icons.lock_outline_rounded,
                                           size: 18,
                                           color: canReturn
-                                              ? AppColors.danger
+                                              ? c.textSecondary
                                               : c.textMuted,
                                         ),
                                         label: Text(
                                           canReturn
-                                              ? 'Yêu Cầu Trả Hàng'
+                                              ? 'Trả hàng'
                                               : 'Yêu Cầu Trả Hàng (Cần quyền Quản lý)',
                                           style: GoogleFonts.manrope(
                                             color: canReturn
-                                                ? AppColors.danger
+                                                ? c.textSecondary
                                                 : c.textMuted,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                         style: OutlinedButton.styleFrom(
                                           side: BorderSide(
-                                            color: canReturn
-                                                ? AppColors.danger
-                                                : c.divider,
-                                            width: 1.5,
+                                            color: c.inputBorder,
+                                            width: 1,
                                           ),
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 14,
                                           ),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
-                                              16,
+                                              10,
                                             ),
                                           ),
                                         ),
@@ -857,7 +854,7 @@ class OrderDetailScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
+                AppIcon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
                 const SizedBox(height: 12),
                 Text(
                   'Không tải được chi tiết phiếu tính tiền.\n$e',
@@ -871,7 +868,7 @@ class OrderDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () => ref.invalidate(salesDetailProvider(id)),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  icon: const AppIcon(Icons.refresh_rounded, size: 18),
                   label: const Text('Thử lại'),
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
@@ -986,589 +983,100 @@ class OrderDetailScreen extends ConsumerWidget {
   }
 }
 
-void _showPaymentDialog(
+void _refreshSalesPaymentViews(
+  WidgetRef ref,
+  int orderId,
+  Map<dynamic, dynamic> order,
+) {
+  ref.invalidate(salesDetailProvider(orderId));
+  ref.invalidate(salesListProvider);
+  ref.invalidate(paymentSummaryProvider);
+  ref.invalidate(recentTransactionsProvider);
+  ref.invalidate(salesSummaryProvider);
+  ref.invalidate(customerListProvider);
+  ref.invalidate(customerOptionsProvider);
+  ref.invalidate(customerReceivablesProvider);
+  ref.invalidate(customerDetailProvider);
+  ref.invalidate(debtAgingProvider);
+  ref.invalidate(overdueDebtsProvider);
+  ref.invalidate(transactionsProvider);
+  ref.invalidate(cashSummaryProvider);
+  ref.invalidate(cashflowProjectionProvider);
+  ref.invalidate(dailyClosingProvider);
+  ref.invalidate(dashboardActionProvider);
+}
+
+Future<void> _showPaymentDialog(
   BuildContext context,
   WidgetRef ref,
   int orderId,
-  double remaining,
-) {
-  final c = AppThemeColors.of(context);
-  final theme = Theme.of(context);
-  final amountCtrl = TextEditingController(text: remaining.toStringAsFixed(0));
-  String selectedMethod = 'CASH';
-  final notesCtrl = TextEditingController();
-  String? errorMessage;
-
-  showModalBottomSheet(
+  Map<dynamic, dynamic> order,
+) async {
+  final shopId = ref.read(shopProvider).currentShopId,
+      actor = '${ref.read(authProvider).user?['id']}';
+  final result = await showDialog<bool>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: c.card,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Thanh toán đơn hàng',
-              style: GoogleFonts.manrope(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Hạn mức cần thu: ${_currFmt.format(remaining)}',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: c.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Amount field
-            Text(
-              'Số tiền thanh toán (VNĐ)',
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Nhập số tiền',
-                suffixText: '₫',
-                helperText: parseCurrency(amountCtrl.text) > 0
-                    ? _currFmt.format(parseCurrency(amountCtrl.text))
-                    : null,
-                helperStyle: TextStyle(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-                filled: true,
-                fillColor: c.inputFill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: c.inputBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.primary,
-                    width: 1.5,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  errorMessage!,
-                  style: GoogleFonts.inter(
-                    color: AppColors.danger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-            // Payment method
-            Text(
-              'Phương thức giao dịch',
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                _MethodChip(
-                  'CASH',
-                  'Tiền mặt',
-                  Icons.money_rounded,
-                  selectedMethod,
-                  (v) => setState(() => selectedMethod = v),
-                ),
-                _MethodChip(
-                  'TRANSFER',
-                  'Chuyển khoản',
-                  Icons.account_balance_rounded,
-                  selectedMethod,
-                  (v) => setState(() => selectedMethod = v),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Notes
-            Text(
-              'Ghi chú bổ sung',
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: notesCtrl,
-              style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Ghi chú (Không bắt buộc)',
-                filled: true,
-                fillColor: c.inputFill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: c.inputBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.primary,
-                    width: 1.5,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Submit buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: c.divider, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: Text(
-                      'Hủy bỏ',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.bold,
-                        color: c.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final amount = parseCurrency(amountCtrl.text);
-                      if (amount <= 0) {
-                        setState(
-                          () => errorMessage =
-                              'Số tiền thanh toán phải lớn hơn 0!',
-                        );
-                        return;
-                      }
-                      if (amount > remaining) {
-                        setState(
-                          () => errorMessage =
-                              'Không thể thanh toán vượt quá ${_currFmt.format(remaining)}',
-                        );
-                        return;
-                      }
-                      Navigator.of(ctx).pop();
-                      try {
-                        await ref.read(salesRepoProvider).addPayment(orderId, {
-                          'amount': amount,
-                          'method': selectedMethod,
-                          'notes': notesCtrl.text.trim().isEmpty
-                              ? null
-                              : notesCtrl.text.trim(),
-                        });
-                        ref.invalidate(salesDetailProvider(orderId));
-                        ref.invalidate(salesListProvider);
-                        if (context.mounted) {
-                          ToastService.showSuccess(
-                            'Đã thanh toán ${_currFmt.format(amount)}',
-                          );
-                        }
-                      } catch (_) {
-                        if (context.mounted) {
-                          ToastService.showError(
-                            'Thanh toán thất bại. Vui lòng kiểm tra lại.',
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(
-                      Icons.check_circle_outline_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                    label: Text(
-                      'Xác Nhận',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.success,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  ).then((_) {
-    amountCtrl.dispose();
-    notesCtrl.dispose();
-  });
+    barrierDismissible: false,
+    builder: (_) => SalesPaymentDialog(order: Map<String, dynamic>.from(order)),
+  );
+  if (result == true &&
+      context.mounted &&
+      ref.read(shopProvider).currentShopId == shopId &&
+      '${ref.read(authProvider).user?['id']}' == actor) {
+    _refreshSalesPaymentViews(ref, orderId, order);
+  }
 }
 
-void _showReturnDialog(
+Future<void> _showSalesRecovery(
+  BuildContext context,
+  WidgetRef ref,
+  int orderId,
+  Map<dynamic, dynamic> order,
+) async {
+  final shopId = int.tryParse('${order['shopId']}'),
+      actor = '${ref.read(authProvider).user?['id']}';
+  if (shopId == null) return;
+  await showDialog<bool>(
+    context: context,
+    builder: (_) => SalesPaymentRecoveryDialog(
+      orderId: orderId,
+      sourceShopId: shopId,
+      orderCode: 'Đơn ${order['orderCode'] ?? orderId}',
+    ),
+  );
+  if (context.mounted &&
+      ref.read(shopProvider).currentShopId == shopId &&
+      '${ref.read(authProvider).user?['id']}' == actor) {
+    _refreshSalesPaymentViews(ref, orderId, order);
+  }
+}
+
+Future<void> _showReturnDialog(
   BuildContext context,
   WidgetRef ref,
   int orderId,
   List? items,
   Map<String, dynamic> order,
-) {
-  final c = AppThemeColors.of(context);
-  final theme = Theme.of(context);
-  final paidAmount =
-      double.tryParse(order['paidAmount']?.toString() ?? '0') ?? 0;
-  final subtotal = double.tryParse(order['subtotal']?.toString() ?? '0') ?? 0;
-  final discount =
-      double.tryParse(order['discountAmount']?.toString() ?? '0') ?? 0;
-  final taxAmount = double.tryParse(order['taxAmount']?.toString() ?? '0') ?? 0;
-  final merchandiseTotal = subtotal - discount + taxAmount;
-  final shippingFee =
-      double.tryParse(order['shippingFee']?.toString() ?? '0') ?? 0;
-  final shippingTaxRate =
-      double.tryParse(order['shippingTaxRate']?.toString() ?? '0') ?? 0;
-  final customerShippingCharge = order['shippingFeePayer'] == 'CUSTOMER'
-      ? shippingFee * (1 + shippingTaxRate / 100)
-      : 0.0;
-  var refundShippingFee = false;
-  double selectedRefund() => paidAmount.clamp(
-    0,
-    merchandiseTotal + (refundShippingFee ? customerShippingCharge : 0),
-  );
-  final amountCtrl = TextEditingController(
-    text: selectedRefund().toStringAsFixed(0),
-  );
-  final reasonCtrl = TextEditingController();
-  String? errorMessage;
-
-  showModalBottomSheet(
+) async {
+  final shop = ref.read(shopProvider).currentShopId,
+      actor = '${ref.read(authProvider).user?['id']}';
+  final result = await showDialog<bool>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: c.card,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.divider,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Trả hàng & Hoàn tiền sản phẩm',
-              style: GoogleFonts.manrope(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.danger,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Tiền hoàn theo lựa chọn: ${_currFmt.format(selectedRefund())}',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: c.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Amount field
-            Text(
-              'Số tiền hoàn theo các khoản đã thanh toán (VNĐ)',
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: amountCtrl,
-              readOnly: true,
-              keyboardType: TextInputType.number,
-              style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Nhập số tiền hoàn',
-                suffixText: '₫',
-                filled: true,
-                fillColor: c.inputFill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: c.inputBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.primary,
-                    width: 1.5,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (customerShippingCharge > 0) ...[
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: refundShippingFee,
-                title: const Text('Hoàn phí giao hàng'),
-                subtitle: Text(
-                  '${_currFmt.format(customerShippingCharge)} · Chỉ hoàn khi bạn chủ động chọn',
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    refundShippingFee = value;
-                    amountCtrl.text = selectedRefund().toStringAsFixed(0);
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-            if (errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  errorMessage!,
-                  style: GoogleFonts.inter(
-                    color: AppColors.danger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-            Text(
-              'Hệ thống hoàn đúng từng kênh tiền mặt, chuyển khoản, QR hoặc thẻ đã ghi nhận trên đơn.',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                height: 1.4,
-                color: c.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Reason
-            Text(
-              'Lý do trả lại hàng',
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: c.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: reasonCtrl,
-              style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'Nhập lý do trả hàng...',
-                filled: true,
-                fillColor: c.inputFill,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: c.inputBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: theme.colorScheme.primary,
-                    width: 1.5,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Submit buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: c.divider, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: Text(
-                      'Hủy bỏ',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.bold,
-                        color: c.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final amount = parseCurrency(amountCtrl.text);
-                      final expectedRefund = selectedRefund();
-                      if ((amount - expectedRefund).abs() > 0.01) {
-                        setState(
-                          () => errorMessage =
-                              'Số tiền hoàn chưa khớp với lựa chọn phí giao hàng',
-                        );
-                        return;
-                      }
-
-                      final returnItems = (items ?? [])
-                          .map((i) {
-                            final it = i as Map;
-                            return {
-                              'productId':
-                                  it['productId'] ?? it['product']?['id'],
-                              'quantity': it['quantity'],
-                              'unitPrice': it['unitPrice'],
-                              'subtotal': it['subtotal'],
-                              'reason': reasonCtrl.text.trim(),
-                            };
-                          })
-                          .where((item) => item['productId'] != null)
-                          .toList();
-
-                      if (returnItems.isEmpty) {
-                        setState(
-                          () => errorMessage =
-                              'Không có sản phẩm hợp lệ để trả lại',
-                        );
-                        return;
-                      }
-
-                      try {
-                        await ref
-                            .read(salesRepoProvider)
-                            .createReturn(orderId, {
-                              'refundAmount': amount,
-                              'refundShippingFee': refundShippingFee,
-                              'reason': reasonCtrl.text.trim(),
-                              'items': returnItems,
-                            });
-                        ref.invalidate(salesDetailProvider(orderId));
-                        ref.invalidate(salesListProvider);
-                        if (ctx.mounted) {
-                          Navigator.of(ctx).pop();
-                        }
-                        ToastService.showSuccess(
-                          'Đã hoàn tất trả hàng & hoàn trả ${_currFmt.format(amount)}',
-                        );
-                      } catch (_) {
-                        ToastService.showError(
-                          'Không thể thực hiện trả hàng. Vui lòng thử lại sau.',
-                        );
-                      }
-                    },
-                    icon: const Icon(
-                      Icons.assignment_return_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
-                    label: Text(
-                      'Xác Nhận Trả',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.danger,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  ).then((_) {
-    amountCtrl.dispose();
-    reasonCtrl.dispose();
-  });
+    barrierDismissible: false,
+    builder: (_) => SalesReturnDialog(order: order),
+  );
+  if (result == true &&
+      context.mounted &&
+      ref.read(shopProvider).currentShopId == shop &&
+      '${ref.read(authProvider).user?['id']}' == actor) {
+    _refreshSalesPaymentViews(ref, orderId, order);
+    ref.invalidate(productListProvider);
+    ref.invalidate(stockProvider);
+    ref.invalidate(stockPageProvider);
+    ref.invalidate(lowStockProvider);
+    ref.invalidate(inventoryMovementsProvider);
+    ref.invalidate(xntReportProvider);
+  }
 }
 
 String _paymentMethodLabel(String method) {
@@ -1584,65 +1092,9 @@ String _paymentMethodLabel(String method) {
 
 String _formatDate(String raw) {
   try {
-    final dt = DateTime.parse(raw);
-    return DateFormat('dd/MM/yyyy HH:mm').format(dt);
+    return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(raw));
   } catch (_) {
     return raw;
-  }
-}
-
-class _MethodChip extends StatelessWidget {
-  final String value, label;
-  final IconData icon;
-  final String selected;
-  final ValueChanged<String> onTap;
-  const _MethodChip(
-    this.value,
-    this.label,
-    this.icon,
-    this.selected,
-    this.onTap,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AppThemeColors.of(context);
-    final isSelected = selected == value;
-    return GestureDetector(
-      onTap: () => onTap(value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : c.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : c.divider,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? AppColors.primary : c.textSecondary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: GoogleFonts.manrope(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? AppColors.primary : c.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

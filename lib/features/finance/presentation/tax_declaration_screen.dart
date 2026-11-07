@@ -1,3 +1,5 @@
+import '../../../core/widgets/app_page_header.dart';
+import '../../../core/assets/app_icon.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/material.dart';
@@ -99,7 +101,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                               color: AppColors.warning.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            child: const Icon(
+                            child: const AppIcon(
                               Icons.receipt_long_outlined,
                               color: AppColors.warning,
                               size: 32,
@@ -129,12 +131,12 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                                 onPressed: () => ref
                                     .read(taxConfigProvider.notifier)
                                     .refresh(),
-                                icon: const Icon(Icons.refresh),
+                                icon: const AppIcon(Icons.refresh),
                                 label: const Text('Thử tải lại'),
                               ),
                               FilledButton.icon(
                                 onPressed: () => context.push('/tax-config'),
-                                icon: const Icon(Icons.settings_outlined),
+                                icon: const AppIcon(Icons.settings_outlined),
                                 label: const Text('Mở cấu hình thuế'),
                               ),
                             ],
@@ -182,7 +184,11 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
+                  AppIcon(
+                    Icons.cloud_off_rounded,
+                    size: 48,
+                    color: c.textMuted,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'Không thể tải danh mục biểu mẫu từ máy chủ',
@@ -205,7 +211,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: () => ref.invalidate(taxReferenceDataProvider),
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    icon: const AppIcon(Icons.refresh_rounded, size: 18),
                     label: const Text('Thử lại kết nối'),
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -253,12 +259,8 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
       backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leadingWidth: 60,
+        leading: AppNavigationBackLeading(onPressed: () => navigatePageBack(context)),
         title: const Text('Kê khai thuế'),
         actions: [featureGuideButton(context, 'tax_declaration')],
       ),
@@ -283,7 +285,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      const AppIcon(
                         Icons.warning_amber_rounded,
                         size: 48,
                         color: AppColors.warning,
@@ -314,12 +316,18 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                         children: [
                           ElevatedButton.icon(
                             onPressed: () => ref.invalidate(profitLossProvider),
-                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            icon: const AppIcon(
+                              Icons.refresh_rounded,
+                              size: 18,
+                            ),
                             label: const Text('Thử lại'),
                           ),
                           OutlinedButton.icon(
                             onPressed: () => _promptManualRevenue(context),
-                            icon: const Icon(Icons.edit_note_rounded, size: 18),
+                            icon: const AppIcon(
+                              Icons.edit_note_rounded,
+                              size: 18,
+                            ),
                             label: const Text('Lập tờ khai nháp ước tính'),
                           ),
                         ],
@@ -391,7 +399,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        const AppIcon(
                           Icons.info_outline_rounded,
                           size: 18,
                           color: AppColors.warning,
@@ -428,7 +436,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      AppIcon(
                         Icons.calendar_month_outlined,
                         size: 20,
                         color: AppColors.primary,
@@ -509,7 +517,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                           color: AppColors.info.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(
+                        child: const AppIcon(
                           Icons.gavel_rounded,
                           size: 16,
                           color: AppColors.info,
@@ -664,7 +672,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              const AppIcon(
                                 Icons.warning_amber_rounded,
                                 color: Colors.white70,
                                 size: 16,
@@ -709,7 +717,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(
+                              child: AppIcon(
                                 _taxFormIcon(f.iconKey),
                                 size: 20,
                                 color: AppColors.primary,
@@ -794,7 +802,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                                   pit,
                                   config,
                                 ),
-                                icon: const Icon(Icons.download, size: 16),
+                                icon: const AppIcon(Icons.download, size: 16),
                                 label: const Text(
                                   'Kết xuất tờ khai',
                                   style: TextStyle(fontSize: 12),
@@ -802,6 +810,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.primary,
                                   side: BorderSide(color: AppColors.primary),
+                                  minimumSize: const Size(0, 48),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 8,
                                   ),
@@ -813,12 +822,16 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                               child: ElevatedButton.icon(
                                 onPressed: () =>
                                     _showSubmitDialog(context, f.name),
-                                icon: const Icon(Icons.cloud_upload, size: 16),
+                                icon: const AppIcon(
+                                  Icons.cloud_upload,
+                                  size: 16,
+                                ),
                                 label: const Text(
-                                  'Nộp tờ khai',
+                                  'Hướng dẫn nộp',
                                   style: TextStyle(fontSize: 12),
                                 ),
                                 style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(0, 48),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 8,
                                   ),
@@ -841,7 +854,7 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
                   child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
+                      AppIcon(
                         Icons.info_outline,
                         size: 16,
                         color: AppColors.warning,
@@ -1029,51 +1042,62 @@ class _TaxDeclarationScreenState extends ConsumerState<TaxDeclarationScreen> {
     final c = AppThemeColors.of(context);
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: c.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Icon(Icons.cloud_upload, size: 48, color: AppColors.primary),
-            const SizedBox(height: 16),
-            Text(
-              'Nộp $formName',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Ứng dụng chưa tích hợp ký điện tử và nộp tờ khai trực tuyến. '
-              'Hãy xuất XML đã kiểm tra, sau đó nộp bằng kênh chính thức của cơ quan thuế.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Row(
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      'Hủy',
-                      style: TextStyle(color: c.textSecondary),
-                    ),
+                AppIcon(Icons.cloud_upload, size: 48, color: AppColors.primary),
+                const SizedBox(height: 16),
+                Text(
+                  'Hướng dẫn nộp $formName',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Đã hiểu'),
-                  ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Ứng dụng chưa tích hợp ký điện tử và nộp tờ khai trực tuyến. '
+                  'Hãy xuất XML đã kiểm tra, sau đó nộp bằng kênh chính thức của cơ quan thuế.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(
+                          'Hủy',
+                          style: TextStyle(color: c.textSecondary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Đã hiểu'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

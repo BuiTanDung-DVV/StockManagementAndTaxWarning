@@ -30,17 +30,9 @@ void main() async {
     Intl.defaultLocale = 'en_US';
   }
 
-  // Load auth token from storage before app starts
-  final apiClient = ApiClient();
-  await apiClient.loadToken();
-
-  runApp(
-    ProviderScope(
-      retry: _providerRetry,
-      overrides: [apiClientProvider.overrideWithValue(apiClient)],
-      child: const MyApp(),
-    ),
-  );
+  // AuthNotifier restores the session through the configured ApiClient provider.
+  // Keep its mutation notifications and cross-tab invalidation connected.
+  runApp(ProviderScope(retry: _providerRetry, child: const MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
@@ -49,7 +41,12 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch auth state to react to login/logout
-    ref.watch(authProvider);
+    final auth = ref.watch(authProvider);
+    final restoringSession =
+        auth.isLoading &&
+        !auth.isLoggedIn &&
+        !ref.read(apiClientProvider).sessionRestoreCompleted;
+    final toastBuilder = BotToastInit();
     final themeMode = ref.watch(themeProvider);
     final brandColor = ref.watch(brandColorProvider);
     final appLanguage = ref.watch(localeProvider);
@@ -62,7 +59,23 @@ class MyApp extends ConsumerWidget {
       title: 'Quản lý Bán hàng & Kho hàng',
       scrollBehavior: const AppScrollBehavior(),
       scaffoldMessengerKey: ToastService.scaffoldMessengerKey,
-      builder: BotToastInit(),
+      builder: (context, child) => toastBuilder(
+        context,
+        restoringSession
+            ? const Scaffold(
+                body: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Đang khôi phục phiên làm việc…'),
+                    ],
+                  ),
+                ),
+              )
+            : child,
+      ),
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(brandColor.color),
       darkTheme: AppTheme.darkTheme(brandColor.color),

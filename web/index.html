@@ -129,16 +129,21 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script src="offline-client.js" defer></script>
   <script>
     {{flutter_js}}
     {{flutter_build_config}}
     
     _flutter.loader.load({
       config: {
-        renderer: "canvaskit"
+        renderer: "canvaskit",
+        canvasKitBaseUrl: "canvaskit/"
       },
       onEntrypointLoaded: async function(engineInitializer) {
-        const appRunner = await engineInitializer.initializeEngine();
+        const appRunner = await engineInitializer.initializeEngine({
+          renderer: "canvaskit",
+          canvasKitBaseUrl: "canvaskit/"
+        });
         await appRunner.runApp();
         removeSplashFromWeb();
       }

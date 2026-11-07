@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,7 +41,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
                   color: AppColors.warning.withValues(alpha: 0.3),
                 ),
               ),
-              child: const Icon(
+              child: const AppIcon(
                 Icons.hourglass_top_rounded,
                 size: 32,
                 color: AppColors.warning,
@@ -50,7 +51,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.lg),
 
           FilledButton.icon(
-            icon: const Icon(Icons.refresh_rounded, size: 20),
+            icon: const AppIcon(Icons.refresh_rounded, size: 20),
             label: const Text('Tải lại trạng thái'),
             onPressed: () async {
               await ref.read(authProvider.notifier).init();
@@ -71,7 +72,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
 
           OutlinedButton.icon(
-            icon: const Icon(Icons.storefront_outlined, size: 18),
+            icon: const AppIcon(Icons.storefront_outlined, size: 18),
             label: const Text('Chọn / Gia nhập cửa hàng khác'),
             onPressed: () async {
               showDialog(
@@ -83,7 +84,7 @@ class WaitingApprovalScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
 
           TextButton.icon(
-            icon: const Icon(Icons.logout_rounded, size: 18),
+            icon: const AppIcon(Icons.logout_rounded, size: 18),
             label: const Text('Đăng xuất tài khoản'),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
             onPressed: () async {

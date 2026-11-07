@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +12,7 @@ import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../providers/operations_provider.dart';
+import '../../../core/providers/data_freshness_provider.dart';
 
 class ShippingCarrierScreen extends ConsumerStatefulWidget {
   const ShippingCarrierScreen({super.key});
@@ -32,179 +34,194 @@ class _ShippingCarrierScreenState extends ConsumerState<ShippingCarrierScreen> {
   });
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppThemeColors.of(context).bg,
-    body: AppResponsiveContent(
-      maxWidth: 1100,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppPageHeader(
-            title: 'Đơn vị vận chuyển',
-            subtitle:
-                'Quản lý đối tác giao hàng, phí mặc định và đường dẫn tra cứu.',
-            showBackButton: true,
-            action: FilledButton.icon(
-              onPressed: () => _edit(),
-              icon: const Icon(Icons.add),
-              label: const Text('Thêm đơn vị'),
+  Widget build(BuildContext context) {
+    listenToDataChanges(ref, DataArea.system, _reload);
+    return Scaffold(
+      backgroundColor: AppThemeColors.of(context).bg,
+      body: AppResponsiveContent(
+        maxWidth: 1100,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppPageHeader(
+              title: 'Đơn vị vận chuyển',
+              subtitle: 'Danh bạ giao hàng dùng khi ghi nhận đơn bán.',
+              showBackButton: true,
+              action: FilledButton.icon(
+                onPressed: () => _edit(),
+                icon: const AppIcon(Icons.add),
+                label: const Text('Thêm đơn vị'),
+              ),
+              compactAction: IconButton.filled(
+                onPressed: () => _edit(),
+                icon: const AppIcon(Icons.add),
+              ),
             ),
-            compactAction: IconButton.filled(
-              onPressed: () => _edit(),
-              icon: const Icon(Icons.add),
+            const SizedBox(height: AppSpacing.md),
+            const Text(
+              'Chọn đơn vị trong mục Giao hàng của đơn bán để điền phí gợi ý và mã vận đơn. '
+              'Bạn có thể sửa phí và bên chịu phí trước khi lưu. '
+              'App lưu thông tin để theo dõi, không tự đặt giao hàng hay cập nhật hành trình từ hãng vận chuyển.',
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Expanded(
-            child: FutureBuilder<List<dynamic>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: OutlinedButton.icon(
-                      onPressed: _reload,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Chưa tải được dữ liệu · Thử lại'),
-                    ),
-                  );
-                }
-                final items = snapshot.data ?? const [];
-                if (items.isEmpty) {
-                  return RefreshIndicator(
-                    onRefresh: () async => _reload(),
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Container(
-                        height: 360,
-                        alignment: Alignment.center,
-                        child: FilledButton.icon(
-                          onPressed: () => _edit(),
-                          icon: const Icon(Icons.local_shipping_outlined),
-                          label: const Text('Thêm đơn vị vận chuyển đầu tiên'),
-                        ),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: FutureBuilder<List<dynamic>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: OutlinedButton.icon(
+                        onPressed: _reload,
+                        icon: const AppIcon(Icons.refresh),
+                        label: const Text('Chưa tải được dữ liệu · Thử lại'),
                       ),
-                    ),
-                  );
-                }
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns = constraints.maxWidth >= 900 ? 2 : 1;
-                    final width =
-                        (constraints.maxWidth - (columns - 1) * AppSpacing.md) /
-                        columns;
+                    );
+                  }
+                  final items = snapshot.data ?? const [];
+                  if (items.isEmpty) {
                     return RefreshIndicator(
                       onRefresh: () async => _reload(),
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        child: Wrap(
-                          spacing: AppSpacing.md,
-                          runSpacing: AppSpacing.md,
-                          children: items.map((raw) {
-                            final item = Map<String, dynamic>.from(raw);
-                            final active = item['isActive'] != false;
-                            final feeValue = parseCurrency(
-                              item['defaultFee']?.toString() ?? '0',
-                            );
-                            return SizedBox(
-                              width: width,
-                              child: AppCardContainer(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(AppSpacing.md),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const CircleAvatar(
-                                        child: Icon(
-                                          Icons.local_shipping_outlined,
-                                        ),
-                                      ),
-                                      const SizedBox(width: AppSpacing.sm),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item['name'].toString(),
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                            Text(
-                                              '${item['code']} · ${NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(feeValue)}',
-                                            ),
-                                            if (item['phone'] != null)
-                                              Text(
-                                                'Điện thoại: ${item['phone']}',
-                                              ),
-                                            Text(
-                                              active
-                                                  ? 'Đang sử dụng'
-                                                  : 'Đã ngừng sử dụng',
-                                              style: TextStyle(
-                                                color: active
-                                                    ? Colors.green
-                                                    : Colors.grey,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (active)
-                                        PopupMenuButton<String>(
-                                          onSelected: (value) async {
-                                            if (value == 'edit') {
-                                              _edit(item);
-                                            } else if (value == 'off') {
-                                              final confirm =
-                                                  await AppConfirmModal.show(
-                                                    context,
-                                                    title:
-                                                        'Ngừng sử dụng đối tác vận chuyển?',
-                                                    message:
-                                                        'Bạn có chắc muốn ngừng hợp tác với "${item['name']}"? Đơn hàng cũ vẫn giữ nguyên thông tin đối tác này.',
-                                                    confirmText:
-                                                        'Ngừng sử dụng',
-                                                    isDestructive: true,
-                                                  );
-                                              if (confirm == true) {
-                                                _deactivate(item['id'] as int);
-                                              }
-                                            }
-                                          },
-                                          itemBuilder: (_) => const [
-                                            PopupMenuItem(
-                                              value: 'edit',
-                                              child: Text('Chỉnh sửa'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'off',
-                                              child: Text('Ngừng sử dụng'),
-                                            ),
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                        child: Container(
+                          height: 360,
+                          alignment: Alignment.center,
+                          child: FilledButton.icon(
+                            onPressed: () => _edit(),
+                            icon: const AppIcon(Icons.local_shipping_outlined),
+                            label: const Text(
+                              'Thêm đơn vị vận chuyển đầu tiên',
+                            ),
+                          ),
                         ),
                       ),
                     );
-                  },
-                );
-              },
+                  }
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = constraints.maxWidth >= 900 ? 2 : 1;
+                      final width =
+                          (constraints.maxWidth -
+                              (columns - 1) * AppSpacing.md) /
+                          columns;
+                      return RefreshIndicator(
+                        onRefresh: () async => _reload(),
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Wrap(
+                            spacing: AppSpacing.md,
+                            runSpacing: AppSpacing.md,
+                            children: items.map((raw) {
+                              final item = Map<String, dynamic>.from(raw);
+                              final active = item['isActive'] != false;
+                              final feeValue = parseCurrency(
+                                item['defaultFee']?.toString() ?? '0',
+                              );
+                              return SizedBox(
+                                width: width,
+                                child: AppCardContainer(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(
+                                      AppSpacing.md,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const CircleAvatar(
+                                          child: AppIcon(
+                                            Icons.local_shipping_outlined,
+                                          ),
+                                        ),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item['name'].toString(),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              Text(
+                                                '${item['code']} · ${NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(feeValue)}',
+                                              ),
+                                              if (item['phone'] != null)
+                                                Text(
+                                                  'Điện thoại: ${item['phone']}',
+                                                ),
+                                              Text(
+                                                active
+                                                    ? 'Đang sử dụng'
+                                                    : 'Đã ngừng sử dụng',
+                                                style: TextStyle(
+                                                  color: active
+                                                      ? Colors.green
+                                                      : Colors.grey,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (active)
+                                          PopupMenuButton<String>(
+                                            onSelected: (value) async {
+                                              if (value == 'edit') {
+                                                _edit(item);
+                                              } else if (value == 'off') {
+                                                final confirm =
+                                                    await AppConfirmModal.show(
+                                                      context,
+                                                      title:
+                                                          'Ngừng sử dụng đối tác vận chuyển?',
+                                                      message:
+                                                          'Bạn có chắc muốn ngừng hợp tác với "${item['name']}"? Đơn hàng cũ vẫn giữ nguyên thông tin đối tác này.',
+                                                      confirmText:
+                                                          'Ngừng sử dụng',
+                                                      isDestructive: true,
+                                                    );
+                                                if (confirm == true) {
+                                                  _deactivate(
+                                                    item['id'] as int,
+                                                  );
+                                                }
+                                              }
+                                            },
+                                            itemBuilder: (_) => const [
+                                              PopupMenuItem(
+                                                value: 'edit',
+                                                child: Text('Chỉnh sửa'),
+                                              ),
+                                              PopupMenuItem(
+                                                value: 'off',
+                                                child: Text('Ngừng sử dụng'),
+                                              ),
+                                            ],
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Future<void> _edit([Map<String, dynamic>? item]) async {
     var name = item?['name']?.toString() ?? '';
@@ -263,7 +280,9 @@ class _ShippingCarrierScreenState extends ConsumerState<ShippingCarrierScreen> {
                       ),
                       decoration: InputDecoration(
                         labelText: 'Phí mặc định',
-                        helperText: 'Quy đổi: $feeHelper',
+                        helperText:
+                            'Gợi ý cho đơn mới; có thể sửa khi lập đơn. $feeHelper',
+                        helperMaxLines: 3,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),

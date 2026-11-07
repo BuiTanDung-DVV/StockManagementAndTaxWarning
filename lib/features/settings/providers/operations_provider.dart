@@ -33,6 +33,16 @@ class SettingsOperationsRepository {
 
   Future<Map<String, dynamic>> shopProfile() async =>
       Map<String, dynamic>.from(await _api.get('/shop-profile'));
+  Future<Map<String, dynamic>> uploadReceiptLogo({
+    required Uint8List bytes,
+    required String fileName,
+    required String contentType,
+  }) => _api.postImage(
+    '/shop-profile/receipt-logo/upload',
+    bytes,
+    fileName,
+    contentType,
+  );
   Future<Map<String, dynamic>> saveReceiptConfig(
     Map<String, dynamic> config,
   ) async => Map<String, dynamic>.from(

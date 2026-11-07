@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 
 import '../theme/app_theme.dart';
 import '../utils/reporting_period.dart';
@@ -390,7 +391,7 @@ class _ReportingPeriodEditorState extends State<_ReportingPeriodEditor> {
                   IconButton(
                     tooltip: 'Đóng',
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
+                    icon: const AppIcon(Icons.close),
                   ),
                 ],
               ),

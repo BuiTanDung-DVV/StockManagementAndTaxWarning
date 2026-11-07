@@ -1,4 +1,6 @@
 .git
+.planning
+.planning/**
 api
 backend
 .agents
@@ -27,6 +29,10 @@ client_secret_*.json
 .dart-local-cache
 .dart_appdata
 .dart_localappdata
+.dart-appdata
+.aws
+run
+run/**
 .tmp-*
 .tool-home
 .tool-local
@@ -54,8 +60,9 @@ database/seed-assets/test-media
 database/seed-assets/test-media/**
 backend/scripts
 backend/dev-scripts
-scripts
-scripts/**
+scripts/*
+!scripts/verify-web-auth-build.cjs
+!scripts/verify-web-plugin-build.cjs
 android
 android/**
 ios

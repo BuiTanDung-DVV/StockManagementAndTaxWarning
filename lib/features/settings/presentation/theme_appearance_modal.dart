@@ -15,7 +15,6 @@ import '../../../core/theme/avatar_provider.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_avatar.dart';
-import 'avatar_picker_dialog.dart';
 
 class ThemeAppearanceModal extends ConsumerStatefulWidget {
   const ThemeAppearanceModal({super.key});
@@ -38,6 +37,41 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isUploadingBg = false;
+  bool _isUploadingAvatar = false;
+
+  Future<void> _pickCustomAvatar() async {
+    setState(() => _isUploadingAvatar = true);
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      await ref
+          .read(userAvatarProvider.notifier)
+          .setCustomImage(
+            filePath: kIsWeb ? null : picked.path,
+            base64Data: base64Encode(bytes),
+          );
+      if (mounted)
+        ToastService.showSuccess(
+          context.isEnglish ? 'Avatar updated' : 'Đã cập nhật ảnh đại diện',
+        );
+    } catch (_) {
+      if (mounted)
+        ToastService.showError(
+          context.isEnglish
+              ? 'Could not load image. Please try another file.'
+              : 'Không thể tải ảnh. Vui lòng chọn tệp khác.',
+        );
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
+  }
 
   @override
   void initState() {
@@ -134,7 +168,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     child: AppAssetIcon(
                       assetPath: AppAssets.palette,
                       size: 22,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
                       semanticLabel: context.tr.settings.appearanceAndWallpaper,
                     ),
                   ),
@@ -526,6 +560,10 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
   }) {
     final primary = Theme.of(context).colorScheme.primary;
 
+    final selectedForeground = Theme.of(context).brightness == Brightness.dark
+        ? colors.textPrimary
+        : primary;
+
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -547,14 +585,14 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
               AppAssetIcon(
                 assetPath: assetPath,
                 size: 24,
-                color: isSelected ? primary : colors.textSecondary,
+                color: isSelected ? selectedForeground : colors.textSecondary,
                 semanticLabel: title,
               ),
               const SizedBox(height: 8),
               Text(
                 title,
                 style: GoogleFonts.inter(
-                  color: isSelected ? primary : colors.textPrimary,
+                  color: isSelected ? selectedForeground : colors.textPrimary,
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 ),
@@ -1381,7 +1419,7 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    isEnglish ? 'REAL WAREHOUSE' : 'ẢNH KHO THẬT',
+                    isEnglish ? 'ILLUSTRATION' : 'ẢNH MINH HỌA',
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 8.5,
@@ -1459,15 +1497,19 @@ class _ThemeAppearanceModalState extends ConsumerState<ThemeAppearanceModal>
                 ),
               ),
               ElevatedButton.icon(
-                onPressed: () => AvatarPickerDialog.show(context),
+                onPressed: _isUploadingAvatar ? null : _pickCustomAvatar,
                 icon: AppAssetIcon(
-                  assetPath: AppAssets.avatar,
+                  assetPath: AppAssets.upload,
                   size: 15,
                   color: Colors.white,
-                  semanticLabel: context.tr.settings.chooseAvatarPreset,
+                  semanticLabel: context.isEnglish
+                      ? 'Upload photo'
+                      : 'Tải ảnh lên',
                 ),
                 label: Text(
-                  context.tr.settings.chooseAvatarPreset,
+                  _isUploadingAvatar
+                      ? (context.isEnglish ? 'Loading…' : 'Đang tải…')
+                      : (context.isEnglish ? 'Upload photo' : 'Tải ảnh lên'),
                   style: GoogleFonts.inter(fontSize: 12),
                 ),
                 style: ElevatedButton.styleFrom(

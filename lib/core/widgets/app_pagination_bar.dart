@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../assets/app_assets.dart';
 
 int paginationValue(
   Map<String, dynamic> data,
@@ -20,6 +21,7 @@ class AppPaginationBar extends StatelessWidget {
   final String itemLabel;
   final ValueChanged<int> onPageChanged;
   final double trailingSafeSpace;
+  final bool compactNavigation;
 
   const AppPaginationBar({
     super.key,
@@ -29,6 +31,7 @@ class AppPaginationBar extends StatelessWidget {
     required this.itemLabel,
     required this.onPageChanged,
     this.trailingSafeSpace = 0,
+    this.compactNavigation = false,
   });
 
   @override
@@ -78,6 +81,36 @@ class AppPaginationBar extends StatelessWidget {
               ),
             ],
           );
+
+          if (compactNavigation && constraints.maxWidth < 600) {
+            return Row(
+              children: [
+                Expanded(child: summary),
+                if (safeTotalPages > 1) ...[
+                  IconButton(
+                    tooltip: 'Trang trước',
+                    onPressed: canGoBack
+                        ? () => onPageChanged(safeCurrentPage - 1)
+                        : null,
+                    icon: const AppAssetIcon(
+                      assetPath: AppAssets.back,
+                      size: 18,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Trang sau',
+                    onPressed: canGoNext
+                        ? () => onPageChanged(safeCurrentPage + 1)
+                        : null,
+                    icon: const AppAssetIcon(
+                      assetPath: AppAssets.next,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ],
+            );
+          }
 
           if (constraints.maxWidth < 430) {
             return Column(

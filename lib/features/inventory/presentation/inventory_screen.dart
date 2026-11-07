@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
+import '../../../core/assets/app_icon.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -14,8 +15,13 @@ import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../../core/widgets/product_network_image.dart';
+import '../../../core/widgets/panel_scroll_body.dart';
+import '../../../core/widgets/loaded_records_filter.dart';
+import '../../../core/widgets/product_thumbnail.dart';
+import '../../../core/widgets/app_ui_components.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../providers/inventory_provider.dart';
+import 'replenishment_dialog.dart';
 
 class InventoryScreen extends ConsumerWidget {
   final String? initialIssue;
@@ -24,6 +30,8 @@ class InventoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (initialIssue != null)
+      return _InventoryIssueDetails(issue: initialIssue!);
     final colors = AppThemeColors.of(context);
     final stockPageAsync = ref.watch(stockPageProvider(null));
     final stockAsync = stockPageAsync.whenData(
@@ -74,6 +82,7 @@ class InventoryScreen extends ConsumerWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         featureGuideButton(context, 'inventory'),
+        if (canCreatePurchaseOrder) const ReplenishmentButton(),
         if (actionLabel != null)
           compact
               ? AppPrimaryHeaderAction(
@@ -196,6 +205,339 @@ Color _inventoryAbcGradeColor(String grade, BuildContext context) {
       return AppColors.warning;
     default:
       return AppColors.info;
+  }
+}
+
+class _InventoryIssueDetails extends ConsumerWidget {
+  final String issue;
+  const _InventoryIssueDetails({required this.issue});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLow = issue == 'low-stock';
+    final isSlow = issue == 'slow-moving';
+    final source = isLow
+        ? lowStockProvider
+        : isSlow
+        ? slowMovingProvider
+        : expiringProductsProvider;
+    final title = isLow
+        ? 'Hàng dưới định mức tồn'
+        : isSlow
+        ? 'Hàng tồn chậm luân chuyển'
+        : 'Lô hàng sắp hoặc đã hết hạn';
+    final subtitle = isLow
+        ? 'Đối chiếu tồn hiện tại, mức tối thiểu và số lượng cần bổ sung.'
+        : isSlow
+        ? 'Hàng còn tồn, không phát sinh bán trong 30 ngày; không tính đơn mang ngày tương lai.'
+        : 'Lô đã khai hạn dùng và còn số lượng · cảnh báo trước 30 ngày.';
+    final async = ref.watch(source);
+    return Scaffold(
+      backgroundColor: AppThemeColors.of(context).bg,
+      body: AppResponsiveContent(
+        maxWidth: 1400,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppPageHeader(
+              title: title,
+              subtitle: subtitle,
+              showBackButton: false,
+              action: TextButton.icon(
+                onPressed: () => context.go('/inventory'),
+                icon: const AppIcon(Icons.arrow_back, size: 18),
+                label: const Text('Tổng quan kho'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: AppCardContainer(
+                padding: EdgeInsets.zero,
+                child: async.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (_, _) => Center(
+                    child: AppInlineError(
+                      message: 'Không tải được danh sách. Vui lòng thử lại.',
+                      onRetry: () => ref.invalidate(source),
+                    ),
+                  ),
+                  data: (items) => items.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Không có hàng phù hợp với cảnh báo đã chọn.',
+                          ),
+                        )
+                      : LoadedRecordsFilter(
+                          items: items,
+                          builder: (filtered) => LayoutBuilder(
+                            builder: (context, constraints) {
+                              final compact = constraints.maxWidth < 650;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (!compact)
+                                    Container(
+                                      color: AppThemeColors.of(context).cardAlt,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Expanded(
+                                            flex: 5,
+                                            child: Text('Sản phẩm / SKU'),
+                                          ),
+                                          const Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'Tồn hiện tại',
+                                              textAlign: TextAlign.right,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              isLow
+                                                  ? 'Tối thiểu'
+                                                  : isSlow
+                                                  ? 'Lần bán gần nhất'
+                                                  : 'Hạn dùng',
+                                              textAlign: TextAlign.right,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              isLow
+                                                  ? 'Thiếu hụt'
+                                                  : isSlow
+                                                  ? 'Vốn đang tồn'
+                                                  : 'Trạng thái',
+                                              textAlign: TextAlign.right,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      key: const Key('inventory-issue-list'),
+                                      itemCount: filtered.length,
+                                      separatorBuilder: (_, _) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final item = filtered[index] as Map;
+                                        final product = item['product'] is Map
+                                            ? item['product'] as Map
+                                            : item;
+                                        final id = inventoryIssueProductId(
+                                          item,
+                                        );
+                                        final name = inventoryIssueProductName(
+                                          item,
+                                        );
+                                        final unit =
+                                            product['unit']?.toString() ??
+                                            item['unit']?.toString() ??
+                                            '';
+                                        final quantity = inventoryIssueQuantity(
+                                          item,
+                                        );
+                                        final minimum =
+                                            num.tryParse(
+                                              (item['minStock'] ??
+                                                      product['minStock'] ??
+                                                      0)
+                                                  .toString(),
+                                            ) ??
+                                            0;
+                                        final deficit = minimum > quantity
+                                            ? minimum - quantity
+                                            : 0;
+                                        String dateLabel(Object? value) {
+                                          final date = DateTime.tryParse(
+                                            value?.toString() ?? '',
+                                          );
+                                          return date == null
+                                              ? 'Chưa có'
+                                              : DateFormat(
+                                                  'dd/MM/yyyy',
+                                                ).format(date.toLocal());
+                                        }
+
+                                        final middle = isLow
+                                            ? '$minimum $unit'
+                                            : isSlow
+                                            ? dateLabel(item['lastSoldAt'])
+                                            : dateLabel(
+                                                item['expiryDate'] ??
+                                                    item['expiry_date'],
+                                              );
+                                        final last = isLow
+                                            ? '-$deficit $unit'
+                                            : isSlow
+                                            ? NumberFormat.currency(
+                                                locale: 'vi_VN',
+                                                symbol: '₫',
+                                                decimalDigits: 0,
+                                              ).format(
+                                                num.tryParse(
+                                                      item['stockValue']
+                                                              ?.toString() ??
+                                                          '',
+                                                    ) ??
+                                                    0,
+                                              )
+                                            : inventoryExpiringStatus(
+                                                item,
+                                                DateTime.now(),
+                                              ).split(' · ').first;
+                                        final identity = Row(
+                                          children: [
+                                            ProductThumbnail(
+                                              imageUrl:
+                                                  product['imageUrl']
+                                                      ?.toString() ??
+                                                  item['image_url']?.toString(),
+                                              name: name,
+                                              size: 42,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    name,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    'SKU: ${product['sku'] ?? item['sku'] ?? '—'}',
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.bodySmall,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                        return InkWell(
+                                          onTap: id == null
+                                              ? null
+                                              : () {
+                                                  final targetShop =
+                                                      int.tryParse(
+                                                        item['shopId']
+                                                                ?.toString() ??
+                                                            '',
+                                                      );
+                                                  if (ref
+                                                          .read(shopProvider)
+                                                          .isAllShops &&
+                                                      targetShop != null) {
+                                                    ref
+                                                        .read(
+                                                          shopProvider.notifier,
+                                                        )
+                                                        .switchShop(targetShop);
+                                                  }
+                                                  context.push(
+                                                    '/products/$id?from=inventory',
+                                                  );
+                                                },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(16),
+                                            child: compact
+                                                ? Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .stretch,
+                                                    children: [
+                                                      identity,
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        'Tồn: $quantity $unit · ${isLow
+                                                            ? 'Tối thiểu'
+                                                            : isSlow
+                                                            ? 'Lần bán gần nhất'
+                                                            : 'Hạn dùng'}: $middle',
+                                                      ),
+                                                      Text(
+                                                        last,
+                                                        style: TextStyle(
+                                                          color: isLow
+                                                              ? AppColors.danger
+                                                              : AppThemeColors.of(
+                                                                  context,
+                                                                ).textPrimary,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  )
+                                                : Row(
+                                                    children: [
+                                                      Expanded(
+                                                        flex: 5,
+                                                        child: identity,
+                                                      ),
+                                                      Expanded(
+                                                        flex: 2,
+                                                        child: Text(
+                                                          '$quantity $unit',
+                                                          textAlign:
+                                                              TextAlign.right,
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        flex: 2,
+                                                        child: Text(
+                                                          middle,
+                                                          textAlign:
+                                                              TextAlign.right,
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        flex: 2,
+                                                        child: Text(
+                                                          last,
+                                                          textAlign:
+                                                              TextAlign.right,
+                                                          style: TextStyle(
+                                                            color: isLow
+                                                                ? AppColors
+                                                                      .danger
+                                                                : AppThemeColors.of(
+                                                                    context,
+                                                                  ).textPrimary,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -340,16 +682,26 @@ class _InventoryAbcPanel extends StatelessWidget {
                             final grade = raw['grade']?.toString() ?? 'C';
                             return SizedBox(
                               width: width,
-                              child: _InventoryAbcGradeCard(
-                                grade: grade,
-                                skuCount: _inventoryAbcNumber(
-                                  raw['skuCount'],
-                                ).toInt(),
-                                revenueShare: _inventoryAbcNumber(
-                                  raw['revenueShare'],
+                              child: InkWell(
+                                onTap: () => _showInventoryAbcGroup(
+                                  context,
+                                  grade,
+                                  items,
                                 ),
-                                stockValue: _inventoryAbcNumber(
-                                  raw['stockValue'],
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.control,
+                                ),
+                                child: _InventoryAbcGradeCard(
+                                  grade: grade,
+                                  skuCount: _inventoryAbcNumber(
+                                    raw['skuCount'],
+                                  ).toInt(),
+                                  revenueShare: _inventoryAbcNumber(
+                                    raw['revenueShare'],
+                                  ),
+                                  stockValue: _inventoryAbcNumber(
+                                    raw['stockValue'],
+                                  ),
                                 ),
                               ),
                             );
@@ -465,6 +817,47 @@ class _InventoryAbcReconciliation extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showInventoryAbcGroup(
+  BuildContext context,
+  String grade,
+  List<Map<String, dynamic>> items,
+) {
+  final group = items
+      .where((item) => item['grade']?.toString() == grade)
+      .toList();
+  final maximum = group.fold<double>(0, (value, item) {
+    final revenue = _inventoryAbcNumber(item['revenue']);
+    return revenue > value ? revenue : value;
+  });
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text('Nhóm $grade · ${group.length} sản phẩm'),
+      content: SizedBox(
+        width: 760,
+        height: MediaQuery.sizeOf(context).height * .55,
+        child: group.isEmpty
+            ? const Center(child: Text('Không có sản phẩm trong nhóm này.'))
+            : ListView.separated(
+                itemCount: group.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: AppSpacing.sm),
+                itemBuilder: (_, index) => _InventoryAbcProductRow(
+                  item: group[index],
+                  maximumRevenue: maximum,
+                ),
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Đóng'),
+        ),
+      ],
+    ),
+  );
 }
 
 class _InventoryAbcGradeCard extends StatelessWidget {
@@ -669,7 +1062,7 @@ class _InventoryAbcProductRow extends StatelessWidget {
                 ),
                 if (productId != null) ...[
                   const SizedBox(width: AppSpacing.xs),
-                  Icon(
+                  AppIcon(
                     Icons.chevron_right_rounded,
                     size: 20,
                     color: colors.textMuted,
@@ -942,7 +1335,11 @@ String inventoryIssueProductName(dynamic item) {
 
 int? inventoryIssueProductId(dynamic item) {
   if (item is! Map) return null;
-  final raw = item['product']?['id'] ?? item['productId'] ?? item['product_id'];
+  final raw =
+      item['product']?['id'] ??
+      item['productId'] ??
+      item['product_id'] ??
+      item['id'];
   return raw is int ? raw : int.tryParse(raw?.toString() ?? '');
 }
 
@@ -1195,7 +1592,12 @@ class _InventoryActionWorkspace extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final lowPanel = _InventoryIssuePanel(
+          key: const Key('inventory-low-stock-panel'),
+          height: constraints.maxWidth >= 760 && initialIssue == null
+              ? 420
+              : null,
           title: 'Dưới định mức tồn',
+          showAll: initialIssue == 'low-stock',
           emptyMessage: 'Không có sản phẩm dưới định mức.',
           asyncValue: lowStock,
           statusBuilder: inventoryLowStockStatus,
@@ -1204,7 +1606,9 @@ class _InventoryActionWorkspace extends StatelessWidget {
         );
         final slowPanel = _InventoryIssuePanel(
           title: 'Tồn chậm giữ vốn',
-          emptyMessage: 'Không có sản phẩm chậm luân chuyển.',
+          showAll: initialIssue == 'slow-moving',
+          emptyMessage:
+              'Chưa có hàng còn tồn và không phát sinh bán trong 30 ngày qua.',
           asyncValue: slowMoving,
           viewAllRoute: '/inventory?issue=slow-moving',
           accentColor: AppColors.warning,
@@ -1232,8 +1636,14 @@ class _InventoryActionWorkspace extends StatelessWidget {
           },
         );
         final expiringPanel = _InventoryIssuePanel(
+          key: const Key('inventory-expiring-panel'),
+          height: constraints.maxWidth >= 760 && initialIssue == null
+              ? 420
+              : null,
           title: 'Sắp hoặc đã hết hạn',
-          emptyMessage: 'Không có lô hàng sắp hoặc đã hết hạn.',
+          showAll: initialIssue == 'expiring' || initialIssue == 'expired',
+          emptyMessage:
+              'Chưa có lô đã khai hạn dùng, còn số lượng và hết hạn hoặc sẽ hết hạn trong 30 ngày tới. Hàng chưa khai hạn dùng chưa được đánh giá.',
           asyncValue: expiring,
           statusBuilder: (item) =>
               inventoryExpiringStatus(item, DateTime.now()),
@@ -1264,7 +1674,7 @@ class _InventoryActionWorkspace extends StatelessWidget {
                   ),
                 ),
                 child: const Text(
-                  'Danh sách đã được mở theo cảnh báo từ Việc cần làm.',
+                  'Danh sách đầy đủ theo cảnh báo đã chọn. Chọn sản phẩm để xem chi tiết.',
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -1307,6 +1717,8 @@ class _InventoryActionWorkspace extends StatelessWidget {
 }
 
 class _InventoryIssuePanel extends StatelessWidget {
+  final bool showAll;
+  final double? height;
   final String title;
   final String emptyMessage;
   final AsyncValue<List<dynamic>> asyncValue;
@@ -1316,6 +1728,9 @@ class _InventoryIssuePanel extends StatelessWidget {
   final Color accentColor;
 
   const _InventoryIssuePanel({
+    super.key,
+    this.height,
+    this.showAll = false,
     required this.title,
     required this.emptyMessage,
     required this.asyncValue,
@@ -1330,6 +1745,7 @@ class _InventoryIssuePanel extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Container(
+      height: height,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: colors.surface,
@@ -1366,98 +1782,106 @@ class _InventoryIssuePanel extends StatelessWidget {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: () => context.push(viewAllRoute),
+                  onPressed: () => showAll
+                      ? context.go('/inventory')
+                      : context.push(viewAllRoute),
                   iconAlignment: IconAlignment.end,
-                  icon: const Icon(Icons.chevron_right_rounded, size: 18),
-                  label: const Text('Xem tất cả'),
+                  icon: const AppIcon(Icons.chevron_right_rounded, size: 18),
+                  label: Text(showAll ? 'Tổng quan kho' : 'Xem tất cả'),
                 ),
               ],
             ),
           ),
           Divider(height: 1, color: colors.divider),
-          asyncValue.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: AppShimmer(
-                child: ShimmerBox(
-                  width: double.infinity,
-                  height: 120,
-                  radius: AppRadius.control,
-                ),
-              ),
-            ),
-            error: (_, _) => const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: AppInlineError(
-                message: 'Không thể tải danh sách cần xử lý.',
-              ),
-            ),
-            data: (items) {
-              if (items.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check_circle_outline_rounded,
-                        color: AppColors.success,
-                        size: 20,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          emptyMessage,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: colors.textSecondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return Column(
-                children: [
-                  if (summaryBuilder != null) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md,
-                        AppSpacing.sm,
-                        AppSpacing.md,
-                        AppSpacing.sm,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          summaryBuilder!(items),
-                          style: Theme.of(context).textTheme.labelMedium
-                              ?.copyWith(
-                                color: colors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                      ),
-                    ),
-                    Divider(height: 1, color: colors.divider),
-                  ],
-                  for (
-                    var index = 0;
-                    index < items.take(5).length;
-                    index++
-                  ) ...[
-                    if (index > 0) Divider(height: 1, color: colors.divider),
-                    _InventoryIssueRow(
-                      index: index + 1,
-                      item: items[index],
-                      status: statusBuilder(items[index]),
-                      accentColor: accentColor,
-                    ),
-                  ],
-                ],
-              );
-            },
-          ),
+          if (height != null)
+            Expanded(child: PanelScrollBody(child: _buildContent(context)))
+          else
+            _buildContent(context),
         ],
       ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return asyncValue.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(AppSpacing.md),
+        child: AppShimmer(
+          child: ShimmerBox(
+            width: double.infinity,
+            height: 120,
+            radius: AppRadius.control,
+          ),
+        ),
+      ),
+      error: (_, _) => const Padding(
+        padding: EdgeInsets.all(AppSpacing.md),
+        child: AppInlineError(message: 'Không thể tải danh sách cần xử lý.'),
+      ),
+      data: (items) {
+        if (items.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                const AppIcon(
+                  Icons.check_circle_outline_rounded,
+                  color: AppColors.success,
+                  size: 20,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    emptyMessage,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return Column(
+          children: [
+            if (summaryBuilder != null) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    summaryBuilder!(items),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              Divider(height: 1, color: colors.divider),
+            ],
+            for (
+              var index = 0;
+              index < (showAll ? items.length : items.take(5).length);
+              index++
+            ) ...[
+              if (index > 0) Divider(height: 1, color: colors.divider),
+              _InventoryIssueRow(
+                index: index + 1,
+                item: items[index],
+                status: statusBuilder(items[index]),
+                accentColor: accentColor,
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -1554,7 +1978,7 @@ class _InventoryIssueRow extends StatelessWidget {
                   ],
                   if (productId != null) ...[
                     const SizedBox(width: AppSpacing.xs),
-                    Icon(
+                    AppIcon(
                       Icons.chevron_right_rounded,
                       size: 20,
                       color: colors.textMuted,
@@ -1588,14 +2012,38 @@ String inventoryExpiringStatus(dynamic item, DateTime today) {
   return 'Còn $days ngày · $stock';
 }
 
-class _CategoryDistribution extends StatelessWidget {
+class _CategoryDistribution extends ConsumerWidget {
   final AsyncValue<List<dynamic>> asyncValue;
 
   const _CategoryDistribution({required this.asyncValue});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppThemeColors.of(context);
+
+    void openCategory(dynamic category) {
+      final shop = ref.read(shopProvider);
+      if (shop.isAllShops) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chọn một cửa hàng để xem sản phẩm theo danh mục.'),
+          ),
+        );
+        return;
+      }
+      final id = int.tryParse(category['categoryId']?.toString() ?? '');
+      if (id == null || id < 0) return;
+      context.push(
+        Uri(
+          path: '/products',
+          queryParameters: {
+            'categoryId': '$id',
+            'categoryName': category['name']?.toString() ?? 'Chưa phân loại',
+            'inStockOnly': 'true',
+          },
+        ).toString(),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -1688,6 +2136,7 @@ class _CategoryDistribution extends StatelessWidget {
                     ) ...[
                       if (index > 0) const SizedBox(height: AppSpacing.md),
                       _DistributionRow(
+                        onTap: () => openCategory(visibleItems[index]),
                         label:
                             visibleItems[index]['name']?.toString() ?? 'Khác',
                         value: values[index],
@@ -1779,12 +2228,14 @@ class _InventoryValueSummary extends StatelessWidget {
 }
 
 class _DistributionRow extends StatelessWidget {
+  final VoidCallback? onTap;
   final String label;
   final double value;
   final int skuCount;
   final double maximum;
 
   const _DistributionRow({
+    this.onTap,
     required this.label,
     required this.value,
     required this.skuCount,
@@ -1801,51 +2252,70 @@ class _DistributionRow extends StatelessWidget {
       decimalDigits: 0,
     ).format(value);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  if (skuCount > 0)
-                    Text(
-                      '$skuCount SKU',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
+    return Semantics(
+      button: onTap != null,
+      label: 'Xem sản phẩm danh mục $label',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          if (skuCount > 0)
+                            Text(
+                              '$skuCount SKU',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(color: colors.textMuted),
+                            ),
+                        ],
+                      ),
                     ),
-                ],
-              ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      valueText,
+                      style: AppTheme.tabularStyle(
+                        context,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    AppIcon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: colors.textMuted,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 10,
+                  borderRadius: BorderRadius.circular(5),
+                  color: Theme.of(context).colorScheme.primary,
+                  backgroundColor: colors.cardAlt,
+                ),
+              ],
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              valueText,
-              style: AppTheme.tabularStyle(
-                context,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 6),
-        LinearProgressIndicator(
-          value: progress,
-          minHeight: 10,
-          borderRadius: BorderRadius.circular(5),
-          color: Theme.of(context).colorScheme.primary,
-          backgroundColor: colors.cardAlt,
-        ),
-      ],
+      ),
     );
   }
 }

@@ -1,3 +1,5 @@
+import { assertPastOrToday } from '../utils/business-date';
+
 export type InvoiceInput = {
     invoiceType?: string;
     type?: string;
@@ -92,7 +94,7 @@ export function normalizeInvoiceInput(
     }
 
     const rawDate = input.invoiceDate ?? existing.invoiceDate;
-    const invoiceDate = rawDate instanceof Date ? rawDate : new Date(String(rawDate || ''));
+    const invoiceDate = assertPastOrToday(rawDate, 'Ngày hóa đơn');
     if (Number.isNaN(invoiceDate.getTime())) {
         throw new Error('Validation: Ngày hóa đơn không hợp lệ');
     }

@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -120,7 +121,7 @@ class _ShopPaymentQrDialogState extends ConsumerState<ShopPaymentQrDialog> {
                     onPressed: _uploading
                         ? null
                         : () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const AppIcon(Icons.close_rounded),
                   ),
                 ],
               ),
@@ -238,7 +239,7 @@ class _QrPreview extends StatelessWidget {
                         ToastService.showSuccess('Đã sao chép thông tin QR');
                       }
                     },
-                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    icon: const AppIcon(Icons.copy_rounded, size: 18),
                     label: const Text('Sao chép'),
                   ),
                 ),

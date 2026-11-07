@@ -152,8 +152,10 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                           return ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: customers.length + 1,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: AppSpacing.sm),
+                            separatorBuilder: (_, _) => Divider(
+                              height: 1,
+                              color: AppThemeColors.of(context).divider,
+                            ),
                             itemBuilder: (context, index) {
                               if (index == customers.length) {
                                 return AppPaginationBar(
@@ -352,13 +354,9 @@ class _MobileCustomerCard extends StatelessWidget {
 
     return Material(
       color: colors.card,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: colors.divider),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
+
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(

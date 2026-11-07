@@ -46,24 +46,48 @@ export class AuditLogSubscriber implements EntitySubscriberInterface {
 
     if (event.entity) {
       entityId = (event.entity as any).id;
-      nameOrRef = (event.entity as any).code || (event.entity as any).name || (event.entity as any).orderNumber || '';
+      nameOrRef = (event.entity as any).code || (event.entity as any).name || (event.entity as any).orderCode || (event.entity as any).orderNumber || '';
     } else if ((event as any).entityId) {
       entityId = (event as any).entityId;
     }
 
     let oldValue = null;
     let newValue = null;
+    // Loaded relations can contain whole customers and order items. The audit
+    // columns store a bounded scalar snapshot, not an entity graph.
+    const changed = action === 'UPDATE'
+      ? (event as UpdateEvent<any>).updatedColumns.map(column => column.propertyName)
+      : [];
+    const fields = [...new Set(['id', ...changed, ...event.metadata.columns.map(column => column.propertyName)])];
+    const snapshot = (entity: any): string | null => {
+      if (!entity) return null;
+      const values: Record<string, unknown> = {};
+      const omitted: string[] = [];
+      for (const field of fields) {
+        const value = entity[field];
+        if (value === undefined) continue;
+        const serialized = JSON.stringify({...values, [field]: value});
+        if (serialized.length <= 1400) values[field] = value;
+        else omitted.push(field);
+      }
+      if (omitted.length) {
+        values._auditIncomplete = true;
+        values._auditOmittedCount = omitted.length;
+        values._auditOmittedFields = omitted.slice(0, 8).map(field => field.slice(0, 40));
+      }
+      return JSON.stringify(values);
+    };
 
     if (action === 'UPDATE') {
       const updateEvent = event as UpdateEvent<any>;
       if (updateEvent.databaseEntity) {
-        oldValue = JSON.stringify(updateEvent.databaseEntity);
+        oldValue = snapshot(updateEvent.databaseEntity);
       }
-      newValue = JSON.stringify(updateEvent.entity);
+      newValue = snapshot(updateEvent.entity);
     } else if (action === 'CREATE') {
-      newValue = JSON.stringify(event.entity);
+      newValue = snapshot(event.entity);
     } else if (action === 'DELETE') {
-      oldValue = JSON.stringify((event as any).databaseEntity || event.entity);
+      oldValue = snapshot((event as any).databaseEntity || event.entity);
     }
 
     const logRepo = event.manager.getRepository(ActivityLog);
@@ -73,7 +97,7 @@ export class AuditLogSubscriber implements EntitySubscriberInterface {
     log.action = action;
     log.entityType = entityName;
     log.entityId = entityId;
-    log.entityName = nameOrRef;
+    log.entityName = String(nameOrRef).slice(0, 200);
     log.oldValue = oldValue as any;
     log.newValue = newValue as any;
     log.description = `Auto-audit: ${action} on ${entityName}`;

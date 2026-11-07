@@ -88,6 +88,17 @@ export const requirePermission = (
             }
 
             const shopId = req.shopId!;
+            const verified = req.authenticatedMembership;
+            // authenticateJwt already read this OWNER membership from the database.
+            // Reuse only the same active user/shop within this request. Staff and
+            // aggregate scopes continue through the full existing role checks.
+            if (verified?.memberType === 'OWNER' && verified.isActive &&
+                verified.status === 'ACTIVE' && verified.shopId === shopId &&
+                Number(verified.userId) === Number(userId)) {
+                req.isOwner = true;
+                req.memberType = 'OWNER';
+                return next();
+            }
             const member = await memberRepo.findOne({
                 where: {
                     userId,

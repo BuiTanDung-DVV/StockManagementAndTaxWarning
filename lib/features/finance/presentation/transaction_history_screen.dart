@@ -1,13 +1,17 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/finance_display.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/reporting_period.dart';
+import '../../../core/utils/excel_export_service.dart';
+import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
@@ -15,13 +19,16 @@ import '../../../core/widgets/app_page_header.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/responsive_layout.dart';
+import '../../../core/widgets/custom_date_range_picker.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/finance_provider.dart';
+import '../../settings/providers/shop_provider.dart';
 
 final _currency = NumberFormat.currency(
   locale: 'vi_VN',
   symbol: '₫',
-  decimalDigits: 0,
-);
+  decimalDigits: 2,
+)..minimumFractionDigits = 0;
 
 class TransactionHistoryScreen extends ConsumerStatefulWidget {
   final String? initialType;
@@ -43,6 +50,24 @@ class _TransactionHistoryScreenState
   int _page = 1;
   late String? _type;
   late String? _category;
+  ({int? shopId, bool allShops, String from, String to})? _listScope;
+  DateTimeRange? _rangeOverride;
+  bool _isExporting = false;
+  int _exportScopeVersion = 0;
+
+  ({String from, String to}) _period() {
+    final resolved = ref.read(tabResolvedPeriodProvider('finance'));
+    return (
+      from: (_rangeOverride?.start ?? resolved.currentFrom)
+          .toIso8601String()
+          .split('T')
+          .first,
+      to: (_rangeOverride?.end ?? resolved.currentTo)
+          .toIso8601String()
+          .split('T')
+          .first,
+    );
+  }
 
   @override
   void initState() {
@@ -53,9 +78,46 @@ class _TransactionHistoryScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      authProvider.select((s) => (s.isLoggedIn, s.user?['id']?.toString())),
+      (previous, next) {
+        if (previous != next) _exportScopeVersion++;
+      },
+    );
+    ref.listen(shopProvider, (previous, next) {
+      if (previous?.currentShopId != next.currentShopId ||
+          previous?.isAllShops != next.isAllShops ||
+          previous?.hasPermission('finance') != next.hasPermission('finance')) {
+        _exportScopeVersion++;
+      }
+    });
+    ref.listen(tabResolvedPeriodProvider('finance'), (previous, next) {
+      if (previous?.currentFrom != next.currentFrom ||
+          previous?.currentTo != next.currentTo) {
+        setState(() {
+          _rangeOverride = null;
+          _exportScopeVersion++;
+        });
+      }
+    });
     final colors = AppThemeColors.of(context);
-    final period = currentMonthReportingPeriod(DateTime.now());
-    final periodLabel = reportingCompactRangeLabel(
+    ref.watch(tabResolvedPeriodProvider('finance'));
+    final period = _period();
+    final shop = ref.watch(shopProvider);
+    final listScope = (
+      shopId: shop.currentShopId,
+      allShops: shop.isAllShops,
+      from: period.from,
+      to: period.to,
+    );
+    // Reset before constructing the query: a page from another period/shop
+    // must not be requested or shown as an empty result in the new scope.
+    if (_listScope != listScope) {
+      _listScope = listScope;
+      _page = 1;
+      _exportScopeVersion++;
+    }
+    final periodLabel = reportingRangeLabel(
       DateTime.parse(period.from),
       DateTime.parse(period.to),
     );
@@ -99,6 +161,45 @@ class _TransactionHistoryScreenState
                       'Đối soát các khoản thu, chi và phương thức thanh toán trong kỳ $periodLabel.',
                   dense: true,
                   showBackButton: false,
+                  action: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _pickPeriod,
+                        icon: const AppIcon(
+                          Icons.date_range_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Chọn kỳ'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed:
+                            _isExporting ||
+                                shop.isAllShops ||
+                                shop.currentShopId == null ||
+                                !shop.hasPermission('finance') ||
+                                (transactions.asData?.value['total'] as num? ??
+                                        0) ==
+                                    0
+                            ? null
+                            : _exportLedger,
+                        icon: const AppIcon(Icons.download_outlined, size: 18),
+                        label: Text(_isExporting ? 'Đang xuất…' : 'Xuất Excel'),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    shop.isAllShops
+                        ? 'Chọn một cửa hàng để xuất sổ thu chi.'
+                        : 'Excel gồm toàn bộ giao dịch theo kỳ và bộ lọc, kể cả các trang khác.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
                 ),
                 transactions.when(
                   loading: () => _TransactionPanel(
@@ -207,6 +308,7 @@ class _TransactionHistoryScreenState
     setState(() {
       _type = value;
       _page = 1;
+      _exportScopeVersion++;
     });
   }
 
@@ -215,11 +317,92 @@ class _TransactionHistoryScreenState
     setState(() {
       _category = null;
       _page = 1;
+      _exportScopeVersion++;
     });
   }
 
   void _goBack() {
     context.canPop() ? context.pop() : context.go('/finance');
+  }
+
+  Future<void> _pickPeriod() async {
+    final period = _period();
+    final picked = await showCustomDateRangePicker(
+      context,
+      initialRange: DateTimeRange(
+        start: DateTime.parse(period.from),
+        end: DateTime.parse(period.to),
+      ),
+    );
+    if (!mounted || picked == null) return;
+    setState(() {
+      _rangeOverride = picked;
+      _page = 1;
+      _exportScopeVersion++;
+    });
+  }
+
+  Future<void> _exportLedger() async {
+    if (_isExporting) return;
+    final shop = ref.read(shopProvider);
+    final shopId = shop.currentShopId;
+    final actor = ref.read(authProvider).user?['id']?.toString();
+    final period = _period();
+    final type = _type;
+    final category = _category;
+    final version = _exportScopeVersion;
+    bool current() {
+      if (!mounted || version != _exportScopeVersion) return false;
+      final auth = ref.read(authProvider);
+      final active = ref.read(shopProvider);
+      return auth.isLoggedIn &&
+          !auth.isOfflineSession &&
+          actor != null &&
+          auth.user?['id']?.toString() == actor &&
+          shopId != null &&
+          !active.isAllShops &&
+          active.currentShopId == shopId &&
+          active.hasPermission('finance') &&
+          _period() == period &&
+          _type == type &&
+          _category == category;
+    }
+
+    if (!current()) return;
+    setState(() => _isExporting = true);
+    try {
+      final ledger = await ref
+          .read(financeRepoProvider)
+          .exportTransactionsInShop(
+            shopId!,
+            from: period.from,
+            to: period.to,
+            type: type,
+            category: category,
+            isCurrentScope: current,
+          );
+      if (!current()) return;
+      final launched = await ExcelExportService.exportCashLedger(
+        ledger,
+        shopName: shop.currentShopName ?? 'Cửa hàng $shopId',
+      );
+      if (!current()) return;
+      if (launched) {
+        ToastService.showSuccess(
+          'Đã tạo Excel gồm ${ledger.items.length} giao dịch. Kiểm tra mục tải xuống.',
+        );
+      } else {
+        ToastService.showError('Chưa tải được tệp Excel. Vui lòng thử lại.');
+      }
+    } catch (_) {
+      if (current()) {
+        ToastService.showError(
+          'Không thể xuất sổ thu chi. Vui lòng làm mới dữ liệu rồi thử lại.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 }
 
@@ -371,7 +554,7 @@ class _FilterSummary extends StatelessWidget {
           InputChip(
             label: Text('Nhóm: ${financeCategoryLabel(category)}'),
             onDeleted: onCategoryCleared,
-            deleteIcon: const Icon(Icons.close_rounded, size: 16),
+            deleteIcon: const AppIcon(Icons.close_rounded, size: 16),
             visualDensity: VisualDensity.compact,
           ),
         ],
@@ -575,7 +758,7 @@ class _TransactionMark extends StatelessWidget {
         color: color.withValues(alpha: .1),
         borderRadius: BorderRadius.circular(11),
       ),
-      child: Icon(
+      child: AppIcon(
         isIncome ? Icons.south_west_rounded : Icons.north_east_rounded,
         size: 19,
         color: color,
@@ -664,7 +847,7 @@ class _DesktopTransactionContent extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+        AppIcon(Icons.chevron_right_rounded, color: colors.textSecondary),
       ],
     );
   }
@@ -732,7 +915,7 @@ class _MobileTransactionContent extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 2),
-        Icon(
+        AppIcon(
           Icons.chevron_right_rounded,
           size: 18,
           color: colors.textSecondary,

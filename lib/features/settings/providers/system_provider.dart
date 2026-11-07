@@ -1,3 +1,4 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,14 +80,17 @@ final systemRepoProvider = Provider<SystemRepository>((ref) {
 });
 
 final shopProfileProvider = FutureProvider<Map<String, dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.system);
   return ref.watch(systemRepoProvider).getShopProfile();
 });
 
 final paymentBanksProvider = FutureProvider<List<Map<String, String>>>((ref) {
+  watchDataFreshness(ref, DataArea.system);
   return ref.watch(systemRepoProvider).getPaymentBanks();
 });
 
 final shopPaymentQrProvider = FutureProvider<ShopPaymentQr>((ref) {
+  watchDataFreshness(ref, DataArea.system);
   return ref.watch(systemRepoProvider).getShopPaymentQr();
 });
 
@@ -102,5 +106,6 @@ final activityLogsProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   page,
 ) {
+  watchDataFreshness(ref, DataArea.audit);
   return ref.watch(systemRepoProvider).getLogs(page: page);
 });

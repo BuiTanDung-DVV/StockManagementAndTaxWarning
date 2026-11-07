@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 
@@ -104,7 +105,7 @@ class _CustomDateRangePickerContentState
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: const AppIcon(Icons.close),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -178,7 +179,7 @@ class _DateBox extends StatelessWidget {
             SizedBox(height: 8),
             Row(
               children: [
-                Icon(
+                AppIcon(
                   Icons.calendar_today,
                   size: 16,
                   color: AppColors.primaryLight,

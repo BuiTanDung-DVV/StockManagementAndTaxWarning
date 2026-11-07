@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -618,125 +619,117 @@ class _AssistantPanelHeader extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.09),
-            colors.surface,
-          ],
-        ),
+        color: colors.surface,
+        border: Border(bottom: BorderSide(color: colors.divider)),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 540;
-          return SizedBox(
-            height: compact ? 72 : 82,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: colors.divider),
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 4,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 42,
+                      height: 42,
+                      child: const AppAssetIcon(
+                        assetPath: AppAssets.assistant,
+                        size: 24,
+                        semanticLabel: 'Trợ giúp nghiệp vụ',
+                      ),
                     ),
-                    child: const AppAssetIcon(
-                      assetPath: AppAssets.aiMascot,
-                      size: 34,
-                      semanticLabel: 'Trợ giúp nghiệp vụ',
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: compact ? constraints.maxWidth - 100 : 220,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Trợ lý cửa hàng',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(
+                            'Tra cứu dữ liệu và tài liệu',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.textSecondary),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Trợ giúp nghiệp vụ',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text(
-                          compact
-                              ? 'Dữ liệu cửa hàng & tài liệu'
-                              : '● Sẵn sàng · ưu tiên nguồn đang bật',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: compact
-                                    ? colors.textMuted
-                                    : AppColors.success,
-                                fontWeight: compact
-                                    ? FontWeight.w400
-                                    : FontWeight.w600,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Tooltip(
-                    message: 'Làm mới cuộc trò chuyện',
-                    child: IconButton(
-                      tooltip: 'Làm mới',
-                      onPressed: onReset,
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.refresh_rounded, size: 20),
-                    ),
-                  ),
-                  if (showExpandAction)
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Tooltip(
-                      message: expanded
-                          ? 'Thu gọn bảng trợ giúp'
-                          : 'Mở rộng bảng trợ giúp',
-                      child: TextButton(
-                        onPressed: onToggleExpanded,
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AppAssetIcon(
-                              assetPath: expanded
-                                  ? AppAssets.collapse
-                                  : AppAssets.expand,
-                              size: 17,
-                              semanticLabel: expanded
-                                  ? 'Thu gọn bảng trợ giúp'
-                                  : 'Mở rộng bảng trợ giúp',
-                            ),
-                            const SizedBox(width: 4),
-                            Text(expanded ? 'Thu gọn' : 'Mở rộng'),
-                          ],
-                        ),
+                      message: 'Làm mới cuộc trò chuyện',
+                      child: IconButton(
+                        tooltip: 'Làm mới',
+                        onPressed: onReset,
+                        visualDensity: VisualDensity.compact,
+                        icon: const AppIcon(Icons.refresh_rounded, size: 20),
                       ),
                     ),
-                  if (compact)
-                    IconButton(
-                      tooltip: 'Nguồn dữ liệu',
-                      onPressed: onManageSources,
-                      visualDensity: VisualDensity.compact,
-                      icon: const AppAssetIcon(
-                        assetPath: AppAssets.book,
-                        size: 19,
-                        semanticLabel: 'Nguồn dữ liệu',
+                    if (showExpandAction)
+                      Tooltip(
+                        message: expanded
+                            ? 'Thu gọn bảng trợ giúp'
+                            : 'Mở rộng bảng trợ giúp',
+                        child: TextButton(
+                          onPressed: onToggleExpanded,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AppAssetIcon(
+                                assetPath: expanded
+                                    ? AppAssets.collapse
+                                    : AppAssets.expand,
+                                size: 17,
+                                semanticLabel: expanded
+                                    ? 'Thu gọn bảng trợ giúp'
+                                    : 'Mở rộng bảng trợ giúp',
+                              ),
+                              const SizedBox(width: 4),
+                              Text(expanded ? 'Thu gọn' : 'Mở rộng'),
+                            ],
+                          ),
+                        ),
                       ),
-                    )
-                  else
-                    TextButton(
-                      onPressed: onManageSources,
-                      child: const Text('Nguồn dữ liệu'),
-                    ),
-                  TextButton(onPressed: onClose, child: const Text('Đóng')),
-                ],
-              ),
+                    if (compact)
+                      IconButton(
+                        tooltip: 'Nguồn dữ liệu',
+                        onPressed: onManageSources,
+                        visualDensity: VisualDensity.compact,
+                        icon: const AppAssetIcon(
+                          assetPath: AppAssets.book,
+                          size: 19,
+                          semanticLabel: 'Nguồn dữ liệu',
+                        ),
+                      )
+                    else
+                      TextButton(
+                        onPressed: onManageSources,
+                        child: const Text('Nguồn dữ liệu'),
+                      ),
+                    TextButton(onPressed: onClose, child: const Text('Đóng')),
+                  ],
+                ),
+              ],
             ),
           );
         },
@@ -1019,7 +1012,7 @@ class _MessageBlock extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Icon(Icons.open_in_new, size: 16, color: primary),
+                      AppIcon(Icons.open_in_new, size: 16, color: primary),
                     ],
                   ),
                 ),
@@ -1263,8 +1256,8 @@ class _AssistantLauncher extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           AppAssetIcon(
-                            assetPath: AppAssets.aiMascot,
-                            size: compact ? 40 : 52,
+                            assetPath: AppAssets.assistant,
+                            size: compact ? 24 : 28,
                             semanticLabel: 'Stocky, trợ lý SmartStock',
                           ),
                           if (!compact) ...[

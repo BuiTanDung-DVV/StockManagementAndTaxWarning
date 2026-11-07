@@ -1,12 +1,22 @@
+import { randomBytes } from 'crypto';
+import { SupplierService } from './supplier.service';
+import { openingEffectCents, openingEffectValue } from '../finance/opening-balance-effects.repository';
+import { PurchaseWriteActor, PurchaseWriteError, requirePurchaseWriteAuthority, requireOpenPurchaseDay } from '../inventory/purchase-write-authorization';
+import { withOrderDebtBalances } from '../finance/order-debt-balance.repository';
+import { lockShopMutation } from '../utils/shop-mutation-lock';
 import { AppDataSource } from '../config/db.config';
+import { Invoice } from '../system/entities';
 import { InventoryStock, InventoryMovement, Warehouse, PurchaseOrder, PurchaseOrderItem, StockTake, StockTakeItem } from '../inventory/entities';
 import { Product, ProductBatch } from '../product/entities';
-import { Supplier } from '../supplier/entities';
+import { Supplier, Payable } from '../supplier/entities';
 import { COGSService } from './cogs.service';
 import { PostingService } from './posting.service';
-import { EntityManager, In } from 'typeorm';
+import { Brackets, EntityManager, In, QueryRunner } from 'typeorm';
+import { normalizePurchaseOrderQuery } from '../inventory/purchase-order-query.utils';
+import { vietnameseSearchExpression, vietnameseSearchParams } from '../common/vietnamese-search.utils';
 import {
     resolveCurrentMonthExpensePeriod,
+    resolveVietnamBusinessDayEnd,
     vietnamDateKey,
 } from '../finance/finance-period.utils';
 import { buildAllocatedMerchandiseRevenueSql } from '../sales/sales-accounting.utils';
@@ -21,6 +31,7 @@ import {
 } from '../inventory/purchase-order-input.utils';
 import { normalizeWarehouseInput } from '../inventory/inventory-master-input.utils';
 import { normalizeDatabaseBusinessDate } from '../system/data-freshness.utils';
+import { normalizeXntExportQuery, summarizeXntExport, XntExportInputError } from '../inventory/xnt-export.utils';
 
 export class InventoryService {
     private stockRepo = AppDataSource.getRepository(InventoryStock);
@@ -40,11 +51,11 @@ export class InventoryService {
         const where = warehouseId
             ? { shopId: scopedShopId, warehouseId }
             : { shopId: scopedShopId };
-        const [items, total] = await this.stockRepo.findAndCount({ 
+        const [items, total] = await this.stockRepo.findAndCount({
             where,
-            skip: (page - 1) * limit, 
+            skip: (page - 1) * limit,
             take: limit,
-            relations: ['product', 'warehouse'] 
+            relations: ['product', 'warehouse']
         });
         const productTotalRow = await this.stockRepo.createQueryBuilder('stock')
             .select('COUNT(DISTINCT stock.product_id)', 'count')
@@ -103,6 +114,7 @@ export class InventoryService {
                 p.name,
                 p.sku,
                 p.unit,
+                p.image_url,
                 COALESCE(p.min_stock, 0) AS min_stock,
                 COALESCE(SUM(s.quantity), 0) AS quantity,
                 COUNT(DISTINCT s.warehouse_id) AS warehouse_count
@@ -115,6 +127,7 @@ export class InventoryService {
                 p.name,
                 p.sku,
                 p.unit,
+                p.image_url,
                 p.min_stock
             HAVING COALESCE(SUM(s.quantity), 0) <=
                 COALESCE($2::numeric, COALESCE(p.min_stock, 0))
@@ -141,12 +154,13 @@ export class InventoryService {
                     name: row.name,
                     sku: row.sku,
                     unit: row.unit,
+                    imageUrl: row.image_url,
                     minStock,
                 },
             };
         });
     }
-    
+
     // Movements
     async getMovements(shopId: number, page = 1, limit = 20, productId?: number) {
         if (productId !== undefined) {
@@ -183,6 +197,7 @@ export class InventoryService {
 
         const query = `
             SELECT 
+                c.id AS category_id,
                 COALESCE(c.name, 'Chưa phân loại') as name,
                 COUNT(DISTINCT p.id) as sku_count,
                 COALESCE(SUM(s.quantity * p.cost_price), 0) as value
@@ -195,6 +210,7 @@ export class InventoryService {
         `;
         const result = await AppDataSource.query(query, [isArray ? shopId : shopId]);
         return result.map((r: any) => ({
+            categoryId: r.category_id == null ? 0 : Number(r.category_id),
             name: r.name,
             skuCount: Number(r.sku_count),
             value: Number(r.value)
@@ -202,69 +218,113 @@ export class InventoryService {
     }
 
     // Reports
+    async exportXntReport(shopId: number, query: Parameters<typeof normalizeXntExportQuery>[0]) {
+        if (!Number.isSafeInteger(shopId) || shopId <= 0) throw new XntExportInputError('Chọn một cửa hàng để xuất báo cáo.');
+        const { from, to, warehouseId } = normalizeXntExportQuery(query);
+        if (warehouseId !== undefined && !await this.warehouseRepo.findOne({ where: { id: warehouseId, shopId } })) {
+            throw new XntExportInputError('Kho không thuộc cửa hàng đang xem.');
+        }
+        const report = await this.getXntReport(shopId, from, to, warehouseId);
+        return {
+            shopId, period: { from, to, dateField: 'movementBusinessDate' }, warehouseId: warehouseId ?? null,
+            items: report.items, summary: summarizeXntExport(report.items)
+        };
+    }
+
     async getXntReport(shopId: number, from?: string, to?: string, warehouseId?: number) {
         const { fromDate, toDate } = resolveCurrentMonthExpensePeriod(from, to);
 
-        const qb = AppDataSource.getRepository(Product).createQueryBuilder('p')
-            .select(['p.id as id', 'p.sku as sku', 'p.name as name', 'p.unit as unit'])
-            .where('p.shop_id = :shopId', { shopId })
-            .leftJoin('inventory_movements', 'm', 'p.id = m.product_id AND m.shop_id = :shopId' + (warehouseId ? ' AND m.warehouse_id = :warehouseId' : ''))
-            .addSelect(`COALESCE(SUM(CASE WHEN m.created_at < :from AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity WHEN m.created_at < :from AND m.movement_type = 'OUT' THEN -m.quantity ELSE 0 END), 0)`, 'startQty')
-            .addSelect(`COALESCE(SUM(CASE WHEN m.created_at >= :from AND m.created_at <= :to AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity ELSE 0 END), 0)`, 'importQty')
-            .addSelect(`COALESCE(SUM(CASE WHEN m.created_at >= :from AND m.created_at <= :to AND m.movement_type = 'OUT' THEN m.quantity ELSE 0 END), 0)`, 'exportQty')
-            .addSelect(`COALESCE(SUM(CASE WHEN m.created_at <= :to AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity WHEN m.created_at <= :to AND m.movement_type = 'OUT' THEN -m.quantity ELSE 0 END), 0)`, 'endQty')
-            .groupBy('p.id')
-            .addGroupBy('p.sku')
-            .addGroupBy('p.name')
-            .addGroupBy('p.unit')
-            .setParameters({ from: fromDate, to: toDate, warehouseId, shopId });
+        return AppDataSource.transaction('REPEATABLE READ', async manager => {
+            await manager.query('SET TRANSACTION READ ONLY');
+            const [storage] = await manager.query(`SELECT to_regclass('public.opening_balance_batches') IS NOT NULL AS batches_ready,
+                to_regclass('public.opening_balance_adjustments') IS NOT NULL AS adjustments_ready`);
+            if (typeof storage?.batches_ready !== 'boolean' || typeof storage?.adjustments_ready !== 'boolean') {
+                throw new Error('Không xác định được cấu trúc số dư ban đầu.');
+            }
+            if (storage.batches_ready !== storage.adjustments_ready) throw new Error('Cấu trúc số dư ban đầu chưa đầy đủ.');
+            const openingDay = storage.batches_ready ? "WHEN 'OPENING_BALANCE' THEN ob.as_of" : '';
+            const openingAtStart = storage.batches_ready
+                ? "COALESCE(m.reference_type='OPENING_BALANCE' AND ob.as_of=CAST(:from AS date),false)" : 'false';
+            const movementDay = `COALESCE(CASE m.reference_type WHEN 'PURCHASE_ORDER' THEN (po.order_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')::date WHEN 'STOCK_TAKE' THEN st.stock_take_date WHEN 'SALES_ORDER' THEN (so.order_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')::date WHEN 'SALES_RETURN' THEN (sr.return_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')::date WHEN 'PURCHASE_WITHOUT_INVOICE' THEN pw.purchase_date WHEN 'PURCHASE_NO_INVOICE' THEN pw.purchase_date ${openingDay} END, (m.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh')::date)`;
+            const beforeStart = `(${movementDay} < CAST(:from AS date) OR (${openingAtStart}))`;
+            const inPeriod = `(${movementDay} >= CAST(:from AS date) AND ${movementDay} <= CAST(:to AS date) AND NOT (${openingAtStart}))`;
+            const qb = manager.getRepository(Product).createQueryBuilder('p')
+                .select(['p.id as id', 'p.sku as sku', 'p.name as name', 'p.unit as unit'])
+                .where('p.shop_id = :shopId', { shopId })
+                .leftJoin('inventory_movements', 'm', 'p.id = m.product_id AND m.shop_id = :shopId' + (warehouseId ? ' AND m.warehouse_id = :warehouseId' : ''))
+                .addSelect(`COALESCE(SUM(CASE WHEN ${beforeStart} AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity WHEN ${beforeStart} AND m.movement_type = 'OUT' THEN -m.quantity ELSE 0 END), 0)`, 'startQty')
+                .addSelect(`COALESCE(SUM(CASE WHEN ${inPeriod} AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity ELSE 0 END), 0)`, 'importQty')
+                .addSelect(`COALESCE(SUM(CASE WHEN ${inPeriod} AND m.movement_type = 'OUT' THEN m.quantity ELSE 0 END), 0)`, 'exportQty')
+                .addSelect(`COALESCE(SUM(CASE WHEN ${movementDay} <= CAST(:to AS date) AND m.movement_type IN ('IN', 'RETURN') THEN m.quantity WHEN ${movementDay} <= CAST(:to AS date) AND m.movement_type = 'OUT' THEN -m.quantity ELSE 0 END), 0)`, 'endQty')
+                .leftJoin('purchase_orders', 'po', "m.reference_type = 'PURCHASE_ORDER' AND po.id = m.reference_id AND po.shop_id = :shopId")
+                .leftJoin('stock_takes', 'st', "m.reference_type = 'STOCK_TAKE' AND st.id = m.reference_id AND st.shop_id = :shopId")
+                .leftJoin('sales_orders', 'so', "m.reference_type = 'SALES_ORDER' AND so.id = m.reference_id AND so.shop_id = :shopId")
+                .leftJoin('sales_returns', 'sr', "m.reference_type = 'SALES_RETURN' AND sr.id = m.reference_id AND sr.shop_id = :shopId")
+                .leftJoin('purchases_without_invoice', 'pw', "m.reference_type IN ('PURCHASE_WITHOUT_INVOICE','PURCHASE_NO_INVOICE') AND pw.id = m.reference_id AND pw.shop_id = :shopId")
+                .groupBy('p.id')
+                .addGroupBy('p.sku')
+                .addGroupBy('p.name')
+                .addGroupBy('p.unit')
+                .orderBy('p.id', 'ASC')
+                .setParameters({ from: vietnamDateKey(fromDate), to: vietnamDateKey(toDate), warehouseId, shopId });
 
-        const rows = await qb.getRawMany();
-        const items = rows.map((row) => ({
-            id: Number(row.id),
-            sku: row.sku,
-            name: row.name,
-            productName: row.name,
-            unit: row.unit || 'Đơn vị',
-            openingStock: Number(row.startQty || 0),
-            totalImport: Number(row.importQty || 0),
-            imported: Number(row.importQty || 0),
-            totalExport: Number(row.exportQty || 0),
-            exported: Number(row.exportQty || 0),
-            closingStock: Number(row.endQty || 0),
-        }));
-        const summary = items.reduce((acc, item) => ({
-            openingStock: acc.openingStock + item.openingStock,
-            totalImport: acc.totalImport + item.totalImport,
-            totalExport: acc.totalExport + item.totalExport,
-            closingStock: acc.closingStock + item.closingStock,
-            openingSkuCount: acc.openingSkuCount + (item.openingStock > 0 ? 1 : 0),
-            importedSkuCount: acc.importedSkuCount + (item.totalImport > 0 ? 1 : 0),
-            exportedSkuCount: acc.exportedSkuCount + (item.totalExport > 0 ? 1 : 0),
-            closingSkuCount: acc.closingSkuCount + (item.closingStock > 0 ? 1 : 0),
-        }), {
-            // Legacy quantity totals are retained for API compatibility only.
-            // They must not be presented as one comparable quantity when product
-            // units differ (for example bao, mét, bộ and cái).
-            openingStock: 0,
-            totalImport: 0,
-            totalExport: 0,
-            closingStock: 0,
-            openingSkuCount: 0,
-            importedSkuCount: 0,
-            exportedSkuCount: 0,
-            closingSkuCount: 0,
+            if (storage.batches_ready) {
+                qb.leftJoin('opening_balance_batches', 'ob', "m.reference_type='OPENING_BALANCE' AND ob.id=m.reference_id AND ob.shop_id=m.shop_id")
+                    .addSelect("COUNT(*) FILTER(WHERE m.reference_type='OPENING_BALANCE' AND ob.id IS NULL)", 'missingOpeningSource');
+            } else {
+                qb.addSelect("COUNT(*) FILTER(WHERE m.reference_type='OPENING_BALANCE')", 'missingOpeningSource');
+            }
+
+            const rows = await qb.getRawMany();
+            if (rows.some(row => Number(row.missingOpeningSource) > 0)) {
+                throw new Error('Thiếu nguồn số dư ban đầu của chuyển động kho; cần đối chiếu trước khi xem báo cáo.');
+            }
+            const items = rows.map((row) => ({
+                id: Number(row.id),
+                sku: row.sku,
+                name: row.name,
+                productName: row.name,
+                unit: row.unit || 'Đơn vị',
+                openingStock: Number(row.startQty || 0),
+                totalImport: Number(row.importQty || 0),
+                imported: Number(row.importQty || 0),
+                totalExport: Number(row.exportQty || 0),
+                exported: Number(row.exportQty || 0),
+                closingStock: Number(row.endQty || 0),
+            }));
+            const summary = items.reduce((acc, item) => ({
+                openingStock: acc.openingStock + item.openingStock,
+                totalImport: acc.totalImport + item.totalImport,
+                totalExport: acc.totalExport + item.totalExport,
+                closingStock: acc.closingStock + item.closingStock,
+                openingSkuCount: acc.openingSkuCount + (item.openingStock > 0 ? 1 : 0),
+                importedSkuCount: acc.importedSkuCount + (item.totalImport > 0 ? 1 : 0),
+                exportedSkuCount: acc.exportedSkuCount + (item.totalExport > 0 ? 1 : 0),
+                closingSkuCount: acc.closingSkuCount + (item.closingStock > 0 ? 1 : 0),
+            }), {
+                // Legacy quantity totals are retained for API compatibility only.
+                // They must not be presented as one comparable quantity when product
+                // units differ (for example bao, mét, bộ and cái).
+                openingStock: 0,
+                totalImport: 0,
+                totalExport: 0,
+                closingStock: 0,
+                openingSkuCount: 0,
+                importedSkuCount: 0,
+                exportedSkuCount: 0,
+                closingSkuCount: 0,
+            });
+
+            return { items, summary, from: fromDate, to: toDate };
         });
-
-        return { items, summary, from: fromDate, to: toDate };
     }
-    
+
     async getExpiringProducts(shopId: number | number[], daysAhead: number = 30) {
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + daysAhead);
         const isArray = Array.isArray(shopId);
-        
-        return this.batchRepo.createQueryBuilder('b')
+
+        const batches = await this.batchRepo.createQueryBuilder('b')
             .innerJoinAndSelect('b.product', 'p')
             .where(
                 isArray ? 'b.shop_id IN (:...shopIds)' : 'b.shop_id = :shopId',
@@ -272,15 +332,24 @@ export class InventoryService {
             )
             .andWhere('b.expiry_date IS NOT NULL')
             .andWhere('b.expiry_date <= :targetDate', { targetDate })
-            .andWhere('b.quantity > 0')
+            .andWhere('b.is_active = true')
+            .andWhere('p.shop_id = b.shop_id')
             .orderBy('b.expiry_date', 'ASC')
             .getMany();
+        if (!batches.length) return [];
+        const quantities = await AppDataSource.query(`SELECT batch_id, SUM(remaining_qty)::int AS quantity
+            FROM inventory_lots WHERE batch_id=ANY($1::int[]) AND shop_id=ANY($2::int[]) GROUP BY batch_id`,
+            [batches.map(b=>b.id), isArray ? shopId : [shopId]]);
+        const byBatch = new Map<number, number>(quantities.map((r: any)=>[Number(r.batch_id),Number(r.quantity)]));
+        return batches.map(b=>({...b, quantity: byBatch.get(b.id) ?? b.quantity,
+            quantitySource: byBatch.has(b.id) ? 'INVENTORY_LOTS' : 'LEGACY_BATCH'})).filter(b=>b.quantity>0);
     }
 
     async getSlowMovingProducts(shopId: number | number[], daysUnsold: number = 30) {
         // Products that have stock but haven't been in any sales movement for daysUnsold days
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysUnsold);
+        const asOfDate = resolveVietnamBusinessDayEnd(undefined, new Date());
         const isArray = Array.isArray(shopId);
         const shopCondition = isArray
             ? 'p.shop_id IN (:...shopIds)'
@@ -303,6 +372,15 @@ export class InventoryService {
             .leftJoin('categories', 'c', 'c.id = p.category_id')
             .where(shopCondition, shopParams)
             .andWhere('s.quantity > 0')
+            // A newly received product with no sales is not yet slow-moving.
+            // Backfilled opening stock counts from its actual business date.
+            .andWhere(`EXISTS (SELECT 1 FROM inventory_movements stock_started
+                WHERE stock_started.shop_id=p.shop_id AND stock_started.product_id=p.id
+                  AND stock_started.movement_type IN ('IN','RETURN') AND stock_started.quantity>0
+                  AND (CASE WHEN stock_started.reference_type='OPENING_BALANCE'
+                    THEN (SELECT opening.as_of::timestamp FROM opening_balance_batches opening
+                      WHERE opening.id=stock_started.reference_id AND opening.shop_id=stock_started.shop_id)
+                    ELSE stock_started.created_at END)<=:cutoff)`, {cutoff:cutoffDate})
             .andWhere((qb) => {
                 const subQuery = qb.subQuery()
                     .select('sold_item.product_id')
@@ -316,6 +394,7 @@ export class InventoryService {
                     .andWhere('sold_order.shop_id = p.shop_id')
                     .andWhere("sold_order.status != 'CANCELLED'")
                     .andWhere('sold_order.order_date >= :cutoff', { cutoff: cutoffDate })
+                    .andWhere('sold_order.order_date <= :asOf', { asOf: asOfDate })
                     .getQuery();
                 return 'p.id NOT IN ' + subQuery;
             })
@@ -338,7 +417,9 @@ export class InventoryService {
                   AND ${lastOrderShopCondition}
                   AND last_order.shop_id = p.shop_id
                   AND last_order.status != 'CANCELLED'
+                  AND last_order.order_date <= :asOf
             )`, 'lastSoldAt')
+            .setParameter('asOf', asOfDate)
             .groupBy('p.id')
             .addGroupBy('p.sku')
             .addGroupBy('p.name')
@@ -470,24 +551,90 @@ export class InventoryService {
 
 
     // Purchase Orders
-    async getPurchaseOrders(shopId: number, page = 1, limit = 20) {
-        const [items, total] = await this.poRepo.findAndCount({ 
-            where: { shopId }, 
-            skip: (page - 1) * limit, 
-            take: limit, 
-            order: { orderDate: 'DESC' },
-            relations: ['items', 'items.product', 'supplier']
+    async getPurchaseOrders(shopId: number, page = 1, limit = 20, search = '', status = '') {
+        const balanceAsOf = vietnamDateKey(new Date());
+        return AppDataSource.transaction('REPEATABLE READ', async manager => {
+            await manager.query('SET TRANSACTION READ ONLY');
+            const query = normalizePurchaseOrderQuery({ page, limit, search, status });
+            const qb = manager.getRepository(PurchaseOrder).createQueryBuilder('po')
+                .leftJoin('po.supplier', 'supplier', 'supplier.shopId = po.shopId')
+                .where('po.shopId = :shopId', { shopId })
+                .orderBy('po.orderDate', 'DESC').addOrderBy('po.id', 'DESC');
+            if (query.status) qb.andWhere('po.status = :status', { status: query.status });
+            if (query.search) {
+                qb.andWhere(new Brackets(where => {
+                    where.where(vietnameseSearchExpression('po.orderCode'));
+                    for (const field of ['po.invoiceNumber', 'po.notes', 'supplier.name', 'supplier.code']) {
+                        where.orWhere(vietnameseSearchExpression(field));
+                    }
+                    // Resolve matching order IDs once for this shop. A correlated
+                    // product scan here repeats the same text search for every order.
+                    // Keep this separate from returned items so all lines remain visible.
+                    where.orWhere(`po.id IN (SELECT search_item.order_id FROM purchase_order_items search_item
+                    JOIN products search_product ON search_product.id = search_item.product_id
+                        AND search_product.shop_id = :shopId
+                    WHERE (
+                        ${vietnameseSearchExpression('search_product.name')} OR
+                        ${vietnameseSearchExpression('search_product.sku')} OR
+                        ${vietnameseSearchExpression('search_product.barcode')}
+                    ))`);
+                }), vietnameseSearchParams(query.search));
+            }
+            // Paginate parent orders before joining their items. This avoids the
+            // ORM's separate ID-fetch round trip without cutting off order lines.
+            const pageIds = qb.clone().select('po.id')
+                .offset((query.page - 1) * query.limit).limit(query.limit);
+            const details = manager.getRepository(PurchaseOrder).createQueryBuilder('po')
+                .leftJoinAndSelect('po.items', 'item')
+                .leftJoinAndSelect('item.product', 'product', 'product.shopId = po.shopId')
+                .leftJoinAndSelect('po.supplier', 'supplier', 'supplier.shopId = po.shopId')
+                .where('po.shopId = :shopId', { shopId })
+                .andWhere(`po.id IN (${pageIds.getQuery()})`)
+                .setParameters(pageIds.getParameters())
+                .orderBy('po.orderDate', 'DESC').addOrderBy('po.id', 'DESC');
+            const [items, total] = await Promise.all([details.getMany(), qb.getCount()]);
+            return { items: await withOrderDebtBalances(manager, 'PURCHASE', items, balanceAsOf), total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) };
         });
-        return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
-    async createPurchaseOrder(shopId: number, dto: any) {
+    async getPurchaseOrder(shopId: number, id: number) {
+        const balanceAsOf = vietnamDateKey(new Date());
+        return AppDataSource.transaction('REPEATABLE READ', async manager => {
+            await manager.query('SET TRANSACTION READ ONLY');
+            const order = await manager.getRepository(PurchaseOrder).createQueryBuilder('po')
+                .leftJoinAndSelect('po.items', 'item')
+                .leftJoinAndSelect('item.product', 'product', 'product.shopId = po.shopId')
+                .leftJoinAndSelect('po.supplier', 'supplier', 'supplier.shopId = po.shopId')
+                .where('po.shopId = :shopId AND po.id = :id', { shopId, id }).getOne();
+            return order ? (await withOrderDebtBalances(manager, 'PURCHASE', [order], balanceAsOf))[0] : null;
+        });
+    }
+
+    async createPurchaseOrderForActor(shopId: number, dto: unknown, actor: PurchaseWriteActor) {
+        return this.createPurchaseOrder(shopId, dto, undefined, actor);
+    }
+    async updatePurchaseOrderForActor(shopId: number, id: number, dto: unknown, actor: PurchaseWriteActor) {
+        return this.updatePurchaseOrder(shopId, id, dto, actor);
+    }
+    async deletePurchaseOrderForActor(shopId: number, id: number, actor: PurchaseWriteActor) {
+        return this.deletePurchaseOrder(shopId, id, actor);
+    }
+
+    async createPurchaseOrder(shopId: number, dto: any, externalRunner?: QueryRunner, actor?: PurchaseWriteActor) {
         const input = normalizePurchaseOrderCreateInput(dto);
-        const queryRunner = AppDataSource.createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
+        const queryRunner = externalRunner ?? AppDataSource.createQueryRunner();
+        if (!externalRunner) {
+            await queryRunner.connect();
+            await queryRunner.startTransaction();
+        }
 
         try {
             const manager = queryRunner.manager;
+            if (actor) await manager.query("SET LOCAL lock_timeout = '5000ms'");
+            await lockShopMutation(manager, shopId);
+            if (actor) {
+                const member = await requirePurchaseWriteAuthority(manager, shopId, actor);
+                await requireOpenPurchaseDay(manager, shopId, input.orderDate, member.memberType);
+            }
 
             const targetWarehouseId = input.warehouseId
                 ? Number(input.warehouseId)
@@ -505,10 +652,11 @@ export class InventoryService {
                 .getCount();
             if (productCount !== productIds.length) throw new Error('Validation: Có sản phẩm không thuộc cửa hàng');
 
-            let totalAmount = 0;
+            let totalCents = 0n;
             const items = input.items.map((i) => {
-                const sub = i.quantity * i.unitPrice;
-                totalAmount += sub;
+                const cents = BigInt(i.quantity) * openingEffectCents(i.unitPrice);
+                totalCents += cents;
+                const sub = openingEffectValue(cents);
                 return manager.create(PurchaseOrderItem, {
                     productId: i.productId,
                     quantity: i.quantity,
@@ -517,6 +665,7 @@ export class InventoryService {
                 });
             });
 
+            const totalAmount = openingEffectValue(totalCents);
             const po = manager.create(PurchaseOrder, {
                 supplierId: input.supplierId,
                 warehouseId: targetWarehouseId,
@@ -524,7 +673,7 @@ export class InventoryService {
                 paymentDueDate: input.paymentDueDate ? new Date(`${input.paymentDueDate}T00:00:00Z`) : undefined,
                 invoiceNumber: input.invoiceNumber ?? undefined,
                 notes: input.notes ?? undefined,
-                orderCode: 'PO' + Date.now().toString().slice(-6),
+                orderCode: 'PO' + randomBytes(9).toString('hex'),
                 subtotal: totalAmount,
                 discountAmount: 0,
                 taxAmount: 0,
@@ -533,20 +682,21 @@ export class InventoryService {
                 items,
                 shopId,
                 status: 'PENDING',
+                createdBy: actor?.id,
             });
             const savedPO = await manager.save(PurchaseOrder, po);
 
-            await queryRunner.commitTransaction();
+            if (!externalRunner) await queryRunner.commitTransaction();
             return savedPO;
         } catch (error) {
-            await queryRunner.rollbackTransaction();
+            if (!externalRunner) await queryRunner.rollbackTransaction();
             throw error;
         } finally {
-            await queryRunner.release();
+            if (!externalRunner) await queryRunner.release();
         }
     }
 
-    async updatePurchaseOrder(shopId: number, id: number, dto: any) {
+    async updatePurchaseOrder(shopId: number, id: number, dto: any, actor?: PurchaseWriteActor) {
         const input = normalizePurchaseOrderUpdateInput(dto);
         const queryRunner = AppDataSource.createQueryRunner();
         await queryRunner.connect();
@@ -554,11 +704,15 @@ export class InventoryService {
 
         try {
             const manager = queryRunner.manager;
-            const po = await manager.findOne(PurchaseOrder, { 
+            if (actor) await manager.query("SET LOCAL lock_timeout = '5000ms'");
+            await lockShopMutation(manager, shopId);
+            const member = actor ? await requirePurchaseWriteAuthority(manager, shopId, actor) : undefined;
+            const po = await manager.findOne(PurchaseOrder, {
                 where: { id, shopId },
-                relations: ['items'] 
+                relations: ['items']
             });
-            if (!po) throw new Error('PurchaseOrder not found');
+            if (!po) throw new PurchaseWriteError('Không tìm thấy đơn nhập trong cửa hàng này', 404);
+            if (member) await requireOpenPurchaseDay(manager, shopId, new Date(po.orderDate), member.memberType);
 
             const currentStatus = String(po.status || 'PENDING').toUpperCase();
             const nextStatus = input.status;
@@ -572,6 +726,7 @@ export class InventoryService {
                 }
                 throw new Error('Validation: Completed or cancelled purchase order is immutable');
             }
+            await this.assertPendingPurchaseUnposted(manager, po);
 
             if (input.warehouseId) {
                 await this.assertWarehouseBelongsToShop(shopId, input.warehouseId, manager);
@@ -580,6 +735,30 @@ export class InventoryService {
 
             // If changing status from PENDING to COMPLETED, increase stock and post journal
             if (nextStatus === 'COMPLETED') {
+                const sourceInvoice = await manager.findOne(Invoice, { where: { shopId, referenceType: 'PURCHASE_ORDER', referenceId: po.id } });
+                if (sourceInvoice && Math.abs(Number(sourceInvoice.totalAmount) - Number(po.totalAmount)) > 1) {
+                    throw new PurchaseWriteError('Tổng phiếu nhập chưa khớp hóa đơn liên kết. Đối chiếu lại trước khi ghi kho.', 409);
+                }
+                try {
+                    const checked = normalizePurchaseOrderCreateInput({
+                        supplierId: po.supplierId, warehouseId: po.warehouseId,
+                        orderDate: new Date(po.orderDate).toISOString(),
+                        items: po.items.map(i => ({ productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice })),
+                    });
+                    const subtotal = checked.items.reduce((sum, i) => sum + BigInt(i.quantity) * openingEffectCents(i.unitPrice), 0n);
+                    if (subtotal !== openingEffectCents(po.subtotal) || openingEffectCents(po.discountAmount) < 0n
+                        || openingEffectCents(po.taxAmount) < 0n || openingEffectCents(po.discountAmount) > subtotal
+                        || openingEffectCents(po.totalAmount) !== subtotal - openingEffectCents(po.discountAmount) + openingEffectCents(po.taxAmount)
+                        || openingEffectCents(po.paidAmount) !== 0n) throw new Error();
+                } catch {
+                    throw new PurchaseWriteError('Cần đối chiếu dòng hàng, tổng tiền và khoản đã trả của đơn nhập trước khi hoàn tất', 409);
+                }
+                await this.assertWarehouseBelongsToShop(shopId, po.warehouseId, manager);
+                const supplier = await manager.findOne(Supplier, { where: { id: po.supplierId, shopId, isActive: true } });
+                if (!supplier) throw new PurchaseWriteError('Cần đối chiếu nhà cung cấp của đơn nhập trước khi hoàn tất', 409);
+                const productIds = po.items.map(i => i.productId);
+                const products = await manager.count(Product, { where: { id: In(productIds), shopId, isActive: true } });
+                if (products !== productIds.length) throw new PurchaseWriteError('Cần đối chiếu sản phẩm của đơn nhập trước khi hoàn tất', 409);
                 for (const item of (po.items || [])) {
                     if (item.productId && item.quantity > 0 && item.unitPrice > 0) {
                         await this.cogsService.addInventoryLot({
@@ -589,6 +768,7 @@ export class InventoryService {
                             purchaseId: po.id,
                             notes: `PO ${po.orderCode}`,
                             shopId,
+                            lotDate: new Date(po.orderDate),
                         }, manager);
                         await this.increaseStock(
                             shopId,
@@ -600,7 +780,7 @@ export class InventoryService {
                         );
                     }
                 }
-                
+
                 if (po.totalAmount > 0) {
                     await this.postingService.postJournal(
                         shopId,
@@ -611,13 +791,33 @@ export class InventoryService {
                             { accountCode: '156', amount: po.totalAmount, entryType: 'DEBIT' },
                             { accountCode: '331', amount: po.totalAmount, entryType: 'CREDIT' },
                         ],
-                        manager
+                        manager,
+                        new Date(po.orderDate),
                     );
+                    const paidAmount = Number(po.paidAmount || 0);
+                    if (Number(po.totalAmount) > paidAmount) {
+                        const supplier = await manager.findOneByOrFail(Supplier, { id: po.supplierId, shopId });
+                        const dueDate = po.paymentDueDate
+                            ? new Date(po.paymentDueDate)
+                            : new Date(po.orderDate);
+                        if (!po.paymentDueDate) dueDate.setUTCDate(dueDate.getUTCDate() + Number(supplier.paymentTermDays || 0));
+                        await manager.save(Payable, manager.create(Payable, {
+                            shopId, supplierId: po.supplierId, purchaseOrderId: po.id,
+                            amount: Number(po.totalAmount), paidAmount, dueDate,
+                            status: paidAmount > 0 ? 'PARTIAL' : 'UNPAID',
+                            notes: `Công nợ từ đơn nhập ${po.orderCode}`,
+                        }));
+                    }
                 }
             }
 
             po.status = nextStatus;
             const saved = await manager.save(PurchaseOrder, po);
+            if (nextStatus === 'COMPLETED') {
+                const supplier = await manager.findOneByOrFail(Supplier, { id: po.supplierId, shopId });
+                const balance = await new SupplierService().balanceInTransaction(manager, supplier, vietnamDateKey(new Date()));
+                await manager.update(Supplier, { id: supplier.id, shopId }, { balance });
+            }
 
             await queryRunner.commitTransaction();
             return saved;
@@ -631,13 +831,30 @@ export class InventoryService {
 
     // updatePurchaseOrder is replaced above
 
-    async deletePurchaseOrder(shopId: number, id: number) {
-        const po = await this.poRepo.findOne({ where: { id, shopId } });
-        if (po && String(po.status || 'PENDING').toUpperCase() !== 'PENDING') {
-            throw new Error('Validation: Chỉ được xóa đơn nhập đang chờ xử lý');
-        }
-        if (po) await this.poRepo.remove(po);
-        return { success: true };
+    private async assertPendingPurchaseUnposted(manager: EntityManager, po: PurchaseOrder) {
+        const [proof] = await manager.query(`SELECT
+            EXISTS(SELECT 1 FROM payables WHERE purchase_order_id=$1) OR
+            EXISTS(SELECT 1 FROM inventory_lots WHERE purchase_id=$1) OR
+            EXISTS(SELECT 1 FROM inventory_movements WHERE reference_type='PURCHASE_ORDER' AND reference_id=$1) OR
+            EXISTS(SELECT 1 FROM journal_entries WHERE reference_type='PURCHASE_ORDER' AND reference_id=$1 AND NOT is_voided) OR
+            EXISTS(SELECT 1 FROM cash_transactions WHERE reference_type='PURCHASE_ORDER' AND reference_id=$1) AS posted`, [po.id]);
+        if (proof.posted || openingEffectCents(po.paidAmount) !== 0n) throw new PurchaseWriteError('Cần đối chiếu chứng từ tiền, kho và công nợ đã liên kết với đơn nhập đang chờ trước khi thay đổi', 409);
+    }
+
+    async deletePurchaseOrder(shopId: number, id: number, actor?: PurchaseWriteActor) {
+        return AppDataSource.transaction(async manager => {
+            if (actor) await manager.query("SET LOCAL lock_timeout = '5000ms'");
+            await lockShopMutation(manager, shopId);
+            const member = actor ? await requirePurchaseWriteAuthority(manager, shopId, actor) : undefined;
+            const po = await manager.findOne(PurchaseOrder, { where: { id, shopId } });
+            if (!po) return { success: true };
+            if (member) await requireOpenPurchaseDay(manager, shopId, new Date(po.orderDate), member.memberType);
+            if (String(po.status || 'PENDING').toUpperCase() !== 'PENDING') throw new PurchaseWriteError('Chỉ được xóa đơn nhập đang chờ xử lý', 409);
+            await this.assertPendingPurchaseUnposted(manager, po);
+            await manager.delete(PurchaseOrderItem, { order: { id: po.id } });
+            await manager.delete(PurchaseOrder, { id: po.id, shopId });
+            return { success: true };
+        });
     }
 
     // Stock Takes
@@ -686,9 +903,10 @@ export class InventoryService {
 
         try {
             const manager = queryRunner.manager;
+            await lockShopMutation(manager, shopId);
             const stockTake = await manager.findOne(StockTake, { where: { id, shopId }, relations: ['items', 'items.product'] });
             if (!stockTake) throw new Error('StockTake not found');
-            
+
             const currentStatus = String(stockTake.status || 'DRAFT').toUpperCase();
             if (currentStatus !== 'DRAFT') {
                 if (input.status === currentStatus) {
@@ -706,6 +924,7 @@ export class InventoryService {
                     item.systemQty = Number(stock.quantity || 0);
                     item.difference = Number(item.actualQty) - item.systemQty;
                     if (item.difference !== 0) {
+                        await this.cogsService.adjustForStockTake(shopId, Number(productId), Number(item.difference), new Date(stockTake.stockTakeDate), manager);
                         stock.quantity = Number(item.actualQty);
                         stock.updatedAt = new Date();
                         await manager.save(InventoryStock, stock);
@@ -729,7 +948,7 @@ export class InventoryService {
             stockTake.status = input.status;
             if (input.notes !== null) stockTake.notes = input.notes;
             const saved = await manager.save(StockTake, stockTake);
-            
+
             await queryRunner.commitTransaction();
             return saved;
         } catch (error) {

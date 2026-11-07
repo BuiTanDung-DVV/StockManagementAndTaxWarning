@@ -1,3 +1,4 @@
+import { lockShopMutation } from '../utils/shop-mutation-lock';
 import { AppDataSource } from '../config/db.config';
 import {
     Customer,
@@ -11,9 +12,10 @@ import {
     ImageStorageService,
     MAX_PRODUCT_IMAGE_BYTES,
 } from './image-storage.service';
-import { Not, In } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import { SalesOrder } from '../sales/entities';
 import { calculateRemainingDebt } from '../customer/debt.utils';
+import { readOpeningBalanceEffects, openingAdjustedDebt, openingEffectCents, openingEffectValue, openingDebtEffectRows, OpeningBalanceEffects } from '../finance/opening-balance-effects.repository';
 import { classifyDebtAging } from '../customer/debt-aging.utils';
 import { resolveVietnamBusinessDayEnd } from '../finance/finance-period.utils';
 import { normalizeCustomerInput } from '../party/party-input.utils';
@@ -34,6 +36,8 @@ import {
     vietnameseSearchParams,
 } from '../common/vietnamese-search.utils';
 
+const OPEN_RECEIVABLE_REMAINING = '(receivable.amount - COALESCE(receivable.paidAmount, 0) + COALESCE(opening_effect.adjustment_amount, 0))';
+
 export class CustomerService {
     private customerRepo = AppDataSource.getRepository(Customer);
     private receivableRepo = AppDataSource.getRepository(Receivable);
@@ -44,22 +48,45 @@ export class CustomerService {
     private postingService = new PostingService();
 
     async findAll(shopId: number, page = 1, limit = 20, search?: string) {
-        const qb = this.customerRepo.createQueryBuilder('c')
-            .where('c.shopId = :shopId AND c.isActive = :isActive', { shopId, isActive: true });
-        if (search?.trim()) {
-            qb.andWhere(
-                `(${vietnameseSearchExpression('c.name')} OR ${vietnameseSearchExpression('c.phone')} OR ${vietnameseSearchExpression('c.code')})`,
-                vietnameseSearchParams(search),
-            );
-        }
-        const [items, total] = await qb.skip((page - 1) * limit).take(limit).orderBy('c.createdAt', 'DESC').getManyAndCount();
-        return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+        return this.withReceivableSnapshot(shopId, async (manager, effects, balanceAsOf) => {
+            const qb = manager.getRepository(Customer).createQueryBuilder('c')
+                .where('c.shopId = :shopId AND c.isActive = :isActive', { shopId, isActive: true });
+            if (search?.trim()) {
+                qb.andWhere(
+                    `(${vietnameseSearchExpression('c.name')} OR ${vietnameseSearchExpression('c.phone')} OR ${vietnameseSearchExpression('c.code')})`,
+                    vietnameseSearchParams(search),
+                );
+            }
+            const [items, total] = await qb.skip((page - 1) * limit).take(limit).orderBy('c.createdAt', 'DESC').addOrderBy('c.id', 'DESC').getManyAndCount();
+            return { items: await this.withCustomerBalances(manager, items, effects, balanceAsOf, shopId), total, page, limit, totalPages: Math.ceil(total / limit) };
+        });
     }
 
     async findById(shopId: number, id: number) {
-        const customer = await this.customerRepo.findOne({ where: { id, shopId } });
-        if (!customer) throw new Error('Customer not found');
-        return customer;
+        return this.withReceivableSnapshot(shopId, async (manager, effects, balanceAsOf) => {
+            const customer = await manager.findOne(Customer, { where: { id, shopId } });
+            if (!customer) throw new Error('Customer not found');
+            return (await this.withCustomerBalances(manager, [customer], effects, balanceAsOf, shopId))[0];
+        });
+    }
+
+    private async withCustomerBalances(manager: EntityManager, customers: Customer[], effects: OpeningBalanceEffects, balanceAsOf: string, shopId: number) {
+        if (!customers.length) return [];
+        const rows = await this.buildOpenReceivableQuery(shopId, normalizeReceivableListQuery({ asOf: balanceAsOf }), manager, effects, balanceAsOf)
+            .andWhere('receivable.customer_id IN (:...customerIds)', { customerIds: customers.map(customer => customer.id) })
+            .orderBy()
+            .select('receivable.customer_id', 'customerId')
+            .addSelect(`SUM(${OPEN_RECEIVABLE_REMAINING})`, 'balance')
+            .groupBy('receivable.customer_id')
+            .getRawMany();
+        const balances = new Map(rows.map(row => [Number(row.customerId), openingEffectValue(openingEffectCents(row.balance))]));
+        return customers.map(customer => ({ ...customer, balance: balances.get(customer.id) ?? 0, balanceAsOf, balanceBasis: 'CURRENT' as const }));
+    }
+
+    async balanceInTransaction(manager: EntityManager, customer: Customer, balanceAsOf: string) {
+        if (!manager.queryRunner?.isTransactionActive) throw new Error('Customer balance requires an active transaction');
+        const effects = await readOpeningBalanceEffects(manager,{shopId:customer.shopId,asOf:balanceAsOf,includeCash:false,payableIds:[]});
+        return (await this.withCustomerBalances(manager,[customer],effects,balanceAsOf,customer.shopId))[0].balance;
     }
 
     async create(shopId: number, dto: Partial<Customer>) {
@@ -67,19 +94,48 @@ export class CustomerService {
     }
 
     async update(shopId: number, id: number, dto: Partial<Customer>) {
-        const customer = await this.findById(shopId, id);
-        Object.assign(customer, normalizeCustomerInput(dto));
-        return this.customerRepo.save(customer);
+        return this.changeCustomerProfile(shopId, id, normalizeCustomerInput(dto));
     }
 
     async remove(shopId: number, id: number) {
-        const customer = await this.findById(shopId, id);
-        customer.isActive = false;
-        return this.customerRepo.save(customer);
+        return this.changeCustomerProfile(shopId, id, { isActive: false });
+    }
+
+    private async changeCustomerProfile(shopId: number, id: number, patch: Record<string, unknown>) {
+        return AppDataSource.transaction(async manager => {
+            await lockShopMutation(manager, shopId);
+            if (!await manager.findOne(Customer, { where: { id, shopId } })) throw new Error('Customer not found');
+            // Never save a read model or a stale financial balance with profile fields.
+            if (Object.keys(patch).length) await manager.update(Customer, { id, shopId }, patch);
+            const customer = await manager.findOne(Customer, { where: { id, shopId } });
+            if (!customer) throw new Error('Customer not found');
+            const balanceAsOf = vietnamDateKey(new Date());
+            const effects = await readOpeningBalanceEffects(manager, { shopId, asOf: balanceAsOf, includeCash: false, payableIds: [] });
+            return (await this.withCustomerBalances(manager, [customer], effects, balanceAsOf, shopId))[0];
+        });
     }
 
     async getReceivables(shopId: number, customerId: number) {
-        return this.receivableRepo.find({ where: { shopId, customer: { id: customerId } }, relations: ['evidences', 'paymentHistory'] });
+        return this.withReceivableSnapshot(shopId, async (manager, effects, balanceAsOf) => {
+            const records = await manager.getRepository(Receivable).createQueryBuilder('receivable')
+                .innerJoin('receivable.customer', 'customer', 'customer.shopId = :shopId', { shopId })
+                .leftJoinAndSelect('receivable.evidences', 'evidence', '(evidence.shopId = :shopId OR evidence.shopId IS NULL)', { shopId })
+                .leftJoinAndSelect('receivable.paymentHistory', 'paymentHistory', '(paymentHistory.shopId = :shopId OR paymentHistory.shopId IS NULL)', { shopId })
+                .where('receivable.shopId = :shopId AND customer.id = :customerId', { shopId, customerId })
+                .orderBy('receivable.createdAt', 'ASC').addOrderBy('receivable.id', 'ASC')
+                .getMany();
+            return records.map(record => {
+                const adjustment = effects.receivableCents.get(record.id) ?? 0n;
+                const openingEffective = (effects.receivableDates.get(record.id) ?? '') <= balanceAsOf;
+                const debt = openingEffective && record.status !== 'CANCELLED'
+                    ? openingAdjustedDebt(record.amount, record.paidAmount, adjustment) : null;
+                const remaining = openingEffectValue(debt?.remainingCents ?? 0n);
+                return {
+                    ...record, remaining, remainingAmount: remaining, openingAdjustmentAmount: openingEffectValue(adjustment),
+                    openingEffective, closedByAdjustment: debt?.closedByAdjustment ?? false, balanceAsOf, balanceBasis: 'CURRENT' as const
+                };
+            });
+        });
     }
 
     async createReceivable(shopId: number, customerId: number, dto: Partial<Receivable>) {
@@ -97,6 +153,7 @@ export class CustomerService {
         }
 
         return AppDataSource.transaction(async (manager) => {
+            await lockShopMutation(manager, shopId);
             const customer = await manager.findOne(Customer, {
                 where: { id: customerId, shopId, isActive: true },
             });
@@ -127,10 +184,17 @@ export class CustomerService {
         receivableId: number,
         recordedBy: number | undefined,
         dto: { amount?: unknown; method?: unknown; notes?: unknown },
+        now = new Date(),
     ) {
         const amount = Number(dto.amount);
         if (!Number.isFinite(amount) || amount <= 0) {
             throw new Error('Validation: Payment amount must be greater than 0');
+        }
+        let paymentCents: bigint;
+        try {
+            paymentCents = openingEffectCents(String(dto.amount).trim());
+        } catch {
+            throw new Error('Validation: Số tiền thanh toán phải có tối đa hai chữ số thập phân');
         }
         const paymentMethod = normalizeSettledPaymentMethod(
             String(dto.method || 'CASH'),
@@ -141,13 +205,15 @@ export class CustomerService {
         }
 
         return AppDataSource.transaction(async (manager) => {
+            await lockShopMutation(manager, shopId);
             const receivable = await manager.findOne(Receivable, {
                 where: { id: receivableId, shopId },
                 relations: ['customer'],
-                lock: { mode: 'pessimistic_write' },
+                // Shop mutation lock already serializes collections; do not FOR UPDATE a nullable joined customer.
+
             });
             if (!receivable) throw new Error('Receivable not found');
-            if (receivable.status === 'PAID' || receivable.status === 'CANCELLED') {
+            if (receivable.status === 'CANCELLED') {
                 throw new Error('Validation: Receivable is already closed');
             }
             if (Number(receivable.orderId) > 0) {
@@ -156,21 +222,24 @@ export class CustomerService {
                 );
             }
 
-            const payment = calculateRemainingDebt(
-                Number(receivable.amount),
-                Number(receivable.paidAmount || 0),
-            );
-            if (amount > payment) {
+            const effects = await readOpeningBalanceEffects(manager, {
+                shopId,asOf:vietnamDateKey(now),includeCash:false,receivableIds:[receivable.id],payableIds:[],
+            });
+            if ((effects.receivableDates.get(receivable.id) ?? '') > vietnamDateKey(now)) {
+                throw new Error('Validation: Khoản nợ chưa có hiệu lực tại ngày thanh toán');
+            }
+            const adjustment = effects.receivableCents.get(receivable.id) ?? 0n;
+            const before = openingAdjustedDebt(receivable.amount,receivable.paidAmount,adjustment);
+            if (before.remainingCents === 0n) throw new Error('Validation: Receivable is already closed');
+            if (paymentCents > before.remainingCents) {
                 throw new Error(
                     'Validation: Payment amount exceeds remaining receivable balance',
                 );
             }
 
-            receivable.paidAmount = Number(receivable.paidAmount || 0) + amount;
-            const remaining = calculateRemainingDebt(
-                Number(receivable.amount),
-                Number(receivable.paidAmount),
-            );
+            receivable.paidAmount = openingEffectValue(before.paidCents + paymentCents);
+            const after = openingAdjustedDebt(receivable.amount,receivable.paidAmount,adjustment);
+            const remaining = openingEffectValue(after.remainingCents);
             receivable.status = remaining === 0 ? 'PAID' : 'PARTIAL';
             await manager.save(Receivable, receivable);
 
@@ -181,7 +250,7 @@ export class CustomerService {
                     receivable,
                     amount,
                     paymentMethod,
-                    paymentDate: new Date(),
+                    paymentDate: now,
                     notes: notes || undefined,
                     recordedBy,
                 }),
@@ -191,10 +260,8 @@ export class CustomerService {
                 ? receivable.customer
                 : undefined;
             if (!customer) throw new Error('Customer not found');
-            customer.balance = Math.max(
-                Number(customer.balance || 0) - amount,
-                0,
-            );
+            const customerBalance = openingEffectCents(customer.balance || 0) - paymentCents;
+            customer.balance = openingEffectValue(customerBalance > 0n ? customerBalance : 0n);
             await manager.save(Customer, customer);
 
             await this.financeService.createCashTransaction(shopId, {
@@ -206,7 +273,7 @@ export class CustomerService {
                 referenceId: receivable.id,
                 counterparty: customer.name,
                 description: `Thu nợ khách hàng ${customer.name}`,
-                transactionDate: new Date(),
+                transactionDate: now,
                 createdBy: recordedBy,
             } as any, manager);
             await this.postingService.postJournal(
@@ -223,6 +290,7 @@ export class CustomerService {
                     { accountCode: '131', amount, entryType: 'CREDIT' },
                 ],
                 manager,
+                now,
             );
 
             return {
@@ -230,88 +298,40 @@ export class CustomerService {
                 paymentHistoryId: history.id,
                 paidAmount: Number(receivable.paidAmount),
                 remaining,
+                openingAdjustmentAmount: openingEffectValue(adjustment),
                 status: receivable.status,
             };
         });
     }
 
-    async getOpenReceivables(shopId: number) {
-        const receivables = await this.receivableRepo.find({
-            where: {
-                shopId,
-                status: Not(In(['PAID', 'CANCELLED'])),
-            },
-            relations: ['customer'],
-            order: { dueDate: 'ASC', createdAt: 'ASC' },
+    private async withReceivableSnapshot<T>(shopId: number, work: (
+        manager: EntityManager, effects: OpeningBalanceEffects, balanceAsOf: string,
+    ) => Promise<T>): Promise<T> {
+        const balanceAsOf = vietnamDateKey(new Date());
+        return AppDataSource.transaction('REPEATABLE READ', async manager => {
+            await manager.query('SET TRANSACTION READ ONLY');
+            const effects = await readOpeningBalanceEffects(manager, { shopId, asOf: balanceAsOf, includeCash: false, payableIds: [] });
+            return work(manager, effects, balanceAsOf);
         });
+    }
 
-        const openReceivables = receivables.filter(
-            (receivable) =>
-                calculateRemainingDebt(
-                    Number(receivable.amount),
-                    Number(receivable.paidAmount),
-                ) > 0,
-        );
-        const orderIds = [
-            ...new Set(
-                openReceivables
-                    .map((receivable) => Number(receivable.orderId))
-                    .filter((id) => Number.isInteger(id) && id > 0),
-            ),
-        ];
-        const orders = orderIds.length
-            ? await this.orderRepo.find({
-                where: { shopId, id: In(orderIds) },
-            })
-            : [];
-        const orderCodes = new Map(
-            orders.map((order) => [order.id, order.orderCode]),
-        );
-        const now = new Date();
-
-        return openReceivables.map((receivable) => {
-            const customer =
-                receivable.customer?.shopId === shopId
-                    ? receivable.customer
-                    : undefined;
-            const totalAmount = Number(receivable.amount);
-            const paidAmount = Number(receivable.paidAmount);
-            const remaining = calculateRemainingDebt(totalAmount, paidAmount);
-            const dueDate = new Date(receivable.dueDate);
-            const daysOverdue = dueDate < now
-                ? Math.floor(
-                    (now.getTime() - dueDate.getTime()) /
-                    (1000 * 60 * 60 * 24),
-                )
-                : 0;
-
-            return {
-                id: receivable.id,
-                customerId: customer?.id,
-                customerName: customer?.name || 'Khách hàng',
-                customerPhone:
-                    customer?.zaloPhone || customer?.phone || '',
-                orderId: receivable.orderId,
-                orderCode:
-                    orderCodes.get(Number(receivable.orderId)) ||
-                    `CN-${receivable.id}`,
-                createdAt: receivable.createdAt,
-                dueDate: receivable.dueDate,
-                totalAmount,
-                paidAmount,
-                remaining,
-                daysOverdue,
-                status: daysOverdue > 0 ? 'OVERDUE' : receivable.status,
-            };
+    async getOpenReceivables(shopId: number) {
+        const query = normalizeReceivableListQuery({});
+        return this.withReceivableSnapshot(shopId, async (manager, effects, balanceAsOf) => {
+            const records = await this.buildOpenReceivableQuery(shopId, query, manager, effects, balanceAsOf).getMany();
+            return this.mapOpenReceivableRows(shopId, records, query.asOf, manager, effects);
         });
     }
 
     private buildOpenReceivableQuery(
         shopId: number,
         query: NormalizedReceivableListQuery,
+        manager: EntityManager,
+        effects: OpeningBalanceEffects,
+        balanceAsOf: string,
     ) {
         const asOfDate = vietnamDateKey(query.asOf);
-        const qb = this.receivableRepo.createQueryBuilder('receivable')
+        const qb = manager.getRepository(Receivable).createQueryBuilder('receivable')
             .leftJoinAndSelect(
                 'receivable.customer',
                 'customer',
@@ -324,24 +344,20 @@ export class CustomerService {
                 'salesOrder.id = receivable.orderId AND salesOrder.shopId = :shopId',
                 { shopId },
             )
+            .leftJoin(
+                '(SELECT * FROM jsonb_to_recordset(CAST(:openingDebtRows AS jsonb)) AS e(id integer,adjustment_amount numeric,opening_date date))',
+                'opening_effect', 'opening_effect.id = receivable.id',
+                { openingDebtRows: JSON.stringify(openingDebtEffectRows(effects, 'RECEIVABLE')) },
+            )
             .where('receivable.shopId = :shopId', { shopId })
-            .andWhere('receivable.status NOT IN (:...closedStatuses)', {
-                closedStatuses: ['PAID', 'CANCELLED'],
-            })
-            .andWhere(
-                '(receivable.amount - COALESCE(receivable.paidAmount, 0)) > 0',
-            );
+            .andWhere('receivable.status <> :cancelled', { cancelled: 'CANCELLED' })
+            .andWhere(`${OPEN_RECEIVABLE_REMAINING} > 0`)
+            .andWhere('(opening_effect.opening_date IS NULL OR opening_effect.opening_date <= :balanceAsOf)', { balanceAsOf });
 
-        if (query.search) {
+        if (query.search?.trim()) {
             qb.andWhere(
-                `(
-                    customer.name ILIKE :search OR
-                    customer.phone ILIKE :search OR
-                    customer.zaloPhone ILIKE :search OR
-                    customer.code ILIKE :search OR
-                    salesOrder.orderCode ILIKE :search
-                )`,
-                { search: `%${query.search}%` },
+                `(${vietnameseSearchExpression('customer.name')} OR ${vietnameseSearchExpression('customer.phone')} OR ${vietnameseSearchExpression('customer.zaloPhone')} OR ${vietnameseSearchExpression('customer.code')} OR ${vietnameseSearchExpression('salesOrder.orderCode')})`,
+                vietnameseSearchParams(query.search),
             );
         }
         if (query.status === 'OVERDUE') {
@@ -351,24 +367,24 @@ export class CustomerService {
         }
 
         if (query.sort === 'REMAINING_DESC') {
-            qb.orderBy(
-                '(receivable.amount - COALESCE(receivable.paidAmount, 0))',
-                'DESC',
-            ).addOrderBy('receivable.dueDate', 'ASC');
+            qb.addSelect(OPEN_RECEIVABLE_REMAINING, 'effective_remaining_sort')
+                .orderBy('effective_remaining_sort', 'DESC').addOrderBy('receivable.dueDate', 'ASC');
         } else if (query.sort === 'CUSTOMER_ASC') {
-            qb.orderBy('LOWER(customer.name)', 'ASC')
+            qb.addSelect('LOWER(customer.name)', 'customer_name_sort').orderBy('customer_name_sort', 'ASC')
                 .addOrderBy('receivable.dueDate', 'ASC');
         } else {
             qb.orderBy('receivable.dueDate', 'ASC')
                 .addOrderBy('receivable.createdAt', 'ASC');
         }
-        return qb;
+        return qb.addOrderBy('receivable.id', 'ASC');
     }
 
     private async mapOpenReceivableRows(
         shopId: number,
         receivables: Receivable[],
         asOf: Date,
+        manager: EntityManager,
+        effects: OpeningBalanceEffects,
     ) {
         const orderIds = [
             ...new Set(
@@ -378,7 +394,7 @@ export class CustomerService {
             ),
         ];
         const orders = orderIds.length
-            ? await this.orderRepo.find({
+            ? await manager.getRepository(SalesOrder).find({
                 where: { shopId, id: In(orderIds) },
             })
             : [];
@@ -390,9 +406,10 @@ export class CustomerService {
             const customer = receivable.customer?.shopId === shopId
                 ? receivable.customer
                 : undefined;
-            const totalAmount = Number(receivable.amount);
-            const paidAmount = Number(receivable.paidAmount || 0);
-            const remaining = calculateRemainingDebt(totalAmount, paidAmount);
+            const totalAmount = openingEffectValue(openingEffectCents(receivable.amount));
+            const paidAmount = openingEffectValue(openingEffectCents(receivable.paidAmount || 0));
+            const adjustment = effects.receivableCents.get(receivable.id) ?? 0n;
+            const remaining = openingEffectValue(openingAdjustedDebt(receivable.amount, receivable.paidAmount, adjustment).remainingCents);
             const aging = classifyDebtAging(receivable.dueDate, asOf);
             return {
                 id: receivable.id,
@@ -407,42 +424,38 @@ export class CustomerService {
                 totalAmount,
                 paidAmount,
                 remaining,
+                openingAdjustmentAmount: openingEffectValue(adjustment),
                 daysOverdue: aging.daysOverdue,
-                status: aging.daysOverdue > 0 ? 'OVERDUE' : receivable.status,
+                status: aging.daysOverdue > 0 ? 'OVERDUE' : paidAmount > 0 ? 'PARTIAL' : 'UNPAID',
             };
         });
     }
 
-    private async getOpenReceivableSummary(shopId: number, asOf: Date) {
-        const asOfDate = vietnamDateKey(asOf);
-        const raw = await this.receivableRepo.createQueryBuilder('receivable')
+    private async getOpenReceivableSummary(shopId: number, query: NormalizedReceivableListQuery,
+        manager: EntityManager, effects: OpeningBalanceEffects, balanceAsOf: string) {
+        const asOfDate = vietnamDateKey(query.asOf);
+        const raw = await this.buildOpenReceivableQuery(shopId, { ...query, search: undefined, status: 'ALL', sort: 'DUE_DATE_ASC' }, manager, effects, balanceAsOf)
+            .orderBy()
             .select(
-                'COALESCE(SUM(receivable.amount - COALESCE(receivable.paidAmount, 0)), 0)',
+                `COALESCE(SUM(${OPEN_RECEIVABLE_REMAINING}), 0)`,
                 'outstanding',
             )
             .addSelect(
                 `COALESCE(SUM(
                     CASE WHEN receivable.dueDate < :asOfDate
-                    THEN receivable.amount - COALESCE(receivable.paidAmount, 0)
+                    THEN ${OPEN_RECEIVABLE_REMAINING}
                     ELSE 0 END
                 ), 0)`,
                 'overdue',
             )
             .addSelect('COUNT(*)', 'receivableCount')
-            .addSelect('COUNT(DISTINCT receivable.customer)', 'customerCount')
-            .where('receivable.shopId = :shopId', { shopId })
-            .andWhere('receivable.status NOT IN (:...closedStatuses)', {
-                closedStatuses: ['PAID', 'CANCELLED'],
-            })
-            .andWhere(
-                '(receivable.amount - COALESCE(receivable.paidAmount, 0)) > 0',
-            )
+            .addSelect('COUNT(DISTINCT receivable.customer_id)', 'customerCount')
             .setParameter('asOfDate', asOfDate)
             .getRawOne();
 
         return {
-            outstanding: Number(raw?.outstanding || 0),
-            overdue: Number(raw?.overdue || 0),
+            outstanding: openingEffectValue(openingEffectCents(raw?.outstanding || 0)),
+            overdue: openingEffectValue(openingEffectCents(raw?.overdue || 0)),
             customerCount: Number(raw?.customerCount || 0),
             receivableCount: Number(raw?.receivableCount || 0),
         };
@@ -453,24 +466,16 @@ export class CustomerService {
         input: ReceivableListQueryInput,
     ) {
         const query = normalizeReceivableListQuery(input);
-        const qb = this.buildOpenReceivableQuery(shopId, query);
-        const [receivables, total] = await qb
-            .skip((query.page - 1) * query.limit)
-            .take(query.limit)
-            .getManyAndCount();
-        const [items, summary] = await Promise.all([
-            this.mapOpenReceivableRows(shopId, receivables, query.asOf),
-            this.getOpenReceivableSummary(shopId, query.asOf),
-        ]);
-        return {
-            items,
-            total,
-            page: query.page,
-            limit: query.limit,
-            totalPages: Math.max(1, Math.ceil(total / query.limit)),
-            summary,
-            asOf: query.asOf,
-        };
+        return this.withReceivableSnapshot(shopId, async (manager, effects, balanceAsOf) => {
+            const qb = this.buildOpenReceivableQuery(shopId, query, manager, effects, balanceAsOf);
+            const [receivables, total] = await qb.skip((query.page - 1) * query.limit).take(query.limit).getManyAndCount();
+            const items = await this.mapOpenReceivableRows(shopId, receivables, query.asOf, manager, effects);
+            const summary = await this.getOpenReceivableSummary(shopId, query, manager, effects, balanceAsOf);
+            return {                
+items, total, page: query.page, limit: query.limit, totalPages: Math.max(1, Math.ceil(total / query.limit)),
+                summary, asOf: query.asOf, balanceAsOf, balanceBasis: 'CURRENT' as const            
+};
+        });
     }
 
     async exportOpenReceivables(
@@ -478,9 +483,10 @@ export class CustomerService {
         input: ReceivableListQueryInput,
     ) {
         const query = normalizeReceivableListQuery(input);
-        const receivables = await this.buildOpenReceivableQuery(shopId, query)
-            .getMany();
-        return this.mapOpenReceivableRows(shopId, receivables, query.asOf);
+        return this.withReceivableSnapshot(shopId, async (manager, effects, balanceAsOf) => {
+            const records = await this.buildOpenReceivableQuery(shopId, query, manager, effects, balanceAsOf).getMany();
+            return this.mapOpenReceivableRows(shopId, records, query.asOf, manager, effects);
+        });
     }
 
     async getDebtEvidence(shopId: number, customerId: number) {
@@ -558,131 +564,142 @@ export class CustomerService {
     }
 
     async getDebtAging(shopId: number, asOf?: string) {
-        const receivables = await this.receivableRepo.find({
-            where: { shopId, status: Not(In(['PAID', 'CANCELLED'])) },
-            relations: ['customer', 'paymentHistory'],
-        });
-
         const now = resolveVietnamBusinessDayEnd(asOf);
+        const query = normalizeReceivableListQuery({ asOf });
+        return this.withReceivableSnapshot(shopId, async (manager, effects, balanceAsOf) => {
+            const receivables = await this.buildOpenReceivableQuery(shopId, query, manager, effects, balanceAsOf)
+                .leftJoinAndSelect('receivable.paymentHistory', 'paymentHistory', '(paymentHistory.shopId = :shopId OR paymentHistory.shopId IS NULL)', { shopId })
+                .getMany();
+            const buckets = { current: 0n, past30: 0n, past60: 0n, past90: 0n };
+            let totalDebtCents = 0n;
+            let receivableCount = 0;
+            const byCustomer = new Map<number, {
+                customerId: number;
+                customerName: string;
+                total: bigint;
+                current: bigint;
+                past30: bigint;
+                past60: bigint;
+                past90: bigint;
+                overdue: bigint;
+                overdueDays: number;
+                lastPaymentDate: Date | null;
+            }>();
 
-        const buckets = { current: 0, past30: 0, past60: 0, past90: 0 };
-        let totalDebt = 0;
-        let receivableCount = 0;
-        const byCustomer = new Map<number, {
-            customerId: number;
-            customerName: string;
-            total: number;
-            current: number;
-            past30: number;
-            past60: number;
-            past90: number;
-            overdue: number;
-            overdueDays: number;
-            lastPaymentDate: Date | null;
-        }>();
+            for (const r of receivables) {
+                const remaining = openingAdjustedDebt(r.amount, r.paidAmount, effects.receivableCents.get(r.id) ?? 0n).remainingCents;
+                if (remaining <= 0n) continue;
+                receivableCount += 1;
+                totalDebtCents += remaining;
 
-        for (const r of receivables) {
-            const remaining = calculateRemainingDebt(Number(r.amount), Number(r.paidAmount));
-            if (remaining <= 0) continue;
-            receivableCount += 1;
-            totalDebt += remaining;
+                const customerId = Number(r.customer?.id || 0);
+                const customerName = r.customer?.name || 'N/A';
+                if (!byCustomer.has(customerId)) {
+                    byCustomer.set(customerId, {
+                        customerId,
+                        customerName,
+                        total: 0n,
+                        current: 0n,
+                        past30: 0n,
+                        past60: 0n,
+                        past90: 0n,
+                        overdue: 0n,
+                        overdueDays: 0,
+                        lastPaymentDate: null,
+                    });
+                }
+                const customerBucket = byCustomer.get(customerId)!;
+                customerBucket.total += remaining;
 
-            const customerId = Number(r.customer?.id || 0);
-            const customerName = r.customer?.name || 'N/A';
-            if (!byCustomer.has(customerId)) {
-                byCustomer.set(customerId, {
-                    customerId,
-                    customerName,
-                    total: 0,
-                    current: 0,
-                    past30: 0,
-                    past60: 0,
-                    past90: 0,
-                    overdue: 0,
-                    overdueDays: 0,
-                    lastPaymentDate: null,
-                });
-            }
-            const customerBucket = byCustomer.get(customerId)!;
-            customerBucket.total += remaining;
+                const aging = classifyDebtAging(r.dueDate, now);
+                buckets[aging.bucket] += remaining;
+                customerBucket[aging.bucket] += remaining;
+                if (aging.daysOverdue > 0) {
+                    customerBucket.overdue += remaining;
+                    customerBucket.overdueDays = Math.max(
+                        customerBucket.overdueDays,
+                        aging.daysOverdue,
+                    );
+                }
 
-            const aging = classifyDebtAging(r.dueDate, now);
-            buckets[aging.bucket] += remaining;
-            customerBucket[aging.bucket] += remaining;
-            if (aging.daysOverdue > 0) {
-                customerBucket.overdue += remaining;
-                customerBucket.overdueDays = Math.max(
-                    customerBucket.overdueDays,
-                    aging.daysOverdue,
-                );
-            }
-
-            if (Array.isArray(r.paymentHistory) && r.paymentHistory.length > 0) {
-                const lastPayment = r.paymentHistory
-                    .map((p) => new Date(p.paymentDate))
-                    .sort((a, b) => b.getTime() - a.getTime())[0];
-                if (!customerBucket.lastPaymentDate || lastPayment > customerBucket.lastPaymentDate) {
-                    customerBucket.lastPaymentDate = lastPayment;
+                if (Array.isArray(r.paymentHistory) && r.paymentHistory.length > 0) {
+                    const lastPayment = r.paymentHistory
+                        .map((p) => new Date(p.paymentDate))
+                        .sort((a, b) => b.getTime() - a.getTime())[0];
+                    if (!customerBucket.lastPaymentDate || lastPayment > customerBucket.lastPaymentDate) {
+                        customerBucket.lastPaymentDate = lastPayment;
+                    }
                 }
             }
-        }
 
-        const customers = Array.from(byCustomer.values())
-            .sort((a, b) => b.overdue - a.overdue || b.total - a.total)
-            .map((c) => ({
-                ...c,
-                lastPaymentDate: c.lastPaymentDate ? c.lastPaymentDate.toISOString() : null,
-            }));
+            const customers = Array.from(byCustomer.values())
+                .sort((a, b) => a.overdue === b.overdue
+                    ? a.total === b.total ? a.customerId - b.customerId : a.total > b.total ? -1 : 1
+                    : a.overdue > b.overdue ? -1 : 1)
+                .map((c) => ({
+                    ...c,
+                    total: openingEffectValue(c.total),
+                    current: openingEffectValue(c.current),
+                    past30: openingEffectValue(c.past30),
+                    past60: openingEffectValue(c.past60),
+                    past90: openingEffectValue(c.past90),
+                    overdue: openingEffectValue(c.overdue),
+                    lastPaymentDate: c.lastPaymentDate ? c.lastPaymentDate.toISOString() : null,
+                }));
 
-        const overdueDebt = buckets.past30 + buckets.past60 + buckets.past90;
-        return {
-            asOf: now,
-            buckets: {
-                ...buckets,
-                // Backward-compatible aliases for old UI keys.
-                days30: buckets.past30,
-                days60: buckets.past60,
-                days90: buckets.past90,
-                over90: buckets.past90,
-            },
-            totalDebt,
-            receivableCount,
-            customerCount: customers.length,
-            customers,
-            summary: {
+            const bucketValues = {
+                current: openingEffectValue(buckets.current),
+                past30: openingEffectValue(buckets.past30),
+                past60: openingEffectValue(buckets.past60),
+                past90: openingEffectValue(buckets.past90),
+            };
+            const totalDebt = openingEffectValue(totalDebtCents);
+            const overdueDebt = openingEffectValue(buckets.past30 + buckets.past60 + buckets.past90);
+            return {
+                asOf: now,
+                balanceAsOf,
+                balanceBasis: 'CURRENT' as const,
+                buckets: {
+                    ...bucketValues,
+                    // Backward-compatible aliases for old UI keys.
+                    days30: bucketValues.past30,
+                    days60: bucketValues.past60,
+                    days90: bucketValues.past90,
+                    over90: bucketValues.past90,
+                },
                 totalDebt,
-                overdueDebt,
                 receivableCount,
                 customerCount: customers.length,
-                currentRatio: totalDebt > 0 ? Number((buckets.current / totalDebt).toFixed(4)) : 0,
-                overdueRatio: totalDebt > 0 ? Number((overdueDebt / totalDebt).toFixed(4)) : 0,
-            },
-        };
+                customers,
+                summary: {
+                    totalDebt,
+                    overdueDebt,
+                    receivableCount,
+                    customerCount: customers.length,
+                    currentRatio: totalDebt > 0 ? Number((bucketValues.current / totalDebt).toFixed(4)) : 0,
+                    overdueRatio: totalDebt > 0 ? Number((overdueDebt / totalDebt).toFixed(4)) : 0,
+                },
+            };
+        });
     }
 
     async getOverdueDebts(shopId: number) {
-        const receivables = await this.receivableRepo.find({
-            where: { shopId, status: Not(In(['PAID', 'CANCELLED'])) },
-            relations: ['customer'],
-            order: { dueDate: 'ASC' },
-        });
-
-        const now = new Date();
-        const overdueItems = receivables
-            .filter(r => new Date(r.dueDate) < now && (Number(r.amount) - Number(r.paidAmount)) > 0)
-            .map(r => ({
-                customerId: r.customer?.id,
-                customerName: r.customer?.name || 'N/A',
-                phone: r.customer?.phone || '',
-                amount: Number(r.amount),
-                paidAmount: Number(r.paidAmount),
-                remaining: Number(r.amount) - Number(r.paidAmount),
+        const query = normalizeReceivableListQuery({ status: 'OVERDUE', sort: 'REMAINING_DESC' });
+        return this.withReceivableSnapshot(shopId, async (manager, effects, balanceAsOf) => {
+            const receivables = await this.buildOpenReceivableQuery(shopId, query, manager, effects, balanceAsOf).getMany();
+            const rows = await this.mapOpenReceivableRows(shopId, receivables, query.asOf, manager, effects);
+            return rows.map((r, index) => ({
+                customerId: r.customerId,
+                customerName: r.customerName,
+                phone: receivables[index].customer?.phone || '',
+                amount: r.totalAmount,
+                paidAmount: r.paidAmount,
+                remaining: r.remaining,
+                openingAdjustmentAmount: r.openingAdjustmentAmount,
                 dueDate: r.dueDate,
-                daysOverdue: Math.floor((now.getTime() - new Date(r.dueDate).getTime()) / (1000 * 60 * 60 * 24)),
-            }))
-            .sort((a, b) => b.remaining - a.remaining);
-
-        return overdueItems;
+                daysOverdue: r.daysOverdue,
+            }));
+        });
     }
 
 }

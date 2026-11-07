@@ -1,10 +1,230 @@
 import 'dart:convert';
+import 'package:file_saver/file_saver.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../features/finance/models/cash_ledger_export.dart';
+import '../../features/finance/models/debt_aging_export.dart';
+import '../../features/inventory/models/xnt_export.dart';
+import '../../features/products/models/product_import.dart';
+import '../../features/products/models/inventory_export.dart';
+import 'finance_display.dart';
+import 'report_xlsx_builder.dart';
 
 class ExcelExportService {
+  static Future<bool> downloadProductImportTemplate() async {
+    try {
+      final data = await rootBundle.load(productImportTemplateAsset);
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      if (kIsWeb) {
+        await FileSaver.instance.saveFile(
+          name: 'Mau_nhap_san_pham',
+          bytes: bytes,
+          fileExtension: 'xlsx',
+          mimeType: MimeType.microsoftExcel,
+        );
+        return true;
+      }
+      return launchUrl(
+        Uri.dataFromBytes(
+          bytes,
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ),
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> exportXnt(
+    XntExport report, {
+    required String shopName,
+  }) => _downloadXlsx(
+    buildXntXlsx(report, shopName: shopName),
+    'Nhap_Xuat_Ton_${report.shopId}_${report.from.replaceAll('-', '')}_${report.to.replaceAll('-', '')}.xlsx',
+  );
+
+  static Uint8List buildXntXlsx(
+    XntExport report, {
+    required String shopName,
+    DateTime? exportedAt,
+  }) =>
+      ReportXlsxBuilder.xnt(report, shopName: shopName, exportedAt: exportedAt);
+
+  static String buildXntCsv(
+    XntExport report, {
+    required String shopName,
+    DateTime? exportedAt,
+  }) {
+    String text(dynamic value) =>
+        _csvCell(_safeSpreadsheetText(value?.toString() ?? ''));
+    final buffer = StringBuffer('\uFEFF');
+    buffer.writeln('BÁO CÁO NHẬP–XUẤT–TỒN - SMARTSTOCK');
+    buffer.writeln(
+      '"Ngày xuất",${text(DateFormat('dd/MM/yyyy HH:mm').format(exportedAt ?? DateTime.now()))}',
+    );
+    buffer.writeln('"Cửa hàng",${text(shopName)}');
+    buffer.writeln('"Mã cửa hàng",${report.shopId}');
+    buffer.writeln('"Từ ngày",${text(report.from)}');
+    buffer.writeln('"Đến ngày",${text(report.to)}');
+    buffer.writeln(
+      '"Phạm vi kho",${text(report.warehouseId == null ? 'Tất cả kho' : 'Kho ID ${report.warehouseId}')}',
+    );
+    buffer.writeln('"Số sản phẩm",${report.items.length}');
+    buffer.writeln('"SKU có tồn đầu",${report.summary['openingSkuCount']}');
+    buffer.writeln('"SKU có nhập",${report.summary['importedSkuCount']}');
+    buffer.writeln('"SKU có xuất",${report.summary['exportedSkuCount']}');
+    buffer.writeln('"SKU còn tồn",${report.summary['closingSkuCount']}');
+    buffer.writeln(
+      '"Lưu ý","Theo ngày nghiệp vụ; không cộng tổng số lượng khác đơn vị. Đặt cột SKU dạng văn bản khi mở bằng Excel."',
+    );
+    buffer.writeln();
+    buffer.writeln(
+      'ID SẢN PHẨM,SKU,TÊN SẢN PHẨM,ĐƠN VỊ,TỒN ĐẦU,NHẬP,XUẤT,TỒN CUỐI',
+    );
+    for (final row in report.items) {
+      buffer.writeln(
+        [
+          row['id'],
+          text(row['sku']),
+          text(row['name']),
+          text(row['unit']),
+          row['openingStock'],
+          row['totalImport'],
+          row['totalExport'],
+          row['closingStock'],
+        ].join(','),
+      );
+    }
+    return buffer.toString();
+  }
+
+  static Future<bool> exportCashLedger(
+    CashLedgerExport ledger, {
+    required String shopName,
+  }) => _downloadXlsx(
+    buildCashLedgerXlsx(ledger, shopName: shopName),
+    'So_Thu_Chi_${ledger.shopId}_${ledger.from.replaceAll('-', '')}_${ledger.to.replaceAll('-', '')}.xlsx',
+  );
+
+  static Uint8List buildCashLedgerXlsx(
+    CashLedgerExport ledger, {
+    required String shopName,
+    DateTime? exportedAt,
+  }) => ReportXlsxBuilder.cashLedger(
+    ledger,
+    shopName: shopName,
+    exportedAt: exportedAt,
+  );
+
+  static Future<bool> _downloadXlsx(Uint8List bytes, String filename) async {
+    try {
+      if (kIsWeb) {
+        await FileSaver.instance.saveFile(
+          name: filename.replaceFirst(RegExp(r'\.xlsx$'), ''),
+          bytes: bytes,
+          fileExtension: 'xlsx',
+          mimeType: MimeType.microsoftExcel,
+        );
+        return true;
+      }
+      // Keep the existing native template/export handoff. The workbook bytes
+      // and MIME remain XLSX; only the platform's download mechanism differs.
+      return launchUrl(
+        Uri.dataFromBytes(
+          bytes,
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ),
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static String buildCashLedgerCsv(
+    CashLedgerExport ledger, {
+    required String shopName,
+    DateTime? exportedAt,
+  }) {
+    String text(dynamic value) =>
+        _csvCell(_safeSpreadsheetText(value?.toString() ?? ''));
+    final buffer = StringBuffer('\uFEFF');
+    buffer.writeln('SỔ THU CHI THEO KỲ - SMARTSTOCK');
+    buffer.writeln(
+      '"Ngày xuất",${text(DateFormat('dd/MM/yyyy HH:mm').format(exportedAt ?? DateTime.now()))}',
+    );
+    buffer.writeln('"Cửa hàng",${text(shopName)}');
+    buffer.writeln('"Từ ngày",${text(ledger.from)}');
+    buffer.writeln('"Đến ngày",${text(ledger.to)}');
+    buffer.writeln(
+      '"Bộ lọc",${text('${ledger.type == null
+          ? 'Tất cả thu chi'
+          : ledger.type == 'INCOME'
+          ? 'Thu'
+          : 'Chi'} · ${ledger.category == null ? 'Tất cả nhóm' : financeCategoryLabel(ledger.category)}')}',
+    );
+    buffer.writeln('"Số bản ghi",${ledger.items.length}');
+    buffer.writeln(
+      '"Tổng thu (VNĐ)",${CashLedgerExport.decimalAmount(ledger.incomeCents)}',
+    );
+    buffer.writeln(
+      '"Tổng chi (VNĐ)",${CashLedgerExport.decimalAmount(ledger.expenseCents)}',
+    );
+    buffer.writeln(
+      '"Dòng tiền thuần trong bộ lọc (VNĐ)",${CashLedgerExport.decimalAmount(ledger.incomeCents - ledger.expenseCents)}',
+    );
+    buffer.writeln(
+      '"Phạm vi","Ngày ghi sổ; không phải số dư quỹ hoặc báo cáo lợi nhuận"',
+    );
+    buffer.writeln();
+    buffer.writeln(
+      'MÃ GIAO DỊCH,NGÀY GHI SỔ,LOẠI,NHÓM,THU (VNĐ),CHI (VNĐ),PHƯƠNG THỨC,ĐỐI TÁC,LOẠI CHỨNG TỪ,ID THAM CHIẾU,GHI CHÚ,NHÃN,ẢNH CHỨNG TỪ',
+    );
+    for (final row in ledger.items) {
+      final amount = CashLedgerExport.decimalAmount(
+        CashLedgerExport.cents(row['amount']),
+      );
+      final tags = row['tags'];
+      buffer.writeln(
+        [
+          text(row['transactionCode']),
+          text(row['transactionDate']),
+          text(row['type'] == 'INCOME' ? 'Thu' : 'Chi'),
+          text(financeCategoryLabel(row['category']?.toString())),
+          row['type'] == 'INCOME' ? amount : '0.00',
+          row['type'] == 'EXPENSE' ? amount : '0.00',
+          text(financePaymentMethodLabel(row['paymentMethod']?.toString())),
+          text(row['counterparty']),
+          text(row['referenceType']),
+          text(row['referenceId']),
+          text(row['notes']),
+          text(tags is List ? tags.join(' · ') : tags),
+          text(row['receiptImageUrl']),
+        ].join(','),
+      );
+    }
+    return buffer.toString();
+  }
+
   /// Export Sales Orders to Excel CSV with UTF-8 BOM
-  static void exportOrdersToExcel(List<dynamic> orders) {
+  static Future<bool> exportOrdersToExcel(List<dynamic> orders) async {
+    try {
+      return await _downloadFile(
+        buildOrdersCsv(orders),
+        'Bao_Cao_Don_Hang_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
+      );
+    } on FormatException {
+      return false;
+    }
+  }
+
+  static String buildOrdersCsv(List<dynamic> orders, {DateTime? exportedAt}) {
     final StringBuffer buffer = StringBuffer();
     // Add UTF-8 BOM byte sequence so Excel opens Vietnamese characters correctly
     buffer.write('\uFEFF');
@@ -12,7 +232,7 @@ class ExcelExportService {
     // Title Header
     buffer.writeln('BÁO CÁO DANH SÁCH ĐƠN HÀNG - SMARTSTOCK');
     buffer.writeln(
-      'Ngày xuất: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+      'Ngày xuất: ${DateFormat('dd/MM/yyyy HH:mm').format(exportedAt ?? DateTime.now())}',
     );
     buffer.writeln();
 
@@ -21,55 +241,107 @@ class ExcelExportService {
       'MÃ ĐƠN,KHÁCH HÀNG,THỜI GIAN,PHƯƠNG THỨC,TỔNG TIỀN (VNĐ),TRẠNG THÁI',
     );
 
-    double totalRevenue = 0;
+    int totalCents = 0;
     for (final order in orders) {
-      final code = order['code'] ?? order['id'] ?? '';
-      final customer = (order['customer']?['name'] ?? 'Khách lẻ')
-          .toString()
-          .replaceAll(',', ' ');
-      final date = order['createdAt'] != null
-          ? DateFormat(
-              'dd/MM/yyyy HH:mm',
-            ).format(DateTime.tryParse(order['createdAt']) ?? DateTime.now())
-          : '';
-      final method = order['paymentMethod'] ?? 'CASH';
-      final total =
-          num.tryParse(order['totalAmount']?.toString() ?? '0')?.toDouble() ??
-          0.0;
-      final status = order['status'] ?? 'COMPLETED';
-
-      totalRevenue += total;
-
-      buffer.writeln('"$code","$customer","$date","$method",$total,"$status"');
+      String text(dynamic value) =>
+          _csvCell(_safeSpreadsheetText(value?.toString() ?? ''));
+      final code = order['orderCode'] ?? order['code'] ?? order['id'] ?? '';
+      final customer =
+          order['customer']?['name'] ?? order['customerName'] ?? 'Khách lẻ';
+      final rawDate =
+          (order['orderDate'] ?? order['transactionDate'] ?? order['createdAt'])
+              ?.toString() ??
+          '';
+      final parsedDate = DateTime.tryParse(rawDate);
+      final localDate = parsedDate?.isUtc == true
+          ? parsedDate!.add(const Duration(hours: 7))
+          : parsedDate;
+      final date = localDate == null
+          ? rawDate
+          : DateFormat(
+              rawDate.length <= 10 ? 'dd/MM/yyyy' : 'dd/MM/yyyy HH:mm',
+            ).format(localDate);
+      final amount = CashLedgerExport.cents(
+        order['totalAmount'] ?? order['amount'],
+      );
+      totalCents += amount;
+      if (totalCents.abs() > 9007199254740991) {
+        throw const FormatException(
+          'Tổng giá trị đơn vượt giới hạn xuất chính xác.',
+        );
+      }
+      buffer.writeln(
+        [
+          text(code),
+          text(customer),
+          text(date),
+          text(financePaymentMethodLabel(order['paymentMethod']?.toString())),
+          CashLedgerExport.decimalAmount(amount),
+          text(order['status']),
+        ].join(','),
+      );
     }
 
     buffer.writeln();
-    buffer.writeln('TỔNG CỘNG DOANH THU,,,,$totalRevenue,');
+    buffer.writeln(
+      'TỔNG GIÁ TRỊ ĐƠN TRONG DANH SÁCH,,,,${CashLedgerExport.decimalAmount(totalCents)},',
+    );
+    return buffer.toString();
+  }
 
-    _downloadFile(
-      buffer.toString(),
-      'Bao_Cao_Don_Hang_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
+  /// Export the complete scoped receivables result as a typed Excel workbook.
+  static Future<bool> exportCustomerDebtsToExcel(
+    List<dynamic> debts, {
+    int? shopId,
+    String? shopName,
+    String? filterDescription,
+  }) {
+    return _downloadXlsx(
+      buildCustomerDebtsXlsx(
+        debts,
+        shopId: shopId,
+        shopName: shopName,
+        filterDescription: filterDescription,
+      ),
+      'So_No_Khach_Hang_${shopId == null ? '' : '${shopId}_'}${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx',
     );
   }
 
-  /// Export Customer Debt Ledger to Excel CSV
-  static Future<bool> exportCustomerDebtsToExcel(List<dynamic> debts) {
-    return _downloadFile(
-      buildCustomerDebtsCsv(debts),
-      'So_No_Khach_Hang_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
-    );
-  }
+  static Uint8List buildCustomerDebtsXlsx(
+    List<dynamic> debts, {
+    int? shopId,
+    String? shopName,
+    String? filterDescription,
+    DateTime? exportedAt,
+  }) => ReportXlsxBuilder.customerDebts(
+    debts,
+    shopId: shopId,
+    shopName: shopName,
+    filterDescription: filterDescription,
+    exportedAt: exportedAt,
+  );
 
   static Future<bool> exportDebtAgingToExcel(
-    Map<String, dynamic> report, {
+    DebtAgingExport report, {
+    required String shopName,
     DateTime? exportedAt,
   }) {
     final exportTime = exportedAt ?? DateTime.now();
-    return _downloadFile(
-      buildDebtAgingCsv(report, exportedAt: exportTime),
-      'Bao_Cao_Tuoi_No_${DateFormat('yyyyMMdd').format(exportTime)}.csv',
+    return _downloadXlsx(
+      buildDebtAgingXlsx(report, shopName: shopName, exportedAt: exportTime),
+      'Bao_Cao_Tuoi_No_${report.shopId}_${report.asOf.replaceAll('-', '')}.xlsx',
     );
   }
+
+  static Uint8List buildDebtAgingXlsx(
+    DebtAgingExport report, {
+    required String shopName,
+    DateTime? exportedAt,
+  }) => ReportXlsxBuilder.debtAging(
+    report,
+    shopName: shopName,
+    exportedAt: exportedAt,
+  );
 
   static String buildDebtAgingCsv(
     Map<String, dynamic> report, {
@@ -90,6 +362,11 @@ class ExcelExportService {
     buffer.writeln(
       'Ngày đối chiếu: ${_csvCell(report['asOf']?.toString() ?? '')}',
     );
+    if (report['balanceBasis'] == 'CURRENT') {
+      buffer.writeln(
+        '"Cơ sở số dư",${_csvCell('Dư nợ hiện tại tại ${report['balanceAsOf'] ?? ''}; ngày đối chiếu dùng để phân nhóm tuổi nợ.')}',
+      );
+    }
     buffer.writeln();
     buffer.writeln('NHÓM NỢ,SỐ TIỀN (VNĐ)');
     buffer.writeln('${_csvCell('Chưa đến hạn')},${amount('current')}');
@@ -123,6 +400,8 @@ class ExcelExportService {
   static String buildCustomerDebtsCsv(
     List<dynamic> debts, {
     DateTime? exportedAt,
+    String? shopName,
+    String? filterDescription,
   }) {
     final StringBuffer buffer = StringBuffer();
     buffer.write('\uFEFF');
@@ -132,13 +411,22 @@ class ExcelExportService {
     buffer.writeln(
       'Ngày xuất: ${DateFormat('dd/MM/yyyy HH:mm').format(exportTime)}',
     );
+    if (shopName != null && shopName.trim().isNotEmpty) {
+      buffer.writeln('"Cửa hàng",${_csvCell(_safeSpreadsheetText(shopName))}');
+    }
+    if (filterDescription != null && filterDescription.trim().isNotEmpty) {
+      buffer.writeln(
+        '"Bộ lọc",${_csvCell(_safeSpreadsheetText(filterDescription))}',
+      );
+    }
+    buffer.writeln('"Số bản ghi",${debts.length}');
     buffer.writeln();
 
     buffer.writeln(
-      'TÊN KHÁCH HÀNG,SỐ ĐIỆN THOẠI,MÃ ĐƠN NỢ,NGÀY MUA,TỔNG NỢ (VNĐ),ĐÃ TRẢ (VNĐ),CÒN NỢ (VNĐ)',
+      'TÊN KHÁCH HÀNG,SỐ ĐIỆN THOẠI,MÃ ĐƠN NỢ,NGÀY MUA,NỢ GỐC (VNĐ),ĐÃ THU (VNĐ),ĐIỀU CHỈNH ĐẦU KỲ (VNĐ),CÒN NỢ (VNĐ)',
     );
 
-    double totalRemainingDebt = 0;
+    int totalRemainingCents = 0;
     for (final item in debts) {
       final name = _safeSpreadsheetText(
         (item['customerName'] ?? 'Khách lẻ').toString(),
@@ -151,24 +439,35 @@ class ExcelExportService {
       final date = parsedDate == null
           ? ''
           : DateFormat('dd/MM/yyyy').format(parsedDate);
-      final total =
-          num.tryParse(item['totalAmount']?.toString() ?? '0')?.toDouble() ??
-          0.0;
-      final paid =
-          num.tryParse(item['paidAmount']?.toString() ?? '0')?.toDouble() ??
-          0.0;
-      final remaining = (total - paid).clamp(0, double.infinity).toDouble();
-
-      totalRemainingDebt += remaining;
+      final total = CashLedgerExport.cents(item['totalAmount']);
+      final paid = CashLedgerExport.cents(item['paidAmount'] ?? 0);
+      final adjustment = CashLedgerExport.cents(
+        item['openingAdjustmentAmount'] ?? 0,
+        signed: true,
+      );
+      final calculated = total - paid + adjustment;
+      final remaining = item['remaining'] == null
+          ? (calculated < 0 ? 0 : calculated)
+          : CashLedgerExport.cents(item['remaining']);
+      totalRemainingCents += remaining;
+      if (totalRemainingCents > 9007199254740991) {
+        throw const FormatException(
+          'Tổng công nợ vượt giới hạn xuất chính xác',
+        );
+      }
 
       buffer.writeln(
         '${_csvCell(name)},${_csvCell(phone)},${_csvCell(code)},'
-        '${_csvCell(date)},$total,$paid,$remaining',
+        '${_csvCell(date)},${CashLedgerExport.decimalAmount(total)},'
+        '${CashLedgerExport.decimalAmount(paid)},${CashLedgerExport.decimalAmount(adjustment)},'
+        '${CashLedgerExport.decimalAmount(remaining)}',
       );
     }
 
     buffer.writeln();
-    buffer.writeln('TỔNG NỢ CẦN THU CÒN LẠI,,,,,,$totalRemainingDebt');
+    buffer.writeln(
+      'TỔNG NỢ CẦN THU CÒN LẠI,,,,,,,${CashLedgerExport.decimalAmount(totalRemainingCents)}',
+    );
 
     return buffer.toString();
   }
@@ -239,17 +538,28 @@ class ExcelExportService {
     return buffer.toString();
   }
 
-  /// Export Inventory Items to Excel CSV
+  /// Export a validated server snapshot, including the user's selection.
   static Future<bool> exportInventoryToExcel(
-    List<dynamic> products, {
+    InventoryExport report, {
+    required String shopName,
     DateTime? exportedAt,
   }) {
     final exportTime = exportedAt ?? DateTime.now();
-    return _downloadFile(
-      buildInventoryCsv(products, exportedAt: exportTime),
-      'Bao_Cao_Ton_Kho_${DateFormat('yyyyMMdd').format(exportTime)}.csv',
+    return _downloadXlsx(
+      buildInventoryXlsx(report, shopName: shopName, exportedAt: exportTime),
+      'Bao_Cao_Ton_Kho_${report.shopId}_${DateFormat('yyyyMMdd').format(exportTime)}.xlsx',
     );
   }
+
+  static Uint8List buildInventoryXlsx(
+    InventoryExport report, {
+    required String shopName,
+    DateTime? exportedAt,
+  }) => ReportXlsxBuilder.inventory(
+    report,
+    shopName: shopName,
+    exportedAt: exportedAt,
+  );
 
   static String _safeSpreadsheetText(String value) {
     final trimmedLeft = value.trimLeft();
@@ -269,7 +579,21 @@ class ExcelExportService {
   static Future<bool> _downloadFile(String content, String fileName) async {
     try {
       final bytes = utf8.encode(content);
-      final uri = Uri.dataFromBytes(bytes, mimeType: 'text/csv;charset=utf-8');
+      if (kIsWeb) {
+        await FileSaver.instance.saveFile(
+          name: fileName.replaceFirst(RegExp(r'\.csv$'), ''),
+          bytes: Uint8List.fromList(bytes),
+          fileExtension: 'csv',
+          mimeType: MimeType.csv,
+        );
+        // The browser accepted the download request; it owns final disk saving.
+        return true;
+      }
+      final uri = Uri.dataFromBytes(
+        bytes,
+        mimeType: 'text/csv',
+        parameters: {'charset': 'utf-8'},
+      );
       return await launchUrl(uri);
     } catch (_) {
       return false;

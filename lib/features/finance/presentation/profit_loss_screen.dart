@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -72,7 +73,8 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
     try {
       final shop = ref.read(shopProvider);
       final shopProfile = ref.read(shopProfileProvider).value ?? {};
-      final shopName = shop.currentShopName ??
+      final shopName =
+          shop.currentShopName ??
           shopProfile['shopName']?.toString() ??
           'Hộ kinh doanh SmartStock';
       final shopTaxCode = shopProfile['taxCode']?.toString() ?? '';
@@ -133,7 +135,7 @@ class _ProfitLossScreenState extends ConsumerState<ProfitLossScreen> {
           if (currentAsync.value != null)
             IconButton(
               tooltip: 'In / Xuất PDF báo cáo',
-              icon: const Icon(Icons.picture_as_pdf_outlined),
+              icon: const AppIcon(Icons.picture_as_pdf_outlined),
               onPressed: () => _printReport(_Pnl.fromMap(currentAsync.value!)),
             ),
           featureGuideButton(context, 'profit_loss'),
@@ -308,6 +310,7 @@ class _Pnl {
   final double grossProfit;
   final double expenses;
   final double netProfit;
+  final List<Map<String, dynamic>>? expenseEntries;
 
   const _Pnl({
     required this.revenue,
@@ -315,6 +318,7 @@ class _Pnl {
     required this.grossProfit,
     required this.expenses,
     required this.netProfit,
+    this.expenseEntries,
   });
 
   factory _Pnl.fromMap(Map<String, dynamic> value) => _Pnl(
@@ -325,6 +329,9 @@ class _Pnl {
       value['operatingExpenses'] ?? value['expenses'],
     ),
     netProfit: TypeParser.asDouble(value['netProfit']),
+    expenseEntries: (value['operatingExpenseEntries'] as List?)
+        ?.map((item) => Map<String, dynamic>.from(item as Map))
+        .toList(),
   );
 
   bool get isEmpty => revenue == 0 && cogs == 0 && expenses == 0;
@@ -369,12 +376,12 @@ class _ReportHeading extends StatelessWidget {
     );
     final action = OutlinedButton.icon(
       onPressed: onChange,
-      icon: const Icon(Icons.calendar_month_rounded, size: 18),
+      icon: const AppIcon(Icons.calendar_month_rounded, size: 18),
       label: const Text('Đổi kỳ báo cáo'),
     );
     final printButton = FilledButton.tonalIcon(
       onPressed: onPrint,
-      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+      icon: const AppIcon(Icons.picture_as_pdf_outlined, size: 18),
       label: const Text('Xuất PDF'),
     );
     return LayoutBuilder(
@@ -396,10 +403,7 @@ class _ReportHeading extends StatelessWidget {
                 Expanded(child: copy),
                 const SizedBox(width: 16),
                 action,
-                if (onPrint != null) ...[
-                  const SizedBox(width: 8),
-                  printButton,
-                ],
+                if (onPrint != null) ...[const SizedBox(width: 8), printButton],
               ],
             ),
     );
@@ -535,6 +539,71 @@ class _Statement extends StatelessWidget {
     required this.formatter,
   });
 
+  void _showExpenses(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chi phí vận hành trong kỳ'),
+        content: SizedBox(
+          width: 600,
+          height: 400,
+          child: current.expenseEntries == null
+              ? const Text('Chưa tải được chi tiết. Vui lòng làm mới báo cáo.')
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tổng: ${formatter(current.expenses)}'),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: current.expenseEntries!.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'Không có chi phí vận hành trong kỳ.',
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: current.expenseEntries!.length,
+                              separatorBuilder: (_, _) => const Divider(),
+                              itemBuilder: (_, index) {
+                                final item = current.expenseEntries![index];
+                                final date = DateTime.tryParse(
+                                  item['date']?.toString() ?? '',
+                                );
+                                return ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    item['description']?.toString() ??
+                                        'Chi phí vận hành',
+                                  ),
+                                  subtitle: date == null
+                                      ? null
+                                      : Text(
+                                          DateFormat(
+                                            'dd/MM/yyyy',
+                                          ).format(date.toLocal()),
+                                        ),
+                                  trailing: Text(
+                                    formatter(
+                                      TypeParser.asDouble(item['amount']),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
@@ -609,6 +678,7 @@ class _Statement extends StatelessWidget {
                             data: row,
                             revenue: current.revenue,
                             formatter: formatter,
+                            onShowExpenses: () => _showExpenses(context),
                           ),
                         )
                         .toList(),
@@ -617,6 +687,7 @@ class _Statement extends StatelessWidget {
                     rows: rows,
                     revenue: current.revenue,
                     formatter: formatter,
+                    onShowExpenses: () => _showExpenses(context),
                   ),
           ),
         ],
@@ -628,9 +699,11 @@ class _Statement extends StatelessWidget {
 class _StatementTable extends StatelessWidget {
   final List<_RowData> rows;
   final double revenue;
+  final VoidCallback onShowExpenses;
   final String Function(num value, {bool signed}) formatter;
 
   const _StatementTable({
+    required this.onShowExpenses,
     required this.rows,
     required this.revenue,
     required this.formatter,
@@ -670,7 +743,9 @@ class _StatementTable extends StatelessWidget {
             ),
             children: [
               _Cell(
-                onTap: () => context.push(row.route),
+                onTap: () => row.route == '/expense-ledger'
+                    ? onShowExpenses()
+                    : context.push(row.route),
                 left: true,
                 child: Row(
                   children: [
@@ -685,7 +760,7 @@ class _StatementTable extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Icon(
+                    AppIcon(
                       Icons.chevron_right_rounded,
                       size: 18,
                       color: colors.textSecondary,
@@ -821,9 +896,11 @@ class _Money extends StatelessWidget {
 class _MobileRow extends StatelessWidget {
   final _RowData data;
   final double revenue;
+  final VoidCallback onShowExpenses;
   final String Function(num value, {bool signed}) formatter;
 
   const _MobileRow({
+    required this.onShowExpenses,
     required this.data,
     required this.revenue,
     required this.formatter,
@@ -836,7 +913,9 @@ class _MobileRow extends StatelessWidget {
         ? null
         : data.current - data.previous!;
     return InkWell(
-      onTap: () => context.push(data.route),
+      onTap: () => data.route == '/expense-ledger'
+          ? onShowExpenses()
+          : context.push(data.route),
       child: Container(
         constraints: const BoxConstraints(minHeight: 76),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -905,7 +984,7 @@ class _MobileRow extends StatelessWidget {
                 ),
               ],
             ),
-            Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+            AppIcon(Icons.chevron_right_rounded, color: colors.textSecondary),
           ],
         ),
       ),
@@ -1079,7 +1158,7 @@ class _AccountingNote extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.info_outline_rounded, size: 16, color: color),
+        AppIcon(Icons.info_outline_rounded, size: 16, color: color),
         const SizedBox(width: 7),
         Expanded(
           child: Text(

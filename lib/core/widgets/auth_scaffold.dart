@@ -1,3 +1,4 @@
+import '../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -353,6 +354,35 @@ class AuthScaffold extends StatelessWidget {
   }
 }
 
+class _AuthBrandMark extends StatelessWidget {
+  final double size;
+  const _AuthBrandMark({this.size = 44});
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: size,
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      // The original launcher asset has wide white margins. Crop those margins
+      // in layout so the existing logo remains legible at header size.
+      child: OverflowBox(
+        minWidth: size * 1.5,
+        maxWidth: size * 1.5,
+        minHeight: size * 1.5,
+        maxHeight: size * 1.5,
+        child: Image.asset(
+          AppAssets.appIcon,
+          width: size * 1.5,
+          height: size * 1.5,
+          fit: BoxFit.contain,
+          excludeFromSemantics: true,
+          errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+        ),
+      ),
+    ),
+  );
+}
+
 class _MobileBrandHeader extends StatelessWidget {
   final bool canPop;
   final VoidCallback? onPop;
@@ -373,22 +403,13 @@ class _MobileBrandHeader extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                padding: const EdgeInsets.all(4),
-                child: const AppAssetIcon(
-                  assetPath: AppAssets.parcelBox,
-                  size: 24,
-                  semanticLabel: 'SmartStock',
-                ),
-              ),
+              const _AuthBrandMark(),
               const SizedBox(width: 8),
               Text(
                 'SmartStock',
                 style: GoogleFonts.manrope(
-                  color: const Color(0xFF17332F),
-                  fontSize: 16,
+                  color: AppThemeColors.of(context).textPrimary,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
                 ),
@@ -444,30 +465,7 @@ class _DesktopBrandSide extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: isCompact ? 36 : 44,
-                height: isCompact ? 36 : 44,
-                padding: EdgeInsets.all(isCompact ? 4 : 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFC7E2ED).withValues(alpha: 0.6),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: AppAssetIcon(
-                  assetPath: AppAssets.parcelBox,
-                  size: isCompact ? 24 : 32,
-                  semanticLabel: 'SmartStock',
-                ),
-              ),
+              _AuthBrandMark(size: isCompact ? 40 : 48),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -666,7 +664,7 @@ class _BrandCapabilityItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          const Icon(
+          const AppIcon(
             Icons.check_circle_outline_rounded,
             size: 18,
             color: Color(0xFF0F766E),

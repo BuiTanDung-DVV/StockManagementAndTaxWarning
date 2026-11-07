@@ -27,6 +27,10 @@ String financeCategoryLabel(String? category) {
       return 'Doanh thu bán hàng';
     case 'DEBT_COLLECTION':
       return 'Thu công nợ';
+    case 'DEBT_PAYMENT':
+      return 'Trả nợ nhà cung cấp';
+    case 'TAX':
+      return 'Nộp thuế';
     case 'OTHER':
     case null:
     case '':

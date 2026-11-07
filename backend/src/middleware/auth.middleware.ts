@@ -15,9 +15,12 @@ export interface AuthRequest extends Request {
   shopIds?: number[];
   isOwner?: boolean;
   memberType?: string;
+  /** Database-verified membership for this request only; never cached across requests. */
+  authenticatedMembership?: Pick<ShopMember, 'userId' | 'shopId' | 'isActive' | 'status' | 'memberType'>;
 }
 
 export const authenticateJwt = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  req.authenticatedMembership = undefined;
   let token: string | undefined;
   const authHeader = req.headers.authorization;
   
@@ -101,6 +104,7 @@ export const authenticateJwt = async (req: AuthRequest, res: Response, next: Nex
             return res.status(403).json({ success: false, message: 'Forbidden: You do not have access to this shop' });
           }
           req.shopId = shopId;
+          req.authenticatedMembership = isMember;
       }
     }
 

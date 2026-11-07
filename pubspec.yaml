@@ -40,8 +40,13 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   file_picker: ^12.1.0
   file_saver: ^0.3.1
+  archive: ^4.0.9
+  xml: ^6.6.1
   pdf: ^3.11.3
   printing: ^5.14.2
+  sembast: ^3.9.0
+  sembast_web: ^2.4.6+1
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +61,7 @@ flutter:
     - assets/lottie/
     - assets/icon/
     - assets/fonts/
+    - assets/templates/
 
 flutter_launcher_icons:
   android: true

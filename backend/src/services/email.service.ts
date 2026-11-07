@@ -22,11 +22,13 @@ export class EmailService {
         }
     }
 
-    async sendOtp(email: string, otpCode: string): Promise<boolean> {
+    async sendOtp(email: string, otpCode: string, purpose?: 'PROFILE_EMAIL' | 'EMAIL_CHANGE_OLD' | 'EMAIL_CHANGE_NEW'): Promise<boolean> {
         try {
             if (!this.transporter) {
-                if (process.env.OTP_DEBUG_RESPONSE === 'true') {
-                    console.log(`[Email Service - DEBUG] OTP for ${email}: ${otpCode}`);
+                const isProduction = process.env.NODE_ENV === 'production'
+                    || process.env.VERCEL_ENV === 'production';
+                if (!isProduction && process.env.OTP_DEBUG_RESPONSE === 'true') {
+                    console.info('[Email Service] Delivery result', { outcome: 'debug_only' });
                     return true;
                 }
                 console.error('[Email Service] SMTP is not configured');
@@ -71,7 +73,13 @@ export class EmailService {
                                   <h1 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #09090b; letter-spacing: -0.4px;">Mã xác thực của bạn</h1>
                                   
                                   <p style="margin: 0 0 28px 0; font-size: 14px; line-height: 1.6; color: #52525b;">
-                                    Sử dụng mã OTP bên dưới để hoàn tất đăng ký hoặc khôi phục mật khẩu tài khoản SmartStock.
+                                    ${purpose === 'PROFILE_EMAIL'
+                                        ? 'Sử dụng mã bên dưới để xác minh Gmail hiện có trong hồ sơ SmartStock. Mã này không dùng để đổi Gmail hoặc đặt lại mật khẩu.'
+                                        : purpose === 'EMAIL_CHANGE_OLD'
+                                            ? 'Bạn đang yêu cầu đổi Gmail của tài khoản SmartStock. Dùng mã này để xác nhận quyền sở hữu Gmail hiện tại. Nếu không phải bạn yêu cầu, không cung cấp mã và hãy kiểm tra bảo mật tài khoản.'
+                                            : purpose === 'EMAIL_CHANGE_NEW'
+                                                ? 'Dùng mã này để xác nhận Gmail mới cho tài khoản SmartStock. Gmail hiện tại chỉ được thay khi hoàn tất các bước xác nhận.'
+                                        : 'Sử dụng mã OTP bên dưới để hoàn tất đăng ký hoặc khôi phục mật khẩu tài khoản SmartStock.'}
                                   </p>
 
                                   <!-- OTP Display Card -->
@@ -109,14 +117,59 @@ export class EmailService {
                 `,
             };
 
-            await this.transporter.sendMail(mailOptions);
-            return true;
+            return await this.deliver(email, mailOptions);
         } catch (error) {
-            console.error(
-                '[Email Service] Error sending email:',
-                error instanceof Error ? error.message : 'Unknown error'
-            );
-            return false;
+            return this.deliveryError(error);
         }
+    }
+
+    async sendEmailChanged(email: string, destination: 'OLD' | 'NEW'): Promise<boolean> {
+        if (!this.transporter) return false;
+        try {
+            return await this.deliver(email, {
+                from: `"SmartStock" <${process.env.SMTP_USER}>`, to: email,
+                subject: 'Gmail đăng nhập SmartStock đã được cập nhật',
+                text: destination === 'OLD'
+                    ? 'Gmail này không còn là địa chỉ đăng nhập và khôi phục của tài khoản SmartStock vừa thực hiện thay đổi. Nếu không phải bạn thực hiện, hãy liên hệ hỗ trợ và kiểm tra bảo mật tài khoản.'
+                    : 'Gmail này đã được xác minh và trở thành địa chỉ đăng nhập, khôi phục của tài khoản SmartStock. Nếu tài khoản có liên kết Google, liên kết cũng đã chuyển sang Google tương ứng. Dữ liệu và quyền cửa hàng được giữ nguyên.',
+            });
+        } catch (error) {
+            return this.deliveryError(error);
+        }
+    }
+
+    private async deliver(email: string, mailOptions: nodemailer.SendMailOptions): Promise<boolean> {
+            const result = await this.transporter!.sendMail(mailOptions);
+            const recipient = email.trim().toLowerCase();
+            const accepted = Array.isArray(result.accepted) ? result.accepted : [];
+            const rejected = Array.isArray(result.rejected) ? result.rejected : [];
+            const matchesRecipient = (value: string | { address?: string }) =>
+                (typeof value === 'string' ? value : value.address)?.trim().toLowerCase() === recipient;
+            const deliveredToSmtp = accepted.some(matchesRecipient)
+                && !rejected.some(matchesRecipient);
+            // SMTP acceptance is observable; delivery to the recipient's inbox is not.
+            console.info('[Email Service] Delivery result', {
+                outcome: deliveredToSmtp ? 'smtp_accepted' : 'smtp_not_accepted',
+                acceptedCount: accepted.length,
+                rejectedCount: rejected.length,
+            });
+            return deliveredToSmtp;
+    }
+
+    private deliveryError(error: unknown): false {
+            const detail = error as { code?: unknown; responseCode?: unknown } | null;
+            const allowedCodes = new Set([
+                'EAUTH', 'ETIMEDOUT', 'ESOCKET', 'ECONNECTION', 'ECONNREFUSED',
+                'EDNS', 'EENVELOPE', 'EMESSAGE', 'ESTREAM', 'ETLS',
+            ]);
+            const code = typeof detail?.code === 'string' && allowedCodes.has(detail.code)
+                ? detail.code : 'UNKNOWN';
+            const status = Number(detail?.responseCode);
+            console.error('[Email Service] Delivery failed', {
+                code,
+                smtpStatus: Number.isInteger(status) && status >= 400 && status <= 599
+                    ? status : null,
+            });
+            return false;
     }
 }

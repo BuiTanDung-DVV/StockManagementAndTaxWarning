@@ -1,10 +1,14 @@
 import { AppDataSource } from '../config/db.config';
+import { config } from '../config/env.config';
+import { normalizeInvoiceScanQuery } from '../finance/invoice-scan-query.utils';
+import { normalizeReceiptTemplateConfig } from '../system/receipt-template.utils';
 import { ShopProfile, ActivityLog, AiKnowledgeDocument, InvoiceScan, Invoice } from '../system/entities';
 import { PurchaseWithoutInvoice } from '../finance/entities';
 import {
     ImageStorageError,
     ImageStorageService,
     ProductImageUploadRequest,
+    receiptLogoKeyFromPublicUrl,
 } from './image-storage.service';
 import {
     decodePaymentQrImage,
@@ -55,7 +59,7 @@ export class SystemService {
         const allowedFields: (keyof ShopProfile)[] = [
             'shopName', 'phone', 'address', 'taxCode', 'email', 'website',
             'ownerName', 'ownerIdentityNumber', 'businessLicenseNumber',
-            'receiptFooter', 'receiptTemplateConfig', 'costingMethod', 'businessSector',
+            'receiptFooter', 'costingMethod', 'businessSector',
             'applyVatReduction', 'customVatRate', 'customPitRate',
             'bankId', 'bankAccount', 'bankName', 'accountHolder',
         ];
@@ -64,7 +68,21 @@ export class SystemService {
         }
 
         if (dto.receiptTemplateConfig !== undefined) {
-            profile.receiptTemplateConfig = this.normalizeReceiptTemplateConfig(dto.receiptTemplateConfig);
+            const normalized = normalizeReceiptTemplateConfig(dto.receiptTemplateConfig);
+            if (normalized.logoUrl) {
+                const key = receiptLogoKeyFromPublicUrl(shopId, String(normalized.logoUrl), config.cloudinaryCloudName);
+                if (!key) throw new Error('Validation: Logo phiếu không thuộc cửa hàng đang chọn');
+                if (profile.receiptTemplateConfig?.logoUrl !== normalized.logoUrl) {
+                    try {
+                        const confirmed = await this.imageStorageService.confirmReceiptLogo(shopId, key);
+                        normalized.logoUrl = confirmed.imageUrl;
+                    } catch (error) {
+                        if (error instanceof ImageStorageError) throw new Error(`Validation: ${error.message}`);
+                        throw error;
+                    }
+                }
+            }
+            profile.receiptTemplateConfig = normalized;
         }
 
         if (dto.bankId !== undefined) {
@@ -78,33 +96,9 @@ export class SystemService {
         return this.profileRepo.save(profile);
     }
 
-    private normalizeReceiptTemplateConfig(value: unknown) {
-        if (!value || typeof value !== 'object' || Array.isArray(value)) {
-            throw new Error('Validation: Cấu hình phiếu in không hợp lệ');
-        }
-        const raw = value as Record<string, unknown>;
-        const paperSize = String(raw.paperSize || '80mm');
-        if (!['80mm', 'A4'].includes(paperSize)) {
-            throw new Error('Validation: Khổ giấy chỉ hỗ trợ 80mm hoặc A4');
-        }
-        const title = String(raw.title || 'PHIẾU BÁN HÀNG').trim();
-        const footer = String(raw.footer || '').trim();
-        if (!title || title.length > 100 || footer.length > 500) {
-            throw new Error('Validation: Tiêu đề hoặc chân trang phiếu in không hợp lệ');
-        }
-        const flag = (key: string, fallback = true) => raw[key] === undefined ? fallback : Boolean(raw[key]);
-        return {
-            paperSize,
-            title,
-            footer,
-            showLogo: flag('showLogo'),
-            showShopInfo: flag('showShopInfo'),
-            showCustomer: flag('showCustomer'),
-            showSku: flag('showSku'),
-            showDiscount: flag('showDiscount'),
-            showPayment: flag('showPayment'),
-            showQr: flag('showQr'),
-        };
+    async uploadReceiptLogo(shopId: number, request: ProductImageUploadRequest, bytes: Buffer) {
+        await this.getShopProfile(shopId);
+        return this.imageStorageService.uploadReceiptLogo(shopId, request, bytes);
     }
 
     async getShopPaymentQr(shopId: number) {
@@ -270,15 +264,25 @@ export class SystemService {
         return this.scanRepo.save(this.scanRepo.create({ ...dto, shopId, scanCode: 'SCN' + Date.now().toString().slice(-6) }));
     }
 
-    async getInvoiceScans(shopId: number, page = 1, limit = 20) {
-        const safePage = Math.max(page, 1);
-        const safeLimit = Math.min(Math.max(limit, 1), 100);
-        const [items, total] = await this.scanRepo.findAndCount({
-            where: { shopId },
-            order: { scannedAt: 'DESC' },
-            skip: (safePage - 1) * safeLimit,
-            take: safeLimit,
+    async getInvoiceScans(shopId: number, page = 1, limit = 20, filters: {
+        search?: unknown; status?: unknown; from?: unknown; to?: unknown;
+    } = {}) {
+        const query = normalizeInvoiceScanQuery({ ...filters, page, limit });
+        const { page: safePage, limit: safeLimit } = query;
+        const qb = this.scanRepo.createQueryBuilder('scan')
+            .leftJoinAndMapOne('scan.invoice', Invoice, 'invoice',
+                "scan.referenceType = 'INVOICE' AND invoice.id = scan.referenceId AND invoice.shopId = scan.shopId")
+            .where('scan.shopId = :shopId', { shopId });
+        if (query.status) qb.andWhere('scan.status = :status', { status: query.status });
+        if (query.search) qb.andWhere(`(scan.scanCode ILIKE :search OR scan.ocrParsedData ILIKE :search
+            OR scan.confirmedData ILIKE :search OR invoice.invoiceNumber ILIKE :search OR invoice.partnerName ILIKE :search)`,
+            { search: `%${query.search.replace(/[\\%_]/g, '\\$&')}%` });
+        if (query.period) qb.andWhere('scan.scannedAt BETWEEN :from AND :to', {
+            from: query.period.fromDate, to: query.period.toDate,
         });
+        // IDs reflect insertion order even when imported documents carry older/future dates.
+        const [items, total] = await qb.orderBy('scan.id', 'DESC')
+            .skip((safePage - 1) * safeLimit).take(safeLimit).getManyAndCount();
         return {
             items,
             total,

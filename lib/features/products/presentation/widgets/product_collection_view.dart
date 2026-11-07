@@ -1,8 +1,10 @@
+import '../../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/assets/app_assets.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tag_colors.dart';
 import '../../../../core/utils/type_parser.dart';
 import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/product_network_image.dart';
@@ -26,8 +28,14 @@ class ProductCollectionView extends StatelessWidget {
   final ValueChanged<int> onToggleSelect;
   final ValueChanged<Map<String, dynamic>> onProductTap;
   final List<String> topProductNames;
+  final Map<String, Color> tagColors;
   final ScrollController scrollController;
   final Future<void> Function() onRefresh;
+
+  /// Server-paginated collections can participate in the page's single scroll.
+  final bool embedded;
+  final bool? selectAllState;
+  final VoidCallback? onSelectAll;
 
   const ProductCollectionView({
     super.key,
@@ -37,39 +45,367 @@ class ProductCollectionView extends StatelessWidget {
     required this.onToggleSelect,
     required this.onProductTap,
     required this.topProductNames,
+    this.tagColors = const {},
     required this.scrollController,
     required this.onRefresh,
+    this.embedded = false,
+    this.selectAllState = false,
+    this.onSelectAll,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return RefreshIndicator(
-      color: theme.colorScheme.primary,
-      onRefresh: onRefresh,
-      child: viewMode == ProductViewMode.list
-          ? _buildListView(context)
-          : _buildGridView(context),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tableLayout =
+            viewMode == ProductViewMode.list &&
+            constraints.maxWidth >=
+                600 * (MediaQuery.textScalerOf(context).scale(14) / 14);
+        final collection = viewMode == ProductViewMode.list
+            ? _buildListView(context)
+            : _buildGridView(context);
+        final content = tableLayout
+            ? collection
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (onSelectAll != null)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: viewMode == ProductViewMode.grid ? 8 : 0,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        children: [
+                          _selectAllCheckbox(),
+                          const Expanded(child: Text('Sản phẩm')),
+                        ],
+                      ),
+                    ),
+                  if (embedded) collection else Expanded(child: collection),
+                ],
+              );
+        final surface = viewMode == ProductViewMode.grid
+            ? DecoratedBox(
+                key: const Key('product-grid-surface'),
+                decoration: BoxDecoration(
+                  color: AppThemeColors.of(context).bg,
+                  border: Border.symmetric(
+                    horizontal: BorderSide(
+                      color: AppThemeColors.of(context).divider,
+                    ),
+                  ),
+                ),
+                child: content,
+              )
+            : content;
+        if (embedded) return surface;
+        return RefreshIndicator(
+          color: Theme.of(context).colorScheme.primary,
+          onRefresh: onRefresh,
+          child: surface,
+        );
+      },
     );
   }
 
   Widget _buildListView(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        if (constraints.maxWidth >= 600 * scale) {
+          final table = _buildTable(context, scale);
+          if (embedded) return table;
+          return SingleChildScrollView(
+            controller: scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: table,
+          );
+        }
+        return _buildCompactList(context);
+      },
+    );
+  }
+
+  Widget _selectAllCheckbox() => Tooltip(
+    message: 'Chọn tất cả sản phẩm khớp bộ lọc, gồm các trang khác',
+    child: Checkbox(
+      key: const Key('product-select-all-checkbox'),
+      tristate: true,
+      value: selectAllState,
+      onChanged: onSelectAll == null ? null : (_) => onSelectAll!(),
+      semanticLabel: 'Chọn tất cả kết quả lọc',
+    ),
+  );
+
+  Widget _buildTable(BuildContext context, double scale) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    final priceWidth = 112 * scale;
+    final stockWidth = 96 * scale;
+
+    Widget heading(String text, {bool numeric = false}) => Text(
+      text,
+      textAlign: numeric ? TextAlign.end : TextAlign.start,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: c.textSecondary,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+
+    return Container(
+      key: const Key('product-desktop-table'),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(embedded ? 0 : 12),
+        border: embedded ? null : Border.all(color: c.divider),
+      ),
+      child: Column(
+        children: [
+          Container(
+            color: c.cardAlt,
+            padding: const EdgeInsets.fromLTRB(8, 4, 40, 4),
+            child: Semantics(
+              header: true,
+              child: Row(
+                children: [
+                  _selectAllCheckbox(),
+                  const SizedBox(width: 4),
+                  Expanded(child: heading('Sản phẩm')),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: priceWidth,
+                    child: heading('Giá bán', numeric: true),
+                  ),
+                  const SizedBox(width: 20),
+                  SizedBox(
+                    width: stockWidth,
+                    child: heading('Tồn kho', numeric: true),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          for (final raw in items) ...[
+            Divider(height: 1, color: c.divider),
+            Builder(
+              builder: (context) {
+                final product = raw as Map<String, dynamic>;
+                final id = TypeParser.asInt(product['id']);
+                final name =
+                    product['name']?.toString() ?? 'Sản phẩm không tên';
+                final stock = TypeParser.asDouble(
+                  product['currentStock'] ?? product['stock'],
+                );
+                final minStock = TypeParser.asDouble(
+                  product['minStock'] ??
+                      product['minimumStock'] ??
+                      product['min_stock'],
+                );
+                final unit = product['unit']?.toString().trim() ?? '';
+                final price = TypeParser.asDouble(
+                  product['sellingPrice'] ??
+                      product['sellPrice'] ??
+                      product['retailPrice'],
+                );
+                final selected = selectedProductIds.contains(id);
+                final status = stock <= 0
+                    ? 'Hết hàng'
+                    : productIsLowStock(stock, minStock)
+                    ? 'Sắp hết'
+                    : null;
+                final stockText = stock == stock.roundToDouble()
+                    ? stock.toInt().toString()
+                    : stock.toString();
+                final numberStyle = theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: c.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                );
+                return Material(
+                  key: ValueKey('product-list-$id'),
+                  color: selected
+                      ? theme.colorScheme.primary.withValues(alpha: 0.06)
+                      : Colors.transparent,
+                  child: InkWell(
+                    onTap: () => onProductTap(product),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 10, 16, 10),
+                      child: Row(
+                        children: [
+                          Semantics(
+                            label: selected ? 'Bỏ chọn $name' : 'Chọn $name',
+                            child: Checkbox(
+                              key: Key('product-select-checkbox-$id'),
+                              value: selected,
+                              onChanged: (_) => onToggleSelect(id),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: ProductNetworkImage(
+                                    key: ValueKey('product-table-image-$id'),
+                                    imageUrl:
+                                        product['imageUrl']?.toString() ?? '',
+                                    width: 44,
+                                    height: 44,
+                                    semanticLabel: 'Ảnh sản phẩm $name',
+                                    fallback: ColoredBox(
+                                      color: c.surface,
+                                      child: SizedBox.square(
+                                        dimension: 44,
+                                        child: AppAssetIcon(
+                                          assetPath: AppAssets.inventory,
+                                          size: 20,
+                                          color: c.textMuted,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Tooltip(
+                                        message: name,
+                                        child: Text(
+                                          name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: c.textPrimary,
+                                              ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 3,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
+                                        children: [
+                                          Text(
+                                            'SKU: ${product['sku'] ?? 'Chưa có'}',
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: c.textSecondary,
+                                                ),
+                                          ),
+                                          _ProductTagsRow(
+                                            tagsRaw: product['tags'],
+                                            stock: stock,
+                                            p: product,
+                                            topProductNames: topProductNames,
+                                            tagColors: tagColors,
+                                            maxTags: 2,
+                                            includeStockStatus: false,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          SizedBox(
+                            width: priceWidth,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _currFmt.format(price),
+                                  style: numberStyle,
+                                  textAlign: TextAlign.end,
+                                ),
+                                if (unit.isNotEmpty)
+                                  Text(
+                                    '/ $unit',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: c.textSecondary,
+                                    ),
+                                    textAlign: TextAlign.end,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          SizedBox(
+                            width: stockWidth,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '$stockText${unit.isEmpty ? '' : ' $unit'}',
+                                  style: numberStyle,
+                                  textAlign: TextAlign.end,
+                                ),
+                                if (status != null)
+                                  Text(
+                                    status,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: stock <= 0
+                                          ? AppColors.danger
+                                          : AppColors.warning,
+                                    ),
+                                    textAlign: TextAlign.end,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          AppIcon(
+                            Icons.chevron_right_rounded,
+                            size: 16,
+                            color: c.textMuted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactList(BuildContext context) {
     return ListView.separated(
-      controller: scrollController,
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, AppSpacing.lg),
+      controller: embedded ? null : scrollController,
+      primary: false,
+      shrinkWrap: embedded,
+      physics: embedded
+          ? const NeverScrollableScrollPhysics()
+          : const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+      separatorBuilder: (context, _) =>
+          Divider(height: 1, color: AppThemeColors.of(context).divider),
       itemBuilder: (ctx, i) {
         final p = items[i] as Map<String, dynamic>;
         final id = TypeParser.asInt(p['id']);
         final isSelected = selectedProductIds.contains(id);
         return _ProductListItemCard(
+          key: ValueKey('product-list-$id'),
           product: p,
           id: id,
           isSelected: isSelected,
           topProductNames: topProductNames,
+          tagColors: tagColors,
           onToggleSelect: () => onToggleSelect(id),
           onTap: () => onProductTap(p),
         );
@@ -79,28 +415,28 @@ class ProductCollectionView extends StatelessWidget {
 
   Widget _buildGridView(BuildContext context) {
     final textScaler = MediaQuery.textScalerOf(context);
-    final cardHeight = textScaler.scale(320.0).clamp(300.0, 480.0);
+    final cardHeight = 252.0 + (textScaler.scale(130) - 130).clamp(0, 180);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 1200
+        final crossAxisCount = width >= 1140
             ? 4
-            : (width >= 860 ? 3 : (width >= 560 ? 2 : 1));
+            : (width >= 760 ? 3 : (width >= 500 ? 2 : 1));
 
         return GridView.builder(
-          controller: scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            0,
-            AppSpacing.sm,
-            0,
-            AppSpacing.lg,
-          ),
+          key: const Key('product-grid-view'),
+          controller: embedded ? null : scrollController,
+          primary: false,
+          shrinkWrap: embedded,
+          physics: embedded
+              ? const NeverScrollableScrollPhysics()
+              : const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: AppSpacing.sm,
-            mainAxisSpacing: AppSpacing.sm,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
             mainAxisExtent: cardHeight,
           ),
           itemCount: items.length,
@@ -109,10 +445,12 @@ class ProductCollectionView extends StatelessWidget {
             final id = TypeParser.asInt(p['id']);
             final isSelected = selectedProductIds.contains(id);
             return _ProductGridItemCard(
+              key: ValueKey('product-grid-$id'),
               product: p,
               id: id,
               isSelected: isSelected,
               topProductNames: topProductNames,
+              tagColors: tagColors,
               onToggleSelect: () => onToggleSelect(id),
               onTap: () => onProductTap(p),
             );
@@ -128,14 +466,17 @@ class _ProductListItemCard extends StatelessWidget {
   final int id;
   final bool isSelected;
   final List<String> topProductNames;
+  final Map<String, Color> tagColors;
   final VoidCallback onToggleSelect;
   final VoidCallback onTap;
 
   const _ProductListItemCard({
+    super.key,
     required this.product,
     required this.id,
     required this.isSelected,
     required this.topProductNames,
+    this.tagColors = const {},
     required this.onToggleSelect,
     required this.onTap,
   });
@@ -144,203 +485,139 @@ class _ProductListItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
-    final p = product;
-    final name = p['name']?.toString() ?? 'Sản phẩm không tên';
+    final name = product['name']?.toString() ?? 'Sản phẩm không tên';
     final price = TypeParser.asDouble(
-      p['sellingPrice'] ?? p['sellPrice'] ?? p['retailPrice'],
+      product['sellingPrice'] ?? product['sellPrice'] ?? product['retailPrice'],
     );
-    final stock = p['currentStock'] ?? p['stock'] ?? 0;
-    final minStock = TypeParser.asDouble(
-      p['minStock'] ?? p['minimumStock'] ?? p['min_stock'],
+    final stock = TypeParser.asDouble(
+      product['currentStock'] ?? product['stock'],
     );
-    final unit = p['unit']?.toString().trim();
-    final displayUnit = (unit == null || unit.isEmpty) ? 'đơn vị' : unit;
-    final imageUrl = p['imageUrl']?.toString() ?? '';
-    final isOutOfStock = stock <= 0;
-
-    final stockBadge = AppBadge(
-      label: isOutOfStock ? 'Hết hàng' : 'Còn tồn: $stock $displayUnit',
-      color: isOutOfStock
-          ? AppColors.danger
-          : (productIsLowStock(stock, minStock)
-                ? AppColors.warning
-                : AppColors.success),
+    final min = TypeParser.asDouble(
+      product['minStock'] ?? product['minimumStock'] ?? product['min_stock'],
     );
+    final unit = product['unit']?.toString().trim() ?? '';
+    final stockNumber = stock == stock.roundToDouble()
+        ? stock.toInt().toString()
+        : stock.toString();
+    final stockText = stock <= 0
+        ? 'Hết hàng'
+        : 'Tồn $stockNumber${unit.isEmpty ? '' : ' $unit'}';
+    final attention = stock <= 0 || productIsLowStock(stock, min);
 
-    final priceLabel = Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          _currFmt.format(price),
-          style: GoogleFonts.manrope(
-            fontWeight: FontWeight.w800,
-            fontSize: 14,
-            color: c.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          '/ $displayUnit',
-          style: TextStyle(
-            fontSize: 11,
-            color: c.textSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-
-    final veryCompact = MediaQuery.sizeOf(context).width < 520;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isSelected
-            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.2)
-            : c.card,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(
-          color: isSelected
-              ? theme.colorScheme.primary.withValues(alpha: 0.5)
-              : c.divider,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Row(
-              children: [
-                // Selection Checkbox
-                Semantics(
-                  label: isSelected ? 'Bỏ chọn $name' : 'Chọn $name',
-                  child: Checkbox(
-                    key: Key('product-select-checkbox-$id'),
-                    value: isSelected,
-                    onChanged: (_) => onToggleSelect(),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
+    return Material(
+      color: isSelected ? c.primarySubtle : c.card,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                label: isSelected ? 'Bỏ chọn $name' : 'Chọn $name',
+                child: Checkbox(
+                  key: Key('product-select-checkbox-$id'),
+                  value: isSelected,
+                  onChanged: (_) => onToggleSelect(),
                 ),
-                const SizedBox(width: 8),
-
-                // Product Image
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: c.divider.withValues(alpha: 0.4),
-                      width: 1,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(13),
-                    child: ProductNetworkImage(
-                      imageUrl: imageUrl,
-                      width: 64,
-                      height: 64,
-                      semanticLabel: 'Ảnh sản phẩm $name',
-                      fallback: _buildImageFallback(context),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        name,
-                        style: GoogleFonts.manrope(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: c.textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'SKU: ${p['sku'] ?? 'N/A'}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: c.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (p['description'] != null &&
-                          p['description'].toString().trim().isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          p['description'].toString().trim(),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: c.textSecondary,
-                            fontStyle: FontStyle.italic,
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: ProductNetworkImage(
+                    imageUrl: product['imageUrl']?.toString() ?? '',
+                    width: 48,
+                    height: 48,
+                    semanticLabel: 'Ảnh sản phẩm $name',
+                    fallback: ColoredBox(
+                      color: c.cardAlt,
+                      child: SizedBox.square(
+                        dimension: 48,
+                        child: Center(
+                          child: AppAssetIcon(
+                            assetPath: AppAssets.inventory,
+                            size: 22,
+                            color: c.textMuted,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      product['sku']?.toString() ?? 'Chưa có SKU',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: c.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _currFmt.format(price),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: c.textPrimary,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            stockText,
+                            textAlign: TextAlign.end,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: attention
+                                  ? (stock <= 0
+                                        ? AppColors.danger
+                                        : AppColors.warning)
+                                  : c.textSecondary,
+                            ),
+                          ),
                         ),
                       ],
-                      const SizedBox(height: 4),
-                      _ProductTagsRow(
-                        tagsRaw: p['tags'],
-                        stock: stock,
-                        p: p,
-                        topProductNames: topProductNames,
-                      ),
-                      const SizedBox(height: 6),
-                      if (veryCompact)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [stockBadge, const Spacer(), priceLabel],
-                        )
-                      else
-                        stockBadge,
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 4),
+                    _ProductTagsRow(
+                      tagsRaw: product['tags'],
+                      stock: stock,
+                      p: product,
+                      topProductNames: topProductNames,
+                      tagColors: tagColors,
+                      includeStockStatus: false,
+                      maxTags: 2,
+                    ),
+                  ],
                 ),
-
-                if (!veryCompact) ...[
-                  const SizedBox(width: AppSpacing.xs),
-                  priceLabel,
-                  const SizedBox(width: AppSpacing.xs),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: c.textMuted,
-                    size: 20,
-                  ),
-                ],
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+            ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildImageFallback(BuildContext context) {
-    final theme = Theme.of(context);
-    final c = AppThemeColors.of(context);
-    return Container(
-      color: c.cardAlt,
-      alignment: Alignment.center,
-      child: AppAssetIcon(
-        assetPath: AppAssets.inventory,
-        color: theme.colorScheme.primary,
-        size: 22,
-        semanticLabel: 'Sản phẩm chưa có ảnh',
       ),
     );
   }
@@ -351,14 +628,17 @@ class _ProductGridItemCard extends StatelessWidget {
   final int id;
   final bool isSelected;
   final List<String> topProductNames;
+  final Map<String, Color> tagColors;
   final VoidCallback onToggleSelect;
   final VoidCallback onTap;
 
   const _ProductGridItemCard({
+    super.key,
     required this.product,
     required this.id,
     required this.isSelected,
     required this.topProductNames,
+    this.tagColors = const {},
     required this.onToggleSelect,
     required this.onTap,
   });
@@ -390,146 +670,132 @@ class _ProductGridItemCard extends StatelessWidget {
                 : AppColors.success),
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isSelected
-            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.2)
-            : c.card,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(
+    return Material(
+      color: isSelected
+          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.18)
+          : c.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
           color: isSelected
-              ? theme.colorScheme.primary.withValues(alpha: 0.5)
-              : c.divider,
+              ? theme.colorScheme.primary
+              : Color.alphaBlend(
+                  c.textSecondary.withValues(alpha: 0.12),
+                  c.divider,
+                ),
+          width: isSelected ? 2 : 1,
         ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top row with Checkbox and Stock badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Semantics(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 116,
+              child: Stack(
+                children: [
+                  Center(
+                    child: ProductNetworkImage(
+                      imageUrl: imageUrl,
+                      width: 100,
+                      height: 100,
+                      semanticLabel: 'Ảnh sản phẩm $name',
+                      fallback: AppAssetIcon(
+                        assetPath: AppAssets.inventory,
+                        size: 32,
+                        color: c.textMuted,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 2,
+                    top: 2,
+                    child: Semantics(
                       label: isSelected ? 'Bỏ chọn $name' : 'Chọn $name',
                       child: Checkbox(
                         key: Key('product-select-checkbox-$id'),
                         value: isSelected,
                         onChanged: (_) => onToggleSelect(),
                         visualDensity: VisualDensity.compact,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
-                    stockBadge,
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                // Image in center
-                Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: c.divider.withValues(alpha: 0.4),
+                  ),
+                  Positioned(right: 10, top: 10, child: stockBadge),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Tooltip(
+                      message: name,
+                      child: Text(
+                        name,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: c.textPrimary,
+                          height: 1.35,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(13),
-                      child: ProductNetworkImage(
-                        imageUrl: imageUrl,
-                        width: 80,
-                        height: 80,
-                        semanticLabel: 'Ảnh sản phẩm $name',
-                        fallback: Container(
-                          color: c.cardAlt,
-                          alignment: Alignment.center,
-                          child: AppAssetIcon(
-                            assetPath: AppAssets.inventory,
-                            color: theme.colorScheme.primary,
-                            size: 28,
-                            semanticLabel: 'Sản phẩm chưa có ảnh',
+                    const SizedBox(height: 4),
+                    Text(
+                      'SKU: ${p['sku'] ?? 'N/A'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: c.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _ProductTagsRow(
+                      tagsRaw: p['tags'],
+                      stock: stock,
+                      p: p,
+                      topProductNames: topProductNames,
+                      tagColors: tagColors,
+                      maxTags: 2,
+                    ),
+                    const Spacer(),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _currFmt.format(price),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: c.textPrimary,
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Product Name
-                Text(
-                  name,
-                  style: GoogleFonts.manrope(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: c.textPrimary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-
-                // SKU
-                Text(
-                  'SKU: ${p['sku'] ?? 'N/A'}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: c.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-
-                // Tags
-                _ProductTagsRow(
-                  tagsRaw: p['tags'],
-                  stock: stock,
-                  p: p,
-                  topProductNames: topProductNames,
-                  maxTags: 2,
-                ),
-
-                const Spacer(),
-
-                // Price and Unit
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      _currFmt.format(price),
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
-                        color: c.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '/ $displayUnit',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: c.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '/ $displayUnit',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: c.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -541,19 +807,22 @@ class _ProductTagsRow extends StatelessWidget {
   final num stock;
   final Map<String, dynamic> p;
   final List<String> topProductNames;
+  final Map<String, Color> tagColors;
   final int maxTags;
+  final bool includeStockStatus;
 
   const _ProductTagsRow({
     required this.tagsRaw,
     required this.stock,
     required this.p,
     required this.topProductNames,
+    this.tagColors = const {},
     this.maxTags = 3,
+    this.includeStockStatus = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final raw = tagsRaw;
     List<String> tags = [];
     if (raw is Iterable) {
@@ -573,9 +842,9 @@ class _ProductTagsRow extends StatelessWidget {
     final minStock = TypeParser.asDouble(
       p['minStock'] ?? p['minimumStock'] ?? p['min_stock'],
     );
-    if (stock <= 0) {
+    if (includeStockStatus && stock <= 0) {
       if (!tags.contains('Hết hàng')) tags.insert(0, 'Hết hàng');
-    } else if (productIsLowStock(stock, minStock)) {
+    } else if (includeStockStatus && productIsLowStock(stock, minStock)) {
       if (!tags.contains('Sắp hết')) tags.insert(0, 'Sắp hết');
     }
 
@@ -583,17 +852,12 @@ class _ProductTagsRow extends StatelessWidget {
       if (!tags.contains('Bán chạy')) tags.insert(0, 'Bán chạy');
     }
 
-    final createdAtStr = p['createdAt'] ?? p['created_at'];
-    if (createdAtStr != null) {
-      final createdAt = DateTime.tryParse(createdAtStr.toString());
-      if (createdAt != null &&
-          DateTime.now().difference(createdAt).inDays <= 7) {
-        if (!tags.contains('Mới')) tags.insert(0, 'Mới');
-      }
-    }
-
     tags = tags
-        .where((tag) => !tag.trim().toLowerCase().startsWith('sim_tag_'))
+        .where(
+          (tag) =>
+              !tag.trim().toLowerCase().startsWith('sim_tag_') &&
+              (includeStockStatus || (tag != 'Hết hàng' && tag != 'Sắp hết')),
+        )
         .toList();
     if (tags.isEmpty) return const SizedBox.shrink();
 
@@ -601,22 +865,10 @@ class _ProductTagsRow extends StatelessWidget {
       spacing: 4,
       runSpacing: 4,
       children: tags.take(maxTags).map((t) {
-        Color bgColor = theme.colorScheme.primary.withValues(alpha: 0.1);
-        Color textColor = theme.colorScheme.primary;
-
-        if (t == 'Hết hàng') {
-          bgColor = AppColors.danger.withValues(alpha: 0.1);
-          textColor = AppColors.danger;
-        } else if (t == 'Sắp hết') {
-          bgColor = AppColors.warning.withValues(alpha: 0.1);
-          textColor = AppColors.warning;
-        } else if (t == 'Bán chạy') {
-          bgColor = Colors.purple.withValues(alpha: 0.1);
-          textColor = Colors.purple;
-        } else if (t == 'Mới') {
-          bgColor = Colors.blue.withValues(alpha: 0.1);
-          textColor = Colors.blue;
-        }
+        final c = AppThemeColors.of(context);
+        final accent = TagColors.resolve(t, configured: tagColors[t]);
+        final bgColor = TagColors.surface(accent, c.card);
+        final textColor = TagColors.foreground(accent, bgColor);
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

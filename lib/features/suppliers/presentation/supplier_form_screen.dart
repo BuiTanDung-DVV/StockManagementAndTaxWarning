@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,6 +79,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
         await repo.create(data);
       }
       ref.invalidate(supplierListProvider);
+      ref.invalidate(supplierOptionsProvider);
       if (mounted) {
         ToastService.showSuccess(
           _isEdit
@@ -254,7 +256,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                 backgroundColor: Theme.of(
                   context,
                 ).colorScheme.primary.withValues(alpha: 0.8),
-                deleteIcon: const Icon(
+                deleteIcon: const AppIcon(
                   Icons.close,
                   size: 14,
                   color: Colors.white,
@@ -300,7 +302,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                AppIcon(
                   Icons.add,
                   size: 16,
                   color: Theme.of(context).colorScheme.primary,
@@ -345,7 +347,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
         hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: HugeIcon(
+          child: AppHugeIcon(
             icon: icon,
             size: 18,
             color: theme.colorScheme.primary,

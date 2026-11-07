@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -288,7 +289,7 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const HugeIcon(
+                                  : const AppHugeIcon(
                                       icon: HugeIcons
                                           .strokeRoundedCheckmarkCircle02,
                                       color: Colors.white,
@@ -340,7 +341,7 @@ class _ShopProfileScreenState extends ConsumerState<ShopProfileScreen> {
         hintText: hint,
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: HugeIcon(icon: icon, size: 20, color: AppColors.primary),
+          child: AppHugeIcon(icon: icon, size: 20, color: AppColors.primary),
         ),
         filled: true,
         fillColor: c.card,
@@ -375,7 +376,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        HugeIcon(icon: icon, size: 18, color: AppColors.primary),
+        AppHugeIcon(icon: icon, size: 18, color: AppColors.primary),
         const SizedBox(width: 8),
         Text(
           title,

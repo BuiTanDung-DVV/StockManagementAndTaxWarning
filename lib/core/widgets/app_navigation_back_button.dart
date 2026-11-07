@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 
 import '../theme/app_theme.dart';
 
@@ -32,7 +33,7 @@ class AppNavigationBackButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(9),
                 border: Border.all(color: colors.divider),
               ),
-              child: Icon(
+              child: AppIcon(
                 Icons.arrow_back_rounded,
                 size: 19,
                 color: colors.textPrimary,

@@ -32,7 +32,9 @@ export class TagController {
             }
 
             const tag = repo.create({ shopId, type: tagType, name: name.trim(), color: color || '#3B82F6' });
-            await repo.save(tag);
+            // One independent tag row: avoid an extra BEGIN/COMMIT round trip.
+            // PostgreSQL INSERT/UPDATE remains atomic and save returns generated fields.
+            await repo.save(tag, { transaction: false });
             res.json({ success: true, data: tag });
         } catch (error) {
             console.error('Error creating tag:', error);
@@ -64,7 +66,9 @@ export class TagController {
                 tag.color = color;
             }
 
-            await repo.save(tag);
+            // One independent tag row: avoid an extra BEGIN/COMMIT round trip.
+            // PostgreSQL INSERT/UPDATE remains atomic and save returns generated fields.
+            await repo.save(tag, { transaction: false });
             res.json({ success: true, data: tag });
         } catch (error) {
             console.error('Error updating tag:', error);

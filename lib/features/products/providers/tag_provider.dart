@@ -1,3 +1,4 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
@@ -86,5 +87,6 @@ final tagListProvider = FutureProvider.family<List<TagModel>, String>((
   ref,
   type,
 ) async {
+  watchDataFreshness(ref, DataArea.tags);
   return await ref.watch(tagRepoProvider).getAll(type: type);
 });

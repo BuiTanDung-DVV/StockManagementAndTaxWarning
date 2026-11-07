@@ -1,9 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/data_freshness_provider.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
 
 enum DashboardActionSeverity { critical, warning, info, healthy }
+
+bool canViewDashboardActions(ShopState shop) =>
+    !shop.isLoading &&
+    shop.isActive &&
+    ['inventory', 'customers', 'finance'].any((key) => shop.hasPermission(key));
 
 class DashboardActionItem {
   final String actionKey;
@@ -16,6 +22,7 @@ class DashboardActionItem {
   final double? amount;
   final DateTime? dueAt;
   final DateTime? sourceUpdatedAt;
+  final int? shopId;
 
   const DashboardActionItem({
     required this.actionKey,
@@ -28,6 +35,7 @@ class DashboardActionItem {
     this.amount,
     this.dueAt,
     this.sourceUpdatedAt,
+    this.shopId,
   });
 
   factory DashboardActionItem.fromJson(Map<String, dynamic> json) {
@@ -69,6 +77,7 @@ class DashboardActionItem {
       sourceUpdatedAt: DateTime.tryParse(
         json['sourceUpdatedAt']?.toString() ?? '',
       ),
+      shopId: int.tryParse(json['shopId']?.toString() ?? ''),
     );
   }
 
@@ -79,7 +88,14 @@ class DashboardActionItem {
       return '/inventory?issue=low-stock';
     }
     if (actionKey.startsWith('RECEIVABLE_')) {
+      if (!actionKey.contains('OVERDUE')) {
+        return '/customer-debts?status=CURRENT';
+      }
       return '/customer-debts?status=overdue';
+    }
+    if (actionKey.startsWith('PAYABLE_')) return '/supplier-payables-aging';
+    if (actionKey.startsWith('PURCHASE_APPROVAL_')) {
+      return '/purchases-no-invoice?status=PENDING';
     }
     if (actionKey.startsWith('TAX_CONFIG_')) return '/tax-config';
     if (actionKey.startsWith('TAX_')) return '/tax-obligations?status=pending';
@@ -136,6 +152,7 @@ class DashboardActionData {
 final dashboardActionProvider = FutureProvider<DashboardActionData>((
   ref,
 ) async {
+  watchDataFreshness(ref, DataArea.dashboard);
   ref.watch(shopProvider);
   final response = await ref
       .read(apiClientProvider)

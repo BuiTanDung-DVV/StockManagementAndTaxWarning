@@ -12,6 +12,7 @@ import {
 import { SalesService } from './sales.service';
 import { legalGroundingService } from './legal-grounding.service';
 import { withAiDeadline } from '../ai/ai-deadline.utils';
+import { readCurrentDebtSummary } from '../finance/current-debt-summary.repository';
 
 export interface ChatMessage {
   role: 'user' | 'model' | 'assistant';
@@ -188,40 +189,17 @@ export class AiService {
       console.warn('AI StoreContext - Lỗi truy vấn doanh thu và top bán chạy:', e);
     }
 
-    // 3. Công nợ khách hàng phải thu
+    // 3. Current effective debt, including opening dates and reductions.
     try {
-      const debtResult = await AppDataSource.query(`
-        SELECT COALESCE(SUM(GREATEST(amount - paid_amount, 0)), 0) AS total_debt
-        FROM receivables
-        WHERE shop_id = $1
-          AND UPPER(COALESCE(status, '')) NOT IN ('PAID', 'CANCELLED')
-      `, [shopId]);
-
-      if (debtResult && debtResult.length > 0) {
-        customerDebt = Number(debtResult[0]?.total_debt || 0).toLocaleString('vi-VN');
-      } else {
-        customerDebt = '0';
-      }
+      const asOf = vietnamDateKey(new Date());
+      const debt = await AppDataSource.transaction('REPEATABLE READ', async manager => ({
+        receivable: await readCurrentDebtSummary(manager, 'RECEIVABLE', [shopId], asOf),
+        payable: await readCurrentDebtSummary(manager, 'PAYABLE', [shopId], asOf),
+      }));
+      customerDebt = Number(debt.receivable.total_amount).toLocaleString('vi-VN');
+      supplierDebt = Number(debt.payable.total_amount).toLocaleString('vi-VN');
     } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn công nợ khách hàng:', e);
-    }
-
-    // 3.1 Nợ nhà cung cấp phải trả
-    try {
-      const payableResult = await AppDataSource.query(`
-        SELECT COALESCE(SUM(GREATEST(amount - paid_amount, 0)), 0) AS total_payable
-        FROM payables
-        WHERE shop_id = $1
-          AND UPPER(COALESCE(status, '')) NOT IN ('PAID', 'CANCELLED')
-      `, [shopId]);
-
-      if (payableResult && payableResult.length > 0) {
-        supplierDebt = Number(payableResult[0]?.total_payable || 0).toLocaleString('vi-VN');
-      } else {
-        supplierDebt = '0';
-      }
-    } catch (e) {
-      console.warn('AI StoreContext - Lỗi truy vấn nợ nhà cung cấp:', e);
+      console.warn('AI StoreContext - Chưa đối chiếu được công nợ:', e);
     }
 
     // 4. Nghĩa vụ thuế / Cảnh báo thuế
@@ -484,6 +462,7 @@ Người dùng hỏi: ${dto.question}`;
       }
     } catch (e) {
       console.warn('AI Insights - Lỗi tồn kho:', e);
+      insights.push({ title: 'Chưa kiểm tra được tồn kho', category: 'INVENTORY', description: 'Dữ liệu tồn kho tạm thời không khả dụng. Hãy tải lại trước khi đưa ra quyết định.', priority: 'INFO' });
     }
 
     // 2. Kiểm tra nghĩa vụ thuế
@@ -502,26 +481,24 @@ Người dùng hỏi: ${dto.question}`;
       }
     } catch (e) {
       console.warn('AI Insights - Lỗi thuế:', e);
+      insights.push({ title: 'Chưa kiểm tra được nghĩa vụ thuế', category: 'TAX', description: 'Dữ liệu nghĩa vụ thuế tạm thời không khả dụng. Hãy tải lại để kiểm tra.', priority: 'INFO' });
     }
 
     // 3. Công nợ khách hàng
     try {
-      const debtSum = await AppDataSource.query(`
-        SELECT COALESCE(SUM(GREATEST(amount - paid_amount, 0)), 0) AS total
-        FROM receivables
-        WHERE shop_id = $1
-          AND UPPER(COALESCE(status, '')) NOT IN ('PAID', 'CANCELLED')
-      `, [shopId]);
-      if (debtSum && Number(debtSum[0]?.total) > 0) {
+      const debt = await AppDataSource.transaction('REPEATABLE READ', manager =>
+        readCurrentDebtSummary(manager, 'RECEIVABLE', [shopId], vietnamDateKey(new Date())));
+      if (Number(debt.total_amount) > 0) {
         insights.push({
           title: 'Quản lý thu hồi công nợ',
           category: 'FINANCE',
-          description: `Tổng công nợ khách hàng cần thu là ${Number(debtSum[0].total).toLocaleString('vi-VN')} VNĐ. Hãy kiểm tra lịch sử nợ để đối soát.`,
+          description: `Tổng công nợ khách hàng cần thu là ${Number(debt.total_amount).toLocaleString('vi-VN')} VNĐ. Hãy kiểm tra lịch sử nợ để đối soát.`,
           priority: 'MEDIUM',
         });
       }
     } catch (e) {
       console.warn('AI Insights - Lỗi công nợ:', e);
+      insights.push({ title: 'Chưa kiểm tra được công nợ', category: 'FINANCE', description: 'Chưa đối chiếu được số dư công nợ hiện tại. Hãy tải lại, không dùng dữ liệu thiếu để kết luận đã hết nợ.', priority: 'INFO' });
     }
 
     if (insights.length === 0) {

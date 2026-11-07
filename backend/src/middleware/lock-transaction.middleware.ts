@@ -15,6 +15,10 @@ import { PurchaseOrder, StockTake } from '../inventory/entities';
 export const lockTransactionMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
     // Only check mutating requests
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+        // These HTTP entry points recheck their actual dates and current authority
+        // under the shop mutation lock, including returns on a later business day.
+        if (req.method === 'POST' && /^\/sales-orders(?:\/\d+\/(?:payments|returns|cancel))?\/?$/.test(req.path)) return next();
+
         try {
             const shopId = req.shopId;
             if (!shopId) return next();

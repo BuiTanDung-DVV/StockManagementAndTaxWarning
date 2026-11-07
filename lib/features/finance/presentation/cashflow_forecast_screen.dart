@@ -1,8 +1,10 @@
+import '../../../core/widgets/app_page_header.dart';
+import 'cashflow_projection_panel.dart';
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../../core/assets/app_assets.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/theme/app_theme.dart';
@@ -10,7 +12,6 @@ import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
-import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/finance_provider.dart';
 
@@ -35,12 +36,10 @@ class CashflowForecastScreen extends ConsumerWidget {
       backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leadingWidth: 60,
+        leading: AppNavigationBackLeading(
+          onPressed: () => navigatePageBack(context),
+        ),
         title: Text(
           'Dự Báo Dòng Tiền',
           style: GoogleFonts.manrope(
@@ -89,17 +88,6 @@ class CashflowForecastScreen extends ConsumerWidget {
               ),
             ),
             data: (budgets) {
-              if (forecasts.isEmpty && budgets.isEmpty) {
-                return AppEmpty(
-                  visual: AppEmptyVisual.finance,
-                  message: 'Chưa có dữ liệu dự báo',
-                  action: ElevatedButton.icon(
-                    icon: const Icon(Icons.trending_up_rounded),
-                    label: const Text('Thêm dự báo ngay'),
-                    onPressed: () => _showAddForecastDialog(context, ref),
-                  ),
-                );
-              }
               return SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
@@ -109,416 +97,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (forecasts.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 12),
-                        child: Text(
-                          'Dự báo theo ngày',
-                          style: GoogleFonts.manrope(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: c.textPrimary,
-                          ),
-                        ),
-                      ),
-
-                      Container(
-                        height: MediaQuery.sizeOf(context).width < 600
-                            ? 300
-                            : 330,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        padding: const EdgeInsets.only(
-                          left: 10,
-                          right: 16,
-                          top: 18,
-                          bottom: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: c.card,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: c.divider.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                left: 6,
-                                bottom: 12,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Dòng tiền thuần dự kiến',
-                                          style: GoogleFonts.manrope(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: c.textPrimary,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Thu dự kiến − chi dự kiến theo ngày',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: c.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                    'Đơn vị: đồng',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: c.textMuted,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: LineChart(
-                                LineChartData(
-                                  gridData: FlGridData(
-                                    show: true,
-                                    drawVerticalLine: false,
-                                    getDrawingHorizontalLine: (value) => FlLine(
-                                      color: c.divider.withValues(alpha: 0.3),
-                                      strokeWidth: 1,
-                                    ),
-                                  ),
-                                  titlesData: FlTitlesData(
-                                    show: true,
-                                    rightTitles: const AxisTitles(
-                                      sideTitles: SideTitles(showTitles: false),
-                                    ),
-                                    topTitles: const AxisTitles(
-                                      sideTitles: SideTitles(showTitles: false),
-                                    ),
-                                    leftTitles: AxisTitles(
-                                      sideTitles: SideTitles(
-                                        showTitles: true,
-                                        reservedSize: 86,
-                                        getTitlesWidget: (value, meta) {
-                                          if (value == meta.max ||
-                                              value == meta.min) {
-                                            return const SizedBox.shrink();
-                                          }
-                                          return Text(
-                                            compactVietnameseCurrency(value),
-                                            style: AppTheme.tabularStyle(
-                                              context,
-                                              color: c.textMuted,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                            textAlign: TextAlign.right,
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                    bottomTitles: AxisTitles(
-                                      sideTitles: SideTitles(
-                                        showTitles: true,
-                                        reservedSize: 22,
-                                        getTitlesWidget: (value, meta) {
-                                          final idx = value.toInt();
-                                          if (idx < 0 ||
-                                              idx >= forecasts.length) {
-                                            return const SizedBox.shrink();
-                                          }
-                                          final f = forecasts[idx];
-                                          final dateStr =
-                                              f['forecastDate']
-                                                  ?.toString()
-                                                  .split('T')
-                                                  .first ??
-                                              '';
-                                          if (dateStr.length < 5) {
-                                            return const SizedBox.shrink();
-                                          }
-                                          final parts = dateStr.split('-');
-                                          final displayDate = parts.length >= 3
-                                              ? '${parts[2]}/${parts[1]}'
-                                              : dateStr;
-
-                                          if (forecasts.length > 5 &&
-                                              idx %
-                                                      (forecasts.length / 4)
-                                                          .ceil() !=
-                                                  0 &&
-                                              idx != forecasts.length - 1) {
-                                            return const SizedBox.shrink();
-                                          }
-                                          return Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 4,
-                                            ),
-                                            child: Text(
-                                              displayDate,
-                                              style: TextStyle(
-                                                color: c.textMuted,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                  borderData: FlBorderData(show: false),
-                                  lineTouchData: LineTouchData(
-                                    touchTooltipData: LineTouchTooltipData(
-                                      getTooltipColor: (touchedSpot) =>
-                                          c.surface,
-                                      getTooltipItems: (touchedSpots) {
-                                        return touchedSpots.map((spot) {
-                                          final f = forecasts[spot.x.toInt()];
-                                          final balance = spot.y;
-                                          final dateStr =
-                                              f['forecastDate']
-                                                  ?.toString()
-                                                  .split('T')
-                                                  .first ??
-                                              '';
-                                          return LineTooltipItem(
-                                            '$dateStr\n${_fmt(balance)}',
-                                            GoogleFonts.manrope(
-                                              color: c.textPrimary,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                            ),
-                                          );
-                                        }).toList();
-                                      },
-                                    ),
-                                  ),
-                                  lineBarsData: [
-                                    LineChartBarData(
-                                      spots: forecasts.asMap().entries.map((
-                                        entry,
-                                      ) {
-                                        final idx = entry.key.toDouble();
-                                        final f = entry.value;
-                                        final income =
-                                            num.tryParse(
-                                              f['expectedIncome']?.toString() ??
-                                                  '0',
-                                            ) ??
-                                            0;
-                                        final expense =
-                                            num.tryParse(
-                                              f['expectedExpense']
-                                                      ?.toString() ??
-                                                  '0',
-                                            ) ??
-                                            0;
-                                        final balance =
-                                            num.tryParse(
-                                              f['expectedBalance']
-                                                      ?.toString() ??
-                                                  '0',
-                                            ) ??
-                                            (income - expense);
-                                        return FlSpot(idx, balance.toDouble());
-                                      }).toList(),
-                                      isCurved: true,
-                                      color: theme.colorScheme.primary,
-                                      barWidth: 3.5,
-                                      isStrokeCapRound: true,
-                                      dotData: const FlDotData(show: true),
-                                      belowBarData: BarAreaData(
-                                        show: true,
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            theme.colorScheme.primary
-                                                .withValues(alpha: 0.15),
-                                            theme.colorScheme.primary
-                                                .withValues(alpha: 0.0),
-                                          ],
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      ...forecasts.map<Widget>((f) {
-                        final income =
-                            num.tryParse(
-                              f['expectedIncome']?.toString() ?? '0',
-                            ) ??
-                            0;
-                        final expense =
-                            num.tryParse(
-                              f['expectedExpense']?.toString() ?? '0',
-                            ) ??
-                            0;
-                        final balance =
-                            num.tryParse(
-                              f['expectedBalance']?.toString() ?? '0',
-                            ) ??
-                            (income - expense);
-                        final isPositive = balance >= 0;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: c.card,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: c.divider.withValues(alpha: 0.5),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.02),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  left: BorderSide(
-                                    color: isPositive
-                                        ? AppColors.success
-                                        : AppColors.danger,
-                                    width: 5,
-                                  ),
-                                ),
-                              ),
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.calendar_today_rounded,
-                                            size: 14,
-                                            color: c.textSecondary,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            f['forecastDate']
-                                                    ?.toString()
-                                                    .split('T')
-                                                    .first ??
-                                                '',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            'Thuần dự kiến',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: c.textMuted,
-                                            ),
-                                          ),
-                                          Text(
-                                            _fmt(balance),
-                                            style: GoogleFonts.manrope(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 15,
-                                              color: isPositive
-                                                  ? AppColors.success
-                                                  : AppColors.danger,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 12,
-                                    runSpacing: 8,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.success.withValues(
-                                            alpha: 0.08,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            30,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Thu: ${_fmt(income)}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.success,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.danger.withValues(
-                                            alpha: 0.08,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            30,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Chi: ${_fmt(expense)}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.danger,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
+                    const CashflowProjectionPanel(),
                     if (budgets.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Padding(
@@ -597,7 +176,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                                           .withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(
+                                    child: AppIcon(
                                       Icons.pie_chart_outline_rounded,
                                       size: 16,
                                       color: theme.colorScheme.primary,
@@ -731,7 +310,7 @@ class CashflowForecastScreen extends ConsumerWidget {
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _showCreateMenu(context, ref),
-              icon: const Icon(Icons.add_rounded),
+              icon: const AppIcon(Icons.add_rounded),
               label: Text(
                 'Thêm mới',
                 style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
@@ -755,8 +334,8 @@ class CashflowForecastScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: const Text('Dự báo dòng tiền'),
-                subtitle: const Text('Ghi khoản thu và chi dự kiến theo ngày'),
+                title: const Text('Kế hoạch bổ sung'),
+                subtitle: const Text('Khoản dự kiến chưa có trong công nợ'),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _showAddForecastDialog(context, ref);
@@ -916,175 +495,217 @@ class CashflowForecastScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddForecastDialog(BuildContext context, WidgetRef ref) {
+  Future<void> _showAddForecastDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final incomeC = TextEditingController();
     final expenseC = TextEditingController();
     DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    bool isSaving = false;
 
-    showDialog(
+    final route = DialogRoute<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-            'Thêm dự báo dòng tiền',
-            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
+        builder: (context, setDialogState) => PopScope(
+          canPop: !isSaving,
+          child: AlertDialog(
+            title: Text(
+              'Thêm kế hoạch bổ sung',
+              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Material(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        leading: AppIcon(
+                          Icons.calendar_month_rounded,
+                          color: theme.colorScheme.primary,
+                        ),
+                        title: Text(
+                          DateFormat('dd/MM/yyyy').format(selectedDate),
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        trailing: const AppIcon(Icons.edit_rounded, size: 18),
+                        onTap: isSaving
+                            ? null
+                            : () async {
+                                final d = await showDatePicker(
+                                  context: ctx,
+                                  initialDate: selectedDate,
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365),
+                                  ),
+                                );
+                                if (d != null && ctx.mounted) {
+                                  setDialogState(() => selectedDate = d);
+                                }
+                              },
+                      ),
+                    ),
+                  ),
+                  TextField(
+                    controller: incomeC,
+                    enabled: !isSaving,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Thu dự kiến (VNĐ)',
+                      prefixIcon: const AppIcon(
+                        Icons.arrow_downward_rounded,
+                        color: AppColors.success,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: c.divider.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: expenseC,
+                    enabled: !isSaving,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Chi dự kiến (VNĐ)',
+                      prefixIcon: const AppIcon(
+                        Icons.arrow_upward_rounded,
+                        color: AppColors.danger,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: c.divider.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSaving ? null : () => Navigator.pop(ctx),
+                child: Text('Hủy', style: TextStyle(color: c.textSecondary)),
+              ),
+              ElevatedButton(
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        if (isSaving) return;
+                        final income = parseCurrency(incomeC.text);
+                        final expense = parseCurrency(expenseC.text);
+                        if (income < 0 || expense < 0) {
+                          ToastService.showError(
+                            'Số tiền dự báo không được âm',
+                          );
+                          return;
+                        }
+                        setDialogState(() => isSaving = true);
+                        try {
+                          await ref.read(financeRepoProvider).createForecast({
+                            'forecastDate': selectedDate
+                                .toIso8601String()
+                                .split('T')
+                                .first,
+                            'expectedIncome': income,
+                            'expectedExpense': expense,
+                            'expectedBalance': income - expense,
+                          });
+                          ref.invalidate(forecastsProvider);
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                            ToastService.showSuccess('Đã lưu dự báo dòng tiền');
+                          }
+                        } catch (e) {
+                          if (ctx.mounted) {
+                            setDialogState(() => isSaving = false);
+                          }
+                          ToastService.showError(
+                            'Không thể lưu dự báo dòng tiền. Vui lòng thử lại sau.',
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  leading: Icon(
-                    Icons.calendar_month_rounded,
-                    color: theme.colorScheme.primary,
-                  ),
-                  title: Text(
-                    DateFormat('dd/MM/yyyy').format(selectedDate),
-                    style: GoogleFonts.manrope(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  trailing: const Icon(Icons.edit_rounded, size: 18),
-                  onTap: () async {
-                    final d = await showDatePicker(
-                      context: ctx,
-                      initialDate: selectedDate,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (d != null) {
-                      setDialogState(() => selectedDate = d);
-                    }
-                  },
-                ),
-              ),
-              TextField(
-                controller: incomeC,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Thu dự kiến (VNĐ)',
-                  prefixIcon: const Icon(
-                    Icons.arrow_downward_rounded,
-                    color: AppColors.success,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: c.divider.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.primary,
-                      width: 2,
-                    ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: expenseC,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: InputDecoration(
-                  labelText: 'Chi dự kiến (VNĐ)',
-                  prefixIcon: const Icon(
-                    Icons.arrow_upward_rounded,
-                    color: AppColors.danger,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: c.divider.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.primary,
-                      width: 2,
-                    ),
-                  ),
-                ),
+                child: isSaving
+                    ? const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 8),
+                          Text('Đang lưu...'),
+                        ],
+                      )
+                    : const Text('Lưu dự báo'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Hủy', style: TextStyle(color: c.textSecondary)),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final income = parseCurrency(incomeC.text);
-                final expense = parseCurrency(expenseC.text);
-                if (income < 0 || expense < 0) {
-                  ToastService.showError('Số tiền dự báo không được âm');
-                  return;
-                }
-                try {
-                  await ref.read(financeRepoProvider).createForecast({
-                    'forecastDate': selectedDate
-                        .toIso8601String()
-                        .split('T')
-                        .first,
-                    'expectedIncome': income,
-                    'expectedExpense': expense,
-                    'expectedBalance': income - expense,
-                  });
-                  ref.invalidate(forecastsProvider);
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
-                    ToastService.showSuccess('Đã lưu dự báo dòng tiền');
-                  }
-                } catch (e) {
-                  ToastService.showError(
-                    'Không thể lưu dự báo dòng tiền. Vui lòng thử lại sau.',
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-              ),
-              child: const Text('Lưu dự báo'),
-            ),
-          ],
         ),
       ),
     );
+    await Navigator.of(context, rootNavigator: true).push(route);
+    await route.completed;
+    incomeC.dispose();
+    expenseC.dispose();
   }
 }
 

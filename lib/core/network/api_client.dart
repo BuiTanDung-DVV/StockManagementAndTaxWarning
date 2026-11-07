@@ -6,18 +6,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_token_storage.dart';
 import 'configure_dio.dart';
+import 'data_change_bridge.dart';
+import 'data_change_transport.dart';
+import '../offline/offline_read_cache.dart';
+import '../providers/data_freshness_provider.dart';
 
 /// Custom App API Exception
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
-  ApiException(this.message, [this.statusCode]);
+  final Map<String, dynamic>? details;
+  ApiException(this.message, [this.statusCode, this.details]);
   @override
   String toString() => message;
 }
 
 /// Enhanced API client with auth token management
 class ApiClient {
+  OfflineReadCache? readCache;
   static String get baseUrl {
     const envUrl = String.fromEnvironment('API_URL');
     if (kIsWeb) {
@@ -58,11 +64,19 @@ class ApiClient {
   String? _shopId;
   Future<bool>? _refreshFuture;
   bool _sessionRestoreCompleted = false;
+  int _credentialVersion = 0;
+  int _actorVersion = 0;
+  bool _refreshUnavailable = false;
+  bool get refreshUnavailable => _refreshUnavailable;
+  bool localOnlyMode = false;
+  final Dio? _sessionDio;
   final AuthTokenStorage _tokenStorage;
   void Function()? onSessionExpired;
+  void Function(Set<DataArea>)? onDataChanged;
 
-  ApiClient({AuthTokenStorage? tokenStorage})
-    : _tokenStorage = tokenStorage ?? SecureAuthTokenStorage() {
+  ApiClient({AuthTokenStorage? tokenStorage, Dio? sessionDio})
+    : _tokenStorage = tokenStorage ?? SecureAuthTokenStorage(),
+      _sessionDio = sessionDio {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -80,15 +94,82 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (opts, handler) {
+          opts.extra.putIfAbsent(
+            'dataFreshnessActorVersion',
+            () => _actorVersion,
+          );
+          if (opts.extra['pinMutationScope'] == true &&
+              (opts.extra['dataFreshnessActorVersion'] != _actorVersion ||
+                  opts.extra['dataFreshnessShop'] != _shopId)) {
+            return handler.reject(
+              DioException(
+                requestOptions: opts,
+                type: DioExceptionType.cancel,
+                error: ApiException(
+                  'Đã đổi tài khoản hoặc cửa hàng. Thao tác chưa được gửi.',
+                  409,
+                ),
+              ),
+            );
+          }
+          final verifyingIdentity =
+              opts.method == 'GET' &&
+              opts.extra['verifyLocalSession'] == true &&
+              const ['profile', 'my-shops'].contains(_cleanPath(opts.path));
+          if (localOnlyMode &&
+              !_isPublicAuthRequest(opts) &&
+              !verifyingIdentity) {
+            return handler.reject(
+              DioException(
+                requestOptions: opts,
+                type: DioExceptionType.connectionError,
+                error: ApiException(
+                  'Đang dùng dữ liệu trên thiết bị. Kết nối lại để gửi dữ liệu.',
+                ),
+              ),
+            );
+          }
+          final scopeGuard = opts.extra['scopeGuard'];
+          if (scopeGuard is bool Function() && !scopeGuard()) {
+            return handler.reject(
+              DioException(
+                requestOptions: opts,
+                type: DioExceptionType.cancel,
+                error: ApiException(
+                  'Đã đổi tài khoản hoặc cửa hàng. Bản ghi chưa được gửi.',
+                  409,
+                ),
+              ),
+            );
+          }
           if (_token != null) {
             opts.headers['Authorization'] = 'Bearer $_token';
           }
-          if (_shopId != null) {
+          if (opts.extra['offlineShopId'] is String) {
+            opts.headers['x-shop-id'] = opts.extra['offlineShopId'];
+          } else if (_shopId != null) {
             opts.headers['x-shop-id'] = _shopId;
           }
           handler.next(opts);
         },
+        onResponse: (response, handler) {
+          final request = response.requestOptions;
+          final body = response.data;
+          final requestShop = request.headers['x-shop-id']?.toString();
+          if ((response.statusCode ?? 0) >= 200 &&
+              (response.statusCode ?? 0) < 300 &&
+              !(body is Map && body['success'] == false) &&
+              request.extra['dataFreshnessActorVersion'] == _actorVersion &&
+              requestShop == _shopId) {
+            final areas = mutationDataAreas(request.method, request.path);
+            if (areas.isNotEmpty) onDataChanged?.call(areas);
+          }
+          handler.next(response);
+        },
         onError: (e, handler) async {
+          if (e.type == DioExceptionType.cancel && e.error is ApiException) {
+            return handler.next(e);
+          }
           // 401 → Try to refresh token
           if (e.response?.statusCode == 401 &&
               !_isPublicAuthRequest(e.requestOptions) &&
@@ -106,6 +187,23 @@ class ApiClient {
                 return handler.reject(retryError);
               }
             }
+            if (_refreshUnavailable) {
+              return handler.reject(
+                DioException(
+                  requestOptions: e.requestOptions,
+                  type: DioExceptionType.connectionError,
+                  error: ApiException(
+                    'Chưa kết nối được máy chủ để xác thực lại. Nội dung đã lưu được giữ nguyên.',
+                  ),
+                ),
+              );
+            }
+            await clearToken();
+            onSessionExpired?.call();
+          }
+          if (e.response?.statusCode == 401 &&
+              !_isPublicAuthRequest(e.requestOptions) &&
+              e.requestOptions.extra['authRetried'] == true) {
             await clearToken();
             onSessionExpired?.call();
           }
@@ -199,6 +297,7 @@ class ApiClient {
   }
 
   Dio _createSessionDio() {
+    if (_sessionDio != null) return _sessionDio;
     final dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -216,6 +315,9 @@ class ApiClient {
   }
 
   Future<bool> _performRefresh() async {
+    final version = _credentialVersion;
+    final actorVersion = _actorVersion;
+    _refreshUnavailable = false;
     if (!kIsWeb && (_refreshToken == null || _refreshToken!.isEmpty)) {
       return false;
     }
@@ -226,14 +328,39 @@ class ApiClient {
       );
       final body = response.data;
       if (body is! Map || body['success'] != true || body['data'] is! Map) {
+        _refreshUnavailable = true;
         return false;
       }
       final data = Map<String, dynamic>.from(body['data'] as Map);
       final access = data['access_token']?.toString();
-      if (access == null || access.isEmpty) return false;
-      await saveToken(access, data['refresh_token']?.toString());
+      if (access == null || access.isEmpty) {
+        _refreshUnavailable = true;
+        return false;
+      }
+      if (version != _credentialVersion) {
+        _refreshUnavailable = true;
+        return false;
+      }
+      await _storeTokens(access, data['refresh_token']?.toString());
+      if (actorVersion != _actorVersion) {
+        _refreshUnavailable = true;
+        return false;
+      }
       return true;
+    } on DioException catch (error) {
+      _refreshUnavailable =
+          error.response == null ||
+          const [
+            408,
+            429,
+            500,
+            502,
+            503,
+            504,
+          ].contains(error.response?.statusCode);
+      return false;
     } catch (_) {
+      _refreshUnavailable = true;
       return false;
     }
   }
@@ -251,8 +378,38 @@ class ApiClient {
     return future;
   }
 
-  void setToken(String? token) => _token = token;
+  Future<bool> refreshSession() => _refreshOnce();
+
+  // Only identity reads bypass the local-mode gate while reconnecting.
+  // Other reads/writes stay blocked until AuthNotifier verifies actor and shop.
+  Future<dynamic> getSessionIdentity(String path) async {
+    if (!const ['profile', 'my-shops'].contains(_cleanPath(path))) {
+      throw ArgumentError('Chỉ được kiểm tra danh tính và quyền cửa hàng.');
+    }
+    try {
+      return _extract(
+        await _dio.get(
+          _cleanPath(path),
+          options: Options(extra: {'verifyLocalSession': true}),
+        ),
+      );
+    } on DioException catch (error) {
+      if (error.error is ApiException) throw error.error!;
+      throw ApiException(
+        'Chưa xác thực lại được phiên làm việc.',
+        error.response?.statusCode,
+      );
+    }
+  }
+
+  void setToken(String? token) {
+    _credentialVersion++;
+    _actorVersion++;
+    _token = token;
+  }
+
   String? get token => _token;
+  int get sessionVersion => _actorVersion;
   bool get sessionRestoreCompleted => _sessionRestoreCompleted;
   void setShopId(String? shopId) {
     _shopId = shopId;
@@ -289,19 +446,32 @@ class ApiClient {
   String _cleanPath(String path) =>
       path.startsWith('/') ? path.substring(1) : path;
 
+  Map<String, dynamic> _mutationScope() => {
+    'pinMutationScope': true,
+    'dataFreshnessActorVersion': _actorVersion,
+    'dataFreshnessShop': _shopId,
+  };
+
   Future<dynamic> get(String path, {Map<String, dynamic>? params}) async {
     try {
       final res = await _dio.get(_cleanPath(path), queryParameters: params);
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
-      throw ApiException(e.message ?? 'Lỗi không xác định');
+      throw ApiException(
+        e.message ?? 'Không thể kết nối máy chủ. Vui lòng kiểm tra mạng.',
+        e.response?.statusCode,
+      );
     }
   }
 
   Future<dynamic> post(String path, {dynamic data}) async {
     try {
-      final res = await _dio.post(_cleanPath(path), data: data);
+      final res = await _dio.post(
+        _cleanPath(path),
+        data: data,
+        options: Options(extra: _mutationScope()),
+      );
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
@@ -309,9 +479,148 @@ class ApiClient {
     }
   }
 
+  /// Preparation must reach the server, never reuse an older cached page and
+  /// label it a freshly downloaded complete catalog.
+  Future<dynamic> getOnlineInShop(
+    String path,
+    String shopId, {
+    Map<String, dynamic>? params,
+    required bool Function() isCurrentScope,
+  }) async {
+    if (!isCurrentScope() || _shopId != shopId) {
+      throw ApiException('Phạm vi tải dữ liệu đã thay đổi.', 409);
+    }
+    try {
+      final response = await _dio.get(
+        _cleanPath(path),
+        queryParameters: params,
+        options: Options(
+          extra: {'offlineShopId': shopId, 'scopeGuard': isCurrentScope},
+        ),
+      );
+      if (!isCurrentScope() || _shopId != shopId) {
+        throw ApiException('Phạm vi tải dữ liệu đã thay đổi.', 409);
+      }
+      return _extract(response);
+    } on DioException catch (error) {
+      if (const [403, 404].contains(error.response?.statusCode)) {
+        final cache = readCache;
+        final access = cache?.access(path, params);
+        if (cache != null && access != null) {
+          try {
+            await cache.invalidate(access);
+          } catch (_) {
+            /* Keep the server denial. */
+          }
+        }
+      }
+      if (error.error is ApiException) throw error.error!;
+      throw ApiException(
+        'Chưa tải được dữ liệu mới từ máy chủ.',
+        error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<dynamic> postInShop(
+    String path,
+    String shopId,
+    Map<String, dynamic> data, {
+    required bool Function() isCurrentScope,
+  }) async {
+    if (!isCurrentScope() || _shopId != shopId) {
+      throw ApiException('Cửa hàng đã thay đổi. Bản ghi chưa được gửi.', 409);
+    }
+    try {
+      final response = await _dio.post(
+        _cleanPath(path),
+        data: data,
+        options: Options(
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 20),
+          extra: {
+            ..._mutationScope(),
+            'offlineShopId': shopId,
+            'scopeGuard': isCurrentScope,
+          },
+        ),
+      );
+      return _extract(response);
+    } on DioException catch (error) {
+      final body = error.response?.data;
+      if (error.response?.statusCode == 409 &&
+          body is Map &&
+          body['code'] == 'SYNC_REVIEW_REQUIRED' &&
+          body['review'] is Map) {
+        throw ApiException(
+          body['message']?.toString() ?? 'Cần kiểm tra giao dịch tương tự.',
+          409,
+          Map<String, dynamic>.from(body['review'] as Map),
+        );
+      }
+      if (error.error is ApiException) throw error.error!;
+      throw ApiException(
+        'Chưa kết nối được máy chủ. Bản ghi vẫn ở trên thiết bị.',
+        error.response?.statusCode,
+      );
+    }
+  }
+
+  Future<dynamic> putInShop(
+    String path,
+    String shopId, {
+    dynamic data,
+    required bool Function() isCurrentScope,
+  }) => _writeInShop('PUT', path, shopId, data, isCurrentScope);
+
+  Future<dynamic> deleteInShop(
+    String path,
+    String shopId, {
+    required bool Function() isCurrentScope,
+  }) => _writeInShop('DELETE', path, shopId, null, isCurrentScope);
+
+  Future<dynamic> _writeInShop(
+    String method,
+    String path,
+    String shopId,
+    dynamic data,
+    bool Function() isCurrentScope,
+  ) async {
+    if (!isCurrentScope() || _shopId != shopId) {
+      throw ApiException('Cửa hàng đã thay đổi. Thao tác chưa được gửi.', 409);
+    }
+    try {
+      final response = await _dio.request(
+        _cleanPath(path),
+        data: data,
+        options: Options(
+          method: method,
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 20),
+          extra: {
+            ..._mutationScope(),
+            'offlineShopId': shopId,
+            'scopeGuard': isCurrentScope,
+          },
+        ),
+      );
+      return _extract(response);
+    } on DioException catch (error) {
+      if (error.error is ApiException) throw error.error!;
+      throw ApiException(
+        'Chưa xác định được kết quả. Hãy tải lại đơn trước khi thao tác tiếp.',
+        error.response?.statusCode,
+      );
+    }
+  }
+
   Future<dynamic> put(String path, {dynamic data}) async {
     try {
-      final res = await _dio.put(_cleanPath(path), data: data);
+      final res = await _dio.put(
+        _cleanPath(path),
+        data: data,
+        options: Options(extra: _mutationScope()),
+      );
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
@@ -321,7 +630,11 @@ class ApiClient {
 
   Future<dynamic> delete(String path, {dynamic data}) async {
     try {
-      final res = await _dio.delete(_cleanPath(path), data: data);
+      final res = await _dio.delete(
+        _cleanPath(path),
+        data: data,
+        options: Options(extra: _mutationScope()),
+      );
       return _extract(res);
     } on DioException catch (e) {
       if (e.error is ApiException) throw e.error!;
@@ -334,7 +647,10 @@ class ApiClient {
       final res = await _dio.post<List<int>>(
         _cleanPath(path),
         data: data,
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes,
+          extra: _mutationScope(),
+        ),
       );
       return Uint8List.fromList(res.data ?? const []);
     } on DioException catch (e) {
@@ -358,6 +674,7 @@ class ApiClient {
         options: Options(
           contentType: 'application/gzip',
           headers: {'x-backup-password': password},
+          extra: _mutationScope(),
         ),
       );
       return Map<String, dynamic>.from(_extract(res) as Map);
@@ -385,6 +702,7 @@ class ApiClient {
         options: Options(
           contentType: contentType,
           headers: {'x-file-name': fileName},
+          extra: _mutationScope(),
         ),
       );
       return Map<String, dynamic>.from(_extract(response) as Map);
@@ -401,6 +719,7 @@ class ApiClient {
     try {
       final prefs = await SharedPreferences.getInstance();
       _shopId = prefs.getString('shop_id');
+      if (prefs.getBool('session_restore_disabled') == true) return;
       if (kIsWeb) {
         // main() restores the HttpOnly-cookie session before ProviderScope.
         // Avoid rotating the same refresh token again in AuthNotifier.init().
@@ -432,8 +751,16 @@ class ApiClient {
   }
 
   Future<void> saveToken(String token, [String? refreshToken]) async {
+    _actorVersion++;
+    await _storeTokens(token, refreshToken);
+  }
+
+  Future<void> _storeTokens(String token, String? refreshToken) async {
+    _credentialVersion++;
     _token = token;
     _refreshToken = refreshToken ?? _refreshToken;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('session_restore_disabled');
     if (kIsWeb) return;
     await _tokenStorage.write('auth_token', token);
     if (refreshToken != null) {
@@ -442,6 +769,8 @@ class ApiClient {
   }
 
   Future<void> clearToken() async {
+    _credentialVersion++;
+    _actorVersion++;
     _token = null;
     _refreshToken = null;
     if (!kIsWeb) {
@@ -454,16 +783,56 @@ class ApiClient {
   }
 
   Future<void> revokeSession() async {
+    final refresh = _refreshToken;
+    // Disable reopening before waiting on an unreachable logout endpoint.
+    // A refresh already in flight must not restore credentials after this.
+    await clearToken();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('session_restore_disabled', true);
     try {
       await _createSessionDio().post(
         'auth/logout',
-        data: kIsWeb ? <String, dynamic>{} : {'refresh_token': _refreshToken},
+        data: kIsWeb ? <String, dynamic>{} : {'refresh_token': refresh},
       );
     } finally {
       await clearToken();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('session_restore_disabled', true);
     }
+  }
+
+  /// The server has already revoked every session after an email change.
+  Future<void> discardRevokedSession() async {
+    await clearToken();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('session_restore_disabled', true);
   }
 }
 
 /// Global provider for ApiClient — singleton
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final api = ApiClient();
+  late final DataChangeBridge bridge;
+  final transport = openDataChangeTransport((message) {
+    if (ref.mounted) bridge.receive(message);
+  });
+  bridge = DataChangeBridge(
+    currentShop: () => api.shopId,
+    isAuthenticated: () => api.token != null && !api.localOnlyMode,
+    invalidate: (areas) {
+      if (ref.mounted) ref.read(dataFreshnessProvider.notifier).changed(areas);
+    },
+    send: transport.publish,
+  );
+  api.onDataChanged = (areas) {
+    if (ref.mounted) {
+      ref.read(dataFreshnessProvider.notifier).changed(areas);
+      bridge.committed(areas);
+    }
+  };
+  ref.onDispose(() {
+    api.onDataChanged = null;
+    transport.dispose();
+  });
+  return api;
+});

@@ -44,30 +44,30 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
     bg: Color(0xFF0B1420),
     surface: Color(0xFF111D2B),
     card: Color(0xFF172536),
-    cardAlt: Color(0xFF1E3044),
+    cardAlt: Color(0xFF24384F),
     textPrimary: Color(0xFFF8FAFC),
     textSecondary: Color(0xFFD0DAE6),
-    textMuted: Color(0xFF91A3B8),
-    divider: Color(0xFF2A3C50),
+    textMuted: Color(0xFFA9B7C7),
+    divider: Color(0xFF43576D),
     inputFill: Color(0xFF101C29),
-    inputBorder: Color(0xFF3B5067),
+    inputBorder: Color(0xFF637A91),
     primary: Color(0xFF14B8A6),
     primarySubtle: Color(0x2614B8A6),
     primaryBorder: Color(0x5914B8A6),
   );
 
-  // Deep teal and mint neutral palette for retail management.
+  // Neutral surfaces keep the brand color focused on actions and selection.
   static const light = AppThemeColors(
-    bg: Color(0xFFF5F8F7),
+    bg: Color(0xFFEBF0F5),
     surface: Color(0xFFFFFFFF),
     card: Color(0xFFFFFFFF),
-    cardAlt: Color(0xFFEDF4F1),
-    textPrimary: Color(0xFF17332F),
-    textSecondary: Color(0xFF3D5450),
-    textMuted: Color(0xFF5D716B),
-    divider: Color(0xFFDCE7E3),
-    inputFill: Color(0xFFFFFFFF),
-    inputBorder: Color(0xFFDCE7E3),
+    cardAlt: Color(0xFFE7EDF4),
+    textPrimary: Color(0xFF172B3A),
+    textSecondary: Color(0xFF475569),
+    textMuted: Color(0xFF586B80),
+    divider: Color(0xFFCBD5E1),
+    inputFill: Color(0xFFF8FAFC),
+    inputBorder: Color(0xFF7E8FA2),
     primary: Color(0xFF0F766E),
     primarySubtle: Color(0x1A0F766E),
     primaryBorder: Color(0x400F766E),
@@ -75,28 +75,19 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
 
   static AppThemeColors createLight(Color primary) {
     return AppThemeColors(
-      bg: const Color(0xFFF5F8F7),
+      bg: const Color(0xFFEBF0F5),
       surface: const Color(0xFFFFFFFF),
       card: const Color(0xFFFFFFFF),
-      cardAlt: Color.alphaBlend(
-        primary.withValues(alpha: 0.04),
-        const Color(0xFFEDF4F1),
-      ),
-      textPrimary: const Color(0xFF17332F),
-      textSecondary: const Color(0xFF3D5450),
-      textMuted: const Color(0xFF5D716B),
-      divider: Color.alphaBlend(
-        primary.withValues(alpha: 0.06),
-        const Color(0xFFDCE7E3),
-      ),
-      inputFill: const Color(0xFFFFFFFF),
-      inputBorder: Color.alphaBlend(
-        primary.withValues(alpha: 0.09),
-        const Color(0xFFDCE7E3),
-      ),
+      cardAlt: const Color(0xFFE7EDF4),
+      textPrimary: const Color(0xFF172B3A),
+      textSecondary: const Color(0xFF475569),
+      textMuted: const Color(0xFF586B80),
+      divider: const Color(0xFFCBD5E1),
+      inputFill: const Color(0xFFF8FAFC),
+      inputBorder: const Color(0xFF7E8FA2),
       primary: primary,
-      primarySubtle: primary.withValues(alpha: 0.09),
-      primaryBorder: primary.withValues(alpha: 0.28),
+      primarySubtle: primary.withValues(alpha: 0.13),
+      primaryBorder: primary.withValues(alpha: 0.42),
     );
   }
 
@@ -107,21 +98,21 @@ class AppThemeColors extends ThemeExtension<AppThemeColors> {
       card: const Color(0xFF172536),
       cardAlt: Color.alphaBlend(
         primary.withValues(alpha: 0.06),
-        const Color(0xFF1E3044),
+        const Color(0xFF24384F),
       ),
       textPrimary: const Color(0xFFF8FAFC),
       textSecondary: const Color(0xFFD0DAE6),
-      textMuted: const Color(0xFF91A3B8),
+      textMuted: const Color(0xFFA9B7C7),
       divider: Color.alphaBlend(
         primary.withValues(alpha: 0.08),
-        const Color(0xFF2A3C50),
+        const Color(0xFF43576D),
       ),
       inputFill: const Color(0xFF101C29),
       inputBorder: Color.alphaBlend(
         primary.withValues(alpha: 0.12),
-        const Color(0xFF3B5067),
+        const Color(0xFF637A91),
       ),
-      primary: primary,
+      primary: Color.alphaBlend(Colors.white.withValues(alpha: 0.5), primary),
       primarySubtle: primary.withValues(alpha: 0.15),
       primaryBorder: primary.withValues(alpha: 0.35),
     );
@@ -230,9 +221,9 @@ abstract final class AppBreakpoints {
 
 abstract final class AppRadius {
   static const double control = 8;
-  static const double input = 12;
-  static const double card = 20;
-  static const double dialog = 20;
+  static const double input = 8;
+  static const double card = 12;
+  static const double dialog = 16;
 }
 
 abstract final class AppSpacing {
@@ -362,8 +353,8 @@ class AppTheme {
       extensions: [colors],
       colorScheme: ColorScheme(
         brightness: brightness,
-        primary: primaryColor,
-        onPrimary: Colors.white,
+        primary: colors.primary,
+        onPrimary: isDark ? colors.bg : Colors.white,
         secondary: primaryLight,
         onSecondary: Colors.white,
         surface: colors.surface,
@@ -389,7 +380,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: Border(bottom: BorderSide(color: colors.divider, width: 1)),
         titleTextStyle: GoogleFonts.manrope(
-          fontSize: 18,
+          fontSize: 22,
           fontWeight: FontWeight.w700,
           color: colors.textPrimary,
           letterSpacing: -0.4,
@@ -445,6 +436,7 @@ class AppTheme {
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
+        floatingLabelBehavior: FloatingLabelBehavior.always,
         filled: true,
         fillColor: colors.inputFill,
         border: OutlineInputBorder(
@@ -473,8 +465,8 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          minimumSize: const Size(48, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_inputRadius),
           ),
@@ -487,8 +479,10 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(48, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_inputRadius),
           ),
@@ -500,8 +494,9 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+          backgroundColor: colors.card,
+          minimumSize: const Size(48, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           side: BorderSide(color: colors.inputBorder),
           foregroundColor: colors.textPrimary,
           shape: RoundedRectangleBorder(
@@ -515,8 +510,8 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          minimumSize: const Size(48, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_inputRadius),
           ),
@@ -529,9 +524,9 @@ class AppTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           foregroundColor: colors.textSecondary,
-          backgroundColor: colors.cardAlt,
+          backgroundColor: Colors.transparent,
           minimumSize: const Size(40, 40),
-          side: BorderSide(color: colors.divider),
+          side: BorderSide.none,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.control),
           ),
@@ -581,7 +576,7 @@ class AppTheme {
       ),
       listTileTheme: ListTileThemeData(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        iconColor: primaryColor,
+        iconColor: colors.textSecondary,
         textColor: colors.textPrimary,
         subtitleTextStyle: bodyTextTheme.bodySmall?.copyWith(
           color: colors.textSecondary,
@@ -623,14 +618,9 @@ class AppTheme {
         ),
       ),
       dataTableTheme: DataTableThemeData(
-        headingRowColor: WidgetStatePropertyAll(
-          Color.alphaBlend(
-            primaryColor.withValues(alpha: 0.055),
-            colors.cardAlt,
-          ),
-        ),
+        headingRowColor: WidgetStatePropertyAll(colors.cardAlt),
         headingTextStyle: bodyTextTheme.labelSmall?.copyWith(
-          color: colors.textSecondary,
+          color: colors.textPrimary,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.35,
         ),

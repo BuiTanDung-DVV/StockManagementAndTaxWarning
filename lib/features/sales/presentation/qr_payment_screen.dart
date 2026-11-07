@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter/services.dart';
@@ -166,7 +167,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                       width: 2,
                     ),
                   ),
-                  child: const Icon(
+                  child: const AppIcon(
                     Icons.check_circle_rounded,
                     size: 88,
                     color: AppColors.success,
@@ -282,7 +283,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                           ),
                           const SizedBox(width: 8),
                           IconButton(
-                            icon: Icon(
+                            icon: AppIcon(
                               Icons.copy_rounded,
                               size: 20,
                               color: theme.colorScheme.primary,
@@ -311,7 +312,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            AppIcon(
                               Icons.receipt_long_rounded,
                               size: 14,
                               color: theme.colorScheme.primary,
@@ -397,7 +398,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(
+                                    const AppIcon(
                                       Icons.error_outline_rounded,
                                       color: AppColors.danger,
                                       size: 48,
@@ -434,7 +435,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
+                              AppIcon(
                                 Icons.copy_rounded,
                                 size: 14,
                                 color: c.textSecondary,
@@ -509,7 +510,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.check_circle_rounded, size: 22),
+                        : const AppIcon(Icons.check_circle_rounded, size: 22),
                     label: Text(
                       _confirming ? 'ĐANG XÁC NHẬN...' : 'ĐÃ NHẬN TIỀN',
                       style: GoogleFonts.manrope(
@@ -533,7 +534,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
 
                 OutlinedButton.icon(
                   onPressed: _cancelOrder,
-                  icon: const Icon(
+                  icon: const AppIcon(
                     Icons.cancel_outlined,
                     size: 20,
                     color: AppColors.danger,
@@ -602,7 +603,7 @@ class _QrPaymentScreenState extends ConsumerState<QrPaymentScreen> {
                   borderRadius: BorderRadius.circular(4),
                   child: Padding(
                     padding: const EdgeInsets.all(4.0),
-                    child: Icon(
+                    child: AppIcon(
                       Icons.copy_rounded,
                       size: 16,
                       color: Theme.of(context).colorScheme.primary,

@@ -18,11 +18,15 @@ chmod +x flutter/bin/flutter
 flutter config --no-analytics
 
 echo "📦 Đang tải các thư viện (packages)..."
+# Cached web entrypoints can retain an older, incomplete plugin registrant.
+# Regenerate through Flutter instead of shipping a bundle with missing plugins.
+flutter clean
 flutter pub get
 
 echo "🔨 Đang tiến hành Build Web..."
 # Truyền các cấu hình public vào Flutter bằng dart-define mà không in giá trị ra build log.
-BUILD_ARGS=(--release)
+# This app selects CanvasKit. Avoid a second, unused Wasm diagnostic compilation.
+BUILD_ARGS=(--release --no-wasm-dry-run)
 if [ -n "${API_URL:-}" ]; then
   BUILD_ARGS+=(--dart-define="API_URL=$API_URL")
 else
@@ -35,5 +39,7 @@ GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-124075638912-hk0076lmjvgqa0iqec75a
 BUILD_ARGS+=(--dart-define="GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID")
 
 flutter build web "${BUILD_ARGS[@]}"
+node scripts/verify-web-auth-build.cjs build/web
+node scripts/verify-web-plugin-build.cjs build/web
 
 echo "✨ Hoàn thành quá trình Build!"

@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscurePassword = true;
   bool _rememberMe = false;
   bool _isAutoLoggingIn = false;
+
+  String? _usernameError;
+  String? _passwordError;
+
+  bool _isLoginInFlight = false;
 
   @override
   void initState() {
@@ -86,30 +92,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
-    final success = await ref
-        .read(authProvider.notifier)
-        .login(username, password);
+    setState(() {
+      _usernameError = username.isEmpty ? 'Vui lòng nhập tài khoản' : null;
+      _passwordError = password.isEmpty ? 'Vui lòng nhập mật khẩu' : null;
+    });
 
-    if (!success) {
-      if (mounted) setState(() => _isAutoLoggingIn = false);
-      return;
-    }
+    if (_usernameError != null || _passwordError != null) return;
+    if (_isLoginInFlight || ref.read(authProvider).isLoading) return;
+
+    setState(() {
+      _isLoginInFlight = true;
+    });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      if (_rememberMe) {
-        await prefs.setBool(_prefRememberMe, true);
-        await prefs.setString(_prefSavedUsername, username);
-        await prefs.setString(_prefSavedPassword, password);
-      } else {
-        await prefs.setBool(_prefRememberMe, false);
-        await prefs.remove(_prefSavedUsername);
-        await prefs.remove(_prefSavedPassword);
-      }
-    } catch (_) {}
+      final success = await ref
+          .read(authProvider.notifier)
+          .login(username, password);
 
-    if (!mounted) return;
-    _navigateAfterAuthentication();
+      if (!success) {
+        if (mounted) setState(() => _isAutoLoggingIn = false);
+        return;
+      }
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (_rememberMe) {
+          await prefs.setBool(_prefRememberMe, true);
+          await prefs.setString(_prefSavedUsername, username);
+          await prefs.setString(_prefSavedPassword, password);
+        } else {
+          await prefs.setBool(_prefRememberMe, false);
+          await prefs.remove(_prefSavedUsername);
+          await prefs.remove(_prefSavedPassword);
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+      _navigateAfterAuthentication();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoginInFlight = false;
+        });
+      }
+    }
   }
 
   Future<void> _loginWithGoogle(String idToken) async {
@@ -150,8 +176,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         passwordFocus: _passwordFocus,
         obscurePassword: _obscurePassword,
         rememberMe: _rememberMe,
-        loading: auth.isLoading || _isAutoLoggingIn,
+        loading: auth.isLoading || _isAutoLoggingIn || _isLoginInFlight,
         error: auth.error,
+        usernameError: _usernameError,
+        passwordError: _passwordError,
         onTogglePassword: () {
           setState(() => _obscurePassword = !_obscurePassword);
         },
@@ -175,6 +203,8 @@ class _LoginForm extends StatelessWidget {
   final bool rememberMe;
   final bool loading;
   final String? error;
+  final String? usernameError;
+  final String? passwordError;
   final VoidCallback onTogglePassword;
   final ValueChanged<bool> onRememberMeChanged;
   final VoidCallback onLogin;
@@ -190,6 +220,8 @@ class _LoginForm extends StatelessWidget {
     required this.rememberMe,
     required this.loading,
     required this.error,
+    this.usernameError,
+    this.passwordError,
     required this.onTogglePassword,
     required this.onRememberMeChanged,
     required this.onLogin,
@@ -212,10 +244,11 @@ class _LoginForm extends StatelessWidget {
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.email, AutofillHints.username],
             onSubmitted: (_) => passwordFocus.requestFocus(),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Gmail hoặc tên đăng nhập',
               hintText: 'Nhập tài khoản',
-              prefixIcon: Icon(Icons.person_outline_rounded),
+              prefixIcon: const AppIcon(Icons.person_outline_rounded),
+              errorText: usernameError,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -225,11 +258,12 @@ class _LoginForm extends StatelessWidget {
             obscureText: obscurePassword,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.password],
-            onSubmitted: (_) => onLogin(),
+            onSubmitted: (_) => loading ? null : onLogin(),
             decoration: InputDecoration(
               labelText: 'Mật khẩu',
               hintText: 'Nhập mật khẩu',
-              prefixIcon: const Icon(Icons.lock_outline_rounded),
+              prefixIcon: const AppIcon(Icons.lock_outline_rounded),
+              errorText: passwordError,
               suffixIcon: PasswordVisibilityButton(
                 obscureText: obscurePassword,
                 onPressed: onTogglePassword,
@@ -296,7 +330,7 @@ class _LoginForm extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  const AppIcon(
                     Icons.error_outline_rounded,
                     size: 18,
                     color: AppColors.danger,

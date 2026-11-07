@@ -1,3 +1,4 @@
+import '../../../core/widgets/loaded_records_filter.dart';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,46 +39,51 @@ class BudgetPlanScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (items) {
-          if (items.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(budgetPlansProvider);
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: SizedBox(
-                  height: 420,
-                  child: const Center(
-                    child: AppEmpty(
-                      visual: AppEmptyVisual.finance,
-                      message: 'Chưa có kế hoạch ngân sách nào',
+        data: (loadedItems) {
+          return LoadedRecordsFilter(
+            items: loadedItems,
+            builder: (items) {
+              if (items.isEmpty) {
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(budgetPlansProvider);
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: SizedBox(
+                      height: 420,
+                      child: const Center(
+                        child: AppEmpty(
+                          visual: AppEmptyVisual.finance,
+                          message: 'Chưa có kế hoạch ngân sách nào',
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(budgetPlansProvider);
-            },
-            child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length,
-              itemBuilder: (_, i) {
-                final item = items[i];
-                return Card(
-                  color: c.card,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    title: Text(item['name'] ?? 'Kế hoạch ${i + 1}'),
-                    subtitle: Text(item['description'] ?? ''),
-                  ),
                 );
-              },
-            ),
+              }
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(budgetPlansProvider);
+                },
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  itemCount: items.length,
+                  itemBuilder: (_, i) {
+                    final item = items[i];
+                    return Card(
+                      color: c.card,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        title: Text(item['name'] ?? 'Kế hoạch ${i + 1}'),
+                        subtitle: Text(item['description'] ?? ''),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           );
         },
       ),

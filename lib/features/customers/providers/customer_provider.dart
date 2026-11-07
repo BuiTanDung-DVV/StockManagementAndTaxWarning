@@ -1,8 +1,10 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
+import '../../../core/utils/paged_records.dart';
 
 class CustomerRepository {
   final ApiClient _api;
@@ -113,6 +115,23 @@ class CustomerRepository {
     return Map<String, dynamic>.from(data);
   }
 
+  Future<Map<String, dynamic>> getDebtAgingForExport(
+    int shopId, {
+    required String asOf,
+    required bool Function() isCurrentScope,
+  }) async {
+    final data = await _api.getOnlineInShop(
+      '/customers/debt-aging',
+      '$shopId',
+      params: {'asOf': asOf},
+      isCurrentScope: isCurrentScope,
+    );
+    if (data is! Map) {
+      throw ApiException('Dữ liệu tuổi nợ phải thu không đầy đủ');
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
   Future<Map<String, dynamic>> getOpenReceivablesPage({
     required Map<String, dynamic> params,
   }) async => _requirePagedResponse(
@@ -124,6 +143,20 @@ class CustomerRepository {
     required Map<String, dynamic> params,
   }) async => _requireListResponse(
     await _api.get('/customer-receivables/export', params: params),
+    'Dữ liệu xuất công nợ không hợp lệ',
+  );
+
+  Future<List<dynamic>> exportOpenReceivablesInShop(
+    int shopId, {
+    required Map<String, dynamic> params,
+    required bool Function() isCurrentScope,
+  }) async => _requireListResponse(
+    await _api.getOnlineInShop(
+      '/customer-receivables/export',
+      '$shopId',
+      params: params,
+      isCurrentScope: isCurrentScope,
+    ),
     'Dữ liệu xuất công nợ không hợp lệ',
   );
 
@@ -169,6 +202,7 @@ final customerListProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.customers);
       return ref
           .watch(customerRepoProvider)
           .findAll(page: args.page, search: args.search);
@@ -177,11 +211,19 @@ final customerListProvider =
 /// Complete option set for POS pickers. The customer management screen remains
 /// paginated, while a sales flow must be able to select beyond page one.
 final customerOptionsProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.watch(customerRepoProvider).findAll(page: 1, limit: 500);
+  watchDataFreshness(ref, DataArea.customers);
+  final repo = ref.watch(customerRepoProvider);
+  var active = true;
+  ref.onDispose(() => active = false);
+  return collectPagedRecords(
+    (page, limit) => repo.findAll(page: page, limit: limit),
+    isCurrent: () => active,
+  );
 });
 
 final customerDetailProvider = FutureProvider.family<Map<String, dynamic>, int>(
   (ref, id) {
+    watchDataFreshness(ref, DataArea.customers);
     return ref.watch(customerRepoProvider).findById(id);
   },
 );
@@ -190,6 +232,7 @@ final customerReceivablesProvider = FutureProvider.family<List<dynamic>, int>((
   ref,
   customerId,
 ) {
+  watchDataFreshness(ref, DataArea.customers);
   return ref.watch(customerRepoProvider).findReceivables(customerId);
 });
 
@@ -197,6 +240,7 @@ final customerEvidenceProvider = FutureProvider.family<List<dynamic>, int>((
   ref,
   customerId,
 ) {
+  watchDataFreshness(ref, DataArea.customers);
   return ref.watch(customerRepoProvider).findEvidence(customerId);
 });
 
@@ -204,9 +248,11 @@ final debtAgingProvider = FutureProvider.family<Map<String, dynamic>, String?>((
   ref,
   asOf,
 ) {
+  watchDataFreshness(ref, DataArea.customers);
   return ref.watch(customerRepoProvider).getDebtAging(asOf: asOf);
 });
 
 final overdueDebtsProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.customers);
   return ref.watch(customerRepoProvider).findOverdueDebts();
 });

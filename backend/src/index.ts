@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan = require('morgan');
 import { AppDataSource } from './config/db.config';
 import { config, isAllowedOrigin, validateSecurityConfig } from './config/env.config';
+import { productImportJson } from './middleware/product-import-body.middleware';
 
 validateSecurityConfig();
 
@@ -12,6 +13,7 @@ const app = express();
 
 app.disable('x-powered-by');
 if (process.env.VERCEL === '1') app.set('trust proxy', 1);
+app.use(['/api/products/import', '/products/import'], productImportJson);
 app.use(express.json({ limit: '256kb' }));
 app.use(cors({
   origin: (origin, callback) => {
@@ -54,6 +56,7 @@ import aiRoutes from './routes/ai.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import shippingCarrierRoutes from './routes/shipping-carrier.routes';
 import shopBackupRoutes from './routes/shop-backup.routes';
+import syncRoutes from './routes/sync.routes';
 
 import { authenticateJwt, requireShopId } from './middleware/auth.middleware';
 
@@ -69,6 +72,8 @@ apiRouter.get('/shops/search', shopMemberCtrl.searchShops);
 apiRouter.post('/shop-members/request-join', shopMemberCtrl.requestJoin);
 
 apiRouter.use(requireShopId);
+// Reject legacy offline uploads before reaching business posting handlers.
+apiRouter.use('/', syncRoutes);
 apiRouter.use('/', financeRoutes);
 apiRouter.use('/', dashboardRoutes);
 apiRouter.use('/', shippingCarrierRoutes);

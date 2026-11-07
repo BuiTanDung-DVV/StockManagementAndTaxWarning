@@ -1,6 +1,26 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
+import '../models/cash_ledger_export.dart';
+import '../../dashboard/providers/dashboard_action_provider.dart';
+import '../../settings/providers/system_provider.dart';
+
+/// Refresh dependent views only after a cash mutation succeeds.
+void refreshCashTransactionViews(WidgetRef ref, {int? transactionId}) {
+  ref.invalidate(transactionsProvider);
+  if (transactionId != null) {
+    ref.invalidate(transactionDetailProvider(transactionId));
+  }
+  ref.invalidate(cashSummaryProvider);
+  ref.invalidate(expensesByCategoryProvider);
+  ref.invalidate(expensesByCategoryForPeriodProvider);
+  ref.invalidate(profitLossProvider);
+  ref.invalidate(dailyClosingProvider);
+  ref.invalidate(cashflowProjectionProvider);
+  ref.invalidate(dashboardActionProvider);
+  ref.invalidate(activityLogsProvider);
+}
 
 class FinanceRepository {
   final ApiClient _api;
@@ -35,9 +55,49 @@ class FinanceRepository {
     );
   }
 
+  Future<CashLedgerExport> exportTransactionsInShop(
+    int shopId, {
+    required String from,
+    required String to,
+    String? type,
+    String? category,
+    required bool Function() isCurrentScope,
+  }) async {
+    final params = <String, dynamic>{'from': from, 'to': to};
+    if (type != null) params['type'] = type;
+    if (category != null) params['category'] = category;
+    final raw = await _api.getOnlineInShop(
+      '/cash-transactions/export',
+      '$shopId',
+      params: params,
+      isCurrentScope: isCurrentScope,
+    );
+    return CashLedgerExport.fromResponse(
+      raw,
+      shopId: shopId,
+      from: from,
+      to: to,
+      type: type,
+      category: category,
+    );
+  }
+
   Future<Map<String, dynamic>> createTransaction(
     Map<String, dynamic> dto,
   ) async => await _api.post('/cash-transactions', data: dto);
+
+  Future<Map<String, dynamic>> createTransactionInShop(
+    Map<String, dynamic> dto,
+    int shopId, {
+    required bool Function() isCurrentScope,
+  }) async => Map<String, dynamic>.from(
+    await _api.postInShop(
+      '/cash-transactions',
+      '$shopId',
+      dto,
+      isCurrentScope: isCurrentScope,
+    ),
+  );
   Future<Map<String, dynamic>> findTransaction(int id) async =>
       Map<String, dynamic>.from(await _api.get('/cash-transactions/$id'));
   Future<Map<String, dynamic>> updateTransaction(
@@ -320,6 +380,7 @@ final transactionsProvider =
         String? to,
       })
     >((ref, args) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref
           .watch(financeRepoProvider)
           .findTransactions(
@@ -334,6 +395,7 @@ final transactionsProvider =
 
 final transactionDetailProvider =
     FutureProvider.family<Map<String, dynamic>, int>((ref, id) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref.watch(financeRepoProvider).findTransaction(id);
     });
 
@@ -342,6 +404,7 @@ final cashSummaryProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref
           .watch(financeRepoProvider)
           .getCashFlowSummary(args.from, args.to);
@@ -352,6 +415,7 @@ final profitLossProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref.watch(financeRepoProvider).getProfitLoss(args.from, args.to);
     });
 
@@ -360,6 +424,7 @@ final invoiceReconciliationProvider =
       Map<String, dynamic>,
       ({String? from, String? to, bool all})
     >((ref, args) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref
           .watch(financeRepoProvider)
           .getInvoiceReconciliation(
@@ -370,6 +435,7 @@ final invoiceReconciliationProvider =
     });
 
 final expensesByCategoryProvider = FutureProvider<Map<String, dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.finance);
   return ref.watch(financeRepoProvider).getExpensesByCategory();
 });
 
@@ -378,6 +444,7 @@ final expensesByCategoryForPeriodProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref
           .watch(financeRepoProvider)
           .getExpensesByCategory(from: args.from, to: args.to);
@@ -385,23 +452,28 @@ final expensesByCategoryForPeriodProvider =
 
 final dailyClosingProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, date) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref.watch(financeRepoProvider).getDailyClosing(date);
     });
 
 final dailyClosingsListProvider =
     FutureProvider.family<Map<String, dynamic>, int>((ref, page) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref.watch(financeRepoProvider).getDailyClosings(page: page);
     });
 
 final cashAccountsProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.finance);
   return ref.watch(financeRepoProvider).findAccounts();
 });
 
 final forecastsProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.finance);
   return ref.watch(financeRepoProvider).findForecasts();
 });
 
 final budgetPlansProvider = FutureProvider<List<dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.finance);
   return ref.watch(financeRepoProvider).findBudgetPlans();
 });
 
@@ -410,6 +482,7 @@ final invoiceListProvider =
       Map<String, dynamic>,
       ({int page, String? type, String? from, String? to})
     >((ref, args) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref
           .watch(financeRepoProvider)
           .findInvoices(
@@ -425,6 +498,7 @@ final invoiceSummaryProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref
           .watch(financeRepoProvider)
           .getInvoiceSummary(args.from, args.to);
@@ -435,15 +509,27 @@ final purchasesNoInvoiceProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.finance);
       return ref
           .watch(financeRepoProvider)
           .findPurchasesNoInvoice(page: args.page, status: args.status);
     });
 
 final taxObligationsProvider = FutureProvider<Map<String, dynamic>>((ref) {
+  watchDataFreshness(ref, DataArea.finance);
   final shopState = ref.watch(shopProvider);
   if (shopState.isAllShops || shopState.currentShopId == null) {
     return {'items': <dynamic>[]};
   }
   return ref.watch(financeRepoProvider).getTaxObligations();
 });
+
+final cashflowProjectionProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+      watchDataFreshness(ref, DataArea.finance);
+      ref.watch(shopProvider);
+      ref.watch(forecastsProvider);
+      return Map<String, dynamic>.from(
+        await ref.watch(apiClientProvider).get('/cashflow-projection'),
+      );
+    });

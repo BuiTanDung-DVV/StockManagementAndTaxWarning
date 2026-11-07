@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -57,12 +58,12 @@ class ChartCard extends StatelessWidget {
     final c = AppThemeColors.of(context);
     return Container(
       height: height,
+      clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: c.divider),
-        boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,7 +160,7 @@ class EmptyChartPlaceholder extends StatelessWidget {
                     size: 28,
                     color: theme.colorScheme.primary.withValues(alpha: 0.7),
                   )
-                : Icon(
+                : AppIcon(
                     icon,
                     size: 28,
                     color: theme.colorScheme.primary.withValues(alpha: 0.5),
@@ -590,6 +591,7 @@ class MiniBarChart extends StatelessWidget {
   final List<Color>? barColors;
   final bool showLeftTitles;
   final String valueSuffix;
+  final ValueChanged<int>? onBarTap;
 
   const MiniBarChart({
     super.key,
@@ -600,6 +602,7 @@ class MiniBarChart extends StatelessWidget {
     this.barColors,
     this.showLeftTitles = false,
     this.valueSuffix = '',
+    this.onBarTap,
   });
 
   @override
@@ -624,6 +627,11 @@ class MiniBarChart extends StatelessWidget {
         alignment: BarChartAlignment.spaceAround,
         maxY: maxY * 1.15,
         barTouchData: BarTouchData(
+          touchCallback: (event, response) {
+            final spot = response?.spot;
+            if (event is FlTapUpEvent && spot != null)
+              onBarTap?.call(spot.touchedBarGroupIndex);
+          },
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (group) => c.surface,
             getTooltipItem: (group, gIdx, rod, rIdx) {

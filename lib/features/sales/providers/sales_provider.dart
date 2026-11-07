@@ -1,3 +1,5 @@
+import '../../../core/providers/data_freshness_provider.dart';
+import '../models/sales_payment.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../../../core/network/api_client.dart';
@@ -40,10 +42,91 @@ class SalesRepository {
     int id,
     Map<String, dynamic> dto,
   ) async => await _api.post('/sales-orders/$id/payments', data: dto);
+  Future<SalesPaymentResult> recordPaymentInShop(
+    int orderId,
+    int shopId,
+    Map<String, dynamic> request,
+    bool Function() current,
+  ) async {
+    final raw = await _api.postInShop(
+      '/sales-orders/$orderId/payments',
+      '$shopId',
+      request,
+      isCurrentScope: current,
+    );
+    if (!current()) throw ApiException('Phạm vi ghi nhận đã thay đổi', 409);
+    return SalesPaymentResult.fromResponse(
+      raw,
+      shopId: shopId,
+      orderId: orderId,
+      operationId: request['operationId'] as String,
+    );
+  }
+
+  Future<SalesPaymentResult?> paymentStatusInShop(
+    int orderId,
+    int shopId,
+    String operationId,
+    bool Function() current,
+  ) async {
+    final raw = await _api.getOnlineInShop(
+      '/sales-orders/$orderId/payment-attempts/$operationId',
+      '$shopId',
+      isCurrentScope: current,
+    );
+    if (!current()) throw ApiException('Phạm vi tra cứu đã thay đổi', 409);
+    if (raw is Map && raw['state'] == 'UNKNOWN') return null;
+    if (raw is! Map || raw['state'] != 'COMPLETED') {
+      throw const FormatException('Chưa đọc được kết quả thu tiền');
+    }
+    return SalesPaymentResult.fromResponse(
+      raw['result'],
+      shopId: shopId,
+      orderId: orderId,
+      operationId: operationId,
+    );
+  }
+
   Future<Map<String, dynamic>> createReturn(
     int id,
     Map<String, dynamic> dto,
   ) async => await _api.post('/sales-orders/$id/returns', data: dto);
+
+  Future<Map<String, dynamic>> createReturnInShop(
+    int id,
+    int shopId,
+    Map<String, dynamic> dto,
+    bool Function() current,
+  ) async {
+    final raw = await _api.postInShop(
+      '/sales-orders/$id/returns',
+      '$shopId',
+      dto,
+      isCurrentScope: current,
+    );
+    if (!current()) throw ApiException('Phạm vi ghi nhận đã thay đổi', 409);
+    if (raw is! Map) {
+      throw const FormatException('Biên nhận trả hàng chưa đầy đủ');
+    }
+    return Map<String, dynamic>.from(raw);
+  }
+
+  Future<Map<String, dynamic>> findByIdInShop(
+    int id,
+    int shopId,
+    bool Function() current,
+  ) async {
+    final raw = await _api.getOnlineInShop(
+      '/sales-orders/$id',
+      '$shopId',
+      isCurrentScope: current,
+    );
+    if (!current()) throw ApiException('Phạm vi tra cứu đã thay đổi', 409);
+    if (raw is! Map || raw['id'] != id || raw['shopId'] != shopId) {
+      throw const FormatException('Đơn bán không khớp cửa hàng');
+    }
+    return Map<String, dynamic>.from(raw);
+  }
 
   Future<Map<String, dynamic>> getSummary(String from, String to) async {
     final data = Map<String, dynamic>.from(
@@ -148,6 +231,7 @@ final salesListProvider =
         String? to,
       })
     >((ref, args) {
+      watchDataFreshness(ref, DataArea.sales);
       return ref
           .watch(salesRepoProvider)
           .findAll(
@@ -164,6 +248,7 @@ final salesDetailProvider = FutureProvider.family<Map<String, dynamic>, int>((
   ref,
   id,
 ) {
+  watchDataFreshness(ref, DataArea.sales);
   return ref.watch(salesRepoProvider).findById(id);
 });
 
@@ -172,6 +257,7 @@ final salesSummaryProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.sales);
       return ref.watch(salesRepoProvider).getSummary(args.from, args.to);
     });
 
@@ -180,6 +266,7 @@ final topProductsProvider =
       List<dynamic>,
       ({String from, String to, String? previousFrom, String? previousTo})
     >((ref, args) {
+      watchDataFreshness(ref, DataArea.sales);
       return ref
           .watch(salesRepoProvider)
           .getTopProducts(
@@ -191,6 +278,7 @@ final topProductsProvider =
     });
 
 final recentTransactionsProvider = FutureProvider<List<dynamic>>((ref) async {
+  watchDataFreshness(ref, DataArea.sales);
   final shopState = ref.watch(shopProvider);
   if (shopState.userShops.isEmpty) return [];
   final res = await ref.watch(salesRepoProvider).findAll(page: 1, limit: 5);
@@ -206,6 +294,7 @@ final paymentSummaryProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.sales);
       return ref.watch(salesRepoProvider).getPaymentSummary(args.from, args.to);
     });
 
@@ -214,6 +303,7 @@ final topReturnedProductsProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.sales);
       return ref
           .watch(salesRepoProvider)
           .getTopReturnedProducts(args.from, args.to);

@@ -1,4 +1,7 @@
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/search_text.dart';
 import 'package:flutter/material.dart';
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -188,7 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               description: tr.settings.minStockAlertDesc,
               icon: Icons.warning_amber_rounded,
               iconColor: const Color(0xFFE11D48),
-              onTap: () => context.push('/inventory'),
+              onTap: () => context.push('/products/min-stock'),
             ),
         ],
       ),
@@ -266,7 +269,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               description: tr.settings.taxPortalDesc,
               icon: Icons.open_in_new_rounded,
               iconColor: const Color(0xFF7C3AED),
-              onTap: () => context.push('/tax-support'),
+              onTap: () async {
+                final opened = await launchUrl(
+                  Uri.parse('https://thuedientu.gdt.gov.vn/'),
+                  mode: LaunchMode.externalApplication,
+                );
+                if (!opened)
+                  ToastService.showError(
+                    'Không mở được cổng Thuế điện tử. Vui lòng thử lại.',
+                  );
+              },
             ),
         ],
       ),
@@ -322,7 +334,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     ];
 
-    final query = _searchQuery.trim().toLowerCase();
+    final query = foldSearchText(_searchQuery);
     final filteredSections = sections
         .map(
           (section) => _SettingsSectionData(
@@ -331,9 +343,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             iconColor: section.iconColor,
             entries: section.entries.where((entry) {
               if (query.isEmpty) return true;
-              return entry.label.toLowerCase().contains(query) ||
-                  entry.description.toLowerCase().contains(query) ||
-                  section.title.toLowerCase().contains(query);
+              return foldSearchText(entry.label).contains(query) ||
+                  foldSearchText(entry.description).contains(query) ||
+                  foldSearchText(section.title).contains(query);
             }).toList(),
           ),
         )
@@ -414,7 +426,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       prefixIcon: Padding(
                         padding: const EdgeInsets.only(left: 14, right: 10),
-                        child: Icon(
+                        child: AppIcon(
                           Icons.search_rounded,
                           color: Theme.of(context).colorScheme.primary,
                           size: 22,
@@ -426,7 +438,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 18),
+                              icon: const AppIcon(
+                                Icons.close_rounded,
+                                size: 18,
+                              ),
                               color: colors.textSecondary,
                               onPressed: () {
                                 _searchController.clear();
@@ -450,7 +465,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Row(
                       children: [
-                        Icon(
+                        AppIcon(
                           Icons.filter_list_rounded,
                           size: 16,
                           color: colors.textSecondary,
@@ -475,7 +490,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
                           },
-                          icon: const Icon(Icons.close_rounded, size: 14),
+                          icon: const AppIcon(Icons.close_rounded, size: 14),
                           label: Text(tr.settings.clearFilter),
                           style: TextButton.styleFrom(
                             visualDensity: VisualDensity.compact,
@@ -517,7 +532,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Center(
                   child: OutlinedButton.icon(
                     onPressed: () => _confirmLogout(context),
-                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    icon: const AppIcon(Icons.logout_rounded, size: 18),
                     label: Text(tr.settings.logoutButton),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.danger,
@@ -1148,18 +1163,11 @@ class _SettingsSection extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.divider.withValues(alpha: 0.7)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1182,12 +1190,12 @@ class _SettingsSection extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: section.iconColor.withValues(alpha: 0.12),
+                      color: colors.cardAlt,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(
+                    child: AppIcon(
                       section.icon,
-                      color: section.iconColor,
+                      color: colors.primary,
                       size: 20,
                     ),
                   ),
@@ -1249,7 +1257,7 @@ class _SettingsActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final iconColor = entry.iconColor ?? colors.textSecondary;
+    final iconColor = colors.textSecondary;
 
     return Material(
       color: Colors.transparent,
@@ -1277,7 +1285,7 @@ class _SettingsActionRow extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.09),
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
@@ -1289,7 +1297,7 @@ class _SettingsActionRow extends StatelessWidget {
                         semanticLabel: entry.label,
                       )
                     : (entry.icon != null
-                          ? Icon(entry.icon, size: 20, color: iconColor)
+                          ? AppIcon(entry.icon, size: 20, color: iconColor)
                           : const SizedBox.shrink()),
               ),
               const SizedBox(width: 14),
@@ -1342,7 +1350,7 @@ class _SettingsActionRow extends StatelessWidget {
                     color: colors.bg,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  child: AppIcon(
                     Icons.chevron_right_rounded,
                     size: 18,
                     color: colors.textMuted,
@@ -1570,7 +1578,7 @@ class _LanguageOption extends StatelessWidget {
                   ),
                 ),
                 if (selected)
-                  Icon(Icons.check_circle_rounded, color: primary, size: 22),
+                  AppIcon(Icons.check_circle_rounded, color: primary, size: 22),
               ],
             ),
           ),

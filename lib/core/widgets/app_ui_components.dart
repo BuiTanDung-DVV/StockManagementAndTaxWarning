@@ -1,7 +1,9 @@
+import '../utils/search_text.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../assets/app_assets.dart';
+import '../assets/app_icon.dart';
 import '../theme/app_theme.dart';
 import 'chart_widgets.dart';
 
@@ -39,7 +41,6 @@ class AppCardContainer extends StatelessWidget {
           color: borderColor ?? c.divider.withValues(alpha: 0.9),
           width: 1,
         ),
-        boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: child,
     );
@@ -59,6 +60,8 @@ class AppKpiCard extends StatelessWidget {
   final List<double>? sparklineData;
   final bool isHero;
   final bool compact;
+  final int titleMaxLines;
+  final bool badgeBelowValue;
   final VoidCallback? onTap;
   final String? navigationHint;
 
@@ -73,6 +76,8 @@ class AppKpiCard extends StatelessWidget {
     this.sparklineData,
     this.isHero = false,
     this.compact = false,
+    this.titleMaxLines = 1,
+    this.badgeBelowValue = false,
     this.onTap,
     this.navigationHint,
   });
@@ -96,7 +101,6 @@ class AppKpiCard extends StatelessWidget {
         color: c.card,
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: c.divider.withValues(alpha: 0.9)),
-        boxShadow: const [AppTheme.diffusionShadow],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,14 +133,14 @@ class AppKpiCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: c.textSecondary,
                         ),
-                        maxLines: 1,
+                        maxLines: titleMaxLines,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (!compact && badgeText != null)
+              if (!compact && !badgeBelowValue && badgeText != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -179,7 +183,7 @@ class AppKpiCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (compact && badgeText != null) ...[
+              if (compact && !badgeBelowValue && badgeText != null) ...[
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -203,6 +207,25 @@ class AppKpiCard extends StatelessWidget {
               ],
             ],
           ),
+          if (badgeBelowValue && badgeText != null)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                badgeText!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ),
           if (sparklineData != null && sparklineData!.isNotEmpty) ...[
             const SizedBox(height: 8),
             CompactSparkline(values: sparklineData!, color: color, height: 28),
@@ -316,7 +339,7 @@ class AppSectionHeader extends StatelessWidget {
                 AppAssetIcon(
                   assetPath: assetPath!,
                   size: 20,
-                  color: iconColor,
+                  color: c.textSecondary,
                   semanticLabel: title,
                 ),
                 const SizedBox(width: 10),
@@ -363,7 +386,7 @@ class AppDataTableColumn {
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. AppDataTable — Unified Reusable Table for All Modules
 // ─────────────────────────────────────────────────────────────────────────────
-class AppDataTable<T> extends StatelessWidget {
+class AppDataTable<T> extends StatefulWidget {
   final String title;
   final dynamic icon;
   final String? assetPath;
@@ -373,6 +396,7 @@ class AppDataTable<T> extends StatelessWidget {
   final List<T> items;
   final Widget Function(BuildContext context, T item, int index) rowBuilder;
   final String emptyMessage;
+  final bool showSearch;
 
   const AppDataTable({
     super.key,
@@ -385,10 +409,39 @@ class AppDataTable<T> extends StatelessWidget {
     required this.items,
     required this.rowBuilder,
     this.emptyMessage = 'Chưa có dữ liệu',
+    this.showSearch = true,
   });
 
   @override
+  State<AppDataTable<T>> createState() => _AppDataTableState<T>();
+}
+
+class _AppDataTableState<T> extends State<AppDataTable<T>> {
+  final _search = TextEditingController();
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final title = widget.title;
+    final icon = widget.icon;
+    final assetPath = widget.assetPath;
+    final iconColor = widget.iconColor;
+    final headerAction = widget.headerAction;
+    final columns = widget.columns;
+    final rowBuilder = widget.rowBuilder;
+    final query = foldSearchText(_search.text);
+    final items = widget.items.where((item) {
+      if (query.isEmpty) return true;
+      return recordSearchText(item).contains(query);
+    }).toList();
+    final emptyMessage = query.isEmpty
+        ? widget.emptyMessage
+        : 'Không có dòng phù hợp với tìm kiếm';
+
     final c = AppThemeColors.of(context);
 
     return AppCardContainer(
@@ -396,18 +449,9 @@ class AppDataTable<T> extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            height: 3,
-            decoration: BoxDecoration(
-              color: iconColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppRadius.card - 1),
-              ),
-            ),
-          ),
           // Section Title Header
           Container(
-            color: c.cardAlt.withValues(alpha: 0.34),
+            color: c.card,
             padding: const EdgeInsets.fromLTRB(18, 15, 18, 14),
             child: AppSectionHeader(
               title: title,
@@ -419,6 +463,36 @@ class AppDataTable<T> extends StatelessWidget {
           ),
           Divider(height: 1, color: c.divider.withValues(alpha: 0.6)),
 
+          if (widget.showSearch)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Tìm trong ${widget.items.length} dòng đã tải',
+                  hintText: 'Nhập tên, mã hoặc nội dung trong bảng',
+                  prefixIcon: const AppIcon(Icons.search, size: 18),
+                  suffixIcon: query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Bỏ lọc bảng',
+                          icon: const AppIcon(Icons.close, size: 18),
+                          onPressed: () {
+                            _search.clear();
+                            setState(() {});
+                          },
+                        ),
+                ),
+              ),
+            ),
+          if (query.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              child: Text(
+                '${items.length} / ${widget.items.length} dòng phù hợp',
+              ),
+            ),
           // Table Body with Smooth Horizontal Scroll on Mobile
           LayoutBuilder(
             builder: (context, constraints) {

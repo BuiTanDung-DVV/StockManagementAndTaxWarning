@@ -1,3 +1,4 @@
+import '../../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -87,7 +88,7 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
           children: [
             Row(
               children: [
-                Icon(
+                AppIcon(
                   Icons.storefront_rounded,
                   color: theme.colorScheme.primary,
                   size: 28,
@@ -104,7 +105,7 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: c.textMuted),
+                  icon: AppIcon(Icons.close_rounded, color: c.textMuted),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -116,7 +117,7 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                 decoration: InputDecoration(
                   labelText: 'Tìm Cửa hàng / Doanh nghiệp',
                   hintText: 'Nhập tên hoặc mã cửa hàng...',
-                  prefixIcon: Icon(Icons.search_rounded, color: c.textMuted),
+                  prefixIcon: AppIcon(Icons.search_rounded, color: c.textMuted),
                   suffixIcon: _isSearching
                       ? Padding(
                           padding: const EdgeInsets.all(12),
@@ -232,7 +233,7 @@ class _JoinShopDialogState extends ConsumerState<JoinShopDialog> {
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close_rounded, color: c.textMuted),
+                      icon: AppIcon(Icons.close_rounded, color: c.textMuted),
                       onPressed: () => setState(() => _selectedShop = null),
                     ),
                   ],

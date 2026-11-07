@@ -1,84 +1,63 @@
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 import '../assets/app_assets.dart';
 import '../theme/app_theme.dart';
 import 'feature_guide_data.dart';
 
-/// Hiển thị hướng dẫn tính năng dưới dạng BottomSheet
+/// Hướng dẫn ngắn: hộp thoại trên web rộng, trang kéo từ dưới trên mobile.
 ///
 /// Sử dụng: `showFeatureGuide(context, 'dashboard')`
 void showFeatureGuide(BuildContext context, String screenKey) {
   final guide = featureGuides[screenKey];
   if (guide == null) return;
 
-  showModalBottomSheet(
+  if (MediaQuery.sizeOf(context).width >= 600) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 620,
+            maxHeight: MediaQuery.sizeOf(ctx).height - 64,
+          ),
+          child: _FeatureGuideContent(guide: guide),
+        ),
+      ),
+    );
+    return;
+  }
+  showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    showDragHandle: true,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (ctx) => DraggableScrollableSheet(
-      initialChildSize: 0.9,
+      initialChildSize: 0.78,
       minChildSize: 0.5,
       maxChildSize: 1.0,
-      expand: true,
+      expand: false,
       snap: true,
-      builder: (_, controller) {
-        final c = AppThemeColors.of(ctx);
-        return Column(
-          children: [
-            // ── Drag handle ──
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: c.textMuted.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // ── Title ──
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: Row(
-                children: [
-                  Text(guide.icon, style: const TextStyle(fontSize: 24)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Hướng dẫn: ${guide.title}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: c.textMuted),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1, color: c.textMuted.withValues(alpha: 0.15)),
-            // ── Guide Items ──
-            Expanded(
-              child: ListView.separated(
-                controller: controller,
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                itemCount: guide.items.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (_, i) => _GuideItemCard(item: guide.items[i]),
-              ),
-            ),
-          ],
-        );
-      },
+      builder: (_, controller) =>
+          _FeatureGuideContent(guide: guide, scrollController: controller),
     ),
   );
 }
 
-/// Tạo nút ❓ để gắn vào AppBar actions
+/// Tác vụ hướng dẫn có nhãn trên desktop, tooltip trên màn hẹp.
 Widget featureGuideButton(BuildContext context, String screenKey) {
+  if (MediaQuery.sizeOf(context).width >= 800) {
+    return Tooltip(
+      message: 'Hướng dẫn',
+      child: TextButton.icon(
+        onPressed: () => showFeatureGuide(context, screenKey),
+        icon: const AppAssetIcon(assetPath: AppAssets.help, size: 18),
+        label: const Text('Hướng dẫn'),
+      ),
+    );
+  }
   return IconButton(
     icon: const AppAssetIcon(
       assetPath: AppAssets.help,
@@ -92,6 +71,64 @@ Widget featureGuideButton(BuildContext context, String screenKey) {
 
 // ── Guide Item Card ──
 
+class _FeatureGuideContent extends StatelessWidget {
+  final FeatureGuide guide;
+  final ScrollController? scrollController;
+  const _FeatureGuideContent({required this.guide, this.scrollController});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 12, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'HƯỚNG DẪN SỬ DỤNG',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: c.textSecondary,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      guide.title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Đóng hướng dẫn',
+                onPressed: () => Navigator.pop(context),
+                icon: const AppIcon(Icons.close, size: 20),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: c.divider),
+        Flexible(
+          child: ListView.separated(
+            shrinkWrap: true,
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            itemCount: guide.items.length,
+            separatorBuilder: (_, _) => Divider(height: 25, color: c.divider),
+            itemBuilder: (_, i) => _GuideItemCard(item: guide.items[i]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _GuideItemCard extends StatelessWidget {
   final FeatureGuideItem item;
   const _GuideItemCard({required this.item});
@@ -99,46 +136,33 @@ class _GuideItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppThemeColors.of(context);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: c.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.textMuted.withValues(alpha: 0.1)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (item.heading.isNotEmpty) ...[
+            Text(
+              item.heading,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+          ],
           // ── Giới thiệu ──
           Text(item.intro, style: const TextStyle(fontSize: 14, height: 1.5)),
-          const SizedBox(height: 10),
-          // ── Ví dụ ──
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(8),
+          if (item.example.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Ví dụ: ${item.example}',
+              style: TextStyle(
+                fontSize: 13,
+                color: c.textSecondary,
+                height: 1.4,
+              ),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('💡', style: TextStyle(fontSize: 14)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.example,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: c.textSecondary,
-                      fontStyle: FontStyle.italic,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ],
       ),
     );

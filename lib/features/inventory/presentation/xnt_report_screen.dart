@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +10,11 @@ import '../../../core/widgets/app_pagination_bar.dart';
 import '../../../core/widgets/custom_date_range_picker.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/inventory_provider.dart';
+import '../../../core/providers/reporting_period_provider.dart';
+import '../../../core/utils/excel_export_service.dart';
+import '../../../core/network/api_client.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../settings/providers/shop_provider.dart';
 
 final _xntQuantityFormat = NumberFormat.decimalPattern('vi_VN');
 
@@ -26,24 +32,156 @@ class XntReportScreen extends ConsumerStatefulWidget {
 }
 
 class _XntReportScreenState extends ConsumerState<XntReportScreen> {
-  late String _from;
-  late String _to;
+  DateTimeRange? _rangeOverride;
   int _page = 1;
+  int _exportVersion = 0;
+  bool _exporting = false;
+  ({int? shopId, bool allShops, String from, String to})? _listScope;
 
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _from = DateTime(now.year, now.month, 1).toIso8601String().split('T').first;
-    _to = now.toIso8601String().split('T').first;
+  ({String from, String to}) _period() {
+    final period = ref.read(tabResolvedPeriodProvider('inventory'));
+    return (
+      from: (_rangeOverride?.start ?? period.currentFrom)
+          .toIso8601String()
+          .split('T')
+          .first,
+      to: (_rangeOverride?.end ?? period.currentTo)
+          .toIso8601String()
+          .split('T')
+          .first,
+    );
+  }
+
+  Future<void> _pickPeriod() async {
+    final period = _period(), version = _exportVersion;
+    final picked = await showCustomDateRangePicker(
+      context,
+      initialRange: DateTimeRange(
+        start: DateTime.parse(period.from),
+        end: DateTime.parse(period.to),
+      ),
+    );
+    if (!mounted || picked == null || version != _exportVersion) return;
+    setState(() {
+      _rangeOverride = picked;
+      _page = 1;
+      _exportVersion++;
+    });
+  }
+
+  Future<void> _exportReport() async {
+    if (_exporting) return;
+    final shop = ref.read(shopProvider), period = _period();
+    final shopId = shop.currentShopId,
+        actor = ref.read(authProvider).user?['id']?.toString(),
+        version = _exportVersion;
+    bool current() {
+      if (!mounted || version != _exportVersion) return false;
+      final auth = ref.read(authProvider), active = ref.read(shopProvider);
+      return auth.isLoggedIn &&
+          !auth.isOfflineSession &&
+          actor != null &&
+          auth.user?['id']?.toString() == actor &&
+          shopId != null &&
+          !active.isAllShops &&
+          active.currentShopId == shopId &&
+          active.hasPermission('inventory') &&
+          _period() == period;
+    }
+
+    if (!current()) return;
+    setState(() => _exporting = true);
+    try {
+      final report = await ref
+          .read(inventoryRepoProvider)
+          .exportXntInShop(
+            shopId!,
+            from: period.from,
+            to: period.to,
+            isCurrentScope: current,
+          );
+      if (!current()) return;
+      final downloaded = await ExcelExportService.exportXnt(
+        report,
+        shopName: shop.currentShopName ?? 'Cửa hàng $shopId',
+      );
+      if (!mounted || !current()) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            downloaded
+                ? 'Đã gửi tệp Excel gồm ${report.items.length} sản phẩm để tải xuống.'
+                : 'Chưa tải được tệp Excel. Vui lòng thử lại.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted || !current()) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is ApiException
+                ? error.message
+                : error is FormatException
+                ? error.message
+                : 'Chưa xuất được báo cáo. Vui lòng thử lại.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      authProvider.select(
+        (value) => (
+          value.isLoggedIn,
+          value.user?['id']?.toString(),
+          value.isOfflineSession,
+        ),
+      ),
+      (previous, next) {
+        if (previous != next) _exportVersion++;
+      },
+    );
+    ref.listen(shopProvider, (previous, next) {
+      if (previous?.currentShopId != next.currentShopId ||
+          previous?.isAllShops != next.isAllShops ||
+          previous?.hasPermission('inventory') !=
+              next.hasPermission('inventory')) {
+        _exportVersion++;
+      }
+    });
+    ref.listen(tabResolvedPeriodProvider('inventory'), (previous, next) {
+      if (previous?.currentFrom != next.currentFrom ||
+          previous?.currentTo != next.currentTo) {
+        setState(() {
+          _rangeOverride = null;
+          _page = 1;
+          _exportVersion++;
+        });
+      }
+    });
+    ref.watch(tabResolvedPeriodProvider('inventory'));
+    final period = _period(), shop = ref.watch(shopProvider);
+    final listScope = (
+      shopId: shop.currentShopId,
+      allShops: shop.isAllShops,
+      from: period.from,
+      to: period.to,
+    );
+    if (_listScope != listScope) {
+      _listScope = listScope;
+      _page = 1;
+      _exportVersion++;
+    }
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final reportAsync = ref.watch(
-      xntReportProvider((from: _from, to: _to, warehouseId: null)),
+      xntReportProvider((from: period.from, to: period.to, warehouseId: null)),
     );
     final slowAsync = ref.watch(slowMovingProvider);
 
@@ -67,26 +205,45 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
         ),
         centerTitle: true,
         actions: [
-          featureGuideButton(context, 'xnt_report'),
-          IconButton(
-            icon: const Icon(Icons.calendar_month_rounded),
-            onPressed: () async {
-              final picked = await showCustomDateRangePicker(
-                context,
-                initialRange: DateTimeRange(
-                  start: DateTime.parse(_from),
-                  end: DateTime.parse(_to),
+          if (MediaQuery.sizeOf(context).width < 720)
+            PopupMenuButton<String>(
+              tooltip: 'Tác vụ báo cáo',
+              onSelected: (value) {
+                if (value == 'period') _pickPeriod();
+                if (value == 'export') _exportReport();
+                if (value == 'guide') showFeatureGuide(context, 'xnt_report');
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'period', child: Text('Chọn kỳ')),
+                PopupMenuItem(
+                  value: 'export',
+                  enabled:
+                      !_exporting &&
+                      !shop.isAllShops &&
+                      shop.hasPermission('inventory'),
+                  child: const Text('Xuất XNT Excel'),
                 ),
-              );
-              if (picked != null) {
-                setState(() {
-                  _from = picked.start.toIso8601String().split('T').first;
-                  _to = picked.end.toIso8601String().split('T').first;
-                  _page = 1;
-                });
-              }
-            },
-          ),
+                const PopupMenuItem(value: 'guide', child: Text('Hướng dẫn')),
+              ],
+            )
+          else ...[
+            featureGuideButton(context, 'xnt_report'),
+            OutlinedButton.icon(
+              onPressed:
+                  _exporting ||
+                      shop.isAllShops ||
+                      !shop.hasPermission('inventory')
+                  ? null
+                  : _exportReport,
+              icon: const AppIcon(Icons.download_outlined, size: 18),
+              label: Text(_exporting ? 'Đang xuất…' : 'Xuất XNT Excel'),
+            ),
+            IconButton(
+              tooltip: 'Chọn kỳ báo cáo',
+              icon: const AppIcon(Icons.calendar_month_rounded),
+              onPressed: _pickPeriod,
+            ),
+          ],
           const SizedBox(width: 8),
         ],
       ),
@@ -142,18 +299,20 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        AppIcon(
                           Icons.date_range_rounded,
                           size: 14,
                           color: theme.colorScheme.primary,
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'Kỳ báo cáo: $_from → $_to',
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Text(
+                            'Kỳ báo cáo: ${period.from} → ${period.to}',
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -163,14 +322,9 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
 
                   // Các thẻ đếm SKU, không cộng lẫn số lượng khác đơn vị tính.
                   LayoutBuilder(
-                    builder: (context, constraints) => GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: constraints.maxWidth < 680 ? 2 : 4,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: constraints.maxWidth < 680 ? 2.35 : 1.9,
-                      children: [
+                    builder: (context, constraints) {
+                      final isCompact = constraints.maxWidth < 680;
+                      final cards = [
                         _MiniCard(
                           'SKU có tồn đầu',
                           '$openingSkuCount',
@@ -191,8 +345,45 @@ class _XntReportScreenState extends ConsumerState<XntReportScreen> {
                           '$closingSkuCount',
                           AppColors.primary,
                         ),
-                      ],
-                    ),
+                      ];
+
+                      if (isCompact) {
+                        return Column(
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: cards[0]),
+                                const SizedBox(width: 8),
+                                Expanded(child: cards[1]),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: cards[2]),
+                                const SizedBox(width: 8),
+                                Expanded(child: cards[3]),
+                              ],
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: cards[0]),
+                          const SizedBox(width: 8),
+                          Expanded(child: cards[1]),
+                          const SizedBox(width: 8),
+                          Expanded(child: cards[2]),
+                          const SizedBox(width: 8),
+                          Expanded(child: cards[3]),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
 
@@ -659,6 +850,7 @@ class _MiniCard extends StatelessWidget {
         border: Border.all(color: c.divider.withValues(alpha: 0.5)),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -674,13 +866,12 @@ class _MiniCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              fontSize: 9,
+              fontSize: 12,
               color: c.textSecondary,
               fontWeight: FontWeight.w600,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

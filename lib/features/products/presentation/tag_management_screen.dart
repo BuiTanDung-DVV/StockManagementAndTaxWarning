@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +42,8 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
     final theme = Theme.of(context);
     final nameCtrl = TextEditingController(text: tag?.name);
     String selectedColor = tag?.color ?? _predefinedColors[4];
+    bool saving = false;
+    ModalRoute<dynamic>? sheetRoute;
 
     try {
       await showModalBottomSheet(
@@ -51,6 +54,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         builder: (ctx) {
+          sheetRoute = ModalRoute.of(ctx);
           return StatefulBuilder(
             builder: (ctx, setModalState) {
               return Padding(
@@ -138,7 +142,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                                   : null,
                             ),
                             child: isSelected
-                                ? const Icon(
+                                ? const AppIcon(
                                     Icons.check,
                                     color: Colors.white,
                                     size: 20,
@@ -153,48 +157,59 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: () async {
-                          final name = nameCtrl.text.trim();
-                          if (name.isEmpty) {
-                            ToastService.showError('Vui lòng nhập tên nhãn');
-                            return;
-                          }
+                        onPressed: saving
+                            ? null
+                            : () async {
+                                if (saving) return;
+                                final name = nameCtrl.text.trim();
+                                if (name.isEmpty) {
+                                  ToastService.showError(
+                                    'Vui lòng nhập tên nhãn',
+                                  );
+                                  return;
+                                }
 
-                          try {
-                            if (tag == null) {
-                              await ref
-                                  .read(tagRepoProvider)
-                                  .create(
-                                    name,
-                                    selectedColor,
-                                    type: widget.type,
+                                setModalState(() => saving = true);
+                                try {
+                                  if (tag == null) {
+                                    await ref
+                                        .read(tagRepoProvider)
+                                        .create(
+                                          name,
+                                          selectedColor,
+                                          type: widget.type,
+                                        );
+                                  } else {
+                                    await ref
+                                        .read(tagRepoProvider)
+                                        .update(
+                                          tag.id,
+                                          name,
+                                          selectedColor,
+                                          type: widget.type,
+                                        );
+                                  }
+                                  ref.invalidate(tagListProvider(widget.type));
+                                  if (widget.type == 'product') {
+                                    ref.invalidate(availableTagsProvider);
+                                  }
+                                  if (context.mounted) {
+                                    ToastService.showSuccess(
+                                      tag == null
+                                          ? 'Tạo nhãn mới thành công!'
+                                          : 'Cập nhật nhãn thành công!',
+                                    );
+                                    Navigator.pop(ctx);
+                                  }
+                                } catch (e) {
+                                  ToastService.showError(
+                                    'Không thể lưu thông tin nhãn. Vui lòng thử lại sau.',
                                   );
-                            } else {
-                              await ref
-                                  .read(tagRepoProvider)
-                                  .update(
-                                    tag.id,
-                                    name,
-                                    selectedColor,
-                                    type: widget.type,
-                                  );
-                            }
-                            ref.invalidate(tagListProvider(widget.type));
-                            ref.invalidate(availableTagsProvider);
-                            if (context.mounted) {
-                              ToastService.showSuccess(
-                                tag == null
-                                    ? 'Tạo nhãn mới thành công!'
-                                    : 'Cập nhật nhãn thành công!',
-                              );
-                              Navigator.pop(ctx);
-                            }
-                          } catch (e) {
-                            ToastService.showError(
-                              'Không thể lưu thông tin nhãn. Vui lòng thử lại sau.',
-                            );
-                          }
-                        },
+                                } finally {
+                                  if (ctx.mounted)
+                                    setModalState(() => saving = false);
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.colorScheme.primary,
                           shape: RoundedRectangleBorder(
@@ -202,7 +217,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                           ),
                         ),
                         child: Text(
-                          'Lưu thay đổi',
+                          saving ? 'Đang lưu…' : 'Lưu thay đổi',
                           style: GoogleFonts.manrope(
                             color: Colors.white,
                             fontSize: 16,
@@ -220,6 +235,9 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
         },
       );
     } finally {
+      // The pop future resolves before the sheet exit animation ends.
+      // Keep its controller alive until the route is fully removed.
+      if (sheetRoute != null) await sheetRoute!.completed;
       nameCtrl.dispose();
     }
   }
@@ -255,7 +273,9 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
       try {
         await ref.read(tagRepoProvider).delete(tag.id);
         ref.invalidate(tagListProvider(widget.type));
-        ref.invalidate(availableTagsProvider);
+        if (widget.type == 'product') {
+          ref.invalidate(availableTagsProvider);
+        }
         ToastService.showSuccess('Đã xóa nhãn thành công!');
       } catch (e) {
         ToastService.showError('Không thể xóa nhãn. Vui lòng thử lại sau.');
@@ -316,7 +336,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _showTagDialog(),
-              icon: const HugeIcon(
+              icon: const AppHugeIcon(
                 icon: HugeIcons.strokeRoundedTag01,
                 color: Colors.white,
                 size: 24,
@@ -333,7 +353,9 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(tagListProvider(widget.type));
-          ref.invalidate(availableTagsProvider);
+          if (widget.type == 'product') {
+            ref.invalidate(availableTagsProvider);
+          }
         },
         child: tagsAsync.when(
           data: (tags) {
@@ -377,7 +399,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                         color: tag.uiColor.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
+                      child: AppIcon(
                         Icons.sell_rounded,
                         color: tag.uiColor,
                         size: 20,
@@ -394,7 +416,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: HugeIcon(
+                          icon: AppHugeIcon(
                             icon: HugeIcons.strokeRoundedEdit02,
                             color: c.textSecondary,
                             size: 20,
@@ -402,7 +424,7 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                           onPressed: () => _showTagDialog(tag: tag),
                         ),
                         IconButton(
-                          icon: HugeIcon(
+                          icon: AppHugeIcon(
                             icon: HugeIcons.strokeRoundedDelete02,
                             color: Colors.red.withValues(alpha: 0.7),
                             size: 20,
@@ -424,7 +446,9 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                 message: 'Không thể tải danh sách nhãn. Vui lòng thử lại sau.',
                 onRetry: () {
                   ref.invalidate(tagListProvider(widget.type));
-                  ref.invalidate(availableTagsProvider);
+                  if (widget.type == 'product') {
+                    ref.invalidate(availableTagsProvider);
+                  }
                 },
               ),
             ),

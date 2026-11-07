@@ -12,7 +12,13 @@ class GoogleAuthService {
   GoogleAuthService._();
 
   static final GoogleAuthService instance = GoogleAuthService._();
-  static const _envWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+  // Public OAuth identifier, also used by build_vercel.sh. Local release builds
+  // must keep Google sign-in working even when no --dart-define is supplied.
+  static const webClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue:
+        '124075638912-hk0076lmjvgqa0iqec75aerpoe4lcpfq.apps.googleusercontent.com',
+  );
 
   static const _envServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
@@ -29,12 +35,12 @@ class GoogleAuthService {
 
   Future<void> _initializeOnce() async {
     if (kIsWeb) {
-      if (_envWebClientId.isEmpty) {
+      if (webClientId.isEmpty) {
         throw const GoogleAuthConfigurationException(
           'Thiếu GOOGLE_WEB_CLIENT_ID trong cấu hình build.',
         );
       }
-      await _signIn.initialize(clientId: _envWebClientId);
+      await _signIn.initialize(clientId: webClientId);
       return;
     }
     final isApple =

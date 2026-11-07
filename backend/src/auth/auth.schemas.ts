@@ -78,6 +78,40 @@ export const changePasswordSchema = z.object({
   newPassword: securePasswordSchema,
 }).strict();
 
+export const requestProfileEmailVerificationSchema = z.object({
+  currentPassword: bcryptPasswordInputSchema,
+  expectedEmail: gmailSchema,
+}).strict();
+
+export const confirmProfileEmailVerificationSchema = z.object({
+  otpCode: z.string().regex(/^\d{6}$/, 'Mã OTP phải gồm đúng 6 chữ số'),
+  expectedEmail: gmailSchema,
+}).strict();
+
+export const requestProfileEmailChangeSchema = z.object({
+  expectedEmail: gmailSchema,
+  newEmail: gmailSchema,
+  currentPassword: bcryptPasswordInputSchema.optional(),
+  currentGoogleIdToken: z.string().min(100).max(12000).optional(),
+  newGoogleIdToken: z.string().min(100).max(12000).optional(),
+}).strict().superRefine((value, ctx) => {
+  if (Boolean(value.currentPassword) === Boolean(value.currentGoogleIdToken)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Cần xác thực lại bằng mật khẩu hoặc tài khoản Google hiện tại' });
+  }
+  if (value.expectedEmail === value.newEmail) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Gmail mới phải khác Gmail hiện tại' });
+  }
+});
+
+export const confirmProfileEmailChangeSchema = z.object({
+  operationToken: z.string().min(100).max(4096),
+  currentEmailCode: z.string().regex(/^\d{6}$/, 'Mã Gmail hiện tại phải gồm 6 chữ số'),
+  newEmailCode: z.string().regex(/^\d{6}$/, 'Mã Gmail mới phải gồm 6 chữ số').optional(),
+}).strict();
+
+export type RequestProfileEmailChangeDto = z.infer<typeof requestProfileEmailChangeSchema>;
+export type ConfirmProfileEmailChangeDto = z.infer<typeof confirmProfileEmailChangeSchema>;
+
 export const updateProfileSchema = z.object({
   fullName: z.string().trim().min(2).max(100).optional(),
   phone: z.string().trim().max(20).regex(/^[0-9+ .()-]*$/).optional(),

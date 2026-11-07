@@ -1,6 +1,9 @@
+import '../../../core/widgets/app_page_header.dart';
+import 'expense_ledger_content.dart';
+import '../../../core/assets/app_icon.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
+import '../../../core/widgets/business_date_field.dart';
 import '../../../core/assets/app_assets.dart';
-import '../../../core/utils/finance_display.dart';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,19 +11,13 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/parse_utils.dart';
 import '../../../core/utils/toast_service.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/widgets/app_animations.dart';
-import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../providers/finance_provider.dart';
 
 class ExpenseLedgerScreen extends ConsumerWidget {
   const ExpenseLedgerScreen({super.key});
-
-  String _fmt(num v) => NumberFormat.currency(
-    locale: 'vi_VN',
-    symbol: '₫',
-    decimalDigits: 0,
-  ).format(v);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,12 +29,8 @@ class ExpenseLedgerScreen extends ConsumerWidget {
       backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leadingWidth: 60,
+        leading: AppNavigationBackLeading(onPressed: () => navigatePageBack(context)),
         title: const Text('Sổ chi phí'),
         actions: [
           featureGuideButton(context, 'expense_ledger'),
@@ -82,7 +75,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
                       visual: AppEmptyVisual.finance,
                       message: 'Chưa có chi phí nào',
                       action: ElevatedButton.icon(
-                        icon: const Icon(Icons.money_off),
+                        icon: const AppIcon(Icons.money_off),
                         label: const Text('Thêm chi phí'),
                         onPressed: () => _showAddExpenseDialog(context, ref),
                       ),
@@ -93,216 +86,14 @@ class ExpenseLedgerScreen extends ConsumerWidget {
             );
           }
 
-          final catColors = [
-            AppColors.primary,
-            AppColors.danger,
-            AppColors.warning,
-            AppColors.success,
-            const Color(0xFF8B5CF6),
-            const Color(0xFFEC4899),
-          ];
-
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(expensesByCategoryProvider);
             },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1E3A5F), Color(0xFF0F172A)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Tổng chi phí tháng này',
-                          style: TextStyle(color: Colors.white54, fontSize: 12),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _fmt(total),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ChartCard(
-                    title: 'Tỷ trọng chi phí',
-                    height: 220,
-                    child: MiniDonutChart(
-                      segments: categories.asMap().entries.map((e) {
-                        final c = e.value;
-                        final color = catColors[e.key % catColors.length];
-                        final amount = asNum(c['amount']);
-                        return DonutSegment(
-                          financeCategoryLabel(c['category']?.toString()),
-                          amount.toDouble(),
-                          color,
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Theo danh mục',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  ...categories.asMap().entries.map<Widget>((entry) {
-                    final c = entry.value;
-                    final color = catColors[entry.key % catColors.length];
-                    final amount = asNum(c['amount']);
-                    final pct = total > 0
-                        ? (amount / total * 100).toStringAsFixed(1)
-                        : '0';
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppThemeColors.of(context).card,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 4,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  financeCategoryLabel(
-                                    c['category']?.toString(),
-                                  ),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                Text(
-                                  asNum(c['count']).toInt() > 0
-                                      ? '${asNum(c['count']).toInt()} giao dịch'
-                                      : 'Chi phí định kỳ',
-                                  style: TextStyle(
-                                    color: AppThemeColors.of(
-                                      context,
-                                    ).textSecondary,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                _fmt(amount),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: color,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
-                                '$pct%',
-                                style: TextStyle(
-                                  color: AppThemeColors.of(
-                                    context,
-                                  ).textSecondary,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                  if (recentItems.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Giao dịch gần đây',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...recentItems.map<Widget>(
-                      (t) => Container(
-                        margin: const EdgeInsets.only(bottom: 6),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppThemeColors.of(context).card,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  t['counterparty'] ??
-                                      financeCategoryLabel(
-                                        t['category']?.toString(),
-                                      ),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                Text(
-                                  t['transactionDate']
-                                          ?.toString()
-                                          .split('T')
-                                          .first ??
-                                      '',
-                                  style: TextStyle(
-                                    color: AppThemeColors.of(
-                                      context,
-                                    ).textSecondary,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              _fmt(asNum(t['amount'])),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.danger,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+            child: ExpenseLedgerContent(
+              total: total,
+              categories: categories,
+              recentItems: recentItems,
             ),
           );
         },
@@ -311,7 +102,7 @@ class ExpenseLedgerScreen extends ConsumerWidget {
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _showAddExpenseDialog(context, ref),
-              icon: const Icon(Icons.money_off),
+              icon: const AppIcon(Icons.money_off),
               label: const Text('Thêm'),
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -320,114 +111,197 @@ class ExpenseLedgerScreen extends ConsumerWidget {
   }
 
   void _showAddExpenseDialog(BuildContext context, WidgetRef ref) {
-    final amountC = TextEditingController();
-    final noteC = TextEditingController();
-    String category = 'OTHER';
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          final parsed = parseCurrency(amountC.text);
-          return AlertDialog(
-            title: const Text('Thêm chi phí'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: category,
-                    items: const [
-                      DropdownMenuItem(value: 'SALARY', child: Text('Lương')),
-                      DropdownMenuItem(value: 'RENT', child: Text('Tiền thuê')),
-                      DropdownMenuItem(
-                        value: 'UTILITIES',
-                        child: Text('Tiện ích'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'PURCHASE',
-                        child: Text('Mua hàng'),
-                      ),
-                      DropdownMenuItem(value: 'OTHER', child: Text('Khác')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) {
-                        setDialogState(() => category = v);
-                      }
-                    },
-                    decoration: const InputDecoration(labelText: 'Danh mục'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: amountC,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+    showDialog(context: context, builder: (ctx) => const _AddExpenseDialog());
+  }
+}
+
+class _AddExpenseDialog extends ConsumerStatefulWidget {
+  const _AddExpenseDialog();
+
+  @override
+  ConsumerState<_AddExpenseDialog> createState() => _AddExpenseDialogState();
+}
+
+class _AddExpenseDialogState extends ConsumerState<_AddExpenseDialog> {
+  late final TextEditingController amountC;
+  late final TextEditingController noteC;
+  String category = 'OTHER';
+  DateTime _expenseDate = DateTime.now();
+  bool isSaving = false;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    amountC = TextEditingController();
+    noteC = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    amountC.dispose();
+    noteC.dispose();
+    super.dispose();
+  }
+
+  String _fmt(num v) => NumberFormat.currency(
+    locale: 'vi_VN',
+    symbol: '₫',
+    decimalDigits: 0,
+  ).format(v);
+
+  Future<void> _submit() async {
+    if (isSaving) return;
+    final amount = parseCurrency(amountC.text);
+    if (amount <= 0) {
+      ToastService.showError('Số tiền chi phí phải lớn hơn 0');
+      return;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDateOnly = DateTime(
+      _expenseDate.year,
+      _expenseDate.month,
+      _expenseDate.day,
+    );
+    if (selectedDateOnly.isAfter(today)) {
+      setState(() => errorMessage = 'Ngày chi không được ở tương lai.');
+      return;
+    }
+
+    setState(() {
+      isSaving = true;
+      errorMessage = null;
+    });
+
+    try {
+      await ref.read(financeRepoProvider).createTransaction({
+        'type': 'EXPENSE',
+        'category': category,
+        'amount': amount,
+        'transactionDate': _expenseDate.toIso8601String().split('T').first,
+        'notes': noteC.text.trim(),
+      });
+      if (!mounted) return;
+      refreshCashTransactionViews(ref);
+      Navigator.pop(context);
+      ToastService.showSuccess('Đã thêm khoản chi phí thành công');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isSaving = false;
+        if (e is ApiException) {
+          errorMessage = 'Không thể thêm khoản chi phí: ${e.message}';
+        } else {
+          errorMessage = 'Không thể thêm khoản chi phí. Vui lòng thử lại sau.';
+        }
+      });
+      ToastService.showError(
+        'Không thể thêm khoản chi phí. Vui lòng thử lại sau.',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = parseCurrency(amountC.text);
+    return PopScope(
+      canPop: !isSaving,
+      child: AlertDialog(
+        title: const Text('Thêm chi phí'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    errorMessage!,
+                    style: const TextStyle(
+                      color: AppColors.danger,
+                      fontSize: 13,
                     ),
-                    onChanged: (_) => setDialogState(() {}),
-                    decoration: InputDecoration(
-                      labelText: 'Số tiền *',
-                      hintText: 'Nhập số tiền chi...',
-                      suffixText: '₫',
-                      helperText: parsed > 0 ? _fmt(parsed) : null,
-                      helperStyle: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: noteC,
-                    decoration: const InputDecoration(
-                      labelText: 'Ghi chú',
-                      hintText: 'Nhập nội dung chi phí...',
-                    ),
-                  ),
+                ),
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                items: const [
+                  DropdownMenuItem(value: 'SALARY', child: Text('Lương')),
+                  DropdownMenuItem(value: 'RENT', child: Text('Tiền thuê')),
+                  DropdownMenuItem(value: 'UTILITIES', child: Text('Tiện ích')),
+                  DropdownMenuItem(value: 'PURCHASE', child: Text('Mua hàng')),
+                  DropdownMenuItem(value: 'OTHER', child: Text('Khác')),
                 ],
+                onChanged: isSaving
+                    ? null
+                    : (v) {
+                        if (v != null) {
+                          setState(() => category = v);
+                        }
+                      },
+                decoration: const InputDecoration(labelText: 'Danh mục'),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final amount = parseCurrency(amountC.text);
-                  if (amount <= 0) {
-                    ToastService.showError('Số tiền chi phí phải lớn hơn 0');
-                    return;
-                  }
-                  try {
-                    await ref.read(financeRepoProvider).createTransaction({
-                      'type': 'EXPENSE',
-                      'category': category,
-                      'amount': amount,
-                      'transactionDate': DateTime.now()
-                          .toIso8601String()
-                          .split('T')
-                          .first,
-                      'notes': noteC.text.trim(),
-                    });
-                    ref.invalidate(expensesByCategoryProvider);
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    ToastService.showSuccess(
-                      'Đã thêm khoản chi phí thành công',
-                    );
-                  } catch (e) {
-                    ToastService.showError(
-                      'Không thể thêm khoản chi phí. Vui lòng thử lại sau.',
-                    );
-                  }
+              const SizedBox(height: 8),
+              BusinessDateField(
+                label: 'Ngày chi',
+                selectedDate: _expenseDate,
+                enabled: !isSaving,
+                onChanged: (date) {
+                  setState(() {
+                    _expenseDate = date;
+                  });
                 },
-                child: const Text('Lưu'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: amountC,
+                enabled: !isSaving,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Số tiền *',
+                  hintText: 'Nhập số tiền chi...',
+                  suffixText: '₫',
+                  helperText: parsed > 0 ? _fmt(parsed) : null,
+                  helperStyle: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: noteC,
+                enabled: !isSaving,
+                decoration: const InputDecoration(
+                  labelText: 'Ghi chú',
+                  hintText: 'Nhập nội dung chi phí...',
+                ),
               ),
             ],
-          );
-        },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: isSaving ? null : () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: isSaving ? null : _submit,
+            child: isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Lưu'),
+          ),
+        ],
       ),
-    ).whenComplete(() {
-      amountC.dispose();
-      noteC.dispose();
-    });
+    );
   }
 }

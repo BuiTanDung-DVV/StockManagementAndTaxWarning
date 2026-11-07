@@ -16,11 +16,13 @@ router.post('/inventory/warehouses', requirePermission('inventory', 'edit'), inv
 router.get('/inventory/categories-summary', requirePermission(['inventory', 'dashboard'], 'view', { allowAllShops: true }), inventoryCtrl.getCategoriesSummary);
 router.get('/inventory/abc-analysis', requirePermission(['inventory', 'dashboard'], 'view', { allowAllShops: true }), inventoryCtrl.getAbcAnalysis);
 router.get('/inventory/xnt-report', requirePermission('inventory', 'view'), inventoryCtrl.getXntReport);
+router.get('/inventory/xnt-export', requirePermission('inventory', 'view'), inventoryCtrl.exportXntReport);
 router.get('/inventory/expiring-products', requirePermission('inventory', 'view', { allowAllShops: true }), inventoryCtrl.getExpiringProducts);
 router.get('/inventory/slow-moving', requirePermission('inventory', 'view', { allowAllShops: true }), inventoryCtrl.getSlowMoving);
 
 // Purchase Orders
 router.get('/purchase-orders', requirePermission('inventory', 'view'), inventoryCtrl.getPurchaseOrders);
+router.get('/purchase-orders/:id', requirePermission('inventory', 'view'), inventoryCtrl.getPurchaseOrder);
 router.post('/purchase-orders', requirePermission('inventory', 'edit'), inventoryCtrl.createPurchaseOrder);
 router.put('/purchase-orders/:id', requirePermission('inventory', 'edit'), inventoryCtrl.updatePurchaseOrder);
 router.delete('/purchase-orders/:id', requirePermission('inventory', 'edit'), inventoryCtrl.deletePurchaseOrder);

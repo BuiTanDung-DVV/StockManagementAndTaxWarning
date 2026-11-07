@@ -1,3 +1,4 @@
+import { assertPastOrToday } from '../utils/business-date';
 import { CashTransaction } from './entities';
 
 const ALLOWED_TYPES = new Set(['INCOME', 'EXPENSE']);
@@ -65,7 +66,7 @@ export function normalizeCashTransactionInput(
     }
 
     const rawDate = input.transactionDate ?? current?.transactionDate ?? new Date();
-    const transactionDate = new Date(rawDate);
+    const transactionDate = assertPastOrToday(rawDate, 'Ngày giao dịch');
     if (Number.isNaN(transactionDate.getTime())) {
         throw new Error('Validation: Invalid transaction date');
     }

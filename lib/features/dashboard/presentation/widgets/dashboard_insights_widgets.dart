@@ -1,3 +1,6 @@
+import '../../../settings/providers/shop_provider.dart';
+import '../../../../core/widgets/panel_scroll_body.dart';
+import '../../../../core/assets/app_icon.dart';
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -371,6 +374,7 @@ class DashboardInsightCard extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final Widget child;
+  final bool scrollBody;
 
   const DashboardInsightCard({
     super.key,
@@ -378,6 +382,7 @@ class DashboardInsightCard extends StatelessWidget {
     this.subtitle,
     this.trailing,
     required this.child,
+    this.scrollBody = true,
   });
 
   @override
@@ -385,6 +390,12 @@ class DashboardInsightCard extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Container(
+      height:
+          MediaQuery.sizeOf(context).width < 820 ||
+              MediaQuery.textScalerOf(context).scale(1.0) > 1.2
+          ? 520
+          : 460,
+      clipBehavior: Clip.antiAlias,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: colors.card,
@@ -504,7 +515,9 @@ class DashboardInsightCard extends StatelessWidget {
                 child: header,
               ),
               const SizedBox(height: AppSpacing.md),
-              child,
+              Expanded(
+                child: scrollBody ? PanelScrollBody(child: child) : child,
+              ),
             ],
           );
         },
@@ -699,7 +712,7 @@ class _CashFlowTotalsSummary extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-        final compact = constraints.maxWidth < 460 || textScale > 1.2;
+        final compact = constraints.maxWidth < 400 || textScale > 1.2;
 
         final items = [
           (
@@ -1814,15 +1827,15 @@ class _InventoryCategoryDonutChartState
     return Semantics(
       label: semanticLabel,
       child: SizedBox(
-        width: 140,
-        height: 140,
+        width: 150,
+        height: 150,
         child: Stack(
           alignment: Alignment.center,
           children: [
             PieChart(
               PieChartData(
                 sections: sections,
-                centerSpaceRadius: 42,
+                centerSpaceRadius: 47,
                 sectionsSpace: 2.5,
                 pieTouchData: PieTouchData(
                   touchCallback: (FlTouchEvent event, pieTouchResponse) {
@@ -1989,6 +2002,7 @@ class DashboardInventoryCategoryCard extends StatelessWidget {
         return DashboardInsightCard(
           title: 'Giá trị tồn kho theo nhóm',
           subtitle: 'Tồn kho hiện tại · theo giá vốn; không theo kỳ báo cáo',
+          scrollBody: false,
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -2054,7 +2068,7 @@ class DashboardInventoryCategoryCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    itemsColumn,
+                    Expanded(child: PanelScrollBody(child: itemsColumn)),
                   ],
                 );
               }
@@ -2069,7 +2083,7 @@ class DashboardInventoryCategoryCard extends StatelessWidget {
                     ),
                     child: donut,
                   ),
-                  Expanded(child: itemsColumn),
+                  Expanded(child: PanelScrollBody(child: itemsColumn)),
                 ],
               );
             },
@@ -2267,7 +2281,7 @@ class DashboardLowStockCard extends StatelessWidget {
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+          icon: const AppIcon(Icons.arrow_forward_rounded, size: 14),
           label: Text('Xem tất cả ($totalCount)'),
         );
 
@@ -2287,7 +2301,7 @@ class DashboardLowStockCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  const AppIcon(
                     Icons.check_circle_outline_rounded,
                     color: AppColors.success,
                     size: 24,
@@ -2344,6 +2358,15 @@ class DashboardLowStockCard extends StatelessWidget {
       },
     );
   }
+}
+
+void _openLowStockProduct(BuildContext context, LowStockItem item) {
+  final container = ProviderScope.containerOf(context, listen: false);
+  final shop = container.read(shopProvider);
+  if (shop.isAllShops && item.shopId != null) {
+    container.read(shopProvider.notifier).switchShop(item.shopId!);
+  }
+  context.push('/products/${item.productId}');
 }
 
 class _FullLowStockTable extends StatelessWidget {
@@ -2421,116 +2444,119 @@ class _FullLowStockTable extends StatelessWidget {
         ),
         for (int i = 0; i < items.length; i++) ...[
           const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        items[i].name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
+          InkWell(
+            onTap: () => _openLowStockProduct(context, items[i]),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          items[i].name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: colors.textPrimary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 1),
-                      Row(
-                        children: [
-                          if (isAllShops && items[i].shopId != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
+                        const SizedBox(height: 1),
+                        Row(
+                          children: [
+                            if (isAllShops && items[i].shopId != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.cardAlt,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  'CH #${items[i].shopId}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
                               ),
-                              decoration: BoxDecoration(
-                                color: colors.cardAlt,
-                                borderRadius: BorderRadius.circular(3),
-                              ),
+                              const SizedBox(width: 4),
+                            ],
+                            Flexible(
                               child: Text(
-                                'CH #${items[i].shopId}',
+                                items[i].sku,
+                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.inter(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: colors.textSecondary,
+                                  fontSize: 10.5,
+                                  color: colors.textMuted,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 4),
                           ],
-                          Flexible(
-                            child: Text(
-                              items[i].sku,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                fontSize: 10.5,
-                                color: colors.textMuted,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '${formatQuantity(items[i].currentQuantity)} ${items[i].unit}',
-                      style: AppTheme.tabularStyle(
-                        context,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: colors.textPrimary,
+                  Expanded(
+                    flex: 3,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${formatQuantity(items[i].currentQuantity)} ${items[i].unit}',
+                        style: AppTheme.tabularStyle(
+                          context,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '${formatQuantity(items[i].minStock)} ${items[i].unit}',
-                      style: AppTheme.tabularStyle(
-                        context,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                        color: colors.textSecondary,
+                  Expanded(
+                    flex: 3,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${formatQuantity(items[i].minStock)} ${items[i].unit}',
+                        style: AppTheme.tabularStyle(
+                          context,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: colors.textSecondary,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '-${formatQuantity(items[i].deficit)} ${items[i].unit}',
-                      style: AppTheme.tabularStyle(
-                        context,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.danger,
+                  Expanded(
+                    flex: 3,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '-${formatQuantity(items[i].deficit)} ${items[i].unit}',
+                        style: AppTheme.tabularStyle(
+                          context,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.danger,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -2559,11 +2585,14 @@ class _CompactLowStockList extends StatelessWidget {
           children: [
             for (int i = 0; i < items.length; i++) ...[
               if (i > 0) const Divider(height: 16),
-              _buildItem(
-                context,
-                item: items[i],
-                colors: colors,
-                useVerticalLayout: useVerticalLayout,
+              InkWell(
+                onTap: () => _openLowStockProduct(context, items[i]),
+                child: _buildItem(
+                  context,
+                  item: items[i],
+                  colors: colors,
+                  useVerticalLayout: useVerticalLayout,
+                ),
               ),
             ],
           ],

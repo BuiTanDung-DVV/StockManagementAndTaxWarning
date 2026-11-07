@@ -2,12 +2,15 @@ import { In } from 'typeorm';
 import { AppDataSource } from '../config/db.config';
 import { ShopMember } from '../shop/entities';
 import { permittedDashboardShopIds } from '../dashboard/action-access.utils';
+import { readCurrentDebtSummary } from '../finance/current-debt-summary.repository';
 import {
     DashboardActionItem,
     lowStockActionCopy,
     scorePriority,
     sortDashboardActionItems,
     taxConfigurationActionDetail,
+    businessDateKey,
+    debtReminderItems,
 } from '../dashboard/action-center.utils';
 import {
     taxPolicyService,
@@ -15,8 +18,6 @@ import {
 } from './tax-policy.service';
 
 type ShopScope = number | number[];
-type PermissionDomain = 'inventory' | 'customers' | 'finance';
-
 interface DashboardActionResponse {
     asOf: string;
     items: DashboardActionItem[];
@@ -40,14 +41,13 @@ const dayDifference = (later: Date, earlier: Date): number =>
     Math.max(0, Math.floor((later.getTime() - earlier.getTime()) / 86_400_000));
 
 export class DashboardService {
-    private async allowedShopIds(
+    private async activeMemberships(
         userId: number,
         scope: ShopScope,
-        domain: PermissionDomain,
-    ): Promise<number[]> {
+    ): Promise<ShopMember[]> {
         const requested = Array.isArray(scope) ? scope : [scope];
         if (!requested.length) return [];
-        const members = await AppDataSource.getRepository(ShopMember).find({
+        return AppDataSource.getRepository(ShopMember).find({
             where: {
                 userId,
                 shopId: In(requested),
@@ -56,7 +56,6 @@ export class DashboardService {
             },
             relations: ['role'],
         });
-        return permittedDashboardShopIds(members, domain);
     }
 
     private async inventoryItems(shopIds: number[], now: Date) {
@@ -83,7 +82,6 @@ export class DashboardService {
                     ON s.product_id = p.id AND s.shop_id = p.shop_id
                 WHERE p.shop_id = ANY($1::int[])
                   AND p.is_active = TRUE
-                  AND COALESCE(p.min_stock, 0) > 0
                 GROUP BY p.id, p.min_stock
             ) stock_state
         `, [shopIds]);
@@ -123,7 +121,7 @@ export class DashboardService {
                 severity: 'HEALTHY',
                 priorityScore: 0,
                 title: 'Tồn kho trong định mức',
-                detail: 'Không có sản phẩm hết hàng hoặc chạm mức tồn tối thiểu',
+                detail: 'Không phát hiện sản phẩm hết hàng hoặc chạm định mức đã thiết lập',
                 badge: 'Đang ổn định',
                 count: 0,
                 sourceUpdatedAt: isoTimestamp(stock.source_updated_at),
@@ -138,8 +136,8 @@ export class DashboardService {
             ORDER BY shop_id DESC NULLS LAST
             LIMIT 1
         `, [shopIds]);
-        const warningDays = Number(expiryConfig[0]?.config_value);
-        const hasWarningConfig = Number.isSafeInteger(warningDays) && warningDays > 0;
+        const configuredDays = Number(expiryConfig[0]?.config_value);
+        const warningDays = Number.isSafeInteger(configuredDays) && configuredDays > 0 ? configuredDays : 7;
         const expiryRows = await AppDataSource.query(`
             SELECT
                 COUNT(*) FILTER (WHERE expiry_date < $2::date) AS expired_count,
@@ -148,14 +146,14 @@ export class DashboardService {
                       AND expiry_date >= $2::date
                       AND expiry_date <= ($2::date + $3::int)
                 ) AS expiring_count,
-                MIN(expiry_date) AS nearest_expiry,
+                MIN(expiry_date)::text AS nearest_expiry,
                 MAX(created_at) AS source_updated_at
             FROM product_batches
             WHERE shop_id = ANY($1::int[])
               AND is_active = TRUE
               AND quantity > 0
               AND expiry_date IS NOT NULL
-        `, [shopIds, dateKey(now), hasWarningConfig ? warningDays : null]);
+        `, [shopIds, businessDateKey(now), warningDays]);
         const expiry = expiryRows[0] || {};
         const expiredCount = Number(expiry.expired_count || 0);
         const expiringCount = Number(expiry.expiring_count || 0);
@@ -189,53 +187,45 @@ export class DashboardService {
         return { items, healthy };
     }
 
-    private async receivableItems(shopIds: number[], now: Date) {
+    private async debtItems(kind: 'RECEIVABLE' | 'PAYABLE', shopIds: number[], now: Date) {
         const items: DashboardActionItem[] = [];
         const healthy: DashboardActionItem[] = [];
         if (!shopIds.length) return { items, healthy };
-        const rows = await AppDataSource.query(`
-            SELECT
-                COUNT(*) AS overdue_count,
-                COALESCE(SUM(amount - COALESCE(paid_amount, 0)), 0) AS overdue_amount,
-                MIN(due_date) AS oldest_due_at,
-                MAX(updated_at) AS source_updated_at
-            FROM receivables
-            WHERE shop_id = ANY($1::int[])
-              AND status NOT IN ('PAID', 'CANCELLED')
-              AND due_date < $2::date
-              AND (amount - COALESCE(paid_amount, 0)) > 0
-        `, [shopIds, dateKey(now)]);
-        const row = rows[0] || {};
-        const count = Number(row.overdue_count || 0);
-        const amount = Number(row.overdue_amount || 0);
-        const dueAt = dateKey(row.oldest_due_at);
-        const daysOverdue = dueAt ? dayDifference(now, new Date(`${dueAt}T00:00:00Z`)) : 0;
-        if (count > 0) {
-            items.push({
-                actionKey: 'RECEIVABLE_OVERDUE',
-                severity: 'CRITICAL',
-                priorityScore: scorePriority({ daysOverdue, affectedCount: count, affectedAmount: amount }),
-                title: `${count} khoản công nợ quá hạn`,
-                detail: `${amount.toLocaleString('vi-VN')} đ · quá hạn lâu nhất ${daysOverdue} ngày`,
-                badge: 'Khẩn cấp',
-                count,
-                amount,
-                dueAt,
-                sourceUpdatedAt: isoTimestamp(row.source_updated_at),
-            });
-        } else {
-            healthy.push({
-                actionKey: 'RECEIVABLE_HEALTHY',
-                severity: 'HEALTHY',
-                priorityScore: 0,
-                title: 'Không có công nợ quá hạn',
-                detail: 'Các khoản công nợ đang trong hạn hoặc đã thanh toán',
-                badge: 'Đang ổn định',
-                count: 0,
-                sourceUpdatedAt: isoTimestamp(row.source_updated_at),
-            });
-        }
+        const row = await AppDataSource.transaction('REPEATABLE READ', manager =>
+            readCurrentDebtSummary(manager, kind, shopIds, businessDateKey(now)));
+        // PostgreSQL date values may arrive as Date objects; normalize before building copy.
+        for (const key of ['overdue_due_at', 'today_due_at', 'soon_due_at']) row[key] = dateKey(row[key]);
+        items.push(...debtReminderItems(kind, row, businessDateKey(now)).map(item => ({
+            ...item, sourceUpdatedAt: isoTimestamp(row.source_updated_at),
+        })));
+        if (!items.length) healthy.push({
+            actionKey: `${kind}_HEALTHY`, severity: 'HEALTHY', priorityScore: 0,
+            title: kind === 'PAYABLE' ? 'Không có khoản phải trả đến hạn trong 7 ngày' : 'Không có khoản phải thu đến hạn trong 7 ngày',
+            detail: 'Không phát hiện khoản còn dư nợ quá hạn, đến hạn hôm nay hoặc trong 7 ngày tới',
+            badge: 'Đã kiểm tra', count: 0,
+        });
         return { items, healthy };
+    }
+
+    private async pendingPurchases(ownerIds: number[]) {
+        if (!ownerIds.length) return [];
+        const rows = await AppDataSource.query(`
+            SELECT p.shop_id, s.shop_name, COUNT(*) AS count,
+                   COALESCE(SUM(p.total_amount), 0) AS amount, MAX(p.created_at) AS updated_at
+            FROM purchases_without_invoice p
+            JOIN shop_profiles s ON s.id = p.shop_id
+            WHERE p.shop_id = ANY($1::int[]) AND p.approval_status = 'PENDING'
+            GROUP BY p.shop_id, s.shop_name
+        `, [ownerIds]);
+        return rows.map((row: Record<string, unknown>): DashboardActionItem => ({
+            actionKey: `PURCHASE_APPROVAL_PENDING:${row.shop_id}`,
+            shopId: Number(row.shop_id), severity: 'WARNING',
+            priorityScore: scorePriority({ affectedCount: Number(row.count), affectedAmount: Number(row.amount) }),
+            title: `${row.count} bảng kê mua hàng không hóa đơn chờ duyệt`,
+            detail: `${row.shop_name} · kiểm tra chứng từ trước khi phê duyệt`,
+            badge: 'Chờ duyệt', count: Number(row.count), amount: Number(row.amount),
+            sourceUpdatedAt: isoTimestamp(row.updated_at),
+        }));
     }
 
     private async taxItems(shopIds: number[], now: Date) {
@@ -243,60 +233,68 @@ export class DashboardService {
         const healthy: DashboardActionItem[] = [];
         if (!shopIds.length) return { items, healthy };
 
-        for (const shopId of shopIds) {
-            try {
-                await taxPolicyService.getShopTaxConfiguration(shopId);
-            } catch (error) {
-                if (!(error instanceof TaxPolicyConfigurationError)) throw error;
-                items.push({
-                    actionKey: `TAX_CONFIG_INVALID:${shopId}`,
-                    severity: 'WARNING',
-                    priorityScore: scorePriority({ affectedCount: 1 }),
-                    title: 'Cấu hình thuế chưa hợp lệ',
-                    detail: taxConfigurationActionDetail(),
-                    badge: 'Cần xử lý',
-                    count: 1,
-                });
-            }
-        }
+        // Configuration validation and the due-date aggregate are independent.
+        // Keep both fresh without forcing either branch to wait for the other.
+        const [configurationWarnings, { rows, warningDays }] = await Promise.all([
+            Promise.all(shopIds.map(async (shopId): Promise<DashboardActionItem | null> => {
+                try {
+                    await taxPolicyService.getShopTaxConfiguration(shopId);
+                    return null;
+                } catch (error) {
+                    if (!(error instanceof TaxPolicyConfigurationError)) throw error;
+                    return {
+                        actionKey: `TAX_CONFIG_INVALID:${shopId}`,
+                        severity: 'WARNING',
+                        priorityScore: scorePriority({ affectedCount: 1 }),
+                        title: 'Cấu hình thuế chưa hợp lệ',
+                        detail: taxConfigurationActionDetail(),
+                        badge: 'Cần xử lý',
+                        count: 1,
+                    };
+                }
+            })),
+            (async () => {
+                const dueWarningConfig = await AppDataSource.query(`
+                    SELECT config_value
+                    FROM system_configs
+                    WHERE config_key = 'TAX_OBLIGATION_WARNING_DAYS'
+                      AND (shop_id = ANY($1::int[]) OR shop_id IS NULL)
+                    ORDER BY shop_id DESC NULLS LAST
+                    LIMIT 1
+                `, [shopIds]);
+                const configuredDays = Number(dueWarningConfig[0]?.config_value);
+                const warningDays = Number.isSafeInteger(configuredDays) && configuredDays > 0 ? configuredDays : 7;
 
-        const dueWarningConfig = await AppDataSource.query(`
-            SELECT config_value
-            FROM system_configs
-            WHERE config_key = 'TAX_OBLIGATION_WARNING_DAYS'
-              AND (shop_id = ANY($1::int[]) OR shop_id IS NULL)
-            ORDER BY shop_id DESC NULLS LAST
-            LIMIT 1
-        `, [shopIds]);
-        const warningDays = Number(dueWarningConfig[0]?.config_value);
-        const hasWarningConfig = Number.isSafeInteger(warningDays) && warningDays > 0;
-
-        const rows = await AppDataSource.query(`
-            SELECT
-                COUNT(*) FILTER (WHERE due_date < $2::date) AS overdue_count,
-                COUNT(*) FILTER (
-                    WHERE $3::int IS NOT NULL
-                      AND due_date >= $2::date
-                      AND due_date <= ($2::date + $3::int)
-                ) AS due_soon_count,
-                COALESCE(SUM(
-                    GREATEST(vat_declared + pit_declared - vat_paid - pit_paid, 0)
-                ) FILTER (WHERE due_date < $2::date), 0) AS overdue_amount,
-                MIN(due_date) FILTER (WHERE due_date < $2::date) AS oldest_due_at,
-                MIN(due_date) FILTER (WHERE due_date >= $2::date) AS nearest_due_at,
-                MAX(created_at) AS source_updated_at
-            FROM tax_obligations
-            WHERE shop_id = ANY($1::int[])
-              AND LOWER(status) NOT IN ('done', 'paid', 'cancelled')
-              AND GREATEST(vat_declared + pit_declared - vat_paid - pit_paid, 0) > 0
-        `, [shopIds, dateKey(now), hasWarningConfig ? warningDays : null]);
+                const rows = await AppDataSource.query(`
+                    SELECT
+                        COUNT(*) FILTER (WHERE due_date < $2::date) AS overdue_count,
+                        COUNT(*) FILTER (
+                            WHERE $3::int IS NOT NULL
+                              AND due_date >= $2::date
+                              AND due_date <= ($2::date + $3::int)
+                        ) AS due_soon_count,
+                        COALESCE(SUM(
+                            GREATEST(vat_declared + pit_declared - vat_paid - pit_paid, 0)
+                        ) FILTER (WHERE due_date < $2::date), 0) AS overdue_amount,
+                        (MIN(due_date) FILTER (WHERE due_date < $2::date))::text AS oldest_due_at,
+                        (MIN(due_date) FILTER (WHERE due_date >= $2::date))::text AS nearest_due_at,
+                        MAX(created_at) AS source_updated_at
+                    FROM tax_obligations
+                    WHERE shop_id = ANY($1::int[])
+                      AND LOWER(status) NOT IN ('done', 'paid', 'cancelled')
+                      AND GREATEST(vat_declared + pit_declared - vat_paid - pit_paid, 0) > 0
+                `, [shopIds, businessDateKey(now), warningDays]);
+                return { rows, warningDays };
+            })(),
+        ]);
+        items.push(...configurationWarnings.filter((item): item is DashboardActionItem => item !== null));
         const row = rows[0] || {};
         const overdueCount = Number(row.overdue_count || 0);
         const dueSoonCount = Number(row.due_soon_count || 0);
         const amount = Number(row.overdue_amount || 0);
         const overdueDueAt = dateKey(row.oldest_due_at);
         const daysOverdue = overdueDueAt
-            ? dayDifference(now, new Date(`${overdueDueAt}T00:00:00Z`))
+            ? dayDifference(new Date(`${businessDateKey(now)}T00:00:00Z`), new Date(`${overdueDueAt}T00:00:00Z`))
             : 0;
         if (overdueCount > 0) {
             items.push({
@@ -345,26 +343,35 @@ export class DashboardService {
         scope: ShopScope,
         now = new Date(),
     ): Promise<DashboardActionResponse> {
-        const [inventoryShopIds, customerShopIds, financeShopIds] = await Promise.all([
-            this.allowedShopIds(userId, scope, 'inventory'),
-            this.allowedShopIds(userId, scope, 'customers'),
-            this.allowedShopIds(userId, scope, 'finance'),
-        ]);
-        const [inventory, receivables, tax] = await Promise.all([
+        // Read the same current memberships once per request. Each domain still
+        // applies its existing permission rules; nothing is cached across requests.
+        const members = await this.activeMemberships(userId, scope);
+        const inventoryShopIds = permittedDashboardShopIds(members, 'inventory');
+        const customerShopIds = permittedDashboardShopIds(members, 'customers');
+        const financeShopIds = permittedDashboardShopIds(members, 'finance');
+        const ownerIds = members
+            .filter(member => member.memberType === 'OWNER' && financeShopIds.includes(member.shopId))
+            .map(member => member.shopId);
+        const [inventory, receivables, payables, tax, approvals] = await Promise.all([
             this.inventoryItems(inventoryShopIds, now),
-            this.receivableItems(customerShopIds, now),
+            this.debtItems('RECEIVABLE', customerShopIds, now),
+            this.debtItems('PAYABLE', financeShopIds, now),
             this.taxItems(financeShopIds, now),
+            this.pendingPurchases(ownerIds),
         ]);
         return {
             asOf: now.toISOString(),
             items: sortDashboardActionItems([
                 ...inventory.items,
                 ...receivables.items,
+                ...payables.items,
+                ...approvals,
                 ...tax.items,
             ]),
             healthySummary: sortDashboardActionItems([
                 ...inventory.healthy,
                 ...receivables.healthy,
+                ...payables.healthy,
                 ...tax.healthy,
             ]),
         };

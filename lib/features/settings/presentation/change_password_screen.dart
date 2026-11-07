@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/utils/toast_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -191,7 +192,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                             color: AppColors.primary.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: AppIcon(
                             Icons.lock_reset_rounded,
                             size: 32,
                             color: AppColors.primary,
@@ -312,7 +313,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          const AppIcon(
                             Icons.error_outline_rounded,
                             color: AppColors.danger,
                             size: 20,
@@ -463,7 +464,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
+        AppIcon(
           met
               ? Icons.check_circle_rounded
               : Icons.radio_button_unchecked_rounded,
@@ -492,7 +493,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       padding: const EdgeInsets.only(top: 6, bottom: 4),
       child: Row(
         children: [
-          Icon(
+          AppIcon(
             match ? Icons.check_circle_rounded : Icons.cancel_rounded,
             size: 15,
             color: match ? AppColors.success : AppColors.danger,
@@ -546,7 +547,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
         decoration: InputDecoration(
           hintText: hintText,
-          prefixIcon: Icon(icon, color: c.textMuted, size: 20),
+          prefixIcon: AppIcon(icon, color: c.textMuted, size: 20),
           suffixIcon: suffixIcon,
           filled: true,
           fillColor: c.card,

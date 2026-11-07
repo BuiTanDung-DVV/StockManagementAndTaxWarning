@@ -66,9 +66,11 @@ class AppConfirmModal extends StatelessWidget {
           color: c.textPrimary,
         ),
       ),
-      content: Text(
-        message,
-        style: TextStyle(color: c.textSecondary, fontSize: 15, height: 1.5),
+      content: SingleChildScrollView(
+        child: Text(
+          message,
+          style: TextStyle(color: c.textSecondary, fontSize: 15, height: 1.5),
+        ),
       ),
       actionsPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       actions: [
@@ -77,6 +79,7 @@ class AppConfirmModal extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor: c.textSecondary,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            minimumSize: const Size(0, 48),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -94,6 +97,7 @@ class AppConfirmModal extends StatelessWidget {
                 : Theme.of(context).primaryColor,
             foregroundColor: Colors.white,
             elevation: 0,
+            minimumSize: const Size(0, 48),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

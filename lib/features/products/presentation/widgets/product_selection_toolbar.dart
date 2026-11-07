@@ -1,3 +1,4 @@
+import '../../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -5,7 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 class ProductSelectionToolbar extends StatelessWidget {
   final int selectedCount;
   final VoidCallback onClearSelection;
-  final Future<void> Function() onExportCsv;
+  final Future<void> Function() onExport;
   final bool isExporting;
   final bool canExport;
 
@@ -13,7 +14,7 @@ class ProductSelectionToolbar extends StatelessWidget {
     super.key,
     required this.selectedCount,
     required this.onClearSelection,
-    required this.onExportCsv,
+    required this.onExport,
     this.isExporting = false,
     this.canExport = true,
   });
@@ -32,38 +33,42 @@ class ProductSelectionToolbar extends StatelessWidget {
         final label = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            AppIcon(
               Icons.check_circle_rounded,
               size: 20,
               color: theme.colorScheme.primary,
             ),
             const SizedBox(width: AppSpacing.xs),
-            Text(
-              'Đã chọn $selectedCount sản phẩm',
-              style: GoogleFonts.manrope(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: c.textPrimary,
+            Flexible(
+              child: Text(
+                'Đã chọn $selectedCount sản phẩm',
+                style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: c.textPrimary,
+                ),
               ),
             ),
           ],
         );
 
-        final actions = Row(
-          mainAxisSize: MainAxisSize.min,
+        final actions = Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
           children: [
             if (canExport) ...[
               OutlinedButton.icon(
-                key: const Key('product-bulk-export-csv-button'),
-                onPressed: isExporting ? null : onExportCsv,
+                key: const Key('product-bulk-export-xlsx-button'),
+                onPressed: isExporting ? null : onExport,
                 icon: isExporting
                     ? const SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.download_rounded, size: 16),
-                label: const Text('Xuất CSV'),
+                    : const AppIcon(Icons.download_rounded, size: 16),
+                label: const Text('Xuất Excel'),
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(
@@ -75,7 +80,6 @@ class ProductSelectionToolbar extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.xs),
             ],
             TextButton(
               key: const Key('product-bulk-clear-selection-button'),
@@ -93,6 +97,7 @@ class ProductSelectionToolbar extends StatelessWidget {
         );
 
         return Container(
+          width: double.infinity,
           margin: const EdgeInsets.only(bottom: AppSpacing.sm),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,

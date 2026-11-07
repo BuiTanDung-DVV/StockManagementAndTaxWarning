@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -286,7 +287,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      AppIcon(
                         _success
                             ? Icons.check_circle_rounded
                             : Icons.lock_reset_rounded,
@@ -335,7 +336,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Địa chỉ Gmail',
                   hintText: 'Nhập Gmail đã đăng ký',
-                  prefixIcon: Icon(Icons.email_outlined),
+                  prefixIcon: AppIcon(Icons.email_outlined),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -375,7 +376,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Mã xác thực OTP',
                         hintText: 'Nhập 6 số',
-                        prefixIcon: Icon(Icons.security_rounded),
+                        prefixIcon: AppIcon(Icons.security_rounded),
                       ),
                     ),
                   ),
@@ -432,7 +433,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 decoration: InputDecoration(
                   labelText: 'Mật khẩu mới',
                   hintText: 'Nhập mật khẩu mới',
-                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  prefixIcon: const AppIcon(Icons.lock_outline_rounded),
                   suffixIcon: PasswordVisibilityButton(
                     obscureText: _obscure,
                     onPressed: () => setState(() => _obscure = !_obscure),
@@ -455,7 +456,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 decoration: InputDecoration(
                   labelText: 'Xác nhận mật khẩu',
                   hintText: 'Nhập lại mật khẩu mới',
-                  prefixIcon: const Icon(Icons.lock_clock_outlined),
+                  prefixIcon: const AppIcon(Icons.lock_clock_outlined),
                   suffixIcon: PasswordVisibilityButton(
                     obscureText: _obscureConfirm,
                     onPressed: () =>
@@ -496,7 +497,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    const AppIcon(
                       Icons.error_outline_rounded,
                       color: AppColors.danger,
                       size: 20,

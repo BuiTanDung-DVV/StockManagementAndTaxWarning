@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/assets/app_assets.dart';
+import '../../../core/assets/app_icon.dart';
 import '../../../core/guides/feature_guide_sheet.dart';
 import '../../../core/providers/reporting_period_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -12,12 +13,14 @@ import '../../../core/utils/reporting_period.dart';
 import '../../../core/utils/finance_display.dart';
 import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_page_header.dart';
+import '../../../core/widgets/app_menu_item_content.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/app_ui_components.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../providers/finance_provider.dart';
+import '../../settings/providers/shop_provider.dart';
 
 final _currencyFormat = NumberFormat.currency(
   locale: 'vi_VN',
@@ -29,11 +32,13 @@ class _FinanceToolDefinition {
   final String title;
   final String description;
   final String route;
+  final String assetPath;
 
   const _FinanceToolDefinition({
     required this.title,
     required this.description,
     required this.route,
+    required this.assetPath,
   });
 }
 
@@ -64,27 +69,32 @@ final _financeToolGroups = <_FinanceToolGroupDefinition>[
         title: 'Giao dịch thu chi',
         description: 'Ghi nhận và tra cứu các khoản tiền vào, tiền ra.',
         route: '/transactions',
+        assetPath: AppAssets.financeTransactions,
       ),
       _FinanceToolDefinition(
         title: 'Chốt sổ cuối ngày',
         description: 'Đối soát tiền mặt và xác nhận số dư thực tế.',
         route: '/daily-closing',
+        assetPath: AppAssets.financeClosing,
       ),
       _FinanceToolDefinition(
         title: 'Sổ chi phí SXKD',
         description: 'Theo dõi chi phí theo nhóm và chứng từ liên quan.',
         route: '/expense-ledger',
+        assetPath: AppAssets.financeExpenses,
       ),
       _FinanceToolDefinition(
         title: 'Quản lý chứng từ',
         description: 'Kiểm tra hóa đơn đầu vào, đầu ra và trạng thái xử lý.',
         route: '/invoices',
+        assetPath: AppAssets.financeInvoices,
       ),
       _FinanceToolDefinition(
         title: 'Quét hóa đơn',
         description:
             'Nhận dạng ảnh và kiểm tra thủ công trước khi tạo hóa đơn.',
         route: '/invoice-scans',
+        assetPath: AppAssets.financeScan,
       ),
     ],
   ),
@@ -98,11 +108,13 @@ final _financeToolGroups = <_FinanceToolGroupDefinition>[
         title: 'Báo cáo kết quả kinh doanh',
         description: 'Đối chiếu doanh thu, chi phí và lợi nhuận trong kỳ.',
         route: '/profit-loss',
+        assetPath: AppAssets.financeResults,
       ),
       _FinanceToolDefinition(
         title: 'Dự báo dòng tiền',
         description: 'Xem các khoản dự kiến thu, chi trong thời gian tới.',
         route: '/cashflow-forecast',
+        assetPath: AppAssets.financeForecast,
       ),
     ],
   ),
@@ -116,16 +128,19 @@ final _financeToolGroups = <_FinanceToolGroupDefinition>[
         title: 'Tuổi nợ phải thu',
         description: 'Phân nhóm khoản khách hàng còn nợ theo mức độ ưu tiên.',
         route: '/debt-aging',
+        assetPath: AppAssets.financeReceivables,
       ),
       _FinanceToolDefinition(
         title: 'Tuổi nợ phải trả',
         description: 'Ưu tiên các khoản cần thanh toán cho nhà cung cấp.',
         route: '/supplier-payables-aging',
+        assetPath: AppAssets.financePayables,
       ),
       _FinanceToolDefinition(
         title: 'Sổ lương nhân viên',
         description: 'Theo dõi lương, phụ cấp và khoản chi theo nhân viên.',
         route: '/salary-ledger',
+        assetPath: AppAssets.financeSalary,
       ),
     ],
   ),
@@ -139,21 +154,25 @@ final _financeToolGroups = <_FinanceToolGroupDefinition>[
         title: 'Bảng kê mua không hóa đơn',
         description: 'Quản lý giao dịch mua chưa có chứng từ hợp lệ.',
         route: '/purchases-no-invoice',
+        assetPath: AppAssets.financePurchaseLedger,
       ),
       _FinanceToolDefinition(
         title: 'Tính thuế hộ kinh doanh',
         description: 'Ước tính nghĩa vụ theo dữ liệu và cấu hình hiện có.',
         route: '/tax-calculator',
+        assetPath: AppAssets.financeCalculator,
       ),
       _FinanceToolDefinition(
         title: 'Theo dõi nghĩa vụ thuế',
         description: 'Theo dõi kỳ, hạn nộp và trạng thái hoàn thành.',
         route: '/tax-obligations',
+        assetPath: AppAssets.financeTaxObligations,
       ),
       _FinanceToolDefinition(
         title: 'Kê khai thuế',
         description: 'Chuẩn bị dữ liệu phục vụ quy trình kê khai.',
         route: '/tax-declaration',
+        assetPath: AppAssets.financeTaxDeclaration,
       ),
     ],
   ),
@@ -187,6 +206,7 @@ class FinanceScreen extends ConsumerWidget {
       expensesByCategoryForPeriodProvider((from: from, to: to)),
     );
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
+    final isOwner = ref.watch(shopProvider).isOwner;
 
     Future<void> refresh() async {
       ref.invalidate(cashSummaryProvider);
@@ -206,35 +226,66 @@ class FinanceScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppPageHeader(
-                  title: 'Tài chính & sổ cái',
-                  subtitle:
-                      'Theo dõi dòng tiền, đối soát giao dịch và xử lý công việc tài chính trong tháng.',
-                  dense: true,
-                  action: Wrap(
-                    spacing: AppSpacing.xs,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      featureGuideButton(context, 'finance'),
-                      AppPrimaryPageAction(
-                        label: 'Lịch sử giao dịch',
-                        assetPath: AppAssets.cash,
-                        onPressed: () => context.go('/transactions'),
-                      ),
-                    ],
-                  ),
-                  compactAction: Wrap(
-                    spacing: AppSpacing.xs,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      featureGuideButton(context, 'finance'),
-                      AppPrimaryHeaderAction(
-                        label: 'Lịch sử giao dịch',
-                        assetPath: AppAssets.cash,
-                        heroTag: 'finance-transaction-action-compact',
-                        onPressed: () => context.go('/transactions'),
-                      ),
-                    ],
+                LayoutBuilder(
+                  builder: (context, headerConstraints) => AppPageHeader(
+                    title: 'Tài chính & sổ cái',
+                    subtitle:
+                        'Theo dõi dòng tiền, ghi sổ và đối soát chứng từ.',
+                    dense: true,
+                    action: Wrap(
+                      spacing: AppSpacing.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        if (headerConstraints.maxWidth < 900)
+                          PopupMenuButton<String>(
+                            tooltip: 'Tác vụ khác',
+                            icon: const AppAssetIcon(
+                              assetPath: AppAssets.more,
+                              size: 20,
+                            ),
+                            onSelected: (value) {
+                              if (value == 'opening')
+                                context.push('/opening-balances');
+                              if (value == 'guide')
+                                showFeatureGuide(context, 'finance');
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: 'guide',
+                                child: AppMenuItemContent(
+                                  assetPath: AppAssets.help,
+                                  label: 'Hướng dẫn',
+                                ),
+                              ),
+                              if (isOwner)
+                                const PopupMenuItem(
+                                  value: 'opening',
+                                  child: AppMenuItemContent(
+                                    assetPath: AppAssets.cash,
+                                    label: 'Số liệu ban đầu',
+                                  ),
+                                ),
+                            ],
+                          )
+                        else ...[
+                          if (isOwner)
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  context.push('/opening-balances'),
+                              icon: const AppIcon(
+                                Icons.account_balance_wallet_outlined,
+                              ),
+                              label: const Text('Số liệu ban đầu'),
+                            ),
+                          featureGuideButton(context, 'finance'),
+                        ],
+                        AppPrimaryPageAction(
+                          label: 'Xem sổ thu chi',
+                          assetPath: AppAssets.financeTransactions,
+                          onPressed: () => context.go('/transactions'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 summaryAsync.when(
@@ -250,63 +301,104 @@ class FinanceScreen extends ConsumerWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final chart = summaryAsync.when(
-                      data: (data) =>
-                          _CashFlowPanel(data: data, periodLabel: periodLabel),
-                      loading: () => const _PanelLoading(height: 406),
+                      data: (data) => _CashFlowPanel(
+                        key: const Key('finance-cashflow-panel'),
+                        data: data,
+                        periodLabel: periodLabel,
+                      ),
+                      loading: () => const _PanelLoading(height: 330),
                       error: (_, _) => AppInlineError(
                         message: 'Không thể tải biểu đồ dòng tiền.',
                         onRetry: () => ref.invalidate(cashSummaryProvider),
                       ),
                     );
-                    final categories = categoriesAsync.when(
-                      data: (data) => _ExpenseCategoryPanel(
-                        data: data,
-                        periodLabel: periodLabel,
-                      ),
-                      loading: () => const _PanelLoading(height: 406),
-                      error: (_, _) => AppInlineError(
-                        message: 'Không thể tải phân loại chi phí.',
-                        onRetry: () =>
-                            ref.invalidate(expensesByCategoryForPeriodProvider),
-                      ),
+                    final tools = _FinanceToolGroup(
+                      key: const Key('finance-operating-tools'),
+                      group: _financeToolGroups.first,
                     );
 
-                    if (constraints.maxWidth < 980) {
+                    if (constraints.maxWidth < 820 ||
+                        MediaQuery.textScalerOf(context).scale(1) > 1.25) {
                       return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          chart,
+                          tools,
                           const SizedBox(height: AppSpacing.md),
-                          categories,
+                          chart,
                         ],
                       );
                     }
 
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 3, child: chart),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(child: categories),
-                      ],
+                    return IntrinsicHeight(
+                      child: Row(
+                        key: const Key('finance-cash-and-tools'),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(flex: 3, child: chart),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(flex: 2, child: tools),
+                        ],
+                      ),
                     );
                   },
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                _SectionLead(
-                  title: 'Công việc tài chính',
-                  subtitle:
-                      'Các sổ và báo cáo được nhóm theo nhiệm vụ để dễ tìm trên cả desktop và điện thoại.',
-                ),
+                const _SectionLead(title: 'Sổ & báo cáo'),
                 const SizedBox(height: AppSpacing.md),
-                for (
-                  var index = 0;
-                  index < _financeToolGroups.length;
-                  index++
-                ) ...[
-                  _FinanceToolGroup(group: _financeToolGroups[index]),
-                  if (index < _financeToolGroups.length - 1)
-                    const SizedBox(height: AppSpacing.md),
-                ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final panels = <Widget>[
+                      for (final group in _financeToolGroups.skip(1))
+                        _FinanceToolGroup(group: group),
+                      categoriesAsync.when(
+                        data: (data) => _ExpenseCategoryPanel(
+                          data: data,
+                          periodLabel: periodLabel,
+                        ),
+                        loading: () => const _PanelLoading(height: 330),
+                        error: (_, _) => AppInlineError(
+                          message: 'Không thể tải phân loại chi phí.',
+                          onRetry: () => ref.invalidate(
+                            expensesByCategoryForPeriodProvider,
+                          ),
+                        ),
+                      ),
+                    ];
+                    final columns =
+                        constraints.maxWidth >= 760 &&
+                            MediaQuery.textScalerOf(context).scale(1) <= 1.25
+                        ? 2
+                        : 1;
+                    return Column(
+                      children: [
+                        for (
+                          var index = 0;
+                          index < panels.length;
+                          index += columns
+                        ) ...[
+                          if (index > 0) const SizedBox(height: AppSpacing.md),
+                          if (columns == 1)
+                            panels[index]
+                          else
+                            IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(child: panels[index]),
+                                  const SizedBox(width: AppSpacing.md),
+                                  Expanded(
+                                    child: index + 1 < panels.length
+                                        ? panels[index + 1]
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
                 const SizedBox(height: AppSpacing.xl),
                 _SectionLead(
                   title: 'Giao dịch gần đây',
@@ -339,11 +431,11 @@ class FinanceScreen extends ConsumerWidget {
 class _FinanceMetricStrip extends StatelessWidget {
   final Map<String, dynamic> data;
   final String periodLabel;
-
   const _FinanceMetricStrip({required this.data, required this.periodLabel});
 
   @override
   Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
     final balance = asDouble(
       data['cashBalance'] ?? data['currentBalance'] ?? data['balance'],
     );
@@ -358,70 +450,193 @@ class _FinanceMetricStrip extends StatelessWidget {
         ? 'Hiện tại'
         : 'Tại ${DateFormat('dd/MM/yyyy').format(asOf.toLocal())}';
 
+    Widget valueTile(
+      String title,
+      num value,
+      String contextLabel,
+      String route, {
+      bool featured = false,
+      bool dense = false,
+      Color? valueColor,
+    }) {
+      final foreground = featured ? c.primary : c.textPrimary;
+      final secondary = c.textSecondary;
+      return Material(
+        color: c.card,
+        child: InkWell(
+          onTap: () => featured ? context.push(route) : context.go(route),
+          child: dense
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: c.textPrimary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              contextLabel,
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(color: secondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          _currencyFormat.format(value),
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: valueColor ?? foreground,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: secondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                          ),
+                          AppIcon(
+                            Icons.arrow_outward_rounded,
+                            size: 16,
+                            color: secondary,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _currencyFormat.format(value),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: featured
+                                    ? foreground
+                                    : (valueColor ?? foreground),
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        contextLabel,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: secondary),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final columnCount = width >= 900
-            ? 4
-            : width >= 520
-            ? 2
-            : 1;
-        final compact = width < 900;
-        final gap = compact ? AppSpacing.sm : AppSpacing.md;
-        final cards = [
-          AppKpiCard(
-            title: 'Quỹ tiền mặt',
-            value: _currencyFormat.format(balance),
-            color: AppColors.primary,
-            assetPath: AppAssets.cash,
-            badgeText: balanceDateLabel,
-            compact: compact,
-            onTap: () => context.push('/daily-closing'),
-            navigationHint: 'Mở chốt sổ và đối soát quỹ tiền mặt',
+        final wide =
+            constraints.maxWidth >= 800 &&
+            MediaQuery.textScalerOf(context).scale(1) <= 1.25;
+        final tiles = [
+          valueTile(
+            'Quỹ tiền mặt',
+            balance,
+            balanceDateLabel,
+            '/daily-closing',
+            featured: true,
           ),
-          AppKpiCard(
-            title: 'Tổng thu',
-            value: _currencyFormat.format(income),
-            color: AppColors.success,
-            assetPath: AppAssets.revenue,
-            badgeText: periodLabel,
-            compact: compact,
-            onTap: () => context.go('/transactions?type=INCOME'),
-            navigationHint: 'Mở danh sách các khoản thu',
+          valueTile(
+            'Tổng thu',
+            income,
+            periodLabel,
+            '/transactions?type=INCOME',
+            dense: !wide,
           ),
-          AppKpiCard(
-            title: 'Tổng chi',
-            value: _currencyFormat.format(expense),
-            color: AppColors.danger,
-            assetPath: AppAssets.orders,
-            badgeText: periodLabel,
-            compact: compact,
-            onTap: () => context.go('/transactions?type=EXPENSE'),
-            navigationHint: 'Mở danh sách các khoản chi',
+          valueTile(
+            'Tổng chi',
+            expense,
+            periodLabel,
+            '/transactions?type=EXPENSE',
+            dense: !wide,
           ),
-          AppKpiCard(
-            title: 'Dòng tiền thuần',
-            value: _currencyFormat.format(net),
-            color: net >= 0 ? AppColors.success : AppColors.danger,
-            assetPath: AppAssets.profit,
-            badgeText: periodLabel,
-            compact: compact,
-            onTap: () => context.go('/transactions'),
-            navigationHint: 'Mở các giao dịch tạo nên dòng tiền thuần',
+          valueTile(
+            'Dòng tiền thuần',
+            net,
+            periodLabel,
+            '/transactions',
+            valueColor: net < 0 ? AppColors.danger : c.primary,
+            dense: !wide,
           ),
         ];
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: cards.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columnCount,
-            crossAxisSpacing: gap,
-            mainAxisSpacing: gap,
-            mainAxisExtent: compact ? 96 : 88,
+        return Container(
+          key: const Key('finance-balance-band'),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: c.card,
+            border: Border.all(color: c.divider),
+            borderRadius: BorderRadius.circular(12),
           ),
-          itemBuilder: (context, index) => cards[index],
+          child: wide
+              ? IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(flex: 3, child: tiles[0]),
+                      for (var i = 1; i < tiles.length; i++) ...[
+                        VerticalDivider(width: 1, color: c.divider),
+                        Expanded(flex: 2, child: tiles[i]),
+                      ],
+                    ],
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    tiles[0],
+                    for (var i = 1; i < tiles.length; i++) ...[
+                      Divider(height: 1, color: c.divider),
+                      tiles[i],
+                    ],
+                  ],
+                ),
         );
       },
     );
@@ -456,12 +671,16 @@ class _CashFlowPanel extends StatelessWidget {
   final Map<String, dynamic> data;
   final String periodLabel;
 
-  const _CashFlowPanel({required this.data, required this.periodLabel});
+  const _CashFlowPanel({
+    super.key,
+    required this.data,
+    required this.periodLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 600;
-    final chartHeight = compact ? 286.0 : 316.0;
+    final chartHeight = compact ? 210.0 : 234.0;
     final emptyHeight = compact ? 150.0 : 180.0;
     final dailyFlow = ((data['dailyFlow'] as List?) ?? const [])
         .whereType<Map>()
@@ -494,14 +713,27 @@ class _CashFlowPanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           if (dailyFlow.isEmpty || !hasMovement)
-            SizedBox(
-              height: emptyHeight,
-              child: const AppEmpty(
-                visual: AppEmptyVisual.finance,
-                message: 'Chưa có giao dịch thu–chi trong kỳ',
-                subtitle: 'Biểu đồ sẽ xuất hiện khi có giao dịch thực tế.',
-              ),
-            )
+            compact
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Text(
+                      'Chưa có giao dịch thu–chi trong kỳ. Biểu đồ sẽ xuất hiện khi có giao dịch thực tế.',
+                      style: TextStyle(
+                        color: AppThemeColors.of(context).textSecondary,
+                      ),
+                    ),
+                  )
+                : SizedBox(
+                    height: emptyHeight,
+                    child: const AppEmpty(
+                      visual: AppEmptyVisual.finance,
+                      message: 'Chưa có giao dịch thu–chi trong kỳ',
+                      subtitle:
+                          'Biểu đồ sẽ xuất hiện khi có giao dịch thực tế.',
+                    ),
+                  )
           else
             SizedBox(
               height: chartHeight,
@@ -570,23 +802,44 @@ class _ExpenseCategoryPanel extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           if (allCategories.isEmpty)
-            SizedBox(
-              height: emptyHeight,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Chưa có chi phí để phân loại.',
-                    style: TextStyle(color: colors.textSecondary),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  TextButton(
-                    onPressed: () => context.push('/expense-ledger'),
-                    child: const Text('Thêm khoản chi'),
-                  ),
-                ],
-              ),
-            )
+            compact
+                ? Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.md),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Chưa có chi phí để phân loại.',
+                            style: TextStyle(color: colors.textSecondary),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => context.push('/expense-ledger'),
+                          child: const Text('Thêm khoản chi'),
+                        ),
+                      ],
+                    ),
+                  )
+                : Container(
+                    constraints: BoxConstraints(minHeight: emptyHeight),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Chưa có chi phí để phân loại.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: colors.textSecondary),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        TextButton(
+                          onPressed: () => context.push('/expense-ledger'),
+                          child: const Text('Thêm khoản chi'),
+                        ),
+                      ],
+                    ),
+                  )
           else ...[
             if (procurement != null)
               _ProcurementExpenseSummary(
@@ -693,7 +946,7 @@ class _ProcurementExpenseSummary extends StatelessWidget {
                     color: AppColors.info.withValues(alpha: .12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: const AppIcon(
                     Icons.inventory_2_outlined,
                     color: AppColors.info,
                     size: 21,
@@ -713,6 +966,16 @@ class _ProcurementExpenseSummary extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
+                        _currencyFormat.format(value),
+                        style: AppTheme.tabularStyle(
+                          context,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
                         '${share.toStringAsFixed(1)}% tổng tiền chi',
                         style: TextStyle(
                           color: colors.textSecondary,
@@ -722,16 +985,7 @@ class _ProcurementExpenseSummary extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text(
-                  _currencyFormat.format(value),
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Icon(
+                AppIcon(
                   Icons.chevron_right_rounded,
                   size: 20,
                   color: colors.textMuted,
@@ -814,7 +1068,7 @@ class _ExpenseCategoryRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.xs),
-                    Icon(
+                    AppIcon(
                       Icons.chevron_right_rounded,
                       size: 18,
                       color: colors.textMuted,
@@ -841,7 +1095,7 @@ class _ExpenseCategoryRow extends StatelessWidget {
 class _FinanceToolGroup extends StatelessWidget {
   final _FinanceToolGroupDefinition group;
 
-  const _FinanceToolGroup({required this.group});
+  const _FinanceToolGroup({super.key, required this.group});
 
   @override
   Widget build(BuildContext context) {
@@ -853,16 +1107,7 @@ class _FinanceToolGroup extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: group.color.withValues(alpha: .1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(group.icon, size: 19, color: group.color),
-              ),
+              AppIcon(group.icon, size: 20, color: colors.textSecondary),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -890,21 +1135,16 @@ class _FinanceToolGroup extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          AppFillGrid(
-            minItemWidth: 210,
-            maxColumns: 4,
-            itemHeight: 76,
-            children: [
-              for (final tool in group.tools)
-                _FinanceToolTile(
-                  title: tool.title,
-                  description: tool.description,
-                  color: group.color,
-                  onTap: () => context.push(tool.route),
-                ),
-            ],
-          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (final tool in group.tools) ...[
+            Divider(height: 1, color: colors.divider),
+            _FinanceToolTile(
+              title: tool.title,
+              description: tool.description,
+              assetPath: tool.assetPath,
+              onTap: () => context.push(tool.route),
+            ),
+          ],
         ],
       ),
     );
@@ -914,13 +1154,13 @@ class _FinanceToolGroup extends StatelessWidget {
 class _FinanceToolTile extends StatelessWidget {
   final String title;
   final String description;
-  final Color color;
+  final String assetPath;
   final VoidCallback onTap;
 
   const _FinanceToolTile({
     required this.title,
     required this.description,
-    required this.color,
+    required this.assetPath,
     required this.onTap,
   });
 
@@ -928,69 +1168,55 @@ class _FinanceToolTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Material(
-      color: colors.card,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: colors.divider),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 6,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
+    return Tooltip(
+      message: description,
+      child: Material(
+        color: colors.card,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: ExcludeSemantics(
+                    child: AppAssetIcon(
+                      assetPath: assetPath,
+                      size: 19,
+                      color: colors.textSecondary,
                     ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: 12,
-                        height: 1.35,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Xem',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                const SizedBox(width: AppSpacing.sm),
+                AppIcon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: colors.textMuted,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1173,7 +1399,7 @@ class _DesktopTransactionRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
-                Icon(
+                AppIcon(
                   Icons.chevron_right_rounded,
                   size: 18,
                   color: colors.textMuted,
@@ -1271,7 +1497,7 @@ class _MobileTransactionRow extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(width: AppSpacing.xs),
-                Icon(
+                AppIcon(
                   Icons.chevron_right_rounded,
                   size: 18,
                   color: colors.textMuted,

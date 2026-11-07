@@ -145,8 +145,10 @@ class _SupplierListScreenState extends ConsumerState<SupplierListScreen> {
                           return ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: suppliers.length + 1,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: AppSpacing.sm),
+                            separatorBuilder: (_, _) => Divider(
+                              height: 1,
+                              color: AppThemeColors.of(context).divider,
+                            ),
                             itemBuilder: (context, index) {
                               if (index == suppliers.length) {
                                 return AppPaginationBar(
@@ -390,13 +392,9 @@ class _MobileSupplierCard extends StatelessWidget {
 
     return Material(
       color: colors.card,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: colors.divider),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
+
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.card),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(

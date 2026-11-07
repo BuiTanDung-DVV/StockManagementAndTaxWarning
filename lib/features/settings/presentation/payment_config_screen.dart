@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -45,7 +46,7 @@ class PaymentConfigScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  AppIcon(
                     Icons.qr_code_2_rounded,
                     size: 56,
                     color: Theme.of(context).colorScheme.primary,
@@ -74,7 +75,7 @@ class PaymentConfigScreen extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: () =>
                         showShopPaymentQrDialog(context, canManage: true),
-                    icon: const Icon(Icons.image_outlined),
+                    icon: const AppIcon(Icons.image_outlined),
                     label: const Text('Xem hoặc thay ảnh QR'),
                   ),
                 ],

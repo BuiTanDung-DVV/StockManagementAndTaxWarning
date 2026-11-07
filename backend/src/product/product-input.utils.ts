@@ -12,7 +12,7 @@ const editableFields = new Set([
     'name', 'sku', 'barcode', 'unit', 'costPrice', 'sellingPrice',
     'wholesalePrice', 'wholesaleMinQty', 'taxRate', 'supplierDiscount',
     'promoPrice', 'promoStart', 'promoEnd', 'minStock', 'description',
-    'tags', 'imageUrl', 'currentStock', 'openingStock', 'warehouseId',
+    'tags', 'imageUrl', 'currentStock', 'openingStock', 'warehouseId', 'categoryId',
 ]);
 
 const optionalMoneyFields = ['wholesalePrice', 'promoPrice'] as const;
@@ -87,6 +87,12 @@ export function normalizeProductInput(
     }
 
     const result: Record<string, unknown> = {};
+    if (hasOwn(raw, 'categoryId')) {
+        if (raw.categoryId === null) result.categoryId = null;
+        else if (typeof raw.categoryId !== 'number' || !Number.isSafeInteger(raw.categoryId) || raw.categoryId <= 0) {
+            throw new ProductInputError('Danh mục sản phẩm không hợp lệ');
+        } else result.categoryId = raw.categoryId;
+    }
     if (options.requireName || hasOwn(raw, 'name')) result.name = requiredText(raw.name, 'Tên sản phẩm', 200);
     if (hasOwn(raw, 'sku')) result.sku = optionalText(raw.sku, 'Mã SKU', 50);
     if (hasOwn(raw, 'barcode')) result.barcode = optionalText(raw.barcode, 'Mã vạch', 50);

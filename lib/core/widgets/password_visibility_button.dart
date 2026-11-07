@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../assets/app_icon.dart';
 
 import '../theme/app_theme.dart';
 
@@ -29,7 +30,7 @@ class PasswordVisibilityButton extends StatelessWidget {
         padding: EdgeInsets.zero,
         shape: const RoundedRectangleBorder(),
       ),
-      icon: Icon(
+      icon: AppIcon(
         obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
         size: 20,
         semanticLabel: label,

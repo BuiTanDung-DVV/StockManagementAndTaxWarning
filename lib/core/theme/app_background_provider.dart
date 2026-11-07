@@ -54,9 +54,9 @@ enum AppWallpaperPreset {
   ),
   warehousePanorama(
     id: 'warehouse_panorama',
-    label: 'Kho Hàng Thực Tế',
+    label: 'Không gian kho',
     assetPath: AppAssets.authWarehousePanoramaV2,
-    description: 'Toàn cảnh trung tâm phân phối kho bãi SmartStock',
+    description: 'Ảnh minh họa không gian kho hàng',
     defaultOpacityLight: 0.08,
     defaultOpacityDark: 0.12,
   );
@@ -91,7 +91,7 @@ enum AppWallpaperPreset {
       case AppWallpaperPreset.geometric:
         return 'Geometric Shapes';
       case AppWallpaperPreset.warehousePanorama:
-        return 'Realistic Warehouse';
+        return 'Warehouse illustration';
     }
   }
 
@@ -109,7 +109,7 @@ enum AppWallpaperPreset {
       case AppWallpaperPreset.geometric:
         return 'Clean, elegant 3D isometric geometric polygons';
       case AppWallpaperPreset.warehousePanorama:
-        return 'SmartStock logistics distribution center panorama';
+        return 'Illustration of a warehouse interior';
     }
   }
 

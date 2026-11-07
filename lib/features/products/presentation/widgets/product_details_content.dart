@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/assets/app_assets.dart';
+import '../../../../core/assets/app_icon.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/type_parser.dart';
 import '../../../../core/widgets/product_network_image.dart';
@@ -17,6 +18,7 @@ class ProductDetailsContent extends StatelessWidget {
   final VoidCallback? onViewFullDetail;
   final VoidCallback? onClose;
   final bool isQuickView;
+  final bool showQuickViewActions;
   final Widget? banner;
 
   const ProductDetailsContent({
@@ -25,6 +27,7 @@ class ProductDetailsContent extends StatelessWidget {
     this.onViewFullDetail,
     this.onClose,
     this.isQuickView = false,
+    this.showQuickViewActions = true,
     this.banner,
   });
 
@@ -92,7 +95,7 @@ class ProductDetailsContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isQuickView) ...[
+        if (isQuickView && showQuickViewActions) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -108,7 +111,7 @@ class ProductDetailsContent extends StatelessWidget {
                 IconButton(
                   key: const Key('product-quick-view-close-button'),
                   tooltip: 'Đóng (Esc)',
-                  icon: const Icon(Icons.close_rounded, size: 20),
+                  icon: const AppIcon(Icons.close_rounded, size: 20),
                   onPressed: onClose,
                 ),
             ],
@@ -209,14 +212,14 @@ class ProductDetailsContent extends StatelessWidget {
         const SizedBox(height: 16),
 
         // Quick Actions for quick-view panel
-        if (isQuickView) ...[
+        if (isQuickView && showQuickViewActions) ...[
           if (onViewFullDetail != null)
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 key: const Key('product-quick-view-full-detail-button'),
                 onPressed: onViewFullDetail,
-                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                icon: const AppIcon(Icons.open_in_new_rounded, size: 16),
                 label: const Text('Xem chi tiết đầy đủ'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 10),

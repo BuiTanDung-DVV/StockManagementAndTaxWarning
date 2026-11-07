@@ -1,3 +1,5 @@
+import '../../../core/widgets/app_page_header.dart';
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,7 +77,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        AppIcon(
                           Icons.rule_folder_outlined,
                           size: 48,
                           color: c.textMuted,
@@ -104,7 +106,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                         ElevatedButton.icon(
                           onPressed: () =>
                               ref.read(taxConfigProvider.notifier).refresh(),
-                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          icon: const AppIcon(Icons.refresh_rounded, size: 18),
                           label: const Text('Thử tải lại'),
                           style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(
@@ -135,12 +137,8 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
       backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leadingWidth: 60,
+        leading: AppNavigationBackLeading(onPressed: () => navigatePageBack(context)),
         title: Text(
           'Công cụ tính thuế HKD ${config.fiscalYear}',
           style: GoogleFonts.manrope(
@@ -188,7 +186,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                             ),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: AppIcon(
                             Icons.business_center_rounded,
                             size: 18,
                             color: theme.colorScheme.primary,
@@ -290,7 +288,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
-                      prefixIcon: Icon(
+                      prefixIcon: AppIcon(
                         Icons.payments_rounded,
                         color: theme.colorScheme.primary,
                       ),
@@ -353,7 +351,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                                     .withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
+                              child: AppIcon(
                                 Icons.radar_rounded,
                                 size: 16,
                                 color: thresholds.getColor(_revenue),
@@ -716,7 +714,7 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          AppIcon(
                             thresholds.canUseInvoice(_revenue)
                                 ? Icons.verified_user_rounded
                                 : Icons.info_outline_rounded,

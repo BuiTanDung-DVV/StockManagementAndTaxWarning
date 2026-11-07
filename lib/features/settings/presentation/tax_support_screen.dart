@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import 'package:flutter/services.dart';
@@ -46,7 +47,7 @@ class TaxSupportScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline, size: 48, color: c.textMuted),
+                AppIcon(Icons.lock_outline, size: 48, color: c.textMuted),
                 const SizedBox(height: 16),
                 Text(
                   'Tài khoản chưa được phân quyền truy cập kênh hỗ trợ thuế.',
@@ -91,7 +92,7 @@ class TaxSupportScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.cloud_off_outlined, size: 48, color: c.textMuted),
+                AppIcon(Icons.cloud_off_outlined, size: 48, color: c.textMuted),
                 const SizedBox(height: 16),
                 Text(
                   'Chưa thể tải dữ liệu liên kết hỗ trợ thuế từ máy chủ.',
@@ -104,7 +105,7 @@ class TaxSupportScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: () => ref.refresh(taxReferenceDataProvider),
-                  icon: const Icon(Icons.refresh, size: 18),
+                  icon: const AppIcon(Icons.refresh, size: 18),
                   label: const Text('Thử lại'),
                 ),
               ],
@@ -143,7 +144,7 @@ class TaxSupportScreen extends ConsumerWidget {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.help_center, size: 30, color: Colors.white),
+                    AppIcon(Icons.help_center, size: 30, color: Colors.white),
                     SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -199,7 +200,7 @@ class TaxSupportScreen extends ConsumerWidget {
                             ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(
+                          child: AppIcon(
                             _taxLinkIcon(l.iconKey),
                             size: 20,
                             color: _taxLinkColor(l.colorRole),
@@ -227,7 +228,11 @@ class TaxSupportScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        Icon(Icons.open_in_new, size: 16, color: c.textMuted),
+                        AppIcon(
+                          Icons.open_in_new,
+                          size: 16,
+                          color: c.textMuted,
+                        ),
                       ],
                     ),
                   ),
@@ -248,7 +253,11 @@ class TaxSupportScreen extends ConsumerWidget {
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, size: 20, color: AppColors.info),
+                    AppIcon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: AppColors.info,
+                    ),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -277,7 +286,11 @@ class TaxSupportScreen extends ConsumerWidget {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.gavel, size: 18, color: AppColors.warning),
+                        AppIcon(
+                          Icons.gavel,
+                          size: 18,
+                          color: AppColors.warning,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           'Lưu ý khi tra cứu',
@@ -318,7 +331,7 @@ class TaxSupportScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.language, size: 48, color: AppColors.primary),
+            AppIcon(Icons.language, size: 48, color: AppColors.primary),
             const SizedBox(height: 16),
             Text(
               'Chuyển hướng đến $title',
@@ -338,7 +351,7 @@ class TaxSupportScreen extends ConsumerWidget {
                       Navigator.pop(ctx);
                       ToastService.showSuccess('Đã sao chép liên kết');
                     },
-                    icon: const Icon(Icons.copy, size: 16),
+                    icon: const AppIcon(Icons.copy, size: 16),
                     label: Text('Sao chép'),
                   ),
                 ),
@@ -367,7 +380,7 @@ class TaxSupportScreen extends ConsumerWidget {
                         ToastService.showError('Không thể mở trình duyệt');
                       }
                     },
-                    icon: const Icon(Icons.open_in_browser, size: 16),
+                    icon: const AppIcon(Icons.open_in_browser, size: 16),
                     label: Text('Mở trình duyệt'),
                   ),
                 ),
@@ -388,7 +401,7 @@ class _RightItem extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: Row(
       children: [
-        const Icon(Icons.check, size: 14, color: AppColors.success),
+        const AppIcon(Icons.check, size: 14, color: AppColors.success),
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
       ],

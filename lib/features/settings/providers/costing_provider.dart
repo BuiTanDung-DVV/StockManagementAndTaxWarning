@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/providers/data_freshness_provider.dart';
 
 class CostingState {
   final String? method; // 'FIFO' | 'AVG', null khi chưa tải được từ DB
@@ -14,7 +15,17 @@ class CostingState {
 
 class CostingNotifier extends Notifier<CostingState> {
   @override
-  CostingState build() => const CostingState(isLoading: true);
+  CostingState build() {
+    ref.listen(dataFreshnessProvider.select((s) => s[DataArea.system] ?? 0), (
+      _,
+      _,
+    ) {
+      Future.microtask(() {
+        if (ref.mounted) loadCostingMethod();
+      });
+    });
+    return const CostingState(isLoading: true);
+  }
 
   ApiClient get _api => ref.read(apiClientProvider);
 

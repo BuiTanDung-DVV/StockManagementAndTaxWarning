@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -158,7 +159,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
       subtitle: 'Mã OTP gồm 6 chữ số đã được gửi đến email:',
       footer: Center(
         child: TextButton.icon(
-          icon: const Icon(Icons.arrow_back_rounded, size: 16),
+          icon: const AppIcon(Icons.arrow_back_rounded, size: 16),
           label: const Text('Quay lại đăng ký / đổi email'),
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/register'),
@@ -180,7 +181,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                AppIcon(
                   Icons.mark_email_read_outlined,
                   size: 18,
                   color: Theme.of(context).colorScheme.primary,
@@ -272,7 +273,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  const AppIcon(
                     Icons.error_outline_rounded,
                     color: AppColors.danger,
                     size: 18,

@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,9 @@ import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/widgets/app_navigation_back_button.dart';
 import '../providers/finance_provider.dart';
+import '../models/manual_cash_repeat.dart';
+import '../../settings/providers/shop_provider.dart';
+import 'repeat_cash_transaction_dialog.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -44,7 +48,7 @@ class TransactionDetailScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.link_off_rounded, size: 42),
+                const AppIcon(Icons.link_off_rounded, size: 42),
                 const SizedBox(height: 12),
                 const Text(
                   'Đường dẫn giao dịch không hợp lệ.',
@@ -92,7 +96,7 @@ class TransactionDetailScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.receipt_long_outlined, size: 42),
+                const AppIcon(Icons.receipt_long_outlined, size: 42),
                 const SizedBox(height: 12),
                 const Text(
                   'Không thể tải giao dịch này.',
@@ -138,6 +142,10 @@ class _TransactionDetailView extends ConsumerWidget {
     final transactionDate = financeTransactionDateValue(transaction) ?? '';
     final counterparty = transaction['counterparty'] ?? '';
     final isLinked = financeTransactionIsLinked(transaction);
+    final repeatSource = ManualCashRepeat.from(transaction);
+    final canRepeat =
+        repeatSource != null &&
+        ref.watch(shopProvider).hasPermission('finance', 'edit');
 
     // Lấy ngày tháng format đẹp
     String dateLabel = transactionDate;
@@ -172,7 +180,7 @@ class _TransactionDetailView extends ConsumerWidget {
             ? const []
             : [
                 IconButton(
-                  icon: Icon(
+                  icon: AppIcon(
                     Icons.edit_outlined,
                     color: theme.colorScheme.primary,
                   ),
@@ -180,7 +188,7 @@ class _TransactionDetailView extends ConsumerWidget {
                   onPressed: () => _showEditDialog(context, ref, transaction),
                 ),
                 IconButton(
-                  icon: const Icon(
+                  icon: const AppIcon(
                     Icons.delete_outline,
                     color: Colors.redAccent,
                   ),
@@ -205,7 +213,7 @@ class _TransactionDetailView extends ConsumerWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: c.divider.withValues(alpha: 0.5)),
                   ),
-                  child: Icon(
+                  child: AppIcon(
                     isIncome
                         ? Icons.arrow_downward_rounded
                         : Icons.arrow_upward_rounded,
@@ -233,6 +241,26 @@ class _TransactionDetailView extends ConsumerWidget {
                 ),
                 const SizedBox(height: 32),
 
+                if (canRepeat) ...[
+                  OutlinedButton.icon(
+                    icon: const AppIcon(Icons.copy_outlined, size: 18),
+                    label: Text(
+                      isIncome ? 'Ghi lại khoản thu' : 'Ghi lại khoản chi',
+                    ),
+                    onPressed: () async {
+                      final saved = await showDialog<bool>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) =>
+                            RepeatCashTransactionDialog(source: repeatSource),
+                      );
+                      if (saved == true && context.mounted) {
+                        ToastService.showSuccess('Đã ghi giao dịch mới');
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 // Info Card
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -446,8 +474,10 @@ class _TransactionDetailView extends ConsumerWidget {
                                 'counterparty': cpartyC.text.trim(),
                                 'description': descC.text.trim(),
                               });
-                          ref.invalidate(transactionsProvider);
-                          ref.invalidate(cashSummaryProvider);
+                          refreshCashTransactionViews(
+                            ref,
+                            transactionId: transId,
+                          );
                           if (ctx.mounted) {
                             Navigator.pop(ctx); // close dialog
                             Navigator.pop(context); // close screen
@@ -485,21 +515,40 @@ class _TransactionDetailView extends ConsumerWidget {
     final transId = transaction['id'] is int
         ? transaction['id']
         : int.tryParse(transaction['id']?.toString() ?? '0') ?? 0;
+    final code = transaction['code']?.toString();
+    final displayCode = (code != null && code.isNotEmpty)
+        ? code
+        : 'giao dịch #$transId';
+    final counterparty = transaction['counterparty']?.toString() ?? '';
+    final dateStr = financeTransactionDateValue(transaction) ?? '';
+    String dateLabel = dateStr;
+    if (dateStr.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(dateStr).toLocal();
+        dateLabel = DateFormat('dd/MM/yyyy').format(dt);
+      } catch (_) {}
+    }
+
+    final recordInfo = [
+      displayCode,
+      if (counterparty.isNotEmpty) counterparty,
+      if (dateLabel.isNotEmpty) dateLabel,
+    ].join(' - ');
 
     AppConfirmModal.show(
       context,
       title: 'Xóa giao dịch',
       message:
-          'Bạn có chắc chắn muốn xóa giao dịch này? Số dư sẽ được cập nhật lại.',
-      confirmText: 'Xóa',
+          'Bạn có chắc chắn muốn xóa $recordInfo? Thao tác này chỉ xóa giao dịch được ghi nhận thủ công và tính toán lại số dư tiền; không xóa các chứng từ gốc.',
+      confirmText: 'Xóa giao dịch',
       cancelText: 'Hủy',
+      isDestructive: true,
     ).then((confirm) async {
       if (confirm == true) {
         try {
           await ref.read(financeRepoProvider).deleteTransaction(transId);
           ToastService.showSuccess('Xóa giao dịch thành công');
-          ref.invalidate(transactionsProvider);
-          ref.invalidate(cashSummaryProvider);
+          refreshCashTransactionViews(ref, transactionId: transId);
           if (context.mounted) Navigator.pop(context);
         } catch (e) {
           ToastService.showError(

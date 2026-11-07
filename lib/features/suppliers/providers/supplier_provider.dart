@@ -1,6 +1,9 @@
+import '../../../core/providers/data_freshness_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../settings/providers/shop_provider.dart';
+import '../../../core/utils/paged_records.dart';
+import '../models/supplier_payment.dart';
 
 class SupplierRepository {
   final ApiClient _api;
@@ -30,6 +33,49 @@ class SupplierRepository {
       throw ApiException('Dữ liệu công nợ nhà cung cấp không hợp lệ');
     }
     return List<dynamic>.from(data);
+  }
+
+  Future<SupplierPaymentResult> recordPaymentInShop(
+    int shopId,
+    int payableId,
+    Map<String, dynamic> request,
+    bool Function() current,
+  ) async {
+    final raw = await _api.postInShop(
+      '/suppliers/payables/$payableId/payments',
+      '$shopId',
+      request,
+      isCurrentScope: current,
+    );
+    if (!current()) throw ApiException('Phạm vi ghi nhận đã thay đổi', 409);
+    return SupplierPaymentResult.fromResponse(
+      raw,
+      shopId: shopId,
+      operationId: request['operationId'] as String,
+      payableId: payableId,
+    );
+  }
+
+  Future<SupplierPaymentResult?> paymentStatusInShop(
+    int shopId,
+    String operationId,
+    bool Function() current,
+  ) async {
+    final raw = await _api.getOnlineInShop(
+      '/supplier-payments/$operationId',
+      '$shopId',
+      isCurrentScope: current,
+    );
+    if (!current()) throw ApiException('Phạm vi tra cứu đã thay đổi', 409);
+    if (raw is Map && raw['state'] == 'UNKNOWN') return null;
+    if (raw is! Map || raw['state'] != 'COMPLETED') {
+      throw const FormatException('Chưa đọc được kết quả ghi nhận');
+    }
+    return SupplierPaymentResult.fromResponse(
+      raw['result'],
+      shopId: shopId,
+      operationId: operationId,
+    );
   }
 
   Future<Map<String, dynamic>> getPayablesAging(String asOf) async {
@@ -91,6 +137,7 @@ final supplierListProvider =
       ref,
       args,
     ) {
+      watchDataFreshness(ref, DataArea.suppliers);
       return ref
           .watch(supplierRepoProvider)
           .findAll(page: args.page, search: args.search);
@@ -99,16 +146,33 @@ final supplierListProvider =
 /// Complete option set for purchase forms so suppliers beyond page one are not
 /// omitted from the selector.
 final supplierOptionsProvider = FutureProvider<Map<String, dynamic>>((ref) {
-  return ref.watch(supplierRepoProvider).findAll(page: 1, limit: 500);
+  watchDataFreshness(ref, DataArea.suppliers);
+  final repo = ref.watch(supplierRepoProvider);
+  var active = true;
+  ref.onDispose(() => active = false);
+  return collectPagedRecords(
+    (page, limit) => repo.findAll(page: page, limit: limit),
+    isCurrent: () => active,
+  );
 });
 
 final supplierDetailProvider = FutureProvider.family<Map<String, dynamic>, int>(
   (ref, id) {
+    watchDataFreshness(ref, DataArea.suppliers);
     return ref.watch(supplierRepoProvider).findById(id);
   },
 );
 
+final supplierPayablesProvider = FutureProvider.family<List<dynamic>, int>((
+  ref,
+  id,
+) {
+  watchDataFreshness(ref, DataArea.suppliers);
+  return ref.watch(supplierRepoProvider).findPayables(id);
+});
+
 final supplierPayablesAgingProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, asOf) {
+      watchDataFreshness(ref, DataArea.suppliers);
       return ref.watch(supplierRepoProvider).getPayablesAging(asOf);
     });

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 @Entity('tags')
 export class Tag {
@@ -40,11 +40,16 @@ export class Category {
 }
 
 @Entity('products')
+@Index('uq_products_shop_sku', ['shopId', 'sku'], { unique: true })
+@Index('uq_products_shop_active_barcode', ['shopId', 'barcode'], {
+    unique: true,
+    where: "is_active = true AND barcode IS NOT NULL AND barcode <> ''",
+})
 export class Product {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ unique: true, length: 50 })
+    @Column({ length: 50 })
     sku: string;
 
     @Column({ name: 'shop_id', nullable: true })

@@ -1,3 +1,5 @@
+import '../../../core/providers/data_freshness_provider.dart';
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -41,6 +43,7 @@ class _ProductCategoryManagementScreenState
 
   @override
   Widget build(BuildContext context) {
+    listenToDataChanges(ref, DataArea.products, _reload);
     return Scaffold(
       backgroundColor: AppThemeColors.of(context).bg,
       body: AppResponsiveContent(
@@ -55,12 +58,12 @@ class _ProductCategoryManagementScreenState
               showBackButton: true,
               action: FilledButton.icon(
                 onPressed: () => _edit(),
-                icon: const Icon(Icons.add),
+                icon: const AppIcon(Icons.add),
                 label: const Text('Thêm danh mục'),
               ),
               compactAction: IconButton.filled(
                 onPressed: () => _edit(),
-                icon: const Icon(Icons.add),
+                icon: const AppIcon(Icons.add),
                 tooltip: 'Thêm danh mục',
               ),
             ),
@@ -71,10 +74,10 @@ class _ProductCategoryManagementScreenState
               onSubmitted: (_) => _reload(),
               decoration: InputDecoration(
                 hintText: 'Tìm theo tên danh mục',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const AppIcon(Icons.search),
                 suffixIcon: IconButton(
                   onPressed: _reload,
-                  icon: const Icon(Icons.arrow_forward),
+                  icon: const AppIcon(Icons.arrow_forward),
                 ),
               ),
             ),
@@ -146,7 +149,7 @@ class _ProductCategoryManagementScreenState
                               vertical: AppSpacing.xxs,
                             ),
                             leading: CircleAvatar(
-                              child: Icon(
+                              child: AppIcon(
                                 active
                                     ? Icons.category_outlined
                                     : Icons.pause_circle_outline,
@@ -363,7 +366,7 @@ class _StateMessage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 52),
+          AppIcon(icon, size: 52),
           const SizedBox(height: AppSpacing.sm),
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.xxs),

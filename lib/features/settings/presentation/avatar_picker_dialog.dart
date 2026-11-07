@@ -120,7 +120,7 @@ class _AvatarPickerDialogState extends ConsumerState<AvatarPickerDialog> {
                     child: AppAssetIcon(
                       assetPath: AppAssets.avatar,
                       size: 22,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
                       semanticLabel: context.tr.settings.tabAvatar,
                     ),
                   ),

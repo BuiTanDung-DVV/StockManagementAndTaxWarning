@@ -1,3 +1,4 @@
+import '../../../core/assets/app_icon.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -37,6 +38,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _tagInputCtrl = TextEditingController();
 
   List<String> _tags = [];
+  int? _categoryId;
   bool _saving = false;
   bool _uploadingImage = false;
   Uint8List? _imageBytes;
@@ -51,6 +53,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     super.initState();
     if (_isEdit) {
       final p = widget.product!;
+      final category = p['category'];
+      _categoryId = int.tryParse(
+        '${category is Map ? category['id'] : p['categoryId'] ?? p['category_id']}',
+      );
       _nameCtrl.text = p['name'] ?? '';
       _skuCtrl.text = p['sku'] ?? '';
       _barcodeCtrl.text = p['barcode'] ?? '';
@@ -80,8 +86,76 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
   double _parsePrice(String text) => parseCurrency(text);
 
+  Widget _categoryField() => ref
+      .watch(categoriesProvider)
+      .when(
+        skipLoadingOnRefresh: false,
+        loading: () => const ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          title: Text('Đang tải danh mục...'),
+        ),
+        error: (_, _) => Row(
+          children: [
+            const Expanded(child: Text('Không tải được danh mục sản phẩm.')),
+            TextButton(
+              onPressed: () => ref.invalidate(categoriesProvider),
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
+        data: (items) {
+          final options = items.whereType<Map>().toList();
+          final current = widget.product?['category'];
+          if (_categoryId != null &&
+              !options.any((c) => c['id'] == _categoryId) &&
+              current is Map &&
+              current['id'] == _categoryId) {
+            options.add(current);
+          }
+          return DropdownButtonFormField<int>(
+            key: ValueKey('product-category-$_categoryId'),
+            initialValue: _categoryId ?? 0,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Danh mục sản phẩm',
+              helperText:
+                  'Danh mục dùng để phân nhóm báo cáo; nhãn dùng để đánh dấu linh hoạt.',
+              helperMaxLines: 2,
+              prefixIcon: AppIcon(Icons.category_outlined),
+            ),
+            items: [
+              const DropdownMenuItem(
+                value: 0,
+                child: Text('Chưa phân danh mục'),
+              ),
+              ...options.map(
+                (c) => DropdownMenuItem<int>(
+                  value: c['id'] as int,
+                  child: Text('${c['name']}', overflow: TextOverflow.ellipsis),
+                ),
+              ),
+            ],
+            onChanged: _saving
+                ? null
+                : (id) => setState(() => _categoryId = id == 0 ? null : id),
+          );
+        },
+      );
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final categories = ref.read(categoriesProvider);
+    if (categories.isLoading || categories.hasError) {
+      ToastService.showError(
+        'Vui lòng tải danh mục thành công trước khi lưu sản phẩm.',
+      );
+      return;
+    }
     setState(() => _saving = true);
     String? uploadedObjectKey;
     try {
@@ -118,6 +192,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
       final data = {
         'name': name,
+        'categoryId': _categoryId,
         'sku': _skuCtrl.text.trim().isEmpty ? null : _skuCtrl.text.trim(),
         'barcode': _barcodeCtrl.text.trim().isEmpty
             ? null
@@ -143,6 +218,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       if (!mounted) return;
       ref.invalidate(productListProvider);
       ref.invalidate(productOptionsProvider);
+      ref.invalidate(categoriesProvider);
       if (_isEdit) {
         ref.invalidate(productDetailProvider(widget.product!['id']));
       }
@@ -292,6 +368,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
                   _sectionHeader('Thông tin cơ bản', theme, c),
                   const SizedBox(height: 12),
+                  _categoryField(),
+                  const SizedBox(height: 16),
                   _field(
                     'Tên sản phẩm *',
                     _nameCtrl,
@@ -433,7 +511,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const HugeIcon(
+                          : const AppHugeIcon(
                               icon: HugeIcons.strokeRoundedCheckmarkCircle02,
                               color: Colors.white,
                               size: 18,
@@ -548,7 +626,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                   backgroundColor: c.card.withValues(alpha: 0.94),
                   foregroundColor: AppColors.danger,
                 ),
-                icon: const Icon(Icons.close_rounded, size: 18),
+                icon: const AppIcon(Icons.close_rounded, size: 18),
               ),
             ),
         ],
@@ -560,7 +638,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
+        AppIcon(
           Icons.add_photo_alternate_rounded,
           size: 32,
           color: theme.colorScheme.primary,
@@ -586,7 +664,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   Widget _sectionHeader(String title, ThemeData theme, AppThemeColors c) {
     return Row(
       children: [
-        HugeIcon(
+        AppHugeIcon(
           icon: HugeIcons.strokeRoundedFolder01,
           size: 18,
           color: theme.colorScheme.primary,
@@ -630,7 +708,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
         prefixIcon: Padding(
           padding: const EdgeInsets.all(12),
-          child: HugeIcon(
+          child: AppHugeIcon(
             icon: icon,
             size: 18,
             color: theme.colorScheme.primary,
@@ -683,7 +761,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             ),
             TextButton.icon(
               onPressed: () => _showTagPicker(c, theme),
-              icon: const Icon(Icons.add, size: 16),
+              icon: const AppIcon(Icons.add, size: 16),
               label: const Text('Chọn / Thêm nhãn'),
               style: TextButton.styleFrom(
                 foregroundColor: theme.colorScheme.primary,
@@ -730,7 +808,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 backgroundColor: theme.colorScheme.primary.withValues(
                   alpha: 0.8,
                 ),
-                deleteIcon: const Icon(
+                deleteIcon: const AppIcon(
                   Icons.close,
                   size: 14,
                   color: Colors.white,

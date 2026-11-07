@@ -16,6 +16,7 @@ import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_primary_floating_action.dart';
 import '../../../core/widgets/app_shimmer.dart';
 import '../../../core/widgets/chart_widgets.dart';
+import '../../../core/widgets/product_thumbnail.dart';
 import '../../../core/widgets/responsive_layout.dart';
 import '../../auth/presentation/widgets/join_shop_dialog.dart';
 import '../../finance/providers/finance_provider.dart';
@@ -169,24 +170,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       );
     }
 
-    Widget headerActions({required bool compact}) => Wrap(
+    Widget headerActions() => Wrap(
       spacing: AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         featureGuideButton(context, 'dashboard'),
         if (canSell)
-          compact
-              ? AppPrimaryHeaderAction(
-                  label: 'Ghi nhận bán hàng',
-                  assetPath: AppAssets.orders,
-                  heroTag: 'dashboard-sale-action-compact',
-                  onPressed: () => context.push('/sales/new'),
-                )
-              : AppPrimaryPageAction(
-                  label: 'Ghi nhận bán hàng',
-                  assetPath: AppAssets.orders,
-                  onPressed: () => context.push('/sales/new'),
-                ),
+          AppPrimaryPageAction(
+            label: 'Ghi nhận bán hàng',
+            assetPath: AppAssets.orders,
+            onPressed: () => context.push('/sales/new'),
+          ),
       ],
     );
 
@@ -227,10 +221,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     title: shopState.isAllShops
                         ? 'Tổng quan tất cả cửa hàng'
                         : 'Tổng quan cửa hàng',
-                    subtitle:
-                        'Số liệu đến ${DateFormat('dd/MM/yyyy').format(periods.currentToDate)}',
-                    action: headerActions(compact: compactLayout),
-                    compactAction: headerActions(compact: true),
+                    subtitle: compactLayout
+                        ? 'Kỳ báo cáo: ${periods.currentLabel}'
+                        : 'Số liệu đến ${DateFormat('dd/MM/yyyy').format(periods.currentToDate)}',
+                    action: headerActions(),
+                    compactAction: headerActions(),
                     compact: compactLayout,
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -742,7 +737,7 @@ class _DashboardMasthead extends StatelessWidget {
           style: GoogleFonts.manrope(
             fontSize: compact ? 22 : 26,
             height: 1.15,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             letterSpacing: -0.6,
             color: colors.textPrimary,
           ),
@@ -772,7 +767,7 @@ class _DashboardMasthead extends StatelessWidget {
                 titleWidget,
                 const SizedBox(height: AppSpacing.sm),
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: Alignment.centerRight,
                   child: compact ? compactAction : action,
                 ),
               ],
@@ -1140,7 +1135,7 @@ class _DashboardWorkspace extends ConsumerWidget {
     );
     final priorities = const KeyedSubtree(
       key: Key('dashboard-card-priority'),
-      child: DashboardPriorityList(),
+      child: DashboardPriorityList(fixedHeight: true),
     );
 
     final salesPerformance = KeyedSubtree(
@@ -1184,11 +1179,30 @@ class _DashboardWorkspace extends ConsumerWidget {
     }
 
     Widget productPanel(List<dynamic> items) {
+      Future<void> openProduct(Map<String, dynamic> product) async {
+        final id = int.tryParse(product['id']?.toString() ?? '');
+        if (id == null || id <= 0) return;
+        final shopId = int.tryParse(product['shopId']?.toString() ?? '');
+        final wasAllShops = ref.read(shopProvider).isAllShops;
+        final shops = ref.read(shopProvider.notifier);
+        if (wasAllShops && shopId != null) {
+          shops.switchShop(shopId);
+          if (ref.read(shopProvider).currentShopId != shopId) return;
+        }
+        await context.push('/products/$id');
+        if (context.mounted &&
+            wasAllShops &&
+            ref.read(shopProvider).currentShopId == shopId) {
+          shops.switchShop(-1);
+        }
+      }
+
       if (items.isNotEmpty || previousTopProducts == null) {
         return DashboardTopProductsRevenueChart(
           items: items,
           period: currentLabel,
           comparisonPeriod: previousLabel,
+          onProductTap: openProduct,
         );
       }
       return previousTopProducts!.when(
@@ -1196,6 +1210,7 @@ class _DashboardWorkspace extends ConsumerWidget {
           items: previousItems,
           period: previousLabel,
           isPreviousPeriodFallback: previousItems.isNotEmpty,
+          onProductTap: openProduct,
         ),
         loading: () => const Padding(
           padding: EdgeInsets.only(top: AppSpacing.lg),
@@ -1283,7 +1298,7 @@ class _DashboardWorkspace extends ConsumerWidget {
                   layoutRevision: actionState,
                   left: const KeyedSubtree(
                     key: Key('dashboard-card-priority'),
-                    child: DashboardPriorityList(fixedHeight: false),
+                    child: DashboardPriorityList(fixedHeight: true),
                   ),
                   right: lowStockCard,
                 )
@@ -1299,13 +1314,14 @@ class _DashboardWorkspace extends ConsumerWidget {
           );
         }
 
-        if (constraints.maxWidth < 960) {
+        if (constraints.maxWidth < 820 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.25) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              chart,
-              const SizedBox(height: AppSpacing.lg),
               priorities,
+              const SizedBox(height: AppSpacing.lg),
+              chart,
               const SizedBox(height: AppSpacing.lg),
               salesPerformance,
               const SizedBox(height: AppSpacing.lg),
@@ -1329,14 +1345,11 @@ class _DashboardWorkspace extends ConsumerWidget {
           children: [
             _DashboardEqualHeightRow(
               key: const Key('dashboard-row-chart-priority'),
-              spacing: AppSpacing.lg,
-              rightWidth: 360,
+              spacing: AppSpacing.md,
+              rightWidth: 304,
               layoutRevision: actionState,
               left: chart,
-              right: const KeyedSubtree(
-                key: Key('dashboard-card-priority'),
-                child: DashboardPriorityList(fixedHeight: false),
-              ),
+              right: priorities,
             ),
             const SizedBox(height: AppSpacing.lg),
             _DashboardEqualHeightRow(
@@ -1370,6 +1383,7 @@ class DashboardTopProductsRevenueChart extends StatelessWidget {
   final String period;
   final String? comparisonPeriod;
   final bool isPreviousPeriodFallback;
+  final ValueChanged<Map<String, dynamic>>? onProductTap;
 
   const DashboardTopProductsRevenueChart({
     super.key,
@@ -1377,6 +1391,7 @@ class DashboardTopProductsRevenueChart extends StatelessWidget {
     required this.period,
     this.comparisonPeriod,
     this.isPreviousPeriodFallback = false,
+    this.onProductTap,
   });
 
   @override
@@ -1384,14 +1399,11 @@ class DashboardTopProductsRevenueChart extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final products = items.take(10).toList();
     final mobile = MediaQuery.sizeOf(context).width < 600;
-    final textScaler = MediaQuery.textScalerOf(context);
-    final mobileItemHeight = textScaler.scale(78.0);
-    final mobileHeaderBase = textScaler.scale(140.0);
     final chartHeight = products.isEmpty
         ? 220.0
         : mobile
-        ? (mobileHeaderBase + products.length * mobileItemHeight).toDouble()
-        : (136 + products.length * 55).clamp(324, 686).toDouble();
+        ? 460.0
+        : 440.0;
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.lg),
@@ -1424,6 +1436,7 @@ class DashboardTopProductsRevenueChart extends StatelessWidget {
               )
             : _TopProductsHorizontalBars(
                 products,
+                onProductTap: onProductTap,
                 allowGrowth: !isPreviousPeriodFallback,
                 comparisonPeriod: isPreviousPeriodFallback
                     ? null
@@ -1438,11 +1451,13 @@ class _TopProductsHorizontalBars extends StatelessWidget {
   final List<dynamic> products;
   final bool allowGrowth;
   final String? comparisonPeriod;
+  final ValueChanged<Map<String, dynamic>>? onProductTap;
 
   const _TopProductsHorizontalBars(
     this.products, {
     required this.allowGrowth,
     required this.comparisonPeriod,
+    this.onProductTap,
   });
 
   double _number(dynamic value) =>
@@ -1457,181 +1472,219 @@ class _TopProductsHorizontalBars extends StatelessWidget {
       (current, item) =>
           _number(item['value']) > current ? _number(item['value']) : current,
     );
-    final width = MediaQuery.sizeOf(context).width;
-    final mobile = width < 600;
-    final showGrowth = allowGrowth && width >= 700;
-    final showMargin = width >= 900;
-    final comparisonCaption = allowGrowth && comparisonPeriod != null
-        ? 'Tăng trưởng so với $comparisonPeriod'
-        : null;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final mobile = width < 600;
+        final showGrowth = allowGrowth && width >= 700;
+        final showMargin = width >= 900;
+        final comparisonCaption = allowGrowth && comparisonPeriod != null
+            ? 'Tăng trưởng so với $comparisonPeriod'
+            : null;
 
-    if (mobile) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (comparisonCaption != null) ...[
-            Text(
-              comparisonCaption,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          Expanded(
-            child: ListView.separated(
-              physics: const ClampingScrollPhysics(),
-              itemCount: products.length,
-              separatorBuilder: (_, _) =>
-                  Divider(height: 1, color: colors.divider),
-              itemBuilder: (context, index) {
-                final product = products[index];
-                final revenue = _number(product['value']);
-                final quantity = _number(product['quantity']);
-                final growth = product['growthPct'] == null
-                    ? null
-                    : _number(product['growthPct']);
-                final growthStatus = allowGrowth
-                    ? product['growthStatus']?.toString()
-                    : 'NOT_REQUESTED';
-                return _TopProductMobileRow(
-                  rank: index + 1,
-                  name: product['name']?.toString() ?? 'Chưa rõ',
-                  quantity: quantity,
-                  unit: product['unit']?.toString() ?? 'sản phẩm',
-                  revenue: revenue,
-                  progress: maxRevenue <= 0 ? 0 : revenue / maxRevenue,
-                  growth: growth,
-                  growthStatus: growthStatus,
-                  color: primary.withValues(alpha: 1 - index * 0.045),
-                );
-              },
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Column(
-      children: [
-        if (comparisonCaption != null) ...[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              comparisonCaption,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
+        if (mobile) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(width: 34),
+              if (comparisonCaption != null) ...[
+                Text(
+                  comparisonCaption,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               Expanded(
-                child: Text(
-                  'Xếp theo doanh thu thuần',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.textMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: ListView.separated(
+                  primary: false,
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: products.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: colors.divider),
+                  itemBuilder: (context, index) {
+                    final product = products[index];
+                    final revenue = _number(product['value']);
+                    final quantity = _number(product['quantity']);
+                    final growth = product['growthPct'] == null
+                        ? null
+                        : _number(product['growthPct']);
+                    final growthStatus = allowGrowth
+                        ? product['growthStatus']?.toString()
+                        : 'NOT_REQUESTED';
+                    return _interactiveRow(
+                      context,
+                      product,
+                      _TopProductMobileRow(
+                        rank: index + 1,
+                        name: product['name']?.toString() ?? 'Chưa rõ',
+                        imageUrl: product['imageUrl']?.toString(),
+                        quantity: quantity,
+                        unit: product['unit']?.toString() ?? 'sản phẩm',
+                        revenue: revenue,
+                        progress: maxRevenue <= 0 ? 0 : revenue / maxRevenue,
+                        growth: growth,
+                        growthStatus: growthStatus,
+                        color: primary.withValues(alpha: 1 - index * 0.045),
+                      ),
+                    );
+                  },
                 ),
               ),
-              SizedBox(
-                width: 66,
-                child: Text(
-                  'Đã bán',
-                  textAlign: TextAlign.right,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.textMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                width: 92,
-                child: Text(
-                  'Doanh thu',
-                  textAlign: TextAlign.right,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.textMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              if (showMargin) ...[
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 72,
-                  child: Text(
-                    'Biên lãi',
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.textMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-              if (showGrowth) ...[
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 88,
-                  child: Text(
-                    'Tăng trưởng',
-                    textAlign: TextAlign.right,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.textMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
             ],
-          ),
-        ),
-        Expanded(
-          child: ListView.separated(
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: products.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 7),
-            itemBuilder: (context, index) {
-              final product = products[index];
-              final revenue = _number(product['value']);
-              final quantity = _number(product['quantity']);
-              final marginPct = _number(product['marginPct']);
-              final progress = maxRevenue <= 0 ? 0.0 : revenue / maxRevenue;
-              final growth = product['growthPct'] == null
-                  ? null
-                  : _number(product['growthPct']);
-              final growthStatus = allowGrowth
-                  ? product['growthStatus']?.toString()
-                  : 'NOT_REQUESTED';
+          );
+        }
 
-              return _TopProductRankRow(
-                rank: index + 1,
-                name: product['name']?.toString() ?? 'Chưa rõ',
-                revenue: revenue,
-                quantity: quantity,
-                marginPct: marginPct,
-                unit: product['unit']?.toString() ?? 'sản phẩm',
-                progress: progress,
-                growth: growth,
-                growthStatus: growthStatus,
-                showGrowth: showGrowth,
-                showMargin: showMargin,
-                color: primary.withValues(alpha: 1 - index * 0.045),
-              );
-            },
-          ),
-        ),
-      ],
+        return Column(
+          children: [
+            if (comparisonCaption != null) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  comparisonCaption,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const SizedBox(width: 86),
+                  Expanded(
+                    child: Text(
+                      'Xếp theo doanh thu thuần',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 66,
+                    child: Text(
+                      'Đã bán',
+                      textAlign: TextAlign.right,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 92,
+                    child: Text(
+                      'Doanh thu',
+                      textAlign: TextAlign.right,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (showMargin) ...[
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 72,
+                      child: Text(
+                        'Biên lãi',
+                        textAlign: TextAlign.right,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (showGrowth) ...[
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 88,
+                      child: Text(
+                        'Tăng trưởng',
+                        textAlign: TextAlign.right,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                primary: false,
+                physics: const ClampingScrollPhysics(),
+                itemCount: products.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 7),
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  final revenue = _number(product['value']);
+                  final quantity = _number(product['quantity']);
+                  final marginPct = _number(product['marginPct']);
+                  final progress = maxRevenue <= 0 ? 0.0 : revenue / maxRevenue;
+                  final growth = product['growthPct'] == null
+                      ? null
+                      : _number(product['growthPct']);
+                  final growthStatus = allowGrowth
+                      ? product['growthStatus']?.toString()
+                      : 'NOT_REQUESTED';
+
+                  return _interactiveRow(
+                    context,
+                    product,
+                    _TopProductRankRow(
+                      rank: index + 1,
+                      name: product['name']?.toString() ?? 'Chưa rõ',
+                      imageUrl: product['imageUrl']?.toString(),
+                      revenue: revenue,
+                      quantity: quantity,
+                      marginPct: marginPct,
+                      unit: product['unit']?.toString() ?? 'sản phẩm',
+                      progress: progress,
+                      growth: growth,
+                      growthStatus: growthStatus,
+                      showGrowth: showGrowth,
+                      showMargin: showMargin,
+                      color: primary.withValues(alpha: 1 - index * 0.045),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _interactiveRow(BuildContext context, dynamic product, Widget child) {
+    final id = int.tryParse(product['id']?.toString() ?? '');
+    final enabled = id != null && id > 0;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: ValueKey('top-product-${product['id']}'),
+        borderRadius: BorderRadius.circular(8),
+        onTap: !enabled
+            ? null
+            : () {
+                if (onProductTap != null) {
+                  onProductTap!(Map<String, dynamic>.from(product as Map));
+                } else {
+                  context.push('/products/$id');
+                }
+              },
+        child: child,
+      ),
     );
   }
 }
@@ -1639,6 +1692,7 @@ class _TopProductsHorizontalBars extends StatelessWidget {
 class _TopProductMobileRow extends StatelessWidget {
   final int rank;
   final String name;
+  final String? imageUrl;
   final double quantity;
   final String unit;
   final double revenue;
@@ -1650,6 +1704,7 @@ class _TopProductMobileRow extends StatelessWidget {
   const _TopProductMobileRow({
     required this.rank,
     required this.name,
+    required this.imageUrl,
     required this.quantity,
     required this.unit,
     required this.revenue,
@@ -1678,7 +1733,7 @@ class _TopProductMobileRow extends StatelessWidget {
         ? AppColors.success
         : AppColors.danger;
     final textScaler = MediaQuery.textScalerOf(context);
-    final rowHeight = textScaler.scale(77.0).clamp(77.0, 140.0);
+    final rowHeight = textScaler.scale(90.0).clamp(90.0, 170.0);
 
     return SizedBox(
       height: rowHeight,
@@ -1698,6 +1753,8 @@ class _TopProductMobileRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
+          ProductThumbnail(imageUrl: imageUrl, name: name, size: 44),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1770,6 +1827,7 @@ class _TopProductMobileRow extends StatelessWidget {
 class _TopProductRankRow extends StatelessWidget {
   final int rank;
   final String name;
+  final String? imageUrl;
   final double revenue;
   final double quantity;
   final double marginPct;
@@ -1784,6 +1842,7 @@ class _TopProductRankRow extends StatelessWidget {
   const _TopProductRankRow({
     required this.rank,
     required this.name,
+    required this.imageUrl,
     required this.revenue,
     required this.quantity,
     required this.marginPct,
@@ -1808,7 +1867,7 @@ class _TopProductRankRow extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return SizedBox(
-      height: 47,
+      height: 56,
       child: Row(
         children: [
           SizedBox(
@@ -1824,6 +1883,8 @@ class _TopProductRankRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
+          ProductThumbnail(imageUrl: imageUrl, name: name, size: 44),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1984,6 +2045,7 @@ class _DashboardChart extends StatelessWidget {
           (previous['daily'] as List?) ?? const [],
           currentLabel,
           previousLabel,
+          compact: true,
         ),
         loading: () => const _ChartSkeleton(),
         error: (_, _) => cardWrapper(
@@ -2071,27 +2133,37 @@ class _DashboardMetricStrip extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final colors = AppThemeColors.of(context);
-        final isDesktop = constraints.maxWidth >= 960;
-        final isTablet =
-            constraints.maxWidth >= 600 && constraints.maxWidth < 960;
+        // Four concise metrics fit in the content area beside the desktop rail.
+        final isDesktop =
+            constraints.maxWidth >= 780 &&
+            MediaQuery.textScalerOf(context).scale(1) <= 1.2;
+        final isTablet = constraints.maxWidth >= 600 && !isDesktop;
 
         if (isDesktop) {
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < metrics.length; i++) ...[
-                  if (i > 0) const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    flex: i == 0 ? 28 : 24,
-                    child: _PastelMetricCard(
-                      metric: metrics[i],
-                      surface: _getMetricSurface(metrics[i].label, colors),
-                      isPrimary: i == 0,
+          return Container(
+            key: const Key('dashboard-metric-band'),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: colors.card,
+              border: Border.all(color: colors.divider),
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < metrics.length; i++) ...[
+                    if (i > 0) VerticalDivider(width: 1, color: colors.divider),
+                    Expanded(
+                      child: _PastelMetricCard(
+                        metric: metrics[i],
+                        surface: _getMetricSurface(metrics[i].label, colors),
+                        grouped: true,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           );
         }
@@ -2107,21 +2179,30 @@ class _DashboardMetricStrip extends StatelessWidget {
             final second = hasSecond ? metrics[i + 1] : null;
 
             tabletRows.add(
-              _DashboardEqualHeightRow(
-                key: Key('dashboard-tablet-kpi-row-${i ~/ 2}'),
-                spacing: AppSpacing.md,
-                left: _PastelMetricCard(
-                  metric: first,
-                  surface: _getMetricSurface(first.label, colors),
-                  isPrimary: false,
-                ),
-                right: second != null
-                    ? _PastelMetricCard(
-                        metric: second,
-                        surface: _getMetricSurface(second.label, colors),
+              IntrinsicHeight(
+                child: Row(
+                  key: Key('dashboard-tablet-kpi-row-${i ~/ 2}'),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _PastelMetricCard(
+                        metric: first,
+                        surface: _getMetricSurface(first.label, colors),
                         isPrimary: false,
-                      )
-                    : const SizedBox.shrink(),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: second != null
+                          ? _PastelMetricCard(
+                              metric: second,
+                              surface: _getMetricSurface(second.label, colors),
+                              isPrimary: false,
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -2193,32 +2274,35 @@ class _PastelMetricCard extends StatelessWidget {
   final _DashboardMetric metric;
   final _MetricSurfaceStyle surface;
   final bool isPrimary;
+  final bool grouped;
 
   const _PastelMetricCard({
     required this.metric,
     required this.surface,
     this.isPrimary = false,
+    this.grouped = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final textScaler = MediaQuery.textScalerOf(context);
+    final foreground = isPrimary ? Colors.white : colors.textPrimary;
+    final secondary = isPrimary
+        ? const Color(0xFFC5E1DC)
+        : colors.textSecondary;
     final titleSlotHeight = textScaler.scale(26.0);
     final amountSlotHeight = textScaler.scale(32.0);
 
     return Container(
       decoration: BoxDecoration(
-        color: surface.background,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: surface.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        color: isPrimary ? const Color(0xFF115E59) : surface.background,
+        borderRadius: BorderRadius.circular(grouped ? 0 : 12),
+        border: grouped
+            ? null
+            : Border.all(
+                color: isPrimary ? const Color(0xFF115E59) : surface.border,
+              ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
@@ -2226,28 +2310,22 @@ class _PastelMetricCard extends StatelessWidget {
         child: InkWell(
           onTap: metric.route == null ? null : () => context.go(metric.route!),
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: EdgeInsets.all(grouped ? 16 : 18),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ConstrainedBox(
                   constraints: BoxConstraints(minHeight: titleSlotHeight),
                   child: Row(
                     children: [
-                      Container(
+                      SizedBox(
                         width: 24,
                         height: 24,
-                        decoration: BoxDecoration(
-                          color: surface.iconBg,
-                          borderRadius: BorderRadius.circular(
-                            AppRadius.control,
-                          ),
-                        ),
-                        alignment: Alignment.center,
                         child: AppAssetIcon(
                           assetPath: metric.assetPath,
                           size: 14,
-                          color: surface.iconColor,
+                          color: isPrimary ? Colors.white : surface.iconColor,
                           semanticLabel: metric.label,
                         ),
                       ),
@@ -2259,7 +2337,7 @@ class _PastelMetricCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 13,
-                            color: colors.textPrimary,
+                            color: foreground,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -2267,7 +2345,7 @@ class _PastelMetricCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 ConstrainedBox(
                   constraints: BoxConstraints(minHeight: amountSlotHeight),
                   child: FittedBox(
@@ -2277,10 +2355,10 @@ class _PastelMetricCard extends StatelessWidget {
                       metric.value,
                       maxLines: 1,
                       style: GoogleFonts.manrope(
-                        fontSize: isPrimary ? 24 : 20,
+                        fontSize: isPrimary ? 26 : 24,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.6,
-                        color: colors.textPrimary,
+                        color: foreground,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -2294,7 +2372,7 @@ class _PastelMetricCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.textSecondary,
+                      color: secondary,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
                     ),
@@ -2305,6 +2383,7 @@ class _PastelMetricCard extends StatelessWidget {
                   _ComparisonBadge(
                     comparison: metric.comparison!,
                     isPositive: metric.comparisonPositive,
+                    onDark: isPrimary,
                   ),
                 ],
               ],
@@ -2586,15 +2665,25 @@ class _CompactMetricRow extends StatelessWidget {
 class _ComparisonBadge extends StatelessWidget {
   final _MetricComparison comparison;
   final bool isPositive;
+  final bool onDark;
 
-  const _ComparisonBadge({required this.comparison, required this.isPositive});
+  const _ComparisonBadge({
+    required this.comparison,
+    required this.isPositive,
+    this.onDark = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final Color bg;
     final Color textColor;
-    if (comparison.isNeutral) {
+    if (onDark) {
+      bg = Colors.white.withValues(alpha: 0.12);
+      textColor = comparison.isNeutral
+          ? Colors.white
+          : (isPositive ? const Color(0xFFB3F4D5) : const Color(0xFFFFC7CB));
+    } else if (comparison.isNeutral) {
       bg = colors.cardAlt;
       textColor = colors.textMuted;
     } else if (isPositive) {

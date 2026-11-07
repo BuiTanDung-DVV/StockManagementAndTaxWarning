@@ -1,11 +1,19 @@
 import { Router } from 'express';
 import * as financeCtrl from '../controllers/finance.controller';
-import { requirePermission } from '../middleware/permission.middleware';
+import { requireOwner, requirePermission } from '../middleware/permission.middleware';
+import * as openingCtrl from '../controllers/opening-balance.controller';
 
 const router = Router();
 
 import { lockTransactionMiddleware } from '../middleware/lock-transaction.middleware';
 router.use(lockTransactionMiddleware);
+
+// Opening balances are OWNER-only; service rechecks current authority in its transaction.
+router.post('/opening-balances/snapshot', requireOwner, openingCtrl.snapshotOpeningBalance);
+router.post('/opening-balances/preview', requireOwner, openingCtrl.previewOpeningBalance);
+router.post('/opening-balances/commit', requireOwner, openingCtrl.commitOpeningBalance);
+router.get('/opening-balances/operations/:operationId', requireOwner, openingCtrl.openingBalanceStatus);
+router.get('/opening-balances/history', requireOwner, openingCtrl.openingBalanceHistory);
 
 // Financial Ledgers
 
@@ -19,6 +27,7 @@ router.get('/cash-transactions/summary', requirePermission(['finance', 'dashboar
 router.get('/cash-transactions/profit-loss', requirePermission('finance', 'view'), financeCtrl.getProfitLoss);
 router.get('/cash-transactions/invoice-reconciliation', requirePermission('finance', 'view'), financeCtrl.getInvoiceReconciliation);
 router.get('/cash-transactions/expenses-by-category', requirePermission('finance', 'view'), financeCtrl.getExpensesByCategory);
+router.get('/cash-transactions/export', requirePermission('finance', 'view'), financeCtrl.exportCashTransactions);
 router.get('/cash-transactions/:id', requirePermission('finance', 'view'), financeCtrl.getCashTransaction);
 
 // Daily Closings
@@ -30,6 +39,7 @@ router.post('/daily-closings', requirePermission('finance', 'edit'), financeCtrl
 router.get('/cash-accounts', requirePermission('finance', 'view'), financeCtrl.getCashAccounts);
 
 // Cashflow Forecasts
+router.get('/cashflow-projection', requirePermission('finance', 'view'), financeCtrl.getCashflowProjection);
 router.get('/cashflow-forecasts', requirePermission('finance', 'view'), financeCtrl.getForecasts);
 router.post('/cashflow-forecasts', requirePermission('finance', 'edit'), financeCtrl.createForecast);
 router.put('/cashflow-forecasts/:id', requirePermission('finance', 'edit'), financeCtrl.updateForecast);

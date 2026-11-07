@@ -8,6 +8,8 @@ const router = Router();
 // Shop Profile
 router.get('/shop-profile', requirePermission('settings', 'view'), systemCtrl.getShopProfile);
 router.post('/shop-profile', requirePermission('settings', 'edit'), systemCtrl.saveShopProfile);
+router.post('/shop-profile/receipt-logo/upload', requirePermission('settings', 'edit'),
+    raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '4mb' }), systemCtrl.uploadReceiptLogo);
 router.get('/payment-banks', requirePermission('settings', 'view'), systemCtrl.getPaymentBankOptions);
 router.get('/tax-reference-data', requirePermission('finance', 'view'), systemCtrl.getTaxReferenceData);
 router.get('/shop-payment-qr', systemCtrl.getShopPaymentQr);
@@ -28,6 +30,8 @@ router.post('/invoice-scans/upload', requirePermission('finance', 'edit'), raw({
 router.get('/invoice-scans/:id', requirePermission('finance', 'view'), invoiceOcrCtrl.get);
 router.post('/invoice-scans/:id/retry', requirePermission('finance', 'edit'), invoiceOcrCtrl.retry);
 router.post('/invoice-scans/:id/confirm', requirePermission('finance', 'edit'), invoiceOcrCtrl.confirm);
+router.put('/invoice-scans/:id/invoice', requirePermission('finance', 'edit'), invoiceOcrCtrl.updateInvoice);
+router.post('/invoice-scans/:id/purchase-order', requirePermission('finance', 'edit'), requirePermission('inventory', 'edit'), invoiceOcrCtrl.createPurchaseDraft);
 router.post('/invoice-scans', requirePermission('finance', 'edit'), systemCtrl.createInvoiceScan);
 router.put('/invoice-scans/:id', requirePermission('finance', 'edit'), systemCtrl.updateInvoiceScan);
 

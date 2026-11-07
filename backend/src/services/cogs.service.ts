@@ -18,9 +18,9 @@ export class COGSService {
     private productRepo = AppDataSource.getRepository(Product);
 
     /** Lấy phương pháp tính giá vốn hiện tại */
-    async getCostingMethod(shopId?: number): Promise<'FIFO' | 'AVG'> {
+    async getCostingMethod(shopId?: number, manager?: EntityManager): Promise<'FIFO' | 'AVG'> {
         if (!shopId) throw new Error('Validation: Shop is required for costing');
-        const shop = await this.shopRepo.findOne({ where: { id: shopId } });
+        const shop = await (manager ? manager.getRepository(ShopProfile) : this.shopRepo).findOne({ where: { id: shopId } });
         if (!shop) throw new Error('Validation: Shop not found for costing');
         return shop.costingMethod === 'FIFO' ? 'FIFO' : 'AVG';
     }
@@ -30,7 +30,7 @@ export class COGSService {
      * Trả về: { totalCost, unitCost, lotDeductions }
      * lotDeductions là danh sách các lô bị trừ (để cập nhật remaining_qty sau).
      */
-    async calculateCOGS(productId: number, quantity: number, method?: 'FIFO' | 'AVG', shopId?: number): Promise<{
+    async calculateCOGS(productId: number, quantity: number, method?: 'FIFO' | 'AVG', shopId?: number, manager?: EntityManager): Promise<{
         totalCost: number;
         unitCost: number;
         lotDeductions: { lotId: number; qty: number; costPrice: number }[];
@@ -38,18 +38,18 @@ export class COGSService {
         if (!Number.isFinite(quantity) || quantity <= 0) {
             throw new Error('Validation: COGS quantity must be greater than 0');
         }
-        const costingMethod = method || await this.getCostingMethod(shopId);
+        const costingMethod = method || await this.getCostingMethod(shopId, manager);
 
         if (costingMethod === 'FIFO') {
-            return this.calculateFIFO(productId, quantity, shopId);
+            return this.calculateFIFO(productId, quantity, shopId, manager);
         } else {
-            return this.calculateAvg(productId, quantity, shopId);
+            return this.calculateAvg(productId, quantity, shopId, manager);
         }
     }
 
     /** FIFO: Lấy lô cũ nhất trước */
-    private async calculateFIFO(productId: number, quantity: number, shopId?: number) {
-        const qb = this.lotRepo
+    private async calculateFIFO(productId: number, quantity: number, shopId?: number, manager?: EntityManager) {
+        const qb = (manager ? manager.getRepository(InventoryLot) : this.lotRepo)
             .createQueryBuilder('l')
             .where('l.product_id = :productId AND l.remaining_qty > 0', { productId });
         if (shopId) qb.andWhere('l.shop_id = :shopId', { shopId });
@@ -79,8 +79,8 @@ export class COGSService {
     }
 
     /** Bình quân gia quyền: trung bình từ tất cả lô có tồn */
-    private async calculateAvg(productId: number, quantity: number, shopId?: number) {
-        const avgQb = this.lotRepo
+    private async calculateAvg(productId: number, quantity: number, shopId?: number, manager?: EntityManager) {
+        const avgQb = (manager ? manager.getRepository(InventoryLot) : this.lotRepo)
             .createQueryBuilder('l')
             .select('SUM(l.remaining_qty * l.cost_price)', 'totalValue')
             .addSelect('SUM(l.remaining_qty)', 'totalQty')
@@ -101,7 +101,7 @@ export class COGSService {
         const totalCost = unitCost * quantity;
 
         // Trừ lô theo FIFO (dù tính giá AVG, vẫn phải trừ remaining_qty)
-        const lotsQb = this.lotRepo
+        const lotsQb = (manager ? manager.getRepository(InventoryLot) : this.lotRepo)
             .createQueryBuilder('l')
             .where('l.product_id = :productId AND l.remaining_qty > 0', { productId });
         if (shopId) lotsQb.andWhere('l.shop_id = :shopId', { shopId });
@@ -150,6 +150,7 @@ export class COGSService {
         batchId?: number;
         notes?: string;
         shopId?: number;
+        lotDate?: Date;
     }, manager?: EntityManager) {
         if (!data.shopId) {
             throw new Error('Validation: Shop is required for inventory lot');
@@ -175,7 +176,7 @@ export class COGSService {
             initialQty: data.quantity,
             remainingQty: data.quantity,
             costPrice: data.costPrice,
-            lotDate: new Date(),
+            lotDate: data.lotDate || new Date(),
             purchaseId: data.purchaseId,
             batchId: data.batchId,
             notes: data.notes,
@@ -187,6 +188,30 @@ export class COGSService {
         await this.updateAvgCostOnProduct(data.productId, data.shopId, manager);
 
         return saved;
+    }
+
+    /** Keep lot quantities consistent with the physical stock adjustment. */
+    async adjustForStockTake(shopId: number, productId: number, difference: number, date: Date, manager: EntityManager) {
+        if (difference > 0) {
+            const product = await manager.findOneByOrFail(Product, { id: productId, shopId });
+            await this.addInventoryLot({ shopId, productId, quantity: difference,
+                costPrice: Number(product.costPrice || 0), lotDate: date,
+                notes: 'Điều chỉnh tăng theo kiểm kê' }, manager);
+        } else if (difference < 0) {
+            const lots = await manager.getRepository(InventoryLot).createQueryBuilder('l')
+                .where('l.shop_id = :shopId AND l.product_id = :productId AND l.remaining_qty > 0', { shopId, productId })
+                .orderBy('l.lot_date', 'ASC').addOrderBy('l.id', 'ASC').getMany();
+            let remaining = -difference;
+            for (const lot of lots) {
+                const take = Math.min(remaining, Number(lot.remainingQty));
+                lot.remainingQty = Number(lot.remainingQty) - take;
+                await manager.save(InventoryLot, lot);
+                remaining -= take;
+                if (remaining <= 0) break;
+            }
+            if (remaining > 0) throw new Error('Validation: Tồn lô không khớp tồn kho, cần đối soát trước khi hoàn tất kiểm kê');
+            await this.updateAvgCostOnProduct(productId, shopId, manager);
+        }
     }
 
     /** Cập nhật giá bình quân gia quyền trên sản phẩm */

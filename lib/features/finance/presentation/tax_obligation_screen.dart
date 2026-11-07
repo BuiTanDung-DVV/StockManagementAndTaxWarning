@@ -1,3 +1,5 @@
+import '../../../core/widgets/app_page_header.dart';
+import '../../../core/assets/app_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,12 +38,8 @@ class TaxObligationScreen extends ConsumerWidget {
       backgroundColor: c.bg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leadingWidth: Navigator.of(context).canPop() ? 60 : null,
-        leading: Navigator.of(context).canPop()
-            ? AppNavigationBackLeading(
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
+        leadingWidth: 60,
+        leading: AppNavigationBackLeading(onPressed: () => navigatePageBack(context)),
         title: Text(
           'Theo dõi Nghĩa vụ thuế',
           style: GoogleFonts.manrope(
@@ -74,7 +72,11 @@ class TaxObligationScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.cloud_off_rounded, size: 48, color: c.textMuted),
+                    AppIcon(
+                      Icons.cloud_off_rounded,
+                      size: 48,
+                      color: c.textMuted,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'Không thể tải dữ liệu nghĩa vụ thuế',
@@ -96,7 +98,7 @@ class TaxObligationScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
                       onPressed: () => ref.invalidate(taxObligationsProvider),
-                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      icon: const AppIcon(Icons.refresh_rounded, size: 18),
                       label: const Text('Thử lại'),
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
@@ -134,7 +136,7 @@ class TaxObligationScreen extends ConsumerWidget {
                         visual: AppEmptyVisual.tax,
                         message: 'Chưa phát sinh dữ liệu nghĩa vụ thuế',
                         action: ElevatedButton.icon(
-                          icon: const Icon(Icons.account_balance_rounded),
+                          icon: const AppIcon(Icons.account_balance_rounded),
                           label: Text(
                             'Thêm kỳ thuế mới',
                             style: GoogleFonts.manrope(
@@ -311,7 +313,7 @@ class TaxObligationScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(width: 4),
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: const AppIcon(
                                           Icons.edit_note_rounded,
                                           size: 20,
                                         ),
@@ -327,7 +329,7 @@ class TaxObligationScreen extends ConsumerWidget {
                                         splashRadius: 20,
                                       ),
                                       IconButton(
-                                        icon: const Icon(
+                                        icon: const AppIcon(
                                           Icons.delete_sweep_rounded,
                                           size: 20,
                                         ),
@@ -413,7 +415,7 @@ class TaxObligationScreen extends ConsumerWidget {
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _showAddDialog(context, ref),
-              icon: const Icon(Icons.account_balance_rounded),
+              icon: const AppIcon(Icons.account_balance_rounded),
               label: Text(
                 'Khai thuế mới',
                 style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
@@ -517,8 +519,7 @@ class AddTaxObligationDialog extends StatefulWidget {
   const AddTaxObligationDialog({super.key, required this.ref});
 
   @override
-  State<AddTaxObligationDialog> createState() =>
-      _AddTaxObligationDialogState();
+  State<AddTaxObligationDialog> createState() => _AddTaxObligationDialogState();
 }
 
 typedef _AddTaxObligationDialog = AddTaxObligationDialog;
@@ -681,7 +682,11 @@ class _AddTaxObligationDialogState extends State<AddTaxObligationDialog> {
 class EditTaxObligationDialog extends StatefulWidget {
   final WidgetRef ref;
   final Map<String, dynamic> item;
-  const EditTaxObligationDialog({super.key, required this.ref, required this.item});
+  const EditTaxObligationDialog({
+    super.key,
+    required this.ref,
+    required this.item,
+  });
 
   @override
   State<EditTaxObligationDialog> createState() =>

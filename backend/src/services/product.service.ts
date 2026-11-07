@@ -3,7 +3,10 @@ import { Product, Category, CostType, ProductCostItem, ProductBatch, UnitConvers
 import { InventoryMovement, InventoryStock, Warehouse } from '../inventory/entities';
 import { Brackets } from 'typeorm';
 import { COGSService } from './cogs.service';
+import { productCostSummary } from '../product/product-price.utils';
 import { ImageStorageService } from './image-storage.service';
+import { lockShopMutation } from '../utils/shop-mutation-lock';
+import { InventoryLot } from '../inventory/lot.entity';
 import {
     ProductInputError,
     normalizeBatchInput,
@@ -17,6 +20,7 @@ import {
     vietnameseSearchExpression,
     vietnameseSearchParams,
 } from '../common/vietnamese-search.utils';
+import { ProductExportInputError, ProductExportFilters } from '../product/product-export.utils';
 
 export class ProductService {
     private productRepo = AppDataSource.getRepository(Product);
@@ -33,12 +37,37 @@ export class ProductService {
     private imageStorageService = new ImageStorageService();
 
     // === PRODUCT CRUD ===
-    async findAllProducts(shopId: number, page = 1, limit = 20, search?: string, tag?: string) {
-        const qb = this.productRepo.createQueryBuilder('p')
+    async findAllProducts(shopId: number, page = 1, limit = 20, search?: string, tag?: string, categoryId?: number, inStockOnly = false) {
+        const qb = this.productListQuery(shopId, { search, tag, categoryId, inStockOnly })
             .leftJoinAndSelect('p.category', 'category')
             .leftJoinAndSelect('p.costItems', 'costItems')
-            .leftJoinAndSelect('costItems.costType', 'costType')
+            .leftJoinAndSelect('costItems.costType', 'costType');
+
+        const [items, total] = await qb.skip((page - 1) * limit)
+                                       .take(limit)
+                                       .orderBy('p.createdAt', 'DESC')
+                                       .addOrderBy('p.id', 'DESC')
+                                       .getManyAndCount();
+
+        const itemsWithStock = await this.attachCurrentStock(items, shopId);
+        return { items: itemsWithStock, total, page, limit, totalPages: Math.ceil(total / limit) };
+    }
+
+    private productListQuery(shopId: number,
+        { search, tag, categoryId, inStockOnly }: { search?: string | null; tag?: string | null; categoryId?: number | null; inStockOnly: boolean },
+        repository = this.productRepo) {
+        const qb = repository.createQueryBuilder('p')
             .where('p.shopId = :shopId AND p.isActive = :isActive', { shopId, isActive: true });
+
+        if (categoryId != null) {
+            if (!Number.isSafeInteger(categoryId) || categoryId < 0) throw new Error('Danh mục không hợp lệ');
+            if (categoryId === 0) qb.andWhere('p.category_id IS NULL');
+            else qb.andWhere('p.category_id = :categoryId', { categoryId });
+        }
+        if (inStockOnly) {
+            qb.andWhere(`EXISTS (SELECT 1 FROM inventory_stocks stock
+                WHERE stock.product_id = p.id AND stock.shop_id = :shopId AND stock.quantity > 0)`);
+        }
 
         if (search?.trim()) {
             const searchParams = vietnameseSearchParams(search);
@@ -49,7 +78,16 @@ export class ProductService {
             }), searchParams);
         }
 
-        if (tag?.trim()) {
+        const stockTag = tag?.trim().toLocaleLowerCase('vi');
+        const stockTotal = `(SELECT COALESCE(SUM(s.quantity), 0) FROM inventory_stocks s
+            WHERE s.product_id = p.id AND s.shop_id = :shopId)`;
+        // Stock states are computed from the same shop-scoped source as currentStock.
+        // Apply before pagination; these are not persisted product labels.
+        if (stockTag === 'hết hàng') {
+            qb.andWhere(`${stockTotal} <= 0`);
+        } else if (stockTag === 'sắp hết') {
+            qb.andWhere(`${stockTotal} > 0 AND p.minStock > 0 AND ${stockTotal} <= p.minStock`);
+        } else if (tag?.trim()) {
             qb.andWhere(
                 `EXISTS (
                     SELECT 1
@@ -60,13 +98,24 @@ export class ProductService {
             );
         }
 
-        const [items, total] = await qb.skip((page - 1) * limit)
-                                       .take(limit)
-                                       .orderBy('p.createdAt', 'DESC')
-                                       .getManyAndCount();
+        return qb;
+    }
 
-        const itemsWithStock = await this.attachCurrentStock(items, shopId);
-        return { items: itemsWithStock, total, page, limit, totalPages: Math.ceil(total / limit) };
+    async exportProducts(shopId: number, filters: ProductExportFilters) {
+        if (!Number.isSafeInteger(shopId) || shopId <= 0) throw new ProductExportInputError('Chọn một cửa hàng để xuất sản phẩm');
+        return AppDataSource.transaction('REPEATABLE READ', async manager => {
+            await manager.query('SET TRANSACTION READ ONLY');
+            const [clock] = await manager.query('SELECT CURRENT_TIMESTAMP AS "generatedAt"');
+            const products = await this.productListQuery(shopId, filters, manager.getRepository(Product))
+                .orderBy('p.createdAt', 'DESC').addOrderBy('p.id', 'DESC').getMany();
+            const rows = await this.attachCurrentStock(products, shopId, manager.getRepository(InventoryStock));
+            const items = rows.map(product => ({
+                id: product.id, shopId: product.shopId, sku: product.sku, name: product.name, unit: product.unit,
+                currentStock: product.currentStock, minStock: product.minStock, sellingPrice: product.sellingPrice,
+                tags: product.tags,
+            }));
+            return { shopId, filters, generatedAt: clock.generatedAt, total: items.length, items };
+        });
     }
 
     async findProductById(shopId: number, id: number) {
@@ -93,6 +142,10 @@ export class ProductService {
         delete productPayload.currentStock;
         delete productPayload.openingStock;
         delete productPayload.warehouseId;
+        delete productPayload.categoryId;
+        if (input.categoryId !== undefined) {
+            productPayload.category = await this.resolveProductCategory(shopId, input.categoryId);
+        }
 
         const product = this.productRepo.create({ ...productPayload, sku, shopId });
         let saved: Product;
@@ -138,7 +191,10 @@ export class ProductService {
             if (existsBarcode) throw new Error('Mã vạch này đã tồn tại trong hệ thống');
         }
 
-        const { currentStock, openingStock, warehouseId, ...productPayload } = input;
+        const { currentStock, openingStock, warehouseId, categoryId, ...productPayload } = input;
+        if (categoryId !== undefined) {
+            productPayload.category = await this.resolveProductCategory(shopId, categoryId, product.category?.id);
+        }
         Object.assign(product, productPayload);
         try {
             await this.productRepo.save(product);
@@ -175,6 +231,15 @@ export class ProductService {
         return this.findProductById(shopId, id);
     }
 
+    private async resolveProductCategory(shopId: number, categoryId: unknown, currentId?: number) {
+        if (categoryId === null) return null;
+        const category = await this.categoryRepo.findOne({ where: { id: Number(categoryId), shopId } });
+        if (!category || (!category.isActive && category.id !== currentId)) {
+            throw new ProductInputError('Danh mục không tồn tại, đã ngừng dùng hoặc không thuộc cửa hàng này');
+        }
+        return category;
+    }
+
     async deleteProduct(shopId: number, id: number) {
         const product = await this.loadProductEntity(shopId, id);
         const previousImageUrl = product.imageUrl;
@@ -199,21 +264,7 @@ export class ProductService {
         const product = await this.findProductById(shopId, productId);
         const costItems = await this.costItemRepo.find({ where: { product: { id: productId, shopId } as any, shopId } as any });
 
-        let totalAdditional = 0;
-        for (const item of costItems) {
-            if (item.calculationType === 'FIXED') {
-                totalAdditional += Number(item.amount);
-            } else if (item.calculationType === 'PERCENTAGE') {
-                totalAdditional += Number(product.costPrice) * Number(item.amount) / 100;
-            }
-        }
-
-        const baseCost = Number(product.costPrice) - Number(product.supplierDiscount || 0) + totalAdditional;
-        const afterTax = baseCost * (1 + Number(product.taxRate || 0) / 100);
-        const suggested = afterTax * (1 + Number(product.profitMargin || 0) / 100);
-
-        product.totalAdditionalCost = totalAdditional;
-        product.suggestedPrice = Math.round(suggested);
+        Object.assign(product, productCostSummary(product, costItems));
         await this.productRepo.save(product);
 
         return { costPrice: product.costPrice, suggestedPrice: product.suggestedPrice };
@@ -250,7 +301,35 @@ export class ProductService {
     async getPriceHistory(shopId: number, productId: number) { return this.priceHistoryRepo.find({ where: { product: { id: productId, shopId } as any, shopId } as any, order: { changedAt: 'DESC' } }); }
     
     // === BATCHES ===
-    async findBatches(shopId: number, productId: number) { return this.batchRepo.find({ where: { product: { id: productId, shopId } as any, isActive: true, shopId } as any }); }
+    async findBatches(shopId: number, productId: number) {
+        const batches = await this.batchRepo.find({ where: { product: { id: productId, shopId } as any, isActive: true, shopId } as any });
+        const quantities = await AppDataSource.getRepository(InventoryLot).createQueryBuilder('l')
+            .select('l.batchId', 'batchId').addSelect('SUM(l.remainingQty)', 'quantity')
+            .where('l.shopId = :shopId AND l.productId = :productId AND l.batchId IS NOT NULL', { shopId, productId })
+            .groupBy('l.batchId').getRawMany();
+        const byBatch = new Map(quantities.map(r => [Number(r.batchId), Number(r.quantity)]));
+        return batches.map(batch => ({ ...batch, quantity: byBatch.get(batch.id) ?? batch.quantity,
+            quantitySource: byBatch.has(batch.id) ? 'INVENTORY_LOTS' : 'LEGACY_BATCH' }));
+    }
+    async updateBatchDates(shopId: number, productId: number, batchId: number, dto: unknown) {
+        if (!Number.isSafeInteger(productId) || productId <= 0 || !Number.isSafeInteger(batchId) || batchId <= 0) throw new ProductInputError('Mã sản phẩm/lô không hợp lệ');
+        if (!dto || typeof dto !== 'object' || Array.isArray(dto)
+            || Object.keys(dto).some(k => !['manufacturingDate', 'expiryDate', 'notes'].includes(k))) throw new ProductInputError('Chỉ được cập nhật ngày sản xuất, hạn dùng và ghi chú lô.');
+        const raw = dto as Record<string, unknown>;
+        const normalized = normalizeBatchInput({ batchNumber: 'metadata', quantity: 0, ...raw });
+        if (normalized.manufacturingDate && normalized.expiryDate && normalized.expiryDate < normalized.manufacturingDate) throw new ProductInputError('Hạn sử dụng không được trước ngày sản xuất.');
+        return AppDataSource.transaction(async manager => {
+            await lockShopMutation(manager, shopId);
+            const batch = await manager.getRepository(ProductBatch).findOne({ where: {
+                id: batchId, shopId, isActive: true, product: { id: productId, shopId } as any,
+            } as any });
+            if (!batch) throw new ProductInputError('Lô không thuộc sản phẩm trong cửa hàng này.');
+            batch.manufacturingDate = normalized.manufacturingDate ? new Date(`${normalized.manufacturingDate}T00:00:00Z`) : null as any;
+            batch.expiryDate = normalized.expiryDate ? new Date(`${normalized.expiryDate}T00:00:00Z`) : null as any;
+            batch.notes = normalized.notes ?? '';
+            return manager.getRepository(ProductBatch).save(batch);
+        });
+    }
     async createBatch(shopId: number, productId: number, dto: Partial<ProductBatch>) {
         const product = await this.findProductById(shopId, productId);
         const input = normalizeBatchInput(dto);
@@ -364,13 +443,14 @@ export class ProductService {
         return product;
     }
 
-    private async attachCurrentStock(items: Product[], shopId?: number) {
+    private async attachCurrentStock(items: Product[], shopId?: number, repository = this.stockRepo) {
         if (!items.length) return items;
 
         const productIds = items.map((item) => item.id);
-        const qb = this.stockRepo.createQueryBuilder('s')
+        const qb = repository.createQueryBuilder('s')
             .select('s.product_id', 'productId')
             .addSelect('COALESCE(SUM(s.quantity), 0)', 'qty')
+            .addSelect('BOOL_OR(s.quantity > 0)', 'hasPositiveStock')
             .where('s.product_id IN (:...productIds)', { productIds });
 
         if (shopId) {
@@ -380,13 +460,16 @@ export class ProductService {
         const stockRows = await qb.groupBy('s.product_id').getRawMany();
 
         const stockMap = new Map<number, number>();
+        const positiveStock = new Set<number>();
         for (const row of stockRows) {
             stockMap.set(Number(row.productId), Number(row.qty || 0));
+            if (row.hasPositiveStock === true || row.hasPositiveStock === 't') positiveStock.add(Number(row.productId));
         }
 
         return items.map((item: any) => ({
             ...item,
             currentStock: stockMap.get(item.id) ?? 0,
+            hasPositiveStock: positiveStock.has(item.id),
         }));
     }
 

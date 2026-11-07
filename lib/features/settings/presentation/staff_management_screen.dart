@@ -1,3 +1,5 @@
+import '../../../core/providers/data_freshness_provider.dart';
+import '../../../core/assets/app_icon.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,6 +45,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
   List<Map<String, dynamic>> _roles = [];
   List<Map<String, dynamic>> _pendingMembers = [];
   bool _loading = true;
+  int _loadVersion = 0;
 
   @override
   void initState() {
@@ -51,13 +54,17 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
   }
 
   Future<void> _load() async {
+    final version = ++_loadVersion;
+    setState(() {
+      _loading = true;
+    });
     final api = ref.read(apiClientProvider);
     final shopId = ref.read(shopProvider).currentShopId ?? 1;
     try {
       final membersRaw = await api.get('/shop-members?shopId=$shopId');
       final rolesRaw = await api.get('/shop-roles?shopId=$shopId');
       final pendingRaw = await api.get('/shop-members/pending?shopId=$shopId');
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       setState(() {
         _members = _normalizeMapList(membersRaw);
         _roles = _normalizeMapList(rolesRaw);
@@ -65,7 +72,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       setState(() => _loading = false);
     }
   }
@@ -109,7 +116,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                     decoration: InputDecoration(
                       labelText: 'Tên đăng nhập (đã có trên hệ thống) *',
                       hintText: 'VD: nhanvien01 (tài khoản đã đăng ký)',
-                      prefixIcon: Icon(
+                      prefixIcon: AppIcon(
                         Icons.person_outline_rounded,
                         color: c.textMuted,
                         size: 20,
@@ -130,7 +137,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                     initialValue: selectedRoleId,
                     decoration: InputDecoration(
                       labelText: 'Vai trò *',
-                      prefixIcon: Icon(
+                      prefixIcon: AppIcon(
                         Icons.shield_outlined,
                         color: c.textMuted,
                         size: 20,
@@ -184,7 +191,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          const AppIcon(
                             Icons.error_outline_rounded,
                             color: AppColors.danger,
                             size: 20,
@@ -367,7 +374,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
               initialValue: selectedRoleId,
               decoration: InputDecoration(
                 labelText: 'Vai trò',
-                prefixIcon: Icon(
+                prefixIcon: AppIcon(
                   Icons.shield_outlined,
                   color: c.textMuted,
                   size: 20,
@@ -493,6 +500,13 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    listenToDataChanges(ref, DataArea.access, _load);
+    ref.listen(shopProvider.select((state) => state.currentShopId), (
+      previous,
+      next,
+    ) {
+      if (previous != next) _load();
+    });
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
@@ -518,7 +532,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
           centerTitle: true,
           actions: [
             IconButton(
-              icon: const Icon(Icons.shield_outlined),
+              icon: const AppIcon(Icons.shield_outlined),
               tooltip: 'Quản lý vai trò',
               onPressed: () => context.push('/roles'),
             ),
@@ -571,7 +585,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
             ? null
             : FloatingActionButton.extended(
                 onPressed: _inviteMember,
-                icon: const Icon(Icons.person_add_rounded),
+                icon: const AppIcon(Icons.person_add_rounded),
                 label: Text(
                   'Thêm nhân viên',
                   style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
@@ -700,7 +714,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
-            child: Icon(
+            child: AppIcon(
               isOwner ? Icons.star_rounded : Icons.person_rounded,
               color: isOwner ? theme.colorScheme.primary : c.textSecondary,
               size: 22,
@@ -756,13 +770,13 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
           ),
           if (!isOwner) ...[
             IconButton(
-              icon: const Icon(Icons.swap_horiz_rounded, size: 20),
+              icon: const AppIcon(Icons.swap_horiz_rounded, size: 20),
               tooltip: 'Đổi vai trò',
               onPressed: () => _changeRole(m),
               color: theme.colorScheme.primary,
             ),
             IconButton(
-              icon: const Icon(Icons.person_remove_rounded, size: 20),
+              icon: const AppIcon(Icons.person_remove_rounded, size: 20),
               tooltip: 'Xóa',
               onPressed: () => _removeMember(m),
               color: AppColors.danger,
@@ -874,7 +888,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(
+                icon: const AppIcon(
                   Icons.check_circle_outline_rounded,
                   color: AppColors.success,
                   size: 24,
@@ -883,7 +897,7 @@ class _StaffManagementScreenState extends ConsumerState<StaffManagementScreen> {
                 onPressed: () => _handlePendingDecision(m, approve: true),
               ),
               IconButton(
-                icon: const Icon(
+                icon: const AppIcon(
                   Icons.cancel_outlined,
                   color: AppColors.danger,
                   size: 24,
@@ -930,6 +944,7 @@ class RoleConfigScreen extends ConsumerStatefulWidget {
 class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
   List<Map<String, dynamic>> _roles = [];
   bool _loading = true;
+  int _loadVersion = 0;
 
   @override
   void initState() {
@@ -938,195 +953,34 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
   }
 
   Future<void> _load() async {
+    final version = ++_loadVersion;
+    setState(() {
+      _loading = true;
+    });
     final api = ref.read(apiClientProvider);
     final shopId = ref.read(shopProvider).currentShopId ?? 1;
     try {
       final data = await api.get('/shop-roles?shopId=$shopId');
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       setState(() {
         _roles = _normalizeMapList(data);
         _loading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || version != _loadVersion) return;
       setState(() => _loading = false);
     }
   }
 
   Future<void> _showRoleEditor({Map<String, dynamic>? existing}) async {
-    final nameCtrl = TextEditingController(text: existing?['name'] ?? '');
-    Map<String, String> perms = {};
-    if (existing != null) {
-      final raw = existing['permissions'];
-      if (raw is String) {
-        try {
-          (Map<String, dynamic>.from(
-            Map.castFrom((raw.startsWith('{') ? _parseJson(raw) : {}) as Map),
-          )).forEach((k, v) => perms[k] = v.toString());
-        } catch (_) {}
-      } else if (raw is Map) {
-        raw.forEach((k, v) => perms[k.toString()] = v.toString());
-      }
-    }
-    // Chuẩn hóa dữ liệu vai trò cũ về khóa `sales` mà backend sử dụng.
-    if (!perms.containsKey('sales')) {
-      final posLevel = perms['pos'] ?? 'none';
-      final legacySalesLevel = (perms['sales_view'] ?? 'none') == 'none'
-          ? 'none'
-          : 'view';
-      final posIndex = _permissionLevels.indexOf(posLevel);
-      final legacyIndex = _permissionLevels.indexOf(legacySalesLevel);
-      perms['sales'] =
-          _permissionLevels[posIndex > legacyIndex ? posIndex : legacyIndex];
-    }
-    perms.remove('pos');
-    perms.remove('sales_view');
-
-    // Ensure all keys exist
-    for (final key in _permissionKeys.keys) {
-      perms.putIfAbsent(key, () => 'none');
-    }
-
-    final result = await showDialog<bool>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) {
-        final c = AppThemeColors.of(ctx);
-        final theme = Theme.of(ctx);
-        return StatefulBuilder(
-          builder: (ctx, setDlg) {
-            final nameEmpty = nameCtrl.text.trim().isEmpty;
-            return AlertDialog(
-              backgroundColor: c.card,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              title: Text(
-                existing == null ? 'Tạo vai trò mới' : 'Sửa vai trò',
-                style: GoogleFonts.manrope(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: c.textPrimary,
-                ),
-              ),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: nameCtrl,
-                        onChanged: (_) => setDlg(() {}),
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: c.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Tên vai trò *',
-                          hintText: 'VD: Thu ngân, Thủ kho',
-                          errorText: nameEmpty
-                              ? 'Vui lòng nhập tên vai trò'
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Phân quyền chi tiết:',
-                          style: GoogleFonts.manrope(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: c.textPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...(_permissionKeys.entries.map(
-                        (e) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  e.value,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    color: c.textPrimary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              ToggleButtons(
-                                isSelected: _permissionLevels
-                                    .map((l) => perms[e.key] == l)
-                                    .toList(),
-                                onPressed: (idx) => setDlg(
-                                  () => perms[e.key] = _permissionLevels[idx],
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                                selectedColor: Colors.white,
-                                fillColor: theme.colorScheme.primary,
-                                color: c.textSecondary,
-                                constraints: const BoxConstraints(
-                                  minWidth: 50,
-                                  minHeight: 30,
-                                ),
-                                textStyle: GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                children: _permissionLevels
-                                    .map((l) => Text(_permissionLabels[l]!))
-                                    .toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: Text(
-                    'Hủy',
-                    style: GoogleFonts.manrope(
-                      color: c.textMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: nameEmpty ? null : () => Navigator.pop(ctx, true),
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Lưu',
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (ctx) => _RoleEditorDialog(existing: existing),
     );
 
-    if (result == true && nameCtrl.text.trim().isNotEmpty) {
+    if (result != null) {
+      final name = result['name'] as String;
+      final perms = result['permissions'] as Map<String, String>;
       final api = ref.read(apiClientProvider);
       final shopId = ref.read(shopProvider).currentShopId ?? 1;
       setState(() => _loading = true);
@@ -1134,12 +988,12 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
         if (existing == null) {
           await api.post(
             '/shop-roles?shopId=$shopId',
-            data: {'name': nameCtrl.text.trim(), 'permissions': perms},
+            data: {'name': name, 'permissions': perms},
           );
         } else {
           await api.put(
             '/shop-roles/${existing['id']}',
-            data: {'name': nameCtrl.text.trim(), 'permissions': perms},
+            data: {'name': name, 'permissions': perms},
           );
         }
         if (!mounted) return;
@@ -1159,7 +1013,6 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
         );
       }
     }
-    nameCtrl.dispose();
   }
 
   Future<void> _deleteRole(Map<String, dynamic> role) async {
@@ -1197,6 +1050,13 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
+    listenToDataChanges(ref, DataArea.access, _load);
+    ref.listen(shopProvider.select((state) => state.currentShopId), (
+      previous,
+      next,
+    ) {
+      if (previous != next) _load();
+    });
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final compactLayout = MediaQuery.sizeOf(context).width < 720;
@@ -1232,7 +1092,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _showRoleEditor(),
-              icon: const Icon(Icons.shield_outlined),
+              icon: const AppIcon(Icons.shield_outlined),
               label: Text(
                 'Tạo vai trò mới',
                 style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
@@ -1309,7 +1169,7 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
                   color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
+                child: AppIcon(
                   Icons.shield_rounded,
                   color: theme.colorScheme.primary,
                   size: 20,
@@ -1327,12 +1187,12 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.edit_rounded, size: 18),
+                icon: const AppIcon(Icons.edit_rounded, size: 18),
                 onPressed: () => _showRoleEditor(existing: role),
                 color: theme.colorScheme.primary,
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                icon: const AppIcon(Icons.delete_outline_rounded, size: 18),
                 onPressed: () => _deleteRole(role),
                 color: AppColors.danger,
               ),
@@ -1377,6 +1237,263 @@ class _RoleConfigScreenState extends ConsumerState<RoleConfigScreen> {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _RoleEditorDialog extends StatefulWidget {
+  final Map<String, dynamic>? existing;
+
+  const _RoleEditorDialog({this.existing});
+
+  @override
+  State<_RoleEditorDialog> createState() => _RoleEditorDialogState();
+}
+
+class _RoleEditorDialogState extends State<_RoleEditorDialog> {
+  late final TextEditingController _nameCtrl;
+  late final Map<String, String> _perms;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.existing?['name'] ?? '');
+    _perms = {};
+    if (widget.existing != null) {
+      final raw = widget.existing!['permissions'];
+      if (raw is String) {
+        try {
+          (Map<String, dynamic>.from(
+            Map.castFrom((raw.startsWith('{') ? jsonDecode(raw) : {}) as Map),
+          )).forEach((k, v) => _perms[k] = v.toString());
+        } catch (_) {}
+      } else if (raw is Map) {
+        raw.forEach((k, v) => _perms[k.toString()] = v.toString());
+      }
+    }
+    if (!_perms.containsKey('sales')) {
+      final posLevel = _perms['pos'] ?? 'none';
+      final legacySalesLevel = (_perms['sales_view'] ?? 'none') == 'none'
+          ? 'none'
+          : 'view';
+      final posIndex = _permissionLevels.indexOf(posLevel);
+      final legacyIndex = _permissionLevels.indexOf(legacySalesLevel);
+      _perms['sales'] =
+          _permissionLevels[posIndex > legacyIndex ? posIndex : legacyIndex];
+    }
+    _perms.remove('pos');
+    _perms.remove('sales_view');
+
+    for (final key in _permissionKeys.keys) {
+      _perms.putIfAbsent(key, () => 'none');
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppThemeColors.of(context);
+    final theme = Theme.of(context);
+    final nameEmpty = _nameCtrl.text.trim().isEmpty;
+    final compactLayout = MediaQuery.sizeOf(context).width < 600;
+
+    return AlertDialog(
+      backgroundColor: c.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Text(
+        widget.existing == null ? 'Tạo vai trò mới' : 'Sửa vai trò',
+        style: GoogleFonts.manrope(
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+          color: c.textPrimary,
+        ),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameCtrl,
+                onChanged: (_) => setState(() {}),
+                style: GoogleFonts.inter(fontSize: 13, color: c.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Tên vai trò *',
+                  hintText: 'VD: Thu ngân, Thủ kho',
+                  errorText: nameEmpty ? 'Vui lòng nhập tên vai trò' : null,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Phân quyền chi tiết:',
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: c.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...(_permissionKeys.entries.map((e) {
+                if (compactLayout) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          e.value,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: c.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _permissionLevels.map((l) {
+                            final isSelected = _perms[e.key] == l;
+                            return Material(
+                              color: isSelected
+                                  ? theme.colorScheme.primary
+                                  : Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? theme.colorScheme.primary
+                                      : c.divider,
+                                ),
+                              ),
+                              child: InkWell(
+                                onTap: () => setState(() => _perms[e.key] = l),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  height: 48,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _permissionLabels[l]!,
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : c.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          e.value,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: c.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      ToggleButtons(
+                        isSelected: _permissionLevels
+                            .map((l) => _perms[e.key] == l)
+                            .toList(),
+                        onPressed: (idx) => setState(
+                          () => _perms[e.key] = _permissionLevels[idx],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        selectedColor: Colors.white,
+                        fillColor: theme.colorScheme.primary,
+                        color: c.textSecondary,
+                        constraints: const BoxConstraints(
+                          minWidth: 50,
+                          minHeight: 48,
+                        ),
+                        textStyle: GoogleFonts.manrope(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        children: _permissionLevels
+                            .map(
+                              (l) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                child: Text(_permissionLabels[l]!),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                  ),
+                );
+              })),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Hủy',
+            style: GoogleFonts.manrope(
+              color: c.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: nameEmpty
+              ? null
+              : () => Navigator.pop(context, {
+                  'name': _nameCtrl.text.trim(),
+                  'permissions': _perms,
+                }),
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            backgroundColor: theme.colorScheme.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            'Lưu',
+            style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 }

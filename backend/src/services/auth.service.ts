@@ -76,7 +76,7 @@ export class AuthService {
       const email = normalizeEmail(identifier);
       return repository
         .createQueryBuilder('user')
-        .where('LOWER(user.email) = :email OR LOWER(user.username) = :email', { email })
+        .where('LOWER(user.email) = :email OR ((user.email IS NULL OR BTRIM(user.email) = \'\') AND LOWER(user.username) = :email)', { email })
         .getOne();
     }
     return repository.findOne({
@@ -95,6 +95,12 @@ export class AuthService {
       .getOne();
   }
 
+  private async findEmailOrUsernameUser(email: string, repository: Repository<User> = this.userRepo): Promise<User | null> {
+    return repository.createQueryBuilder('user')
+      .where('LOWER(user.email) = :email OR LOWER(user.username) = :email', {email})
+      .getOne();
+  }
+
   private safeUser(user: User): Record<string, unknown> {
     return {
       id: user.id,
@@ -102,6 +108,9 @@ export class AuthService {
       role: user.role,
       fullName: user.fullName,
       email: user.email || null,
+      emailVerified: user.emailVerified,
+      hasPassword: Boolean(user.passwordHash),
+      googleLinked: Boolean(user.googleSubject),
       phone: user.phone || null,
       avatarUrl: user.avatarUrl || null,
       accountType: user.accountType,
@@ -200,11 +209,17 @@ export class AuthService {
 
   private async issueAuthResult(user: User): Promise<AuthResult> {
     const shops = await this.getUserShops(user.id);
-    const tokens = await this.createSessionTokens(user);
+    const issued = await AppDataSource.transaction(async manager => {
+      const current = await manager.getRepository(User).findOne({where:{id:user.id},lock:{mode:'pessimistic_write'}});
+      if (!current?.isActive || current.authVersion !== user.authVersion) {
+        throw new AuthError('Phiên tài khoản đã thay đổi. Vui lòng đăng nhập lại',401,'SESSION_INVALID');
+      }
+      return {user:current,tokens:await this.createSessionTokens(current,manager)};
+    });
     return {
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
-      user: this.safeUser(user),
+      access_token: issued.tokens.accessToken,
+      refresh_token: issued.tokens.refreshToken,
+      user: this.safeUser(issued.user),
       shops,
     };
   }
@@ -247,7 +262,7 @@ export class AuthService {
     const user = await AppDataSource.transaction(async (manager) => {
       await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [email]);
       const repository = manager.getRepository(User);
-      if (await this.findUserByIdentifier(email, repository)) {
+      if (await this.findEmailOrUsernameUser(email, repository)) {
         throw new AuthError('Địa chỉ Gmail đã tồn tại', 409, 'EMAIL_EXISTS');
       }
       await this.verifyOtp(manager, email, 'REGISTER', dto.otpCode);
@@ -291,7 +306,10 @@ export class AuthService {
           user.lockedUntil = new Date(Date.now() + LOGIN_LOCK_MINUTES * 60_000);
           user.failedLoginAttempts = 0;
         }
-        await this.userRepo.save(user);
+        const recorded=await this.userRepo.update({id:user.id,authVersion:user.authVersion,isActive:true}, {
+          failedLoginAttempts:user.failedLoginAttempts,lockedUntil:user.lockedUntil,
+        });
+        if (!recorded.affected) throw new AuthError('Phiên tài khoản đã thay đổi. Vui lòng đăng nhập lại',401,'SESSION_INVALID');
       }
       throw new AuthError('Sai Gmail hoặc mật khẩu', 401, 'INVALID_CREDENTIALS');
     }
@@ -300,7 +318,10 @@ export class AuthService {
     }
     user.failedLoginAttempts = 0;
     user.lockedUntil = null;
-    await this.userRepo.save(user);
+    const recorded=await this.userRepo.update({id:user.id,authVersion:user.authVersion,isActive:true}, {
+      failedLoginAttempts:0,lockedUntil:null,
+    });
+    if (!recorded.affected) throw new AuthError('Phiên tài khoản đã thay đổi. Vui lòng đăng nhập lại',401,'SESSION_INVALID');
     return this.issueAuthResult(user);
   }
 
@@ -332,6 +353,9 @@ export class AuthService {
         throw new AuthError('Chưa có tài khoản. Vui lòng đăng ký bằng Google trước', 404, 'ACCOUNT_NOT_FOUND');
       }
       if (!current) {
+        if (await this.findEmailOrUsernameUser(email, repository)) {
+          throw new AuthError('Gmail đã thuộc tài khoản khác. Vui lòng đăng nhập bằng phương thức hiện có',409,'EMAIL_EXISTS');
+        }
         return repository.save(repository.create({
           username: email,
           email,
@@ -355,11 +379,14 @@ export class AuthService {
       if (!current.isActive) {
         throw new AuthError('Tài khoản đã bị khóa', 401, 'ACCOUNT_INACTIVE');
       }
-      current.googleSubject = payload.sub;
-      current.email = email;
-      current.emailVerified = true;
-      if (!current.avatarUrl && payload.picture) current.avatarUrl = payload.picture;
-      return repository.save(current);
+      const updates: Partial<User> = {googleSubject:payload.sub};
+      // A stable Google subject authenticates the linked identity. Changing
+      // the primary/recovery address must go through the explicit email flow.
+      if (normalizeEmail(current.email || '') === email) updates.emailVerified = true;
+      if (!current.avatarUrl && payload.picture) updates.avatarUrl = payload.picture;
+      const updated=await repository.update({id:current.id,authVersion:current.authVersion,isActive:true},updates);
+      if (!updated.affected) throw new AuthError('Phiên tài khoản đã thay đổi. Vui lòng đăng nhập lại',401,'SESSION_INVALID');
+      return Object.assign(current,updates);
     });
     return this.issueAuthResult(user);
   }
@@ -379,6 +406,11 @@ export class AuthService {
     }
 
     const outcome = await AppDataSource.transaction(async (manager) => {
+      // Lock identity before session, matching email-change/session issuance.
+      const user = await manager.getRepository(User).findOne({
+        where: { id: Number(decoded.sub) },lock:{mode:'pessimistic_write'},
+      });
+      if (!user?.isActive) throw new AuthError('Tài khoản không còn hoạt động',401,'ACCOUNT_INACTIVE');
       const repository = manager.getRepository(RefreshSession);
       const session = await repository
         .createQueryBuilder('session')
@@ -398,11 +430,9 @@ export class AuthService {
         await repository.save(session);
         throw new AuthError('Phiên đăng nhập đã hết hạn', 401, 'REFRESH_EXPIRED');
       }
-      const user = await manager.getRepository(User).findOne({
-        where: { id: Number(decoded.sub) },
-      });
-      if (!user?.isActive) {
-        throw new AuthError('Tài khoản không còn hoạt động', 401, 'ACCOUNT_INACTIVE');
+      if (Number(decoded.ver) !== user.authVersion || session.userId !== user.id) {
+        await repository.update({familyId:session.familyId},{revokedAt:new Date()});
+        return {kind:'invalidated' as const};
       }
       const next = await this.createSessionTokens(user, manager, session.familyId);
       session.revokedAt = new Date();
@@ -418,6 +448,7 @@ export class AuthService {
     if (outcome.kind === 'reused') {
       throw new AuthError('Phát hiện refresh token đã được sử dụng lại', 401, 'REFRESH_REUSED');
     }
+    if (outcome.kind === 'invalidated') throw new AuthError('Phiên đăng nhập đã bị thu hồi',401,'SESSION_INVALID');
     return {
       access_token: outcome.access_token,
       refresh_token: outcome.refresh_token,
@@ -451,7 +482,9 @@ export class AuthService {
   async sendOtp(dto: SendOtpDto): Promise<{ success: true; message: string; otp?: string }> {
     const identifier = normalizeEmail(dto.identifier);
     const purpose: OtpPurpose = dto.isRegistration ? 'REGISTER' : 'RESET';
-    const existing = await this.findUserByIdentifier(identifier);
+    const existing = purpose === 'REGISTER'
+      ? await this.findEmailOrUsernameUser(identifier)
+      : await this.findUserByIdentifier(identifier);
     if (purpose === 'REGISTER' && existing) {
       throw new AuthError('Địa chỉ Gmail đã tồn tại', 409, 'EMAIL_EXISTS');
     }
@@ -502,16 +535,18 @@ export class AuthService {
     const identifier = normalizeEmail(dto.identifier);
     await AppDataSource.transaction(async (manager) => {
       const repository = manager.getRepository(User);
-      const user = await this.findUserByIdentifier(identifier, repository);
-      if (!user) {
+      const candidate = await this.findUserByIdentifier(identifier, repository);
+      const user = candidate ? await repository.findOne({where:{id:candidate.id},lock:{mode:'pessimistic_write'}}) : null;
+      const current = user ? await this.findUserByIdentifier(identifier, repository) : null;
+      if (!user?.isActive || current?.id !== user.id) {
         throw new AuthError('Mã OTP không đúng hoặc đã hết hạn', 400, 'OTP_INVALID');
       }
       await this.verifyOtp(manager, identifier, 'RESET', dto.otpCode);
-      user.passwordHash = await bcrypt.hash(dto.newPassword, 12);
-      user.authVersion += 1;
-      user.failedLoginAttempts = 0;
-      user.lockedUntil = null;
-      await repository.save(user);
+      const updated=await repository.update({id:user.id,authVersion:user.authVersion,isActive:true}, {
+        passwordHash:await bcrypt.hash(dto.newPassword,12),authVersion:user.authVersion+1,
+        failedLoginAttempts:0,lockedUntil:null,
+      });
+      if (!updated.affected) throw new AuthError('Yêu cầu đặt lại đã hết hiệu lực. Vui lòng yêu cầu mã mới',400,'OTP_INVALID');
       await manager.getRepository(RefreshSession)
         .createQueryBuilder()
         .update()
@@ -552,10 +587,14 @@ export class AuthService {
       }
 
       if (dto.username) {
-        const existing = await manager.getRepository(User).findOne({
-          where: { username: dto.username },
-        });
-        if (existing && existing.id !== user.id) {
+        if (dto.username.includes('@') && normalizeEmail(dto.username) !== normalizeEmail(user.email || '')) {
+          throw new AuthError('Tên đăng nhập riêng không được chứa @. Bạn có thể đăng nhập bằng Gmail hiện tại',400,'USERNAME_FORMAT');
+        }
+        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))',[`username:${dto.username.toLowerCase()}`]);
+        const existing = await manager.getRepository(User).createQueryBuilder('other')
+          .where('LOWER(other.username) = :username',{username:dto.username.toLowerCase()})
+          .andWhere('other.id <> :id',{id:user.id}).getOne();
+        if (existing) {
           throw new AuthError('Tên đăng nhập đã tồn tại', 409, 'USERNAME_EXISTS');
         }
         user.username = dto.username;

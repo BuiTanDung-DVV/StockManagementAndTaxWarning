@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/offline/offline_store_provider.dart';
+import '../../../core/offline/offline_session.dart';
 import '../../settings/providers/shop_provider.dart';
 import '../../sales/providers/sales_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
@@ -23,6 +26,7 @@ class AuthState {
   final String? error;
   final String? accountType; // 'SHOP' | 'PERSONAL'
   final bool isOnboarded;
+  final bool isOfflineSession;
 
   const AuthState({
     this.isLoading = false,
@@ -32,6 +36,7 @@ class AuthState {
     this.error,
     this.accountType,
     this.isOnboarded = true,
+    this.isOfflineSession = false,
   });
   AuthState copyWith({
     bool? isLoading,
@@ -41,6 +46,7 @@ class AuthState {
     String? error,
     String? accountType,
     bool? isOnboarded,
+    bool? isOfflineSession,
   }) => AuthState(
     isLoading: isLoading ?? this.isLoading,
     isLoggedIn: isLoggedIn ?? this.isLoggedIn,
@@ -49,6 +55,7 @@ class AuthState {
     error: error,
     accountType: accountType ?? this.accountType,
     isOnboarded: isOnboarded ?? this.isOnboarded,
+    isOfflineSession: isOfflineSession ?? this.isOfflineSession,
   );
 
   bool get isShopOwner => accountType == 'SHOP';
@@ -74,28 +81,58 @@ class AuthNotifier extends Notifier<AuthState> {
     });
     if (api.token != null && api.token!.isNotEmpty) {
       Future.microtask(() => init());
-      return AuthState(isLoggedIn: true, token: api.token);
+      return const AuthState(isLoading: true);
+    }
+    if (!api.sessionRestoreCompleted) {
+      Future.microtask(() => init());
     }
     return AuthState(isLoading: !api.sessionRestoreCompleted);
   }
 
   bool _wasManualLogout = false;
+  int _sessionVersion = 0;
+  Future<void>? _reconnectFuture;
   bool get wasManualLogout => _wasManualLogout;
   void clearManualLogout() => _wasManualLogout = false;
 
   ApiClient get _api => ref.read(apiClientProvider);
 
   Future<void> init() async {
-    await _api.loadToken();
+    final version = _sessionVersion;
+    try {
+      await _api.loadToken();
+    } catch (_) {
+      state = const AuthState(error: 'Không thể khôi phục phiên đăng nhập.');
+      return;
+    }
+    if (version != _sessionVersion) return;
     if (_api.token != null) {
       // Prevent fetching if already populated (e.g. from login)
       if (state.user != null) return;
 
       try {
-        final profile = await _api.get('/profile');
+        // Both requests use the restored token and are independent. Wait for
+        // both before handling an auth failure so a late shop response cannot
+        // repopulate the store after logout has cleared it.
+        final responses = await Future.wait<dynamic>([
+          _api.get('/profile'),
+          _api.get('/my-shops'),
+        ]);
+        if (version != _sessionVersion) return;
+        if (_api.token == null) {
+          ref.read(shopProvider.notifier).clear();
+          state = const AuthState();
+          return;
+        }
+        final profile = responses.first;
+        if (responses[1] is! List) {
+          throw const FormatException('Danh sách cửa hàng không hợp lệ.');
+        }
+        ref.read(shopProvider.notifier).initFromLogin(responses[1] as List);
         if (profile is Map) {
           final user = Map<String, dynamic>.from(profile);
           state = state.copyWith(
+            isLoading: false,
             isLoggedIn: true,
             token: _api.token,
             user: user,
@@ -106,12 +143,13 @@ class AuthNotifier extends Notifier<AuthState> {
           state = AuthState(isLoggedIn: true, token: _api.token);
         }
       } catch (e) {
+        if (version != _sessionVersion) return;
         // If profile fetch fails due to explicit auth error (401/403), logout
         bool isUnauthorized = false;
         if (e is DioException) {
-          isUnauthorized = e.response?.statusCode == 401;
+          isUnauthorized = const [401, 403].contains(e.response?.statusCode);
         } else if (e is ApiException) {
-          isUnauthorized = e.statusCode == 401;
+          isUnauthorized = const [401, 403].contains(e.statusCode);
         } else {
           final eStr = e.toString().toLowerCase();
           if (eStr.contains('hết hạn') || eStr.contains('401')) {
@@ -124,18 +162,137 @@ class AuthNotifier extends Notifier<AuthState> {
           return;
         }
 
-        // For network errors or 500s, keep them logged in but without profile data
-        // They can still navigate, and API calls might recover if backend wakes up
-        state = AuthState(isLoggedIn: true, token: _api.token);
+        final status = e is ApiException
+            ? e.statusCode
+            : e is DioException
+            ? e.response?.statusCode
+            : -1;
+        if ((status == null || const [502, 503, 504].contains(status)) &&
+            await _restorePreparedWorkspace(version)) {
+          return;
+        }
+
+        ref.read(shopProvider.notifier).clear();
+        state = const AuthState(
+          error:
+              'Chưa thể xác minh phiên làm việc. Vui lòng kết nối mạng và thử lại.',
+        );
       }
-      // Reload shops on app restart
-      await ref.read(shopProvider.notifier).loadUserShops();
+    } else {
+      if (_api.refreshUnavailable && await _restorePreparedWorkspace(version)) {
+        return;
+      }
+      state = const AuthState();
+    }
+  }
+
+  Future<OfflineSessionStore> _sessionStore() async =>
+      OfflineSessionStore(await ref.read(offlineStoreProvider.future));
+
+  Future<void> _forgetPreparedWorkspace() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('offline_restore_disabled', true);
+    try {
+      await (await _sessionStore()).clear();
+    } catch (_) {
+      // A disabled marker prevents reopening even if device storage is broken.
+    }
+  }
+
+  // Offline access was withdrawn. Keep any device data without reopening it.
+  Future<bool> _restorePreparedWorkspace(int version) async => false;
+
+  Future<void> prepareOfflineWorkspace() async {
+    throw ApiException(
+      'Ứng dụng yêu cầu kết nối mạng; không hỗ trợ ghi chép offline.',
+    );
+  }
+
+  Future<void> reconnectOfflineSession() {
+    final active = _reconnectFuture;
+    if (active != null) return active;
+    final future = _reconnectPreparedWorkspace();
+    _reconnectFuture = future;
+    return future.whenComplete(() {
+      if (identical(_reconnectFuture, future)) _reconnectFuture = null;
+    });
+  }
+
+  Future<void> _reconnectPreparedWorkspace() async {
+    if (!state.isOfflineSession) return;
+    final version = _sessionVersion;
+    final userId = state.user!['id'];
+    final shopId = ref.read(shopProvider).currentShopId;
+    if (!await _api.refreshSession()) {
+      if (!_api.refreshUnavailable && version == _sessionVersion) {
+        await logout();
+      }
+      throw ApiException(
+        'Chưa xác thực lại được. Ghi chép trên thiết bị được giữ nguyên.',
+        _api.refreshUnavailable ? null : 401,
+      );
+    }
+    if (version != _sessionVersion) {
+      throw ApiException('Phiên làm việc đã thay đổi.', 409);
+    }
+    try {
+      final values = await Future.wait([
+        _api.getSessionIdentity('/profile'),
+        _api.getSessionIdentity('/my-shops'),
+      ]);
+      if (version != _sessionVersion ||
+          state.user?['id'] != userId ||
+          ref.read(shopProvider).currentShopId != shopId ||
+          ref.read(shopProvider).isAllShops) {
+        throw ApiException('Phiên làm việc đã thay đổi.', 409);
+      }
+      final user = Map<String, dynamic>.from(values[0] as Map);
+      if (user['id'].toString() != userId.toString()) {
+        await logout();
+        throw ApiException(
+          'Tài khoản trực tuyến khác tài khoản của dữ liệu đang chờ. Chưa gửi dữ liệu.',
+          403,
+        );
+      }
+      final shops = (values[1] as List)
+          .map((s) => Map<String, dynamic>.from(s as Map))
+          .toList();
+      final current = shops
+          .where((s) => parseShopRecordId(s['shopId']) == shopId)
+          .firstOrNull;
+      if (current == null ||
+          current['status'] != 'ACTIVE' ||
+          current['isActive'] == false) {
+        await logout();
+        throw ApiException(
+          'Quyền cửa hàng đã thay đổi. Chưa gửi dữ liệu.',
+          403,
+        );
+      }
+      ref.read(shopProvider.notifier).initFromLogin(shops);
+      ref.read(shopProvider.notifier).switchShop(shopId!);
+      _api.localOnlyMode = false;
+      state = AuthState(
+        isLoggedIn: true,
+        token: _api.token,
+        user: user,
+        accountType: user['accountType'] as String?,
+        isOnboarded: user['isOnboarded'] as bool? ?? true,
+      );
+    } catch (_) {
+      if (version == _sessionVersion && state.isOfflineSession) {
+        _api.localOnlyMode = true;
+      }
+      rethrow;
     }
   }
 
   Future<bool> login(String username, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
+    _sessionVersion++;
+    _api.localOnlyMode = false;
+    state = const AuthState(isLoading: true);
     try {
+      await _forgetPreparedWorkspace();
       final data = await _api.post(
         '/auth/login',
         data: {'username': username, 'password': password},
@@ -202,6 +359,9 @@ class AuthNotifier extends Notifier<AuthState> {
     final response = Map<String, dynamic>.from(data);
     final token = response['access_token']?.toString() ?? '';
     if (token.isEmpty) return false;
+    _sessionVersion++;
+    await _forgetPreparedWorkspace();
+    _api.localOnlyMode = false;
     await _api.saveToken(token, response['refresh_token']?.toString());
     final user = response['user'] is Map
         ? Map<String, dynamic>.from(response['user'] as Map)
@@ -350,13 +510,41 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    _sessionVersion++;
     _wasManualLogout = true;
     state = const AuthState();
+    _api.localOnlyMode = false;
+    // Clear local reopening permission before waiting for a network logout.
+    await _forgetPreparedWorkspace();
     try {
       await _api.revokeSession();
     } catch (_) {
       // Local credentials are cleared even when the server is unreachable.
     }
+    await _clearUserWorkspace();
+  }
+
+  Future<void> finishEmailChange() async {
+    _sessionVersion++;
+    _wasManualLogout = true;
+    state = const AuthState(isLoading: true);
+    _api.localOnlyMode = false;
+    String? cleanupError;
+    try {
+      await _api.discardRevokedSession();
+      await _forgetPreparedWorkspace();
+    } catch (_) {
+      cleanupError =
+          'Gmail đã đổi. Vui lòng đăng nhập lại; chưa thể xóa đầy đủ phiên đã lưu trên thiết bị.';
+    }
+    try {
+      await _clearUserWorkspace();
+    } finally {
+      state = AuthState(error: cleanupError);
+    }
+  }
+
+  Future<void> _clearUserWorkspace() async {
     await GoogleAuthService.instance.signOut();
     ref.read(shopProvider.notifier).clear();
 
@@ -371,6 +559,7 @@ class AuthNotifier extends Notifier<AuthState> {
     ref.invalidate(expiringProductsProvider);
     ref.invalidate(slowMovingProvider);
     ref.invalidate(purchaseOrdersProvider);
+    ref.invalidate(purchaseOrderQueryProvider);
     ref.invalidate(transactionsProvider);
     ref.invalidate(cashSummaryProvider);
     ref.invalidate(profitLossProvider);
@@ -390,9 +579,11 @@ class AuthNotifier extends Notifier<AuthState> {
     ref.invalidate(debtAgingProvider);
     ref.invalidate(overdueDebtsProvider);
     ref.invalidate(productListProvider);
+    ref.invalidate(productOptionsProvider);
     ref.invalidate(productDetailProvider);
     ref.invalidate(categoriesProvider);
     ref.invalidate(supplierListProvider);
+    ref.invalidate(supplierOptionsProvider);
     ref.invalidate(supplierDetailProvider);
     ref.invalidate(shopProfileProvider);
     ref.invalidate(activityLogsProvider);
