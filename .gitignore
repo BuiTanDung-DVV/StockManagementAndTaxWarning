@@ -164,3 +164,22 @@ DEMO Screen/
 run/
 test/ui_audit_*/
 
+# Local work plans, SDK state and generated review output
+/.planning/
+/.dart-appdata/
+/output/
+/outputs/
+
+# Local tests and data-generation helpers: not part of the source-only sync.
+# Already tracked tests remain tracked; this does not delete repository files.
+/test/
+/backend/test/
+/scripts/configure-antigravity-check-permissions.mjs
+/scripts/prepare-offline-web.cjs
+/scripts/refresh_ui_icons.py
+
+# Asset research metadata; runtime assets and license files stay versioned.
+/assets/fonts/*-source.json
+/assets/icon/asset_sources.json
+/assets/icon/README.md
+
