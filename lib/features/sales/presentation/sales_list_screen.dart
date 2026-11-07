@@ -895,6 +895,36 @@ class _TopReturnedProductsPanel extends StatelessWidget {
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.bg,
+                              borderRadius: BorderRadius.circular(AppRadius.control),
+                              border: Border.all(color: colors.divider),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.touch_app_outlined,
+                                  size: 13,
+                                  color: colors.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Nhấn xem chi tiết',
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: colors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.xxs),
@@ -977,6 +1007,7 @@ class _TopReturnTableHeader extends StatelessWidget {
             flex: 2,
             child: Text('GIÁ TRỊ', textAlign: TextAlign.right, style: style),
           ),
+          const SizedBox(width: 24),
         ],
       ),
     );
@@ -1289,6 +1320,12 @@ class _TopReturnRow extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: AppSpacing.xs),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: colors.textMuted,
+                ),
               ],
             ),
           )
@@ -1320,6 +1357,12 @@ class _TopReturnRow extends StatelessWidget {
                         color: AppColors.danger,
                       ),
                     ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: colors.textMuted,
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -1343,10 +1386,14 @@ class _TopReturnRow extends StatelessWidget {
             ),
           );
 
-    return InkWell(
-      onTap: () => _showTopReturnDetailDialog(context, item),
-      hoverColor: colors.cardAlt.withValues(alpha: 0.7),
-      child: content,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showTopReturnDetailDialog(context, item),
+        mouseCursor: SystemMouseCursors.click,
+        hoverColor: colors.cardAlt.withValues(alpha: 0.7),
+        child: content,
+      ),
     );
   }
 }
