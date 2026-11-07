@@ -261,8 +261,9 @@ class CashflowProjectionPanel extends ConsumerWidget {
                                     : index <= days.length
                                     ? days[index - 1]['date']
                                     : null;
-                                if (date == null)
+                                if (date == null) {
                                   return const SizedBox.shrink();
+                                }
                                 final parsed = DateTime.tryParse('$date');
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 6),
