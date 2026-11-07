@@ -1,0 +1,9 @@
+.env*
+node_modules/
+dist/
+test/
+database/
+scripts/
+dev-scripts/
+src/scripts/
+*.log
