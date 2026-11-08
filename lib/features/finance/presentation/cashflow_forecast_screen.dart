@@ -22,10 +22,8 @@ class CashflowForecastScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
     final forecastAsync = ref.watch(forecastsProvider);
     final budgetAsync = ref.watch(budgetPlansProvider);
-    final compactLayout = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -47,13 +45,12 @@ class CashflowForecastScreen extends ConsumerWidget {
         centerTitle: true,
         actions: [
           featureGuideButton(context, 'cashflow_forecast'),
-          if (compactLayout)
-            AppPrimaryHeaderAction(
-              label: 'Thêm mới',
-              assetPath: AppAssets.add,
-              heroTag: 'cashflow-add-compact',
-              onPressed: () => _showCreateMenu(context, ref),
-            ),
+          AppPrimaryHeaderAction(
+            label: 'Thêm mới',
+            assetPath: AppAssets.add,
+            heroTag: 'cashflow-add-action',
+            onPressed: () => _showCreateMenu(context, ref),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -95,6 +92,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                     const CashflowProjectionPanel(),
                     const SizedBox(height: 24),
                     const BudgetPlanSection(embedded: true),
+                    const SizedBox(height: 32),
                   ],
                 ),
               );
@@ -102,18 +100,7 @@ class CashflowForecastScreen extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: compactLayout
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _showCreateMenu(context, ref),
-              icon: const AppIcon(Icons.add_rounded),
-              label: Text(
-                'Thêm mới',
-                style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-              ),
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
-            ),
+      floatingActionButton: null,
     );
   }
 
@@ -134,7 +121,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                 subtitle: const Text('Khoản dự kiến chưa có trong công nợ'),
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  _showAddForecastDialog(context, ref);
+                  showAddForecastDialog(context, ref);
                 },
               ),
               ListTile(
@@ -144,7 +131,7 @@ class CashflowForecastScreen extends ConsumerWidget {
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  _showAddBudgetDialog(context, ref);
+                  showAddBudgetDialog(context, ref);
                 },
               ),
             ],
@@ -153,87 +140,272 @@ class CashflowForecastScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  void _showAddBudgetDialog(BuildContext context, WidgetRef ref) {
-    final nameC = TextEditingController();
-    final incomeC = TextEditingController();
-    final expenseC = TextEditingController();
-    var startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
-    var endDate = DateTime(DateTime.now().year, DateTime.now().month + 1, 0);
+void showAddBudgetDialog(BuildContext context, WidgetRef ref) {
+  final nameC = TextEditingController();
+  final incomeC = TextEditingController();
+  final expenseC = TextEditingController();
+  var startDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  var endDate = DateTime(DateTime.now().year, DateTime.now().month + 1, 0);
 
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text(
+          'Thêm kế hoạch ngân sách',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameC,
+                decoration: const InputDecoration(
+                  labelText: 'Tên kế hoạch',
+                  hintText: 'Ví dụ: Ngân sách tháng 8',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _BudgetDateField(
+                      label: 'Từ ngày',
+                      value: startDate,
+                      onTap: () async {
+                        final value = await showDatePicker(
+                          context: dialogContext,
+                          initialDate: startDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (value != null) {
+                          setDialogState(() => startDate = value);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _BudgetDateField(
+                      label: 'Đến ngày',
+                      value: endDate,
+                      onTap: () async {
+                        final value = await showDatePicker(
+                          context: dialogContext,
+                          initialDate: endDate,
+                          firstDate: startDate,
+                          lastDate: DateTime(2100),
+                        );
+                        if (value != null) {
+                          setDialogState(() => endDate = value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: incomeC,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Mục tiêu thu (đồng)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: expenseC,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Hạn mức chi (đồng)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = nameC.text.trim();
+              if (name.isEmpty) {
+                ToastService.showError('Vui lòng nhập tên kế hoạch');
+                return;
+              }
+              if (startDate.isAfter(endDate)) {
+                ToastService.showError(
+                  'Ngày bắt đầu không được sau ngày kết thúc',
+                );
+                return;
+              }
+              final plannedIncome = parseCurrency(incomeC.text);
+              final plannedExpense = parseCurrency(expenseC.text);
+              if (plannedIncome < 0 || plannedExpense < 0) {
+                ToastService.showError('Số tiền kế hoạch không được âm');
+                return;
+              }
+              try {
+                await ref.read(financeRepoProvider).createBudgetPlan({
+                  'name': name,
+                  'period': 'CUSTOM',
+                  'startDate': startDate.toIso8601String().split('T').first,
+                  'endDate': endDate.toIso8601String().split('T').first,
+                  'plannedIncome': plannedIncome,
+                  'plannedExpense': plannedExpense,
+                });
+                ref.invalidate(budgetPlansProvider);
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                  ToastService.showSuccess('Đã lưu kế hoạch ngân sách');
+                }
+              } catch (error) {
+                ToastService.showError(
+                  'Không thể lưu kế hoạch ngân sách. Vui lòng thử lại sau.',
+                );
+              }
+            },
+            child: const Text('Lưu kế hoạch'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> showAddForecastDialog(BuildContext context, WidgetRef ref) async {
+  final c = AppThemeColors.of(context);
+  final theme = Theme.of(context);
+  final incomeC = TextEditingController();
+  final expenseC = TextEditingController();
+  DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+  bool isSaving = false;
+
+  final route = DialogRoute<void>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setDialogState) => PopScope(
+        canPop: !isSaving,
+        child: AlertDialog(
           title: Text(
-            'Thêm kế hoạch ngân sách',
+            'Thêm kế hoạch bổ sung',
             style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: nameC,
-                  decoration: const InputDecoration(
-                    labelText: 'Tên kế hoạch',
-                    hintText: 'Ví dụ: Ngân sách tháng 8',
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Material(
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      leading: AppIcon(
+                        Icons.calendar_month_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        DateFormat('dd/MM/yyyy').format(selectedDate),
+                        style: GoogleFonts.manrope(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      trailing: const AppIcon(Icons.edit_rounded, size: 18),
+                      onTap: isSaving
+                          ? null
+                          : () async {
+                              final d = await showDatePicker(
+                                context: ctx,
+                                initialDate: selectedDate,
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 365),
+                                ),
+                              );
+                              if (d != null && ctx.mounted) {
+                                setDialogState(() => selectedDate = d);
+                              }
+                            },
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _BudgetDateField(
-                        label: 'Từ ngày',
-                        value: startDate,
-                        onTap: () async {
-                          final value = await showDatePicker(
-                            context: dialogContext,
-                            initialDate: startDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2100),
-                          );
-                          if (value != null) {
-                            setDialogState(() => startDate = value);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _BudgetDateField(
-                        label: 'Đến ngày',
-                        value: endDate,
-                        onTap: () async {
-                          final value = await showDatePicker(
-                            context: dialogContext,
-                            initialDate: endDate,
-                            firstDate: startDate,
-                            lastDate: DateTime(2100),
-                          );
-                          if (value != null) {
-                            setDialogState(() => endDate = value);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
                 TextField(
                   controller: incomeC,
+                  enabled: !isSaving,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Mục tiêu thu (đồng)',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Thu dự kiến (VNĐ)',
+                    prefixIcon: const AppIcon(
+                      Icons.arrow_downward_rounded,
+                      color: AppColors.success,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: c.divider.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: theme.colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: expenseC,
+                  enabled: !isSaving,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Hạn mức chi (đồng)',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Chi dự kiến (VNĐ)',
+                    prefixIcon: const AppIcon(
+                      Icons.arrow_upward_rounded,
+                      color: AppColors.danger,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: c.divider.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: theme.colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -241,268 +413,78 @@ class CashflowForecastScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Hủy'),
+              onPressed: isSaving ? null : () => Navigator.pop(ctx),
+              child: Text('Hủy', style: TextStyle(color: c.textSecondary)),
             ),
             ElevatedButton(
-              onPressed: () async {
-                final name = nameC.text.trim();
-                if (name.isEmpty) {
-                  ToastService.showError('Vui lòng nhập tên kế hoạch');
-                  return;
-                }
-                if (startDate.isAfter(endDate)) {
-                  ToastService.showError(
-                    'Ngày bắt đầu không được sau ngày kết thúc',
-                  );
-                  return;
-                }
-                final plannedIncome = parseCurrency(incomeC.text);
-                final plannedExpense = parseCurrency(expenseC.text);
-                if (plannedIncome < 0 || plannedExpense < 0) {
-                  ToastService.showError('Số tiền kế hoạch không được âm');
-                  return;
-                }
-                try {
-                  await ref.read(financeRepoProvider).createBudgetPlan({
-                    'name': name,
-                    'period': 'CUSTOM',
-                    'startDate': startDate.toIso8601String().split('T').first,
-                    'endDate': endDate.toIso8601String().split('T').first,
-                    'plannedIncome': plannedIncome,
-                    'plannedExpense': plannedExpense,
-                  });
-                  ref.invalidate(budgetPlansProvider);
-                  if (dialogContext.mounted) {
-                    Navigator.pop(dialogContext);
-                    ToastService.showSuccess('Đã lưu kế hoạch ngân sách');
-                  }
-                } catch (error) {
-                  ToastService.showError(
-                    'Không thể lưu kế hoạch ngân sách. Vui lòng thử lại sau.',
-                  );
-                }
-              },
-              child: const Text('Lưu kế hoạch'),
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (isSaving) return;
+                      final income = parseCurrency(incomeC.text);
+                      final expense = parseCurrency(expenseC.text);
+                      if (income < 0 || expense < 0) {
+                        ToastService.showError('Số tiền dự báo không được âm');
+                        return;
+                      }
+                      setDialogState(() => isSaving = true);
+                      try {
+                        await ref.read(financeRepoProvider).createForecast({
+                          'forecastDate': selectedDate
+                              .toIso8601String()
+                              .split('T')
+                              .first,
+                          'expectedIncome': income,
+                          'expectedExpense': expense,
+                          'expectedBalance': income - expense,
+                        });
+                        ref.invalidate(forecastsProvider);
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ToastService.showSuccess('Đã lưu dự báo dòng tiền');
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          setDialogState(() => isSaving = false);
+                        }
+                        ToastService.showError(
+                          'Không thể lưu dự báo dòng tiền. Vui lòng thử lại sau.',
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+              ),
+              child: isSaving
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Đang lưu...'),
+                      ],
+                    )
+                  : const Text('Lưu dự báo'),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Future<void> _showAddForecastDialog(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final c = AppThemeColors.of(context);
-    final theme = Theme.of(context);
-    final incomeC = TextEditingController();
-    final expenseC = TextEditingController();
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
-    bool isSaving = false;
-
-    final route = DialogRoute<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => PopScope(
-          canPop: !isSaving,
-          child: AlertDialog(
-            title: Text(
-              'Thêm kế hoạch bổ sung',
-              style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Material(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      clipBehavior: Clip.antiAlias,
-                      child: ListTile(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        leading: AppIcon(
-                          Icons.calendar_month_rounded,
-                          color: theme.colorScheme.primary,
-                        ),
-                        title: Text(
-                          DateFormat('dd/MM/yyyy').format(selectedDate),
-                          style: GoogleFonts.manrope(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        trailing: const AppIcon(Icons.edit_rounded, size: 18),
-                        onTap: isSaving
-                            ? null
-                            : () async {
-                                final d = await showDatePicker(
-                                  context: ctx,
-                                  initialDate: selectedDate,
-                                  firstDate: DateTime.now(),
-                                  lastDate: DateTime.now().add(
-                                    const Duration(days: 365),
-                                  ),
-                                );
-                                if (d != null && ctx.mounted) {
-                                  setDialogState(() => selectedDate = d);
-                                }
-                              },
-                      ),
-                    ),
-                  ),
-                  TextField(
-                    controller: incomeC,
-                    enabled: !isSaving,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Thu dự kiến (VNĐ)',
-                      prefixIcon: const AppIcon(
-                        Icons.arrow_downward_rounded,
-                        color: AppColors.success,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: c.divider.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: theme.colorScheme.primary,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: expenseC,
-                    enabled: !isSaving,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Chi dự kiến (VNĐ)',
-                      prefixIcon: const AppIcon(
-                        Icons.arrow_upward_rounded,
-                        color: AppColors.danger,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: c.divider.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: theme.colorScheme.primary,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: isSaving ? null : () => Navigator.pop(ctx),
-                child: Text('Hủy', style: TextStyle(color: c.textSecondary)),
-              ),
-              ElevatedButton(
-                onPressed: isSaving
-                    ? null
-                    : () async {
-                        if (isSaving) return;
-                        final income = parseCurrency(incomeC.text);
-                        final expense = parseCurrency(expenseC.text);
-                        if (income < 0 || expense < 0) {
-                          ToastService.showError(
-                            'Số tiền dự báo không được âm',
-                          );
-                          return;
-                        }
-                        setDialogState(() => isSaving = true);
-                        try {
-                          await ref.read(financeRepoProvider).createForecast({
-                            'forecastDate': selectedDate
-                                .toIso8601String()
-                                .split('T')
-                                .first,
-                            'expectedIncome': income,
-                            'expectedExpense': expense,
-                            'expectedBalance': income - expense,
-                          });
-                          ref.invalidate(forecastsProvider);
-                          if (ctx.mounted) {
-                            Navigator.pop(ctx);
-                            ToastService.showSuccess('Đã lưu dự báo dòng tiền');
-                          }
-                        } catch (e) {
-                          if (ctx.mounted) {
-                            setDialogState(() => isSaving = false);
-                          }
-                          ToastService.showError(
-                            'Không thể lưu dự báo dòng tiền. Vui lòng thử lại sau.',
-                          );
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                ),
-                child: isSaving
-                    ? const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          SizedBox(width: 8),
-                          Text('Đang lưu...'),
-                        ],
-                      )
-                    : const Text('Lưu dự báo'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    await Navigator.of(context, rootNavigator: true).push(route);
-    await route.completed;
-    incomeC.dispose();
-    expenseC.dispose();
-  }
+    ),
+  );
+  await Navigator.of(context, rootNavigator: true).push(route);
+  await route.completed;
+  incomeC.dispose();
+  expenseC.dispose();
 }
 
 class _BudgetDateField extends StatelessWidget {

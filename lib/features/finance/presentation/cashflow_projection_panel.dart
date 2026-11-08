@@ -9,6 +9,7 @@ import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/chart_widgets.dart';
 import '../providers/finance_provider.dart';
 import 'cashflow_daily_details.dart';
+import 'cashflow_forecast_screen.dart';
 import 'cashflow_plan_list.dart';
 
 class CashflowProjectionPanel extends ConsumerWidget {
@@ -311,15 +312,36 @@ class CashflowProjectionPanel extends ConsumerWidget {
                     ),
                   ),
                 const Divider(height: 32),
-                Text(
-                  'Kế hoạch bổ sung',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Chỉ nhập khoản chưa có trong công nợ. Khi đã ghi thu/chi thực tế, cập nhật hoặc xóa kế hoạch tương ứng để tránh tính trùng.',
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kế hoạch bổ sung',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Chỉ nhập khoản chưa có trong công nợ. Khi đã ghi thu/chi thực tế, cập nhật hoặc xóa kế hoạch tương ứng để tránh tính trùng.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.tonalIcon(
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Thêm kế hoạch'),
+                      onPressed: () => showAddForecastDialog(context, ref),
+                    ),
+                  ],
                 ),
                 CashflowPlanList(
                   plans: plans,
