@@ -34,6 +34,7 @@ import '../../features/finance/presentation/finance_screen.dart';
 import '../../features/finance/presentation/opening_balance_screen.dart';
 import '../../features/finance/presentation/daily_closing_screen.dart';
 import '../../features/finance/presentation/profit_loss_screen.dart';
+import '../../features/finance/presentation/budget_plan_screen.dart';
 import '../../features/finance/presentation/cashflow_forecast_screen.dart';
 import '../../features/finance/presentation/debt_aging_screen.dart';
 import '../../features/finance/presentation/supplier_payables_aging_screen.dart';
@@ -169,6 +170,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path.startsWith('/daily-closing') ||
             path.startsWith('/profit-loss') ||
             path.startsWith('/cashflow-forecast') ||
+            path.startsWith('/budget-plans') ||
             path.startsWith('/debt-aging') ||
             path.startsWith('/supplier-payables-aging') ||
             path.startsWith('/invoices') ||
@@ -425,6 +427,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/cashflow-forecast',
             builder: (_, _) => const CashflowForecastScreen(),
+          ),
+          GoRoute(
+            path: '/budget-plans',
+            builder: (_, _) => const BudgetPlanScreen(),
           ),
           GoRoute(
             path: '/debt-aging',

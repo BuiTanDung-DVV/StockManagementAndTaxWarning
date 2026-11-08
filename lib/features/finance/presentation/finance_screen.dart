@@ -116,6 +116,12 @@ final _financeToolGroups = <_FinanceToolGroupDefinition>[
         route: '/cashflow-forecast',
         assetPath: AppAssets.financeForecast,
       ),
+      _FinanceToolDefinition(
+        title: 'Kế hoạch ngân sách',
+        description: 'Mục tiêu thu, hạn mức chi và kiểm soát ngân sách.',
+        route: '/budget-plans',
+        assetPath: AppAssets.financeClosing,
+      ),
     ],
   ),
   _FinanceToolGroupDefinition(
