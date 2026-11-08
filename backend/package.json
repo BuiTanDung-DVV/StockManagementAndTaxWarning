@@ -18,6 +18,7 @@
         "seed:extend": "npm run build && node dist/scripts/extend-test-store-data.js",
         "seed:extend-test-data": "npm run build && node dist/scripts/extend-test-store-data.js",
         "seed:missing-product-media": "npm run build && node dist/scripts/seed-test-media.js --only-missing-products",
+        "seed:slow-moving": "npm run build && node dist/scripts/seed-slow-moving-products.js",
         "audit:data": "tsx src/scripts/audit-store-data.ts",
         "audit:test-shops": "tsx src/scripts/audit-test-shop-data.ts",
         "repair:test-shops": "tsx src/scripts/repair-test-shop-data.ts",
