@@ -902,7 +902,9 @@ class _TopReturnedProductsPanel extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: colors.bg,
-                              borderRadius: BorderRadius.circular(AppRadius.control),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.control,
+                              ),
                               border: Border.all(color: colors.divider),
                             ),
                             child: Row(
@@ -916,11 +918,12 @@ class _TopReturnedProductsPanel extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Text(
                                   'Nhấn xem chi tiết',
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: colors.textSecondary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: colors.textSecondary,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                               ],
                             ),
@@ -1026,6 +1029,12 @@ void _showTopReturnDetailDialog(
   final returnCount = int.tryParse(item['returnCount']?.toString() ?? '') ?? 0;
   final quantity = double.tryParse(item['quantity']?.toString() ?? '') ?? 0;
   final value = double.tryParse(item['value']?.toString() ?? '') ?? 0;
+  final returnDetails =
+      (item['returnDetails'] as List<dynamic>?)
+          ?.whereType<Map>()
+          .map((d) => Map<String, dynamic>.from(d))
+          .toList() ??
+      [];
 
   showDialog<void>(
     context: context,
@@ -1054,7 +1063,7 @@ void _showTopReturnDetailDialog(
         ],
       ),
       content: SizedBox(
-        width: 480,
+        width: 520,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1198,31 +1207,177 @@ void _showTopReturnDetailDialog(
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              Text(
-                'Lý do trả hàng gần nhất:',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: colors.textPrimary,
+              if (returnDetails.length > 1) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Chi tiết từng lượt trả (${returnDetails.length} lượt):',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Mới nhất trước',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: colors.bg,
-                  borderRadius: BorderRadius.circular(AppRadius.control),
-                  border: Border.all(color: colors.divider),
-                ),
-                child: SelectableText(
-                  reason,
-                  style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
-                    color: colors.textPrimary,
-                    height: 1.4,
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 250),
+                  child: Scrollbar(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      primary: false,
+                      itemCount: returnDetails.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, idx) {
+                        final d = returnDetails[idx];
+                        final rawDate = d['returnDate']?.toString() ?? '';
+                        final parsedDate = DateTime.tryParse(rawDate);
+                        final dateStr = parsedDate != null
+                            ? DateFormat('dd/MM/yyyy HH:mm').format(parsedDate)
+                            : (rawDate.isNotEmpty ? rawDate : 'Không rõ ngày');
+                        final dQty =
+                            double.tryParse(d['quantity']?.toString() ?? '') ??
+                            0;
+                        final dVal =
+                            double.tryParse(d['value']?.toString() ?? '') ?? 0;
+                        final dCode = d['returnCode']?.toString() ?? '';
+                        final dReason =
+                            d['reason']?.toString() ?? 'Không ghi nhận';
+                        final dCust = d['customerName']?.toString();
+
+                        return Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: colors.bg,
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.control,
+                            ),
+                            border: Border.all(color: colors.divider),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.warning.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Lượt ${idx + 1}${dCode.isNotEmpty ? ' · #$dCode' : ''}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.warning,
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    dateStr,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: colors.textMuted,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Số lượng: ${_quantityFormat.format(dQty)} $unit',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  if (dVal > 0)
+                                    Text(
+                                      _currencyFormat.format(dVal),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                        color: AppColors.danger,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (dCust != null &&
+                                  dCust.isNotEmpty &&
+                                  dCust != 'Khách lẻ') ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Khách hàng: $dCust',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                              SelectableText(
+                                'Lý do: $dReason',
+                                style: Theme.of(dialogContext)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: colors.textPrimary,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
+              ] else ...[
+                Text(
+                  'Lý do trả hàng gần nhất:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: colors.bg,
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    border: Border.all(color: colors.divider),
+                  ),
+                  child: SelectableText(
+                    reason,
+                    style: Theme.of(dialogContext).textTheme.bodyMedium
+                        ?.copyWith(color: colors.textPrimary, height: 1.4),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -1277,9 +1432,9 @@ class _TopReturnRow extends StatelessWidget {
                     name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -1288,9 +1443,9 @@ class _TopReturnRow extends StatelessWidget {
                     reason,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -1321,11 +1476,7 @@ class _TopReturnRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
-                Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: colors.textMuted,
-                ),
+                Icon(Icons.chevron_right, size: 18, color: colors.textMuted),
               ],
             ),
           )

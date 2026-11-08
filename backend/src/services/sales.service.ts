@@ -578,9 +578,30 @@ export class SalesService {
                         'Không ghi nhận'
                     )
                     ORDER BY r.return_date DESC, r.id DESC
-                ))[1] AS latest_reason
+                ))[1] AS latest_reason,
+                COALESCE(
+                    JSON_AGG(
+                        JSON_BUILD_OBJECT(
+                            'returnId', r.id,
+                            'returnCode', r.return_code,
+                            'returnDate', TO_CHAR(r.return_date, 'YYYY-MM-DD"T"HH24:MI:SS'),
+                            'orderCode', returned_order.order_code,
+                            'customerName', c.name,
+                            'quantity', ri.quantity,
+                            'value', ${returnedNetValueSql},
+                            'reason', COALESCE(
+                                NULLIF(BTRIM(ri.reason), ''),
+                                NULLIF(BTRIM(r.reason), ''),
+                                'Không ghi nhận'
+                            )
+                        )
+                        ORDER BY r.return_date DESC, r.id DESC
+                    ),
+                    '[]'::json
+                ) AS return_details
             FROM sales_returns r
             JOIN sales_orders returned_order ON returned_order.id = r.order_id
+            LEFT JOIN customers c ON c.id = returned_order.customer_id
             JOIN sales_return_items ri ON ri.return_id = r.id
             JOIN products p ON p.id = ri.product_id
             WHERE ${shopCondition}
@@ -600,6 +621,18 @@ export class SalesService {
             quantity: Number(row.quantity || 0),
             value: Number(row.value || 0),
             latestReason: row.latest_reason || 'Không ghi nhận',
+            returnDetails: Array.isArray(row.return_details)
+                ? row.return_details.map((d: any) => ({
+                    returnId: Number(d.returnId),
+                    returnCode: d.returnCode || '',
+                    returnDate: d.returnDate || '',
+                    orderCode: d.orderCode || '',
+                    customerName: d.customerName || 'Khách lẻ',
+                    quantity: Number(d.quantity || 0),
+                    value: Number(d.value || 0),
+                    reason: d.reason || 'Không ghi nhận',
+                }))
+                : [],
         }));
     }
 
