@@ -33,6 +33,7 @@ import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_badge.dart';
 import '../../../core/widgets/product_thumbnail.dart';
+import '../../../core/widgets/quick_tag_filter_bar.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -532,8 +533,23 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   final _searchFocusNode = FocusNode();
   String _search = '';
   String _tag = '';
+  int? _categoryId;
+  String? _categoryName;
+  bool _inStockOnly = false;
   int _productPage = 1;
   bool _creating = false;
+
+  void _clearFilters() {
+    _searchCtrl.clear();
+    setState(() {
+      _search = '';
+      _tag = '';
+      _categoryId = null;
+      _categoryName = null;
+      _inStockOnly = false;
+      _productPage = 1;
+    });
+  }
 
   @override
   void dispose() {
@@ -549,8 +565,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     final productsAsync = ref.watch(
       productListProvider((
         page: _productPage,
-        categoryId: null,
-        inStockOnly: false,
+        categoryId: _categoryId,
+        inStockOnly: _inStockOnly,
         search: _search.isEmpty ? null : _search,
         tag: _tag.isEmpty ? null : _tag,
       )),
@@ -574,12 +590,11 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           }
         },
         const SingleActivator(LogicalKeyboardKey.escape): () {
-          if (_search.isNotEmpty) {
-            _searchCtrl.clear();
-            setState(() {
-              _search = '';
-              _productPage = 1;
-            });
+          if (_search.isNotEmpty ||
+              _tag.isNotEmpty ||
+              _categoryId != null ||
+              _inStockOnly) {
+            _clearFilters();
           } else {
             _searchFocusNode.unfocus();
           }
@@ -850,94 +865,274 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     CartState cart,
     AsyncValue<Map<String, dynamic>> productsAsync,
   ) {
+    final hasActiveFilter =
+        _search.isNotEmpty ||
+        _tag.isNotEmpty ||
+        _categoryId != null ||
+        _inStockOnly;
+    final categoriesAsync = ref.watch(inventoryCategoriesSummaryProvider);
+    final categories = categoriesAsync.value ?? [];
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Search bar
+        // Search & Filter controls
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: TextField(
-            controller: _searchCtrl,
-            focusNode: _searchFocusNode,
-            decoration: InputDecoration(
-              hintText: 'Tìm theo tên, mã sản phẩm hoặc quét mã',
-              suffixIcon: _search.isNotEmpty
-                  ? TextButton(
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() {
-                          _search = '';
-                          _productPage = 1;
-                        });
-                      },
-                      child: const Text('Xóa'),
-                    )
-                  : null,
-            ),
-            onChanged: (v) => setState(() {
-              _search = v;
-              _productPage = 1;
-            }),
-          ),
-        ),
-
-        // Tag Filter Bar
-        Consumer(
-          builder: (ctx, r, child) {
-            final tagsAsync = r.watch(availableTagsProvider);
-            return tagsAsync.when(
-              data: (tags) {
-                final visibleTags = tags
-                    .where((tag) => !_isInternalTag(tag.name))
-                    .toList();
-                if (visibleTags.isEmpty) return const SizedBox.shrink();
-                return SizedBox(
-                  height: 40,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: visibleTags.length,
-                    itemBuilder: (ctx, i) {
-                      final t = visibleTags[i];
-                      final isSelected = _tag == t.name;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Semantics(
-                          button: true,
-                          label: isSelected
-                              ? 'Bỏ lọc nhãn ${t.name}'
-                              : 'Lọc theo nhãn ${t.name}',
-                          selected: isSelected,
-                          child: ChoiceChip(
-                            label: Text(
-                              t.name,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isSelected ? Colors.white : t.uiColor,
-                              ),
-                            ),
-                            selected: isSelected,
-                            onSelected: (selected) {
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  focusNode: _searchFocusNode,
+                  decoration: InputDecoration(
+                    hintText: 'Tìm theo tên sản phẩm, mã SKU hoặc quét mã',
+                    prefixIcon: const AppIcon(Icons.search_rounded, size: 19),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    suffixIcon: _search.isNotEmpty
+                        ? IconButton(
+                            tooltip: 'Xóa tìm kiếm',
+                            onPressed: () {
+                              _searchCtrl.clear();
                               setState(() {
-                                _tag = selected ? t.name : '';
+                                _search = '';
                                 _productPage = 1;
                               });
                             },
-                            selectedColor: t.uiColor,
-                            backgroundColor: t.uiColor.withValues(alpha: 0.1),
-                            side: BorderSide(
-                              color: t.uiColor.withValues(alpha: 0.3),
-                            ),
+                            icon: const AppIcon(Icons.close_rounded, size: 18),
+                          )
+                        : null,
+                  ),
+                  onChanged: (v) => setState(() {
+                    _search = v;
+                    _productPage = 1;
+                  }),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Lọc Danh mục
+              PopupMenuButton<dynamic>(
+                tooltip: 'Lọc theo danh mục',
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                color: c.card,
+                onSelected: (cat) {
+                  setState(() {
+                    if (cat == null) {
+                      _categoryId = null;
+                      _categoryName = null;
+                    } else {
+                      _categoryId = TypeParser.asInt(cat['id']);
+                      _categoryName = cat['name']?.toString();
+                    }
+                    _productPage = 1;
+                  });
+                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: null,
+                    child: Text(
+                      'Tất cả danh mục',
+                      style: TextStyle(
+                        fontWeight: _categoryId == null
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: _categoryId == null
+                            ? AppColors.primary
+                            : c.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  ...categories.map(
+                    (cat) => PopupMenuItem(
+                      value: cat,
+                      child: Text(
+                        cat['name']?.toString() ?? '',
+                        style: TextStyle(
+                          fontWeight: _categoryId == cat['id']
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: _categoryId == cat['id']
+                              ? AppColors.primary
+                              : c.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                child: Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: _categoryId != null
+                        ? AppColors.primary.withValues(alpha: 0.12)
+                        : c.cardAlt,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _categoryId != null
+                          ? AppColors.primary
+                          : c.divider,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.category_outlined,
+                        size: 18,
+                        color: _categoryId != null
+                            ? AppColors.primary
+                            : c.textSecondary,
+                      ),
+                      if (isLargeScreen) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          _categoryName ?? 'Danh mục',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: _categoryId != null
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: _categoryId != null
+                                ? AppColors.primary
+                                : c.textPrimary,
                           ),
                         ),
-                      );
-                    },
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.arrow_drop_down,
+                          size: 18,
+                          color: _categoryId != null
+                              ? AppColors.primary
+                              : c.textSecondary,
+                        ),
+                      ],
+                    ],
                   ),
-                );
-              },
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-            );
-          },
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Lọc "Có tồn kho"
+              FilterChip(
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 16,
+                      color: _inStockOnly ? Colors.white : c.textSecondary,
+                    ),
+                    if (isLargeScreen) ...[
+                      const SizedBox(width: 6),
+                      const Text('Có tồn kho'),
+                    ],
+                  ],
+                ),
+                selected: _inStockOnly,
+                onSelected: (selected) {
+                  setState(() {
+                    _inStockOnly = selected;
+                    _productPage = 1;
+                  });
+                },
+                selectedColor: AppColors.primary,
+                backgroundColor: c.cardAlt,
+                side: BorderSide(
+                  color: _inStockOnly ? AppColors.primary : c.divider,
+                ),
+                labelStyle: TextStyle(
+                  fontSize: 13,
+                  fontWeight: _inStockOnly
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: _inStockOnly ? Colors.white : c.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Các chip tiêu chí đang áp dụng (như ở kho hàng)
+        if (_categoryId != null || _inStockOnly)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (_categoryId != null)
+                  InputChip(
+                    key: const Key('pos-category-filter'),
+                    label: Text(
+                      'Danh mục: ${_categoryName ?? (_categoryId == 0 ? 'Chưa phân loại' : '#$_categoryId')}',
+                    ),
+                    onDeleted: () => setState(() {
+                      _categoryId = null;
+                      _categoryName = null;
+                      _productPage = 1;
+                    }),
+                  ),
+                if (_inStockOnly)
+                  InputChip(
+                    key: const Key('pos-in-stock-filter'),
+                    label: const Text('Có tồn kho'),
+                    onDeleted: () => setState(() {
+                      _inStockOnly = false;
+                      _productPage = 1;
+                    }),
+                  ),
+              ],
+            ),
+          ),
+
+        // Tag Filter Bar (dùng QuickTagFilterBar như kho hàng)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Consumer(
+            builder: (ctx, r, child) {
+              final tagsAsync = r.watch(availableTagsProvider);
+              final visibleTags = (tagsAsync.value ?? [])
+                  .where((tag) => !_isInternalTag(tag.name))
+                  .toList();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  QuickTagFilterBar(
+                    tagColors: {
+                      for (final tag in visibleTags) tag.name: tag.uiColor,
+                    },
+                    tags: visibleTags.map((t) => t.name).toList(),
+                    value: _tag,
+                    onChanged: (newTag) {
+                      setState(() {
+                        _tag = newTag;
+                        _productPage = 1;
+                      });
+                    },
+                    onClear: _clearFilters,
+                    hasFilters: hasActiveFilter,
+                  ),
+                  if (tagsAsync.isLoading) const LinearProgressIndicator(),
+                  if (tagsAsync.hasError)
+                    TextButton.icon(
+                      onPressed: () => r.invalidate(availableTagsProvider),
+                      icon: const AppAssetIcon(
+                        assetPath: AppAssets.refresh,
+                        size: 18,
+                      ),
+                      label: const Text('Không tải được nhãn · Thử lại'),
+                    ),
+                ],
+              );
+            },
+          ),
         ),
         const SizedBox(height: 8),
 
@@ -1009,20 +1204,30 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               }
 
               if (products.isEmpty) {
+                if (hasActiveFilter) {
+                  return AppEmpty(
+                    visual: AppEmptyVisual.inventory,
+                    message: 'Không tìm thấy sản phẩm phù hợp',
+                    subtitle:
+                        'Hãy thử kiểm tra lại từ khóa hoặc xóa bớt tiêu chí lọc.',
+                    action: OutlinedButton.icon(
+                      onPressed: _clearFilters,
+                      icon: const AppIcon(
+                        Icons.filter_alt_off_rounded,
+                        size: 18,
+                      ),
+                      label: const Text('Xóa tất cả bộ lọc'),
+                    ),
+                  );
+                }
                 return AppEmpty(
                   visual: AppEmptyVisual.inventory,
-                  message: _search.isEmpty
-                      ? 'Chưa có sản phẩm'
-                      : 'Không tìm thấy "$_search"',
-                  subtitle: _search.isEmpty
-                      ? 'Thêm sản phẩm để bắt đầu bán hàng'
-                      : null,
-                  action: _search.isEmpty
-                      ? FilledButton(
-                          onPressed: () => context.push('/products/form'),
-                          child: const Text('Thêm sản phẩm'),
-                        )
-                      : null,
+                  message: 'Chưa có sản phẩm',
+                  subtitle: 'Thêm sản phẩm để bắt đầu bán hàng',
+                  action: FilledButton(
+                    onPressed: () => context.push('/products/form'),
+                    child: const Text('Thêm sản phẩm'),
+                  ),
                 );
               }
               return ListView.separated(
