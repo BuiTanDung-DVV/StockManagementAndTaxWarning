@@ -28,3 +28,7 @@ export const deactivate = async (req: Request, res: Response) => {
     try { return res.json({ success: true, data: await service.deactivate((req as any).shopId, Number(req.params.id)) }); }
     catch (error) { return fail(res, error); }
 };
+export const reactivate = async (req: Request, res: Response) => {
+    try { return res.json({ success: true, data: await service.reactivate((req as any).shopId, Number(req.params.id)) }); }
+    catch (error) { return fail(res, error); }
+};

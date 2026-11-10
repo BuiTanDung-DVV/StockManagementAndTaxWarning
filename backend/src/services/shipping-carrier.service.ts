@@ -72,6 +72,14 @@ export class ShippingCarrierService {
         return { id, isActive: false };
     }
 
+    async reactivate(shopId: number, id: number) {
+        const carrier = await this.repo.findOne({ where: { id, shopId } });
+        if (!carrier) throw new Error('Shipping carrier not found');
+        carrier.isActive = true;
+        await this.repo.save(carrier);
+        return { id, isActive: true };
+    }
+
     private async assertCode(shopId: number, code: string, excludeId?: number) {
         const qb = this.repo.createQueryBuilder('carrier')
             .where('carrier.shop_id = :shopId AND carrier.code = :code', { shopId, code });

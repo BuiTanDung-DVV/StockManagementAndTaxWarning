@@ -155,54 +155,114 @@ class _ShippingCarrierScreenState extends ConsumerState<ShippingCarrierScreen> {
                                                 Text(
                                                   'Điện thoại: ${item['phone']}',
                                                 ),
-                                              Text(
-                                                active
-                                                    ? 'Đang sử dụng'
-                                                    : 'Đã ngừng sử dụng',
-                                                style: TextStyle(
-                                                  color: active
-                                                      ? Colors.green
-                                                      : Colors.grey,
-                                                ),
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    active
+                                                        ? 'Đang sử dụng'
+                                                        : 'Đã ngừng sử dụng',
+                                                    style: TextStyle(
+                                                      color: active
+                                                          ? AppColors.success
+                                                          : Colors.grey,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  if (!active) ...[
+                                                    const SizedBox(width: 8),
+                                                    TextButton.icon(
+                                                      style: TextButton.styleFrom(
+                                                        visualDensity:
+                                                            VisualDensity
+                                                                .compact,
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 8,
+                                                              vertical: 2,
+                                                            ),
+                                                      ),
+                                                      onPressed: () =>
+                                                          _confirmReactivate(
+                                                            item,
+                                                          ),
+                                                      icon: AppIcon(
+                                                        Icons.replay_rounded,
+                                                        size: 14,
+                                                        color:
+                                                            AppColors.primary,
+                                                      ),
+                                                      label: const Text(
+                                                        'Kích hoạt lại',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
                                               ),
                                             ],
                                           ),
                                         ),
-                                        if (active)
-                                          PopupMenuButton<String>(
-                                            onSelected: (value) async {
-                                              if (value == 'edit') {
-                                                _edit(item);
-                                              } else if (value == 'off') {
-                                                final confirm =
-                                                    await AppConfirmModal.show(
-                                                      context,
-                                                      title:
-                                                          'Ngừng sử dụng đối tác vận chuyển?',
-                                                      message:
-                                                          'Bạn có chắc muốn ngừng hợp tác với "${item['name']}"? Đơn hàng cũ vẫn giữ nguyên thông tin đối tác này.',
-                                                      confirmText:
-                                                          'Ngừng sử dụng',
-                                                      isDestructive: true,
-                                                    );
-                                                if (confirm == true) {
-                                                  _deactivate(
-                                                    item['id'] as int,
+                                        PopupMenuButton<String>(
+                                          onSelected: (value) async {
+                                            if (value == 'edit') {
+                                              _edit(item);
+                                            } else if (value == 'off') {
+                                              final confirm =
+                                                  await AppConfirmModal.show(
+                                                    context,
+                                                    title:
+                                                        'Ngừng sử dụng đối tác vận chuyển?',
+                                                    message:
+                                                        'Bạn có chắc muốn ngừng hợp tác với "${item['name']}"? Đơn hàng cũ vẫn giữ nguyên thông tin đối tác này.',
+                                                    confirmText:
+                                                        'Ngừng sử dụng',
+                                                    isDestructive: true,
                                                   );
-                                                }
+                                              if (confirm == true) {
+                                                _deactivate(item['id'] as int);
                                               }
-                                            },
-                                            itemBuilder: (_) => const [
-                                              PopupMenuItem(
+                                            } else if (value == 'on') {
+                                              _confirmReactivate(item);
+                                            }
+                                          },
+                                          itemBuilder: (_) => [
+                                            if (active) ...[
+                                              const PopupMenuItem(
                                                 value: 'edit',
                                                 child: Text('Chỉnh sửa'),
                                               ),
-                                              PopupMenuItem(
+                                              const PopupMenuItem(
                                                 value: 'off',
-                                                child: Text('Ngừng sử dụng'),
+                                                child: Text(
+                                                  'Ngừng sử dụng',
+                                                  style: TextStyle(
+                                                    color: AppColors.danger,
+                                                  ),
+                                                ),
+                                              ),
+                                            ] else ...[
+                                              const PopupMenuItem(
+                                                value: 'on',
+                                                child: Text(
+                                                  'Kích hoạt lại',
+                                                  style: TextStyle(
+                                                    color: AppColors.success,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              const PopupMenuItem(
+                                                value: 'edit',
+                                                child: Text(
+                                                  'Chỉnh sửa thông tin',
+                                                ),
                                               ),
                                             ],
-                                          ),
+                                          ],
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -229,6 +289,7 @@ class _ShippingCarrierScreenState extends ConsumerState<ShippingCarrierScreen> {
     var phone = item?['phone']?.toString() ?? '';
     var url = item?['trackingUrlTemplate']?.toString() ?? '';
     var fee = item?['defaultFee']?.toString() ?? '0';
+    var isActive = item?['isActive'] != false;
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -295,6 +356,25 @@ class _ShippingCarrierScreenState extends ConsumerState<ShippingCarrierScreen> {
                             'Có thể dùng {trackingCode} tại vị trí mã vận đơn.',
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Kích hoạt sử dụng',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        isActive
+                            ? 'Đang hoạt động trong danh bạ vận chuyển'
+                            : 'Đã tạm ngừng sử dụng',
+                      ),
+                      value: isActive,
+                      onChanged: (val) {
+                        isActive = val;
+                        setModalState(() {});
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -333,12 +413,17 @@ class _ShippingCarrierScreenState extends ConsumerState<ShippingCarrierScreen> {
                       'phone': phone.trim(),
                       'trackingUrlTemplate': url.trim(),
                       'defaultFee': parsedFee,
-                      'isActive': true,
+                      'isActive': isActive,
                     };
                     final repo = ref.read(settingsOperationsRepositoryProvider);
                     item == null
                         ? await repo.createCarrier(data)
                         : await repo.updateCarrier(item['id'] as int, data);
+                    ToastService.showSuccess(
+                      item == null
+                          ? 'Đã thêm đơn vị vận chuyển thành công'
+                          : 'Đã cập nhật đơn vị vận chuyển thành công',
+                    );
                     if (dialogContext.mounted) {
                       Navigator.pop(dialogContext, true);
                     }
@@ -362,11 +447,42 @@ class _ShippingCarrierScreenState extends ConsumerState<ShippingCarrierScreen> {
     if (saved == true) _reload();
   }
 
+  Future<void> _confirmReactivate(Map<String, dynamic> item) async {
+    final confirm = await AppConfirmModal.show(
+      context,
+      title: 'Kích hoạt lại đối tác vận chuyển?',
+      message:
+          'Đối tác "${item['name']}" sẽ hoạt động trở lại và có thể được chọn khi ghi nhận đơn hàng.',
+      confirmText: 'Kích hoạt lại',
+      isDestructive: false,
+    );
+    if (confirm == true) {
+      _reactivate(item['id'] as int);
+    }
+  }
+
+  Future<void> _reactivate(int id) async {
+    try {
+      await ref
+          .read(settingsOperationsRepositoryProvider)
+          .reactivateCarrier(id);
+      ToastService.showSuccess('Đã kích hoạt lại đơn vị vận chuyển thành công');
+      _reload();
+    } on ApiException catch (error) {
+      ToastService.showError(error.message);
+    } catch (_) {
+      ToastService.showError(
+        'Không thể kích hoạt lại đơn vị vận chuyển. Vui lòng thử lại sau.',
+      );
+    }
+  }
+
   Future<void> _deactivate(int id) async {
     try {
       await ref
           .read(settingsOperationsRepositoryProvider)
           .deactivateCarrier(id);
+      ToastService.showSuccess('Đã ngừng sử dụng đơn vị vận chuyển');
       _reload();
     } on ApiException catch (error) {
       ToastService.showError(error.message);

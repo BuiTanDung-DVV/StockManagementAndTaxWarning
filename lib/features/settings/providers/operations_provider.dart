@@ -58,6 +58,8 @@ class SettingsOperationsRepository {
       _api.put('/shipping-carriers/$id', data: data);
   Future<void> deactivateCarrier(int id) =>
       _api.delete('/shipping-carriers/$id');
+  Future<void> reactivateCarrier(int id) =>
+      _api.post('/shipping-carriers/$id/reactivate');
 
   Future<Uint8List> exportBackup(String password) =>
       _api.postForBytes('/shop-backups/export', data: {'password': password});
