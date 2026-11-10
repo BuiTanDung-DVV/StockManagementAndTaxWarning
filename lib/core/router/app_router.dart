@@ -329,12 +329,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/products/:id',
-            builder: (_, state) => ProductDetailScreen(
-              id: int.parse(state.pathParameters['id']!),
-              returnRoute: state.uri.queryParameters['from'] == 'inventory'
+            builder: (_, state) {
+              final from = state.uri.queryParameters['from'];
+              final returnRoute = from == 'inventory'
                   ? '/inventory'
-                  : '/products',
-            ),
+                  : from == 'pos'
+                  ? '/sales/pos'
+                  : '/products';
+              return ProductDetailScreen(
+                id: int.parse(state.pathParameters['id']!),
+                returnRoute: returnRoute,
+              );
+            },
           ),
           // Customers
           GoRoute(

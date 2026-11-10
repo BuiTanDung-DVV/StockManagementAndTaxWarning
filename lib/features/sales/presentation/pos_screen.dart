@@ -22,6 +22,7 @@ import '../../../core/widgets/app_animations.dart';
 import '../../../core/widgets/app_pagination_bar.dart';
 import '../../customers/providers/customer_provider.dart';
 import '../../products/providers/product_provider.dart';
+import '../../products/presentation/product_detail_screen.dart';
 import '../../settings/providers/system_provider.dart';
 import '../../settings/providers/operations_provider.dart';
 import '../../inventory/providers/inventory_provider.dart';
@@ -1070,37 +1071,24 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         availableStock: availableStock,
                       );
 
-                  final onRowTap = isOutOfStock
-                      ? null
-                      : () {
-                          if (cartItem != null) {
-                            if (!reachedAvailableStock) {
-                              ref
-                                  .read(_cartProvider.notifier)
-                                  .increment(
-                                    id,
-                                    availableStock: availableStock,
-                                  );
-                              HapticFeedback.selectionClick();
-                            }
-                          } else {
-                            final added = ref
-                                .read(_cartProvider.notifier)
-                                .add(
-                                  id,
-                                  name,
-                                  price,
-                                  taxRate: taxRate,
-                                  availableStock: availableStock,
-                                );
-                            if (added) {
-                              HapticFeedback.lightImpact();
-                            }
-                          }
-                        };
+                  void viewProductDetail() {
+                    final router = GoRouter.maybeOf(context);
+                    if (router != null) {
+                      context.push('/products/$id?from=pos');
+                    } else {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailScreen(
+                            id: id,
+                            returnRoute: '/sales/pos',
+                          ),
+                        ),
+                      );
+                    }
+                  }
 
                   return InkWell(
-                    onTap: onRowTap,
+                    onTap: viewProductDetail,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
