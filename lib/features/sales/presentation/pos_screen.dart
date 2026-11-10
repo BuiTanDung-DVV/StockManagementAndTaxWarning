@@ -31,6 +31,7 @@ import 'qr_payment_screen.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_badge.dart';
+import '../../../core/widgets/product_thumbnail.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -637,7 +638,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               ),
               actions: [
                 featureGuideButton(context, 'pos'),
-                if (cart.items.isNotEmpty)
+                if (MediaQuery.sizeOf(context).width <= 900 &&
+                    cart.items.isNotEmpty)
                   TextButton(
                     onPressed: () => _showCart(context),
                     child: Text('Hàng đã chọn (${cart.itemCount})'),
@@ -856,7 +858,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
             controller: _searchCtrl,
             focusNode: _searchFocusNode,
             decoration: InputDecoration(
-              hintText: 'Tìm sản phẩm...',
+              hintText: 'Tìm theo tên, mã sản phẩm hoặc quét mã',
               suffixIcon: _search.isNotEmpty
                   ? TextButton(
                       onPressed: () {
@@ -1109,24 +1111,12 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: c.cardAlt,
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.control,
-                              ),
-                              border: Border.all(color: c.divider),
-                            ),
-                            child: Center(
-                              child: AppAssetIcon(
-                                assetPath: AppAssets.inventory,
-                                color: AppColors.primary,
-                                size: 24,
-                                semanticLabel: 'Sản phẩm',
-                              ),
-                            ),
+                          ProductThumbnail(
+                            imageUrl:
+                                p['imageUrl']?.toString() ??
+                                p['image_url']?.toString(),
+                            name: name,
+                            size: 52,
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -1153,6 +1143,20 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
+                                    if (p['unit'] != null &&
+                                        p['unit']
+                                            .toString()
+                                            .trim()
+                                            .isNotEmpty) ...[
+                                      Text(
+                                        ' / ${p['unit']}',
+                                        style: TextStyle(
+                                          color: c.textSecondary,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(width: 10),
                                     AppBadge(
                                       label: stockLabel,
@@ -1279,9 +1283,20 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               ),
               if (cart.items.isNotEmpty)
                 TextButton(
-                  onPressed: () {
-                    ref.read(_cartProvider.notifier).clear();
-                    ToastService.showSuccess('Đã xóa toàn bộ giỏ hàng');
+                  onPressed: () async {
+                    final confirm = await AppConfirmModal.show(
+                      context,
+                      title: 'Xóa giỏ hàng',
+                      message:
+                          'Bạn có chắc chắn muốn xóa toàn bộ sản phẩm trong giỏ?',
+                      confirmText: 'Xóa tất cả',
+                      cancelText: 'Hủy',
+                      isDestructive: true,
+                    );
+                    if (confirm == true) {
+                      ref.read(_cartProvider.notifier).clear();
+                      ToastService.showSuccess('Đã xóa toàn bộ giỏ hàng');
+                    }
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.danger,
@@ -1324,12 +1339,25 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                '${_currFmt.format(item.price)} × ${item.quantity}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: c.textSecondary,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    '${_currFmt.format(item.price)} × ${item.quantity}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: c.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '= ${_currFmt.format(item.price * item.quantity)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: c.textPrimary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -1439,7 +1467,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   ),
                 ),
                 child: Text(
-                  cart.customerName ?? 'Chọn khách hàng...',
+                  cart.customerName ?? 'Khách lẻ (bấm để chọn khách quen)',
                   style: TextStyle(
                     fontSize: 13,
                     color: cart.customerName == null
@@ -1480,7 +1508,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   child: Text(
                     cart.discountAmount > 0
                         ? '-${_currFmt.format(cart.discountAmount)}'
-                        : 'Thêm...',
+                        : '+ Thêm',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -1516,8 +1544,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   ),
                   child: Text(
                     cart.notes != null && cart.notes!.isNotEmpty
-                        ? 'Xem/Sửa'
-                        : 'Thêm...',
+                        ? 'Sửa ghi chú'
+                        : '+ Thêm',
                     style: TextStyle(
                       fontSize: 13,
                       color: cart.notes != null && cart.notes!.isNotEmpty
@@ -1543,7 +1571,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 ),
                 TextButton(
                   onPressed: () => _showShippingDialog(context),
-                  child: Text(cart.shippingCarrierName ?? 'Thiết lập...'),
+                  child: Text(cart.shippingCarrierName ?? 'Tại quầy / Tự nhận'),
                 ),
               ],
             ),
@@ -1715,7 +1743,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 subtitle: Text(
                                   cart.discountAmount > 0
                                       ? '-${_currFmt.format(cart.discountAmount)}'
-                                      : 'Thêm chiết khấu...',
+                                      : '+ Thêm chiết khấu',
                                 ),
                                 trailing: const AppIcon(Icons.chevron_right),
                                 onTap: () => _showDiscountDialog(context),
@@ -1725,7 +1753,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 title: const Text('Giao hàng'),
                                 subtitle: Text(
                                   cart.shippingCarrierName ??
-                                      'Thiết lập giao hàng...',
+                                      'Tại quầy / Tự nhận',
                                 ),
                                 trailing: const AppIcon(Icons.chevron_right),
                                 onTap: () => _showShippingDialog(context),
@@ -1736,7 +1764,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                 subtitle: Text(
                                   cart.notes != null && cart.notes!.isNotEmpty
                                       ? cart.notes!
-                                      : 'Thêm ghi chú...',
+                                      : '+ Thêm ghi chú',
                                 ),
                                 trailing: const AppIcon(Icons.chevron_right),
                                 onTap: () => _showNotesDialog(context),
@@ -2235,7 +2263,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               autofocus: true,
               onChanged: (_) => setDialogState(() {}),
               decoration: InputDecoration(
-                hintText: 'Nhập số tiền giảm giá...',
+                hintText: 'Nhập số tiền giảm giá',
                 suffixText: 'đ',
                 helperText: parsed > 0 ? _currFmt.format(parsed) : null,
                 helperStyle: TextStyle(
@@ -2450,7 +2478,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           maxLines: 3,
           autofocus: true,
           decoration: const InputDecoration(
-            hintText: 'Nhập ghi chú hoặc yêu cầu của khách...',
+            hintText: 'Nhập ghi chú hoặc yêu cầu của khách',
           ),
         ),
         actions: [

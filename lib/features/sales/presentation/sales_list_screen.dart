@@ -1564,12 +1564,35 @@ class _PaymentMethodBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final groupedMap = <String, Map<String, dynamic>>{};
+    for (final raw in items.whereType<Map>()) {
+      final item = Map<String, dynamic>.from(raw);
+      final rawMethod =
+          item['method']?.toString() ??
+          item['paymentMethod']?.toString() ??
+          item['payment_method']?.toString();
+      final normalizedGroup = _normalizePaymentGroup(rawMethod);
+      final amount = _paymentAmount(item);
+      final count = int.tryParse(item['count']?.toString() ?? '') ?? 0;
+
+      if (groupedMap.containsKey(normalizedGroup)) {
+        final existing = groupedMap[normalizedGroup]!;
+        final prevAmount = _paymentAmount(existing);
+        final prevCount =
+            int.tryParse(existing['count']?.toString() ?? '') ?? 0;
+        existing['total'] = prevAmount + amount;
+        existing['count'] = prevCount + count;
+      } else {
+        groupedMap[normalizedGroup] = {
+          'method': normalizedGroup,
+          'total': amount,
+          'count': count,
+        };
+      }
+    }
+
     final rows =
-        items
-            .whereType<Map>()
-            .map((item) => Map<String, dynamic>.from(item))
-            .where((item) => _paymentAmount(item) > 0)
-            .toList()
+        groupedMap.values.where((item) => _paymentAmount(item) > 0).toList()
           ..sort((a, b) => _paymentAmount(b).compareTo(_paymentAmount(a)));
     final visibleRows = rows.take(4).toList();
     final total = rows.fold<double>(
@@ -1676,21 +1699,44 @@ class _PaymentMethodRow extends StatelessWidget {
 double _paymentAmount(Map<String, dynamic> item) =>
     double.tryParse(item['total']?.toString() ?? '') ?? 0;
 
+String _normalizePaymentGroup(String? method) {
+  switch (method?.toUpperCase()) {
+    case 'CASH':
+      return 'CASH';
+    case 'BANK_TRANSFER':
+    case 'TRANSFER':
+    case 'QR':
+    case 'VIETQR':
+      return 'BANK_TRANSFER';
+    case 'CREDIT_CARD':
+    case 'CARD':
+    case 'POS':
+      return 'CARD';
+    case 'DEBT':
+    case 'RECEIVABLE':
+      return 'DEBT';
+    case 'MOMO':
+      return 'MOMO';
+    case 'ZALOPAY':
+      return 'ZALOPAY';
+    default:
+      return method ?? 'OTHER';
+  }
+}
+
 String _paymentMethodLabel(String? method) {
   switch (method?.toUpperCase()) {
     case 'CASH':
       return 'Tiền mặt';
     case 'BANK_TRANSFER':
     case 'TRANSFER':
-      return 'Chuyển khoản';
     case 'QR':
     case 'VIETQR':
-      return 'Chuyển khoản QR';
+      return 'Chuyển khoản';
     case 'CREDIT_CARD':
     case 'CARD':
-      return 'Thẻ ngân hàng';
     case 'POS':
-      return 'Thẻ (POS)';
+      return 'Thẻ ngân hàng';
     case 'DEBT':
     case 'RECEIVABLE':
       return 'Ghi nợ';
