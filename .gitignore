@@ -183,6 +183,9 @@ test/ui_audit_*/
 /scripts/configure-antigravity-check-permissions.mjs
 /scripts/prepare-offline-web.cjs
 /scripts/refresh_ui_icons.py
+/scripts/audit_web_and_app.cjs
+/scripts/capture_fixed_chart.cjs
+/scripts/verify_ui_enhancements.cjs
 
 # Asset research metadata; runtime assets and license files stay versioned.
 /assets/fonts/*-source.json
