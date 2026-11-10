@@ -32,9 +32,8 @@ import 'qr_payment_screen.dart';
 import '../../../core/widgets/app_confirm_modal.dart';
 import '../../../core/utils/toast_service.dart';
 import '../../../core/widgets/app_badge.dart';
-import '../../../core/theme/tag_colors.dart';
 import '../../../core/widgets/product_thumbnail.dart';
-import '../../../core/utils/search_text.dart';
+import '../../../core/widgets/quick_tag_filter_bar.dart';
 
 final _currFmt = NumberFormat.currency(
   locale: 'vi_VN',
@@ -915,11 +914,29 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildColorfulFilterBar(
-                    c: c,
+                  QuickTagFilterBar(
                     tags: visibleTags.map((t) => t.name).toList(),
                     tagColors: tagColorsMap,
-                    hasActiveFilter: hasActiveFilter,
+                    selectedTags: _selectedTags,
+                    onToggleTag: (tag) {
+                      setState(() {
+                        if (_selectedTags.contains(tag)) {
+                          _selectedTags.remove(tag);
+                        } else {
+                          _selectedTags.add(tag);
+                        }
+                        _productPage = 1;
+                      });
+                    },
+                    inStockOnly: _inStockOnly,
+                    onToggleInStock: () {
+                      setState(() {
+                        _inStockOnly = !_inStockOnly;
+                        _productPage = 1;
+                      });
+                    },
+                    onClear: _clearFilters,
+                    hasFilters: hasActiveFilter,
                   ),
                   if (tagsAsync.isLoading) const LinearProgressIndicator(),
                   if (tagsAsync.hasError)
@@ -1249,233 +1266,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildColorfulFilterBar({
-    required AppThemeColors c,
-    required List<String> tags,
-    required Map<String, Color> tagColors,
-    required bool hasActiveFilter,
-  }) {
-    final allTags = tags.toSet().toList();
-    final quickTags = allTags.take(12).toList();
-    for (final sel in _selectedTags) {
-      if (!quickTags.contains(sel) && allTags.contains(sel)) {
-        quickTags.add(sel);
-      }
-    }
-
-    Widget buildChip({
-      required String label,
-      required bool selected,
-      required VoidCallback onTap,
-      IconData? icon,
-      Color? customAccent,
-      Key? key,
-    }) {
-      final accent =
-          customAccent ??
-          (label == 'Tất cả'
-              ? AppColors.primary
-              : TagColors.resolve(label, configured: tagColors[label]));
-      final background = TagColors.surface(accent, c.card, selected: selected);
-      final foreground = TagColors.foreground(accent, background);
-
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: key,
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: accent.withValues(alpha: selected ? 1.0 : 0.45),
-                width: selected ? 1.8 : 1.0,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 14, color: foreground),
-                  const SizedBox(width: 5),
-                ] else if (selected && label != 'Tất cả') ...[
-                  Icon(Icons.check_rounded, size: 13, color: foreground),
-                  const SizedBox(width: 4),
-                ],
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-                    color: foreground,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            IconButton(
-              key: const Key('pos-tag-filter-options'),
-              tooltip:
-                  'Tìm và chọn nhãn (${_selectedTags.length}/${allTags.length})',
-              onPressed: () => _showMultiTagDialog(allTags, tagColors),
-              icon: AppAssetIcon(
-                assetPath: AppAssets.filter,
-                size: 19,
-                color: _selectedTags.isNotEmpty
-                    ? AppColors.primary
-                    : c.textSecondary,
-              ),
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    // Chip "Tất cả"
-                    buildChip(
-                      label: 'Tất cả',
-                      selected: _selectedTags.isEmpty && !_inStockOnly,
-                      onTap: () {
-                        setState(() {
-                          _selectedTags.clear();
-                          _inStockOnly = false;
-                          _productPage = 1;
-                        });
-                      },
-                      key: const Key('pos-filter-all'),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Chip "Có tồn kho"
-                    buildChip(
-                      label: 'Có tồn kho',
-                      selected: _inStockOnly,
-                      icon: Icons.inventory_2_outlined,
-                      customAccent: AppColors.success,
-                      onTap: () {
-                        setState(() {
-                          _inStockOnly = !_inStockOnly;
-                          _productPage = 1;
-                        });
-                      },
-                      key: const Key('pos-filter-in-stock'),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Các chip nhãn có màu sắc (multi-select)
-                    for (final name in quickTags) ...[
-                      buildChip(
-                        label: name,
-                        selected: _selectedTags.contains(name),
-                        onTap: () {
-                          setState(() {
-                            if (_selectedTags.contains(name)) {
-                              _selectedTags.remove(name);
-                            } else {
-                              _selectedTags.add(name);
-                            }
-                            _productPage = 1;
-                          });
-                        },
-                        key: ValueKey('pos-tag-$name'),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        if (hasActiveFilter)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 4),
-            child: Row(
-              children: [
-                TextButton.icon(
-                  key: const Key('pos-clear-filters-btn'),
-                  onPressed: _clearFilters,
-                  icon: const AppIcon(Icons.filter_alt_off_rounded, size: 15),
-                  label: const Text('Bỏ lọc', style: TextStyle(fontSize: 12)),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                  ),
-                ),
-                if (_selectedTags.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    'Đã chọn ${_selectedTags.length} nhãn',
-                    style: TextStyle(fontSize: 11, color: c.textSecondary),
-                  ),
-                ],
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Future<void> _showMultiTagDialog(
-    List<String> tags,
-    Map<String, Color> tagColors,
-  ) async {
-    await showDialog<void>(
-      context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return _MultiTagSelectDialog(
-            tags: tags,
-            tagColors: tagColors,
-            selectedTags: _selectedTags,
-            inStockOnly: _inStockOnly,
-            onToggleTag: (tag) {
-              setState(() {
-                if (_selectedTags.contains(tag)) {
-                  _selectedTags.remove(tag);
-                } else {
-                  _selectedTags.add(tag);
-                }
-                _productPage = 1;
-              });
-              setDialogState(() {});
-            },
-            onToggleInStock: () {
-              setState(() {
-                _inStockOnly = !_inStockOnly;
-                _productPage = 1;
-              });
-              setDialogState(() {});
-            },
-            onClearAll: () {
-              _clearFilters();
-              setDialogState(() {});
-            },
-          );
-        },
-      ),
     );
   }
 
@@ -3818,169 +3608,6 @@ class _PosCustomerAddDialogState extends ConsumerState<_PosCustomerAddDialog> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MultiTagSelectDialog extends StatefulWidget {
-  final List<String> tags;
-  final Map<String, Color> tagColors;
-  final Set<String> selectedTags;
-  final bool inStockOnly;
-  final ValueChanged<String> onToggleTag;
-  final VoidCallback onToggleInStock;
-  final VoidCallback onClearAll;
-
-  const _MultiTagSelectDialog({
-    required this.tags,
-    required this.tagColors,
-    required this.selectedTags,
-    required this.inStockOnly,
-    required this.onToggleTag,
-    required this.onToggleInStock,
-    required this.onClearAll,
-  });
-
-  @override
-  State<_MultiTagSelectDialog> createState() => _MultiTagSelectDialogState();
-}
-
-class _MultiTagSelectDialogState extends State<_MultiTagSelectDialog> {
-  final _searchCtrl = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final all = widget.tags.toSet().toList();
-    final matches = all
-        .where((name) => foldSearchText(name).contains(foldSearchText(_query)))
-        .toList();
-
-    final totalSelected =
-        widget.selectedTags.length + (widget.inStockOnly ? 1 : 0);
-
-    return AlertDialog(
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Chọn nhãn lọc ($totalSelected đã chọn)',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
-          if (totalSelected > 0)
-            TextButton(
-              onPressed: widget.onClearAll,
-              child: const Text(
-                'Bỏ chọn tất cả',
-                style: TextStyle(fontSize: 12),
-              ),
-            ),
-        ],
-      ),
-      content: SizedBox(
-        width: 440,
-        height: 420,
-        child: Column(
-          children: [
-            TextField(
-              controller: _searchCtrl,
-              autofocus: false,
-              decoration: InputDecoration(
-                hintText: 'Tìm nhãn sản phẩm...',
-                prefixIcon: const AppAssetIcon(
-                  assetPath: AppAssets.search,
-                  size: 18,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 16),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() => _query = '');
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: (v) => setState(() => _query = v),
-            ),
-            const SizedBox(height: 8),
-
-            // Mục Có tồn kho ở đầu danh sách
-            if (_query.isEmpty ||
-                foldSearchText(
-                  'Có tồn kho',
-                ).contains(foldSearchText(_query))) ...[
-              CheckboxListTile(
-                dense: true,
-                value: widget.inStockOnly,
-                onChanged: (_) => widget.onToggleInStock(),
-                title: const Text(
-                  'Có tồn kho',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                secondary: const Icon(
-                  Icons.inventory_2_outlined,
-                  color: AppColors.success,
-                  size: 20,
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-              ),
-              const Divider(height: 1),
-            ],
-
-            Expanded(
-              child: matches.isEmpty
-                  ? const Center(child: Text('Không tìm thấy nhãn phù hợp'))
-                  : ListView.builder(
-                      itemCount: matches.length,
-                      itemBuilder: (ctx, index) {
-                        final tag = matches[index];
-                        final isSelected = widget.selectedTags.contains(tag);
-                        final tagColor = TagColors.resolve(
-                          tag,
-                          configured: widget.tagColors[tag],
-                        );
-
-                        return CheckboxListTile(
-                          dense: true,
-                          value: isSelected,
-                          onChanged: (_) => widget.onToggleTag(tag),
-                          title: Text(tag),
-                          secondary: Container(
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: tagColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Áp dụng'),
-        ),
-      ],
     );
   }
 }

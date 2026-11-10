@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,17 +33,27 @@ class _SearchQueryNotifier extends Notifier<String> {
   void set(String v) => state = v;
 }
 
-class _TagFilterNotifier extends Notifier<String> {
+class _TagFilterNotifier extends Notifier<Set<String>> {
   @override
-  String build() => '';
-  void set(String v) => state = v;
+  Set<String> build() => <String>{};
+  void toggle(String tag) {
+    final next = Set<String>.from(state);
+    if (next.contains(tag)) {
+      next.remove(tag);
+    } else {
+      next.add(tag);
+    }
+    state = next;
+  }
+
+  void setTags(Set<String> tags) => state = Set<String>.from(tags);
+  void clear() => state = <String>{};
 }
 
 final _productSearchQueryProvider =
     NotifierProvider<_SearchQueryNotifier, String>(_SearchQueryNotifier.new);
-final _productTagFilterProvider = NotifierProvider<_TagFilterNotifier, String>(
-  _TagFilterNotifier.new,
-);
+final _productTagFilterProvider =
+    NotifierProvider<_TagFilterNotifier, Set<String>>(_TagFilterNotifier.new);
 
 bool productListUsesCompactLayout(double width) =>
     width < AppBreakpoints.compactNavigation;
@@ -100,7 +111,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         ref.read(_productSearchQueryProvider.notifier).set('');
-        ref.read(_productTagFilterProvider.notifier).set('');
+        ref.read(_productTagFilterProvider.notifier).clear();
       });
     }
   }
@@ -180,7 +191,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   }
 
   void _onTagSelected(String tag) {
-    ref.read(_productTagFilterProvider.notifier).set(tag);
+    ref.read(_productTagFilterProvider.notifier).toggle(tag);
     setState(() {
       _page = 1;
       _clearSelection();
@@ -192,7 +203,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     _debounce?.cancel();
     _searchController.clear();
     ref.read(_productSearchQueryProvider.notifier).set('');
-    ref.read(_productTagFilterProvider.notifier).set('');
+    ref.read(_productTagFilterProvider.notifier).clear();
     setState(() {
       _categoryId = null;
       _categoryName = null;
@@ -240,7 +251,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     }
     final version = _selectionVersion;
     final search = ref.read(_productSearchQueryProvider);
-    final tag = ref.read(_productTagFilterProvider);
+    final tags = ref.read(_productTagFilterProvider);
+    final tagParam = tags.isEmpty ? null : tags.join(',');
     final shop = ref.read(shopProvider);
     final shopId = shop.currentShopId;
     final actor = ref.read(authProvider).user?['id']?.toString();
@@ -260,7 +272,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           actor != null &&
           auth.user?['id']?.toString() == actor &&
           ref.read(_productSearchQueryProvider) == search &&
-          ref.read(_productTagFilterProvider) == tag &&
+          setEquals(ref.read(_productTagFilterProvider), tags) &&
           _categoryId == categoryId &&
           _inStockOnly == inStockOnly;
     }
@@ -273,7 +285,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           .exportInventoryInShop(
             shopId!,
             search: search.isEmpty ? null : search,
-            tag: tag.isEmpty ? null : tag,
+            tag: tagParam,
             categoryId: categoryId,
             inStockOnly: inStockOnly,
             isCurrentScope: scopeIsCurrent,
@@ -340,7 +352,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     final c = AppThemeColors.of(context);
     final theme = Theme.of(context);
     final searchQuery = ref.watch(_productSearchQueryProvider);
-    final tagQuery = ref.watch(_productTagFilterProvider);
+    final selectedTags = ref.watch(_productTagFilterProvider);
+    final tagParam = selectedTags.isEmpty ? null : selectedTags.join(',');
     final shopState = ref.watch(shopProvider);
     final authState = ref.watch(authProvider);
     final canExportProducts =
@@ -407,7 +420,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         categoryId: _categoryId,
         inStockOnly: _inStockOnly,
         search: searchQuery.isEmpty ? null : searchQuery,
-        tag: tagQuery.isEmpty ? null : tagQuery,
+        tag: tagParam,
       )),
     );
 
@@ -613,29 +626,21 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                             ),
                           ),
                         ),
-                        if (_categoryId != null || _inStockOnly)
+                        if (_categoryId != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                             child: Wrap(
                               spacing: 8,
                               runSpacing: 8,
                               children: [
-                                if (_categoryId != null)
-                                  InputChip(
-                                    key: const Key('product-category-filter'),
-                                    label: Text(
-                                      'Danh mục: ${_categoryName ?? (_categoryId == 0 ? 'Chưa phân loại' : '#$_categoryId')}',
-                                    ),
-                                    onDeleted: () =>
-                                        _removeCategoryScope(category: true),
+                                InputChip(
+                                  key: const Key('product-category-filter'),
+                                  label: Text(
+                                    'Danh mục: ${_categoryName ?? (_categoryId == 0 ? 'Chưa phân loại' : '#$_categoryId')}',
                                   ),
-                                if (_inStockOnly)
-                                  InputChip(
-                                    key: const Key('product-in-stock-filter'),
-                                    label: const Text('Có tồn kho'),
-                                    onDeleted: () =>
-                                        _removeCategoryScope(stock: true),
-                                  ),
+                                  onDeleted: () =>
+                                      _removeCategoryScope(category: true),
+                                ),
                               ],
                             ),
                           ),
@@ -661,11 +666,20 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                                     tags: visibleTags
                                         .map((t) => t.name)
                                         .toList(),
-                                    value: tagQuery,
-                                    onChanged: _onTagSelected,
+                                    selectedTags: selectedTags,
+                                    onToggleTag: _onTagSelected,
+                                    inStockOnly: _inStockOnly,
+                                    onToggleInStock: () {
+                                      setState(() {
+                                        _inStockOnly = !_inStockOnly;
+                                        _page = 1;
+                                        _clearSelection();
+                                      });
+                                      _syncCategoryUrl();
+                                    },
                                     onClear: _clearFilters,
                                     hasFilters:
-                                        tagQuery.isNotEmpty ||
+                                        selectedTags.isNotEmpty ||
                                         searchQuery.isNotEmpty ||
                                         _categoryId != null ||
                                         _inStockOnly,
@@ -714,7 +728,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                             if (items.isEmpty) {
                               final hasActiveFilter =
                                   searchQuery.isNotEmpty ||
-                                  tagQuery.isNotEmpty ||
+                                  selectedTags.isNotEmpty ||
                                   _categoryId != null ||
                                   _inStockOnly;
                               if (hasActiveFilter) {
