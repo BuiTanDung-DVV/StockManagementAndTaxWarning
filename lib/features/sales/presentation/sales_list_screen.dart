@@ -713,8 +713,11 @@ class _SalesSummarySection extends ConsumerWidget {
                   final hasRevenueData =
                       barValues.length >= 3 &&
                       barValues.any((value) => value > 0);
+                  final isCompact = constraints.maxWidth < 600;
                   final revenueChart = ChartCard(
-                    title: 'Doanh thu & lợi nhuận gộp 7 ngày',
+                    title: isCompact
+                        ? 'Doanh thu & LN gộp 7 ngày'
+                        : 'Doanh thu & lợi nhuận gộp 7 ngày',
                     height: 270,
                     trailing: Text(
                       'Đơn vị: đồng',
@@ -1679,19 +1682,22 @@ String _paymentMethodLabel(String? method) {
       return 'Tiền mặt';
     case 'BANK_TRANSFER':
     case 'TRANSFER':
+      return 'Chuyển khoản';
     case 'QR':
     case 'VIETQR':
-      return 'Chuyển khoản';
+      return 'Chuyển khoản QR';
     case 'CREDIT_CARD':
     case 'CARD':
+      return 'Thẻ ngân hàng';
     case 'POS':
-      return 'Thẻ';
+      return 'Thẻ (POS)';
     case 'DEBT':
     case 'RECEIVABLE':
       return 'Ghi nợ';
     case 'MOMO':
+      return 'Ví MoMo';
     case 'ZALOPAY':
-      return 'Ví điện tử';
+      return 'Ví ZaloPay';
     default:
       return (method != null && method.trim().isNotEmpty) ? method : 'Khác';
   }

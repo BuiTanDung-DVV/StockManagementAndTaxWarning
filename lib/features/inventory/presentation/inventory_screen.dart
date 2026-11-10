@@ -124,8 +124,9 @@ class InventoryScreen extends ConsumerWidget {
                 children: [
                   AppPageHeader(
                     title: 'Quản lý kho',
-                    subtitle:
-                        'Ưu tiên sản phẩm cần nhập, sắp hoặc đã hết hạn và tồn chậm luân chuyển.',
+                    subtitle: compactLayout
+                        ? 'Cảnh báo nhập và hạn dùng.'
+                        : 'Ưu tiên sản phẩm cần nhập, sắp hoặc đã hết hạn và tồn chậm luân chuyển.',
                     dense: true,
                     action: headerActions(compact: compactLayout),
                     compactAction: headerActions(compact: true),

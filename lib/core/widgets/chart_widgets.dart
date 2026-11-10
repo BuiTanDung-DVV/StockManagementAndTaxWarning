@@ -776,7 +776,12 @@ class MiniGroupedBarChart extends StatelessWidget {
     var maxValue = allValues.reduce((a, b) => a > b ? a : b);
     minValue = minValue < 0 ? minValue * 1.15 : 0;
     maxValue = maxValue > 0 ? maxValue * 1.15 : 1;
-    final rodWidth = count <= 7 ? 15.0 : 11.0;
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
+    final rodWidth = isCompact
+        ? (count <= 7 ? 8.0 : 6.0)
+        : (count <= 7 ? 13.0 : 9.0);
+    final barsSpace = isCompact ? 2.5 : 4.0;
+    final leftReservedSize = isCompact ? 64.0 : 86.0;
 
     return Column(
       children: [
@@ -816,7 +821,7 @@ class MiniGroupedBarChart extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 86,
+                    reservedSize: leftReservedSize,
                     getTitlesWidget: (value, meta) {
                       if (value == meta.max || value == meta.min) {
                         return const SizedBox.shrink();
@@ -888,7 +893,7 @@ class MiniGroupedBarChart extends StatelessWidget {
               barGroups: List.generate(count, (index) {
                 return BarChartGroupData(
                   x: index,
-                  barsSpace: 5,
+                  barsSpace: barsSpace,
                   barRods: [
                     BarChartRodData(
                       toY: primaryValues[index],
